@@ -1,0 +1,30 @@
+{
+  "name": "butler-sos",
+  "version": "1.0.0",
+  "description": "Butler SenseOps Stats is a Node.js service publishing operational Qlik Sense metrics to MQTT.",
+  "main": "butler-sos.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mountaindude/butler-sos.git"
+  },
+  "keywords": [
+    "butler",
+    "qliksense",
+    "senseops"
+  ],
+  "author": "Göran Sander",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mountaindude/butler-sos/issues"
+  },
+  "homepage": "https://github.com/mountaindude/butler-sos#readme",
+  "dependencies": {
+    "config": "^1.25.1",
+    "mqtt": "^2.5.0",
+    "request": "^2.81.0",
+    "winston": "^2.3.1"
+  }
+}
