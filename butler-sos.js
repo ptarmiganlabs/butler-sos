@@ -19,7 +19,11 @@ globals.logger.info('Starting Butler SOS');
 
 function postStatsToMQTT(host, serverName) {
     request({
-        url: 'https://' + host + '/healthcheck/engine/healthcheck',
+        followAllRedirects: true,
+        url: 'https://' + host + '/healthcheck/engine/healthcheck/',
+        headers: {
+            'Cache-Control':'no-cache'
+        },
         json: true
     }, function (error, response, body) {
 
