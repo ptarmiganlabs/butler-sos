@@ -59,8 +59,12 @@ function postStatsToMQTT(host, serverName) {
             globals.mqttClient.publish(baseTopic + serverName + '/cache/added', body.cache.added.toString());
             globals.mqttClient.publish(baseTopic + serverName + '/cache/replaced', body.cache.replaced.toString());
             globals.mqttClient.publish(baseTopic + serverName + '/cache/bytes_added', body.cache.bytes_added.toString());
+
+            if (body.cache.lookups > 0) {
+                globals.mqttClient.publish(baseTopic + serverName + '/cache/hit_ratio', Math.floor(body.cache.hits / body.cache.lookups * 100).toString());
+                console.log(Math.floor(body.cache.hits / body.cache.lookups * 100).toString());
+            } 
         }
-        
     })
 }
 
