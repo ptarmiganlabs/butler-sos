@@ -1,5 +1,6 @@
 {
     "Butler-SOS": {
+        "logLevel": "verbose",
         "mqttConfig": {
             "enableMQTT": true,
             "brokerIP": "<IP of MQTT server>",
