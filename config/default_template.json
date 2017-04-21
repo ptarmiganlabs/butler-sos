@@ -1,15 +1,28 @@
 {
-  "Butler-SOS": {
-    "mqttConfig": {
-      "brokerIP": "<IP of MQTT server>",
-      "baseTopic": "butler-sos/"
-     },
-    "pollingInterval": 5000,
-    "serversToMonitor": {
-        "servers":  [   
-                        { "host":"<server1.my.domain>", "serverName":"<server1>" }, 
-                        { "host":"<server2.my.domain>", "serverName":"<server2>" } 
-                    ]
+    "Butler-SOS": {
+        "mqttConfig": {
+            "enableMQTT": true,
+            "brokerIP": "<IP of MQTT server>",
+            "baseTopic": "butler-sos/"
+        },
+        "influxdbConfig": {
+            "enableInfluxdb": true,
+            "hostIP": "<IP or FQDN of Influxdb server>",
+            "dbName": "SenseOps"
+        },
+        "pollingInterval": 5000,
+        "serversToMonitor": {
+            "servers": [{
+                    "host": "<server1.my.domain>",
+                    "serverName": "<server1>",
+                    "availableRAM": 32000
+                },
+                {
+                    "host": "<server2.my.domain>",
+                    "serverName": "<server2>",
+                    "availableRAM": 24000
+                }
+            ]
+        }
     }
-  }
 }
