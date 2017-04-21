@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
     "Butler-SOS": {
         "mqttConfig": {
             "enableMQTT": true,
@@ -25,4 +26,24 @@
             ]
         }
     }
+=======
+  "Butler-SOS": {
+    "mqttConfig": {
+      "brokerIP": "<IP of MQTT server>",
+      "baseTopic": "butler-sos/"
+    },
+    "pollingInterval": 5000,
+    "serversToMonitor": {
+      "servers": [{
+          "host": "<server1.my.domain>",
+          "serverName": "<server1>"
+        },
+        {
+          "host": "<server2.my.domain>",
+          "serverName": "<server2>"
+        }
+      ]
+    }
+  }
+>>>>>>> origin/master
 }
