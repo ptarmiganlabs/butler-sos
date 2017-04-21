@@ -9,10 +9,13 @@ var globals = require('./globals');
 // Set specific log level (if/when needed)
 // Possible values are { error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
 // globals.logger.transports.console.level = 'info';
-globals.logger.transports.console.level = 'verbose';
+// globals.logger.transports.console.level = 'verbose';
 // globals.logger.transports.console.level = 'debug';
+// Default is to use log level defined in config file
+globals.logger.transports.console.level = globals.config.get('Butler-SOS.logLevel');
 
 globals.logger.info('Starting Butler SOS');
+globals.logger.info('Log level is: ' + globals.logger.transports.console.level);
 
 
 
