@@ -139,7 +139,7 @@ function postToInfluxdb(host, serverName, body) {
 
         ])
         .then(err => {
-            globals.logger.verbose('Sent data to Influxdb');
+            globals.logger.verbose('Sent data to Influxdb: ' + serverName);
         })
 
         .catch(err => {
