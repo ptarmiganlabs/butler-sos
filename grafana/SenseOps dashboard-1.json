@@ -2,7 +2,7 @@
   "__inputs": [
     {
       "name": "DS_SENSEOPS",
-      "label": "SenseOps",
+      "label": "senseops",
       "description": "",
       "type": "datasource",
       "pluginId": "influxdb",
@@ -14,7 +14,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "4.2.0"
+      "version": "4.1.1"
     },
     {
       "type": "panel",
@@ -44,11 +44,11 @@
   "hideControls": false,
   "id": null,
   "links": [],
-  "refresh": "15m",
+  "refresh": "30s",
   "rows": [
     {
       "collapse": false,
-      "height": 182,
+      "height": 257,
       "panels": [
         {
           "aliasColors": {},
@@ -61,7 +61,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": false,
+            "show": true,
             "total": false,
             "values": false
           },
@@ -74,7 +74,7 @@
           "points": false,
           "renderer": "flot",
           "seriesOverrides": [],
-          "span": 3,
+          "span": 5,
           "stack": false,
           "steppedLine": false,
           "targets": [
@@ -83,7 +83,7 @@
               "groupBy": [
                 {
                   "params": [
-                    "$__interval"
+                    "$interval"
                   ],
                   "type": "time"
                 },
@@ -139,159 +139,10 @@
           },
           "yaxes": [
             {
-              "format": "percent",
+              "format": "short",
               "label": "",
               "logBase": 1,
               "max": "100",
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ]
-        },
-        {
-          "alert": {
-            "conditions": [
-              {
-                "evaluator": {
-                  "params": [
-                    50000
-                  ],
-                  "type": "gt"
-                },
-                "operator": {
-                  "type": "and"
-                },
-                "query": {
-                  "params": [
-                    "A",
-                    "5m",
-                    "now"
-                  ]
-                },
-                "reducer": {
-                  "params": [],
-                  "type": "avg"
-                },
-                "type": "query"
-              }
-            ],
-            "executionErrorState": "alerting",
-            "frequency": "60s",
-            "handler": 1,
-            "name": "RAM alert",
-            "noDataState": "no_data",
-            "notifications": []
-          },
-          "aliasColors": {},
-          "bars": false,
-          "datasource": "${DS_SENSEOPS}",
-          "fill": 1,
-          "id": 13,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "seriesOverrides": [],
-          "span": 3,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "alias": "RAM",
-              "dsType": "influxdb",
-              "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "null"
-                  ],
-                  "type": "fill"
-                }
-              ],
-              "measurement": "mem",
-              "policy": "default",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "comitted"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "mean"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "host",
-                  "operator": "=~",
-                  "value": "/^$Hosts$/"
-                }
-              ]
-            }
-          ],
-          "thresholds": [
-            {
-              "colorMode": "critical",
-              "fill": true,
-              "line": true,
-              "op": "gt",
-              "value": 50000
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "RAM",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "decmbytes",
-              "label": null,
-              "logBase": 1,
-              "max": "61000",
               "min": "0",
               "show": true
             },
@@ -316,7 +167,7 @@
             "current": false,
             "max": false,
             "min": false,
-            "show": false,
+            "show": true,
             "total": false,
             "values": false
           },
@@ -329,16 +180,16 @@
           "points": false,
           "renderer": "flot",
           "seriesOverrides": [],
-          "span": 3,
+          "span": 4,
           "stack": false,
-          "steppedLine": true,
+          "steppedLine": false,
           "targets": [
             {
               "dsType": "influxdb",
               "groupBy": [
                 {
                   "params": [
-                    "$__interval"
+                    "$interval"
                   ],
                   "type": "time"
                 },
@@ -349,7 +200,7 @@
                   "type": "fill"
                 }
               ],
-              "measurement": "users",
+              "measurement": "session",
               "policy": "default",
               "refId": "A",
               "resultFormat": "time_series",
@@ -379,7 +230,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Users",
+          "title": "Sessions",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -399,183 +250,6 @@
               "logBase": 1,
               "max": null,
               "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ]
-        },
-        {
-          "aliasColors": {},
-          "bars": true,
-          "datasource": "${DS_SENSEOPS}",
-          "fill": 1,
-          "id": 12,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "hideEmpty": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": false,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [
-            {
-              "alias": "Cache lookups",
-              "bars": false,
-              "lines": false,
-              "points": true,
-              "yaxis": 2
-            }
-          ],
-          "span": 2,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "alias": "Cache hit ratio",
-              "dsType": "influxdb",
-              "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "null"
-                  ],
-                  "type": "fill"
-                }
-              ],
-              "hide": false,
-              "measurement": "cache",
-              "policy": "default",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "hits"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "sum"
-                  },
-                  {
-                    "params": [
-                      " / SUM(lookups) * 100"
-                    ],
-                    "type": "math"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "host",
-                  "operator": "=~",
-                  "value": "/^$Hosts$/"
-                }
-              ]
-            },
-            {
-              "alias": "Cache lookups",
-              "dsType": "influxdb",
-              "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "null"
-                  ],
-                  "type": "fill"
-                }
-              ],
-              "hide": false,
-              "measurement": "cache",
-              "policy": "default",
-              "refId": "B",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "lookups"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "sum"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "host",
-                  "operator": "=~",
-                  "value": "/^$Hosts$/"
-                }
-              ]
-            }
-          ],
-          "thresholds": [
-            {
-              "colorMode": "warning",
-              "fill": true,
-              "line": true,
-              "op": "lt",
-              "value": 80
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "Cache hit ratio",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "percent",
-              "label": "",
-              "logBase": 1,
-              "max": "100",
-              "min": "0",
               "show": true
             },
             {
@@ -607,7 +281,7 @@
             "thresholdLabels": false,
             "thresholdMarkers": true
           },
-          "id": 30,
+          "id": 7,
           "interval": null,
           "links": [],
           "mappingType": 1,
@@ -635,7 +309,7 @@
               "to": "null"
             }
           ],
-          "span": 1,
+          "span": 3,
           "sparkline": {
             "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": true,
@@ -644,12 +318,11 @@
           },
           "targets": [
             {
-              "alias": "Avg",
               "dsType": "influxdb",
               "groupBy": [
                 {
                   "params": [
-                    "$__interval"
+                    "$interval"
                   ],
                   "type": "time"
                 },
@@ -688,7 +361,7 @@
             }
           ],
           "thresholds": "",
-          "title": "Loaded docs",
+          "title": "Loaded apps",
           "type": "singlestat",
           "valueFontSize": "50%",
           "valueMaps": [
@@ -698,7 +371,7 @@
               "value": "null"
             }
           ],
-          "valueName": "current"
+          "valueName": "avg"
         }
       ],
       "repeat": "Hosts",
@@ -737,7 +410,7 @@
     ]
   },
   "time": {
-    "from": "now-2d",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -766,6 +439,6 @@
     ]
   },
   "timezone": "browser",
-  "title": "SenseOps",
-  "version": 80
+  "title": "SenseOps dashboard",
+  "version": 4
 }
