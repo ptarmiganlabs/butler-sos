@@ -186,7 +186,7 @@ function postToMQTT(host, serverName, body) {
 function getStatsFromSense(host, serverName) {
     request({
         followAllRedirects: true,
-        url: 'https://' + host + '/healthcheck/engine/healthcheck/',
+        url: 'https://' + host + '/engine/healthcheck/',
         headers: {
             'Cache-Control': 'no-cache'
         },
