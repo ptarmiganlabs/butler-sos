@@ -32,7 +32,8 @@ Future versions of Butler SOS may not need these virtual proxies - maybe the nee
 
 
 ## Usage
-Start Influxdb and Mosquitto (or other MQTT broker).  
+Start Influxdb and Mosquitto (or other MQTT broker).   
+Both Influxdb and Mosquitto should work right after installation - for production use their respective config files should of course be edited as needed, to ensure they work as desired.
 
 Starting Influxdb on OSX will look something like this:
 
