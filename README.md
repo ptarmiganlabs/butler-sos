@@ -2,6 +2,14 @@
 Butler SenseOps Stats ("Butler SOS") is a Node.js service publishing operational Qlik Sense Enterprise metrics to MQTT and Influxdb.  
 It uses the Sense healthcheck API to gather operational metrics for the Sense servers specified in the JSON config file.
 
+The most interesting use of Butler SOS is probably to create real-time dashboards, showing operational metrics for a Qlik Sense Enterprise environment:
+
+![Grafana dashboard](img/senseops-1.png "SenseOps dashboard using Grafana")
+
+
+Butler SOS can however also send the data to MQTT, for use in any MQTT capable tool or system.
+
+
 
 ## Install and setup
 * Clone the repository from GitHub to desired location.  
@@ -55,9 +63,7 @@ Finally, the data is stored to Influxdb and sent as MQTT messages.
 
 
 ## Real-time dashboards using Grafana
-Once the data exists in Influxdb it can be visualised using Grafana, creating dashboards like this one:
-
-![Grafana dashboard](img/senseops-1.png "SenseOps dashboard using Grafana")
+Once the data exists in Influxdb it can be visualised using Grafana.
   
 A sample dashboard is included in the Grafana directory - it should work out of the box when imported into your Grafana environment.  
 Grafana is extremely powerful. Creating automatically updating dashboards for any number of servers is a matter of a few minutes work. Tutorials and docs can be found on their site.
