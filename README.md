@@ -48,6 +48,11 @@ If the Influxdb database specified in the config file does not exist, it will be
 
 ![Starting Butler SOS](img/butler-sos-1.png "Starting Butler SOS")
 
+Here we see how three servers are queried for data.  
+The responses are retrived asyncronously as they arrive from the different servers.  
+Finally, the data is stored to Influxdb and sent as MQTT messages.
+
+
 
 ## Real-time dashboards using Grafana
 Once the data exists in Influxdb it can be visualised using Grafana, creating dashboards like this one:
