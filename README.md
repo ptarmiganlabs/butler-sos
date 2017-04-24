@@ -9,7 +9,7 @@ The most interesting use of Butler SOS is probably to create real-time dashboard
 ![Grafana dashboard](img/senseops-1.png "SenseOps dashboard using Grafana")
 
 
-Butler SOS can however also send the data to [MQTT](https://en.wikipedia.org/wiki/MQTT, for use in any MQTT capable tool or system.
+Butler SOS can however also send the data to [MQTT](https://en.wikipedia.org/wiki/MQTT), for use in any MQTT capable tool or system.
 
 
 
@@ -65,7 +65,7 @@ Finally, the data is stored to Influxdb and sent as MQTT messages.
 
 
 ## Real-time dashboards using Grafana
-Once the data exists in Influxdb it can be visualised using [Grafana](https://grafana.com/.
+Once the data exists in Influxdb it can be visualised using [Grafana](https://grafana.com).
   
 A sample dashboard is included in the Grafana directory - it should work out of the box when imported into your Grafana environment.  
 Grafana is extremely powerful. Creating automatically updating dashboards for any number of servers is a matter of a few minutes work. Tutorials and docs can be found on their site.
