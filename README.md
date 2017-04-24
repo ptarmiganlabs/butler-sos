@@ -2,28 +2,28 @@
   
 # Butler SOS
 Butler SenseOps Stats ("Butler SOS") is a Node.js service publishing operational Qlik Sense Enterprise metrics to MQTT and Influxdb.  
-It uses the Sense healthcheck API to gather operational metrics for the Sense servers specified in the JSON config file.
+It uses the [Sense healthcheck API](http://help.qlik.com/en-US/sense-developer/3.2/Subsystems/EngineAPI/Content/GettingSystemInformation/HealthCheckStatus.htm) to gather operational metrics for the Sense servers specified in the JSON config file.
 
 The most interesting use of Butler SOS is probably to create real-time dashboards, showing operational metrics for a Qlik Sense Enterprise environment:
 
 ![Grafana dashboard](img/senseops-1.png "SenseOps dashboard using Grafana")
 
 
-Butler SOS can however also send the data to MQTT, for use in any MQTT capable tool or system.
+Butler SOS can however also send the data to [MQTT](https://en.wikipedia.org/wiki/MQTT, for use in any MQTT capable tool or system.
 
 
 
 ## Install and setup
-* Clone the repository from GitHub to desired location.  
-* Make sure Node.js is installed. Butler-SOS has been tested with Node.js 6.10.0. 
+* Clone [the repository](https://github.com/mountaindude/butler-sos) from GitHub to desired location.  
+* Make sure [Node.js](https://nodejs.org) is installed. Butler-SOS has been tested with Node.js 6.10.0. 
 * Run "npm install" from within the main butler-sos directory to download and install all Node.js dependencies.
-* Make a copy of the config/default_template.json configuration file. Edit the file as needed, save it as "default.json".
-Butler SOS will read config settings from default.json.
-* Install Influxdb (only needed if data is to be stored in Influxdb, of course).
-* Install Mosquitto or another MQTT broker (only needed if data is to be forwarded to MQTT).
+* Make a copy of the [config/default_template.json](https://github.com/mountaindude/butler-sos/blob/master/config/default_template.json) configuration file. Edit the file as needed, save it as "default.json" in the ./config directory.
+Butler SOS will read its config settings from the default.json file.
+* Install [Influxdb](https://docs.influxdata.com/influxdb/v1.2/introduction) (only needed if data is to be stored in Influxdb, of course).
+* Install [Mosquitto](https://mosquitto.org) or another MQTT broker (only needed if data is to be forwarded to MQTT).
 
 ### Virtual proxies
-Butler SOS relies on a Sense virtual proxy to be available for each Sense server that is to be monitored.  
+Butler SOS relies on a [Qlik Sense virtual proxy](http://help.qlik.com/en-US/sense/3.2/Subsystems/ManagementConsole/Content/create-virtual-proxy.htm) to be available for each Sense server that is to be monitored.  
 Existing virtual proxies or new ones can be used - just make sure authentication etc work, and that the host name in the config file points to the correct virtual proxy of each server.
   
 For example, let's say the config/default.json config file contains 
@@ -65,7 +65,7 @@ Finally, the data is stored to Influxdb and sent as MQTT messages.
 
 
 ## Real-time dashboards using Grafana
-Once the data exists in Influxdb it can be visualised using Grafana.
+Once the data exists in Influxdb it can be visualised using [Grafana](https://grafana.com/.
   
 A sample dashboard is included in the Grafana directory - it should work out of the box when imported into your Grafana environment.  
 Grafana is extremely powerful. Creating automatically updating dashboards for any number of servers is a matter of a few minutes work. Tutorials and docs can be found on their site.
