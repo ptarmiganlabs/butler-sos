@@ -73,4 +73,4 @@ Grafana is extremely powerful. Creating automatically updating dashboards for an
 
 ## References
   
-Please see https://ptarmiganlabs.com and https://github.com/mountaindude/butler for more in-depth info on the Butler family of micro services.
+Please see [https://ptarmiganlabs.com](https://ptarmiganlabs.com/blog/2017/04/24/butler-sos-real-time-server-stats-qlik-sense/) and https://github.com/mountaindude/butler for more in-depth info on the Butler family of micro services.
