@@ -1,4 +1,11 @@
+
+
 [![NSP Status](https://nodesecurity.io/orgs/ptarmiganlabscom/projects/adfd09d2-140c-42ae-9f2f-6376c6d45f6d/badge)](https://nodesecurity.io/orgs/ptarmiganlabscom/projects/adfd09d2-140c-42ae-9f2f-6376c6d45f6d)
+  
+
+![Butler SOS](img/butler-sos-small.png)
+
+
   
 # Butler SOS
 Butler SenseOps Stats ("Butler SOS") is a Node.js service publishing operational Qlik Sense Enterprise metrics to MQTT and Influxdb.  
@@ -63,6 +70,25 @@ The responses are retrived asyncronously as they arrive from the different serve
 Finally, the data is stored to Influxdb and sent as MQTT messages.
 
 
+### Installation cheat sheet
+By popular request, here are the commands needed to install Influx and Grafana.  
+The command below assume you are using a Mac and has the [Homebrew](https://brew.sh/) package manager installed.  
+You can also install the software on a Linux server (apt-get install ... on Debian etc). Windows might be possible, but it is usually easier to spin up a Linux server in a Docker container on your Windows PC, compared to installing the actual software on Windows...   
+Using Docker containers is actually a great way to play around with software, without clogging down your own computer. 
+  
+Install and start Influx:  
+
+    brew install influxdb
+    influxd -config /usr/local/etc/influxdb.conf
+
+Install and start Grafana
+
+    brew install grafana
+    brew services start grafana
+
+Connect to Grafana by visiting http://localhost:3000  
+Default username/pwd is admin/admin.
+
 
 ## Real-time dashboards using Grafana
 Once the data exists in Influxdb it can be visualised using [Grafana](https://grafana.com).
@@ -73,4 +99,6 @@ Grafana is extremely powerful. Creating automatically updating dashboards for an
 
 ## References
   
-Please see [https://ptarmiganlabs.com](https://ptarmiganlabs.com/blog/2017/04/24/butler-sos-real-time-server-stats-qlik-sense/) and https://github.com/mountaindude/butler for more in-depth info on the Butler family of micro services.
+Please see [https://ptarmiganlabs.com](https://ptarmiganlabs.com/blog/2017/04/24/butler-sos-real-time-server-stats-qlik-sense/) and [https://github.com/mountaindude/butler](https://github.com/mountaindude/butler) for more in-depth info on the Butler family of micro services.
+  
+At [https://senseops.rocks](https://senseops.rocks) you also find thoughts on using DevOps best practices in the Qlik Sense ecosystem.
