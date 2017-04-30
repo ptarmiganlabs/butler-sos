@@ -72,8 +72,8 @@ Finally, the data is stored to Influxdb and sent as MQTT messages.
 
 ### Installation cheat sheet
 By popular request, here are the commands needed to install Influx and Grafana.  
-The command below assume you are using a Mac and has the [Homebrew](https://brew.sh/) package manager installed.  
-You can also install the software on a Linux server (apt-get install ... on Debian etc). Windows might be possible, but it is usually easier to spin up a Linux server in a Docker container on your Windows PC, compared to installing the actual software on Windows...   
+The commands below assume you are using a Mac and have the [Homebrew](https://brew.sh/) package manager installed.  
+You can also install the software on a Linux server (apt-get install ... on Debian etc). Windows might be possible, but it is usually easier to spin up a small Linux server in a Docker container on your Windows PC, compared to installing the actual software on Windows...   
 Using Docker containers is actually a great way to play around with software, without clogging down your own computer. 
   
 Install and start Influx:  
