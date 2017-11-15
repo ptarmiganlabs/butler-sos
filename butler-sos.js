@@ -183,13 +183,13 @@ function postToMQTT(host, serverName, body) {
 
 
 
-function getStatsFromSense(host, serverName) {
+function getStatsFromSense(server) {
     request({
         followAllRedirects: true,
-        url: 'https://' + host + '/engine/healthcheck/',
-        headers: {
+        url: 'https://' + server.host + '/engine/healthcheck/',
+        headers: Object.assign(server.headers, {
             'Cache-Control': 'no-cache'
-        },
+        }),
         json: true
     }, function (error, response, body) {
 
@@ -227,7 +227,7 @@ setInterval(function () {
         globals.logger.verbose('Getting stats for server: ' + server.serverName);
 
 
-        getStatsFromSense(server.host, server.serverName);
+        getStatsFromSense(server);
     });
 
 }, globals.config.get('Butler-SOS.pollingInterval'));
