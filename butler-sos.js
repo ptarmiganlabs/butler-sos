@@ -183,13 +183,13 @@ function postToMQTT(host, serverName, body) {
 
 
 
-function getStatsFromSense(host, serverName) {
+function getStatsFromSense(server) {
     request({
         followAllRedirects: true,
-        url: 'https://' + host + '/engine/healthcheck/',
-        headers: {
+        url: 'https://' + server.host + '/engine/healthcheck/',
+        headers: Object.assign(server.headers, {
             'Cache-Control': 'no-cache'
-        },
+        }),
         json: true
     }, function (error, response, body) {
 
@@ -199,19 +199,19 @@ function getStatsFromSense(host, serverName) {
         }
 
         if (!error && response.statusCode === 200) {
-            globals.logger.verbose('Received ok response from ' + serverName);
+            globals.logger.verbose('Received ok response from ' + server.serverName);
             globals.logger.debug(body);
 
             // Post to MQTT (if enabled)
             if ( globals.config.get('Butler-SOS.mqttConfig.enableMQTT') ) {
                 globals.logger.debug('Calling MQTT posting method');
-                postToMQTT(host, serverName, body);
+                postToMQTT(server.host, server.serverName, body);
             }
 
             // Post to Influxdb (if enabled)
             if ( globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') ) {
                 globals.logger.debug('Calling Influxdb posting method');
-                postToInfluxdb(host, serverName, body);
+                postToInfluxdb(server.host, server.serverName, body);
             }
         }
     })
@@ -227,7 +227,7 @@ setInterval(function () {
         globals.logger.verbose('Getting stats for server: ' + server.serverName);
 
 
-        getStatsFromSense(server.host, server.serverName);
+        getStatsFromSense(server);
     });
 
 }, globals.config.get('Butler-SOS.pollingInterval'));
