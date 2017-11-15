@@ -199,19 +199,19 @@ function getStatsFromSense(server) {
         }
 
         if (!error && response.statusCode === 200) {
-            globals.logger.verbose('Received ok response from ' + serverName);
+            globals.logger.verbose('Received ok response from ' + server.serverName);
             globals.logger.debug(body);
 
             // Post to MQTT (if enabled)
             if ( globals.config.get('Butler-SOS.mqttConfig.enableMQTT') ) {
                 globals.logger.debug('Calling MQTT posting method');
-                postToMQTT(host, serverName, body);
+                postToMQTT(host, server.serverName, body);
             }
 
             // Post to Influxdb (if enabled)
             if ( globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') ) {
                 globals.logger.debug('Calling Influxdb posting method');
-                postToInfluxdb(host, serverName, body);
+                postToInfluxdb(host, server.serverName, body);
             }
         }
     })
