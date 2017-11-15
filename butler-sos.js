@@ -205,13 +205,13 @@ function getStatsFromSense(server) {
             // Post to MQTT (if enabled)
             if ( globals.config.get('Butler-SOS.mqttConfig.enableMQTT') ) {
                 globals.logger.debug('Calling MQTT posting method');
-                postToMQTT(host, server.serverName, body);
+                postToMQTT(server.host, server.serverName, body);
             }
 
             // Post to Influxdb (if enabled)
             if ( globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') ) {
                 globals.logger.debug('Calling Influxdb posting method');
-                postToInfluxdb(host, server.serverName, body);
+                postToInfluxdb(server.host, server.serverName, body);
             }
         }
     })
