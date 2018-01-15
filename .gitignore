@@ -3,7 +3,6 @@ config/default.json
 .DS_Store
 
 
-
 # Logs
 logs
 *.log
