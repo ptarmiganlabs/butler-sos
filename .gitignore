@@ -1,6 +1,7 @@
 # Project specific
 config/default.json
 .DS_Store
+ssl/*
 
 
 # Logs

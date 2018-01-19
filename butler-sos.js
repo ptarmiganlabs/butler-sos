@@ -1,10 +1,15 @@
 // Add dependencies
-var request = require('request');
-
+var request = require("request");
 
 // Load code from sub modules
-var globals = require('./globals');
+var globals = require("./globals");
 
+// Load certificates to use when connecting to healthcheck API
+var fs = require("fs"),
+  path = require("path"),
+  certFile = path.resolve(__dirname, "ssl/client.pem"),
+  keyFile = path.resolve(__dirname, "ssl/client_key.pem"),
+  caFile = path.resolve(__dirname, "ssl/root.pem");
 
 // Set specific log level (if/when needed)
 // Possible values are { error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
@@ -12,222 +17,350 @@ var globals = require('./globals');
 // globals.logger.transports.console.level = 'verbose';
 // globals.logger.transports.console.level = 'debug';
 // Default is to use log level defined in config file
-globals.logger.transports.console.level = globals.config.get('Butler-SOS.logLevel');
+globals.logger.transports.console.level = globals.config.get(
+  "Butler-SOS.logLevel"
+);
 
-globals.logger.info('Starting Butler SOS');
-globals.logger.info('Log level is: ' + globals.logger.transports.console.level);
-
-
-
+globals.logger.info("Starting Butler SOS");
+globals.logger.info("Log level is: " + globals.logger.transports.console.level);
 
 function postToInfluxdb(host, serverName, body) {
+  // Calculate server uptime
 
-    // Calculate server uptime
+  var dateTime = Date.now();
+  var timestamp = Math.floor(dateTime);
 
-    var dateTime = Date.now();
-    var timestamp = Math.floor(dateTime);
+  var str = body.started;
+  var year = str.substring(0, 4);
+  var month = str.substring(4, 6);
+  var day = str.substring(6, 8);
+  var hour = str.substring(9, 11);
+  var minute = str.substring(11, 13);
+  var second = str.substring(13, 15);
+  var dateTimeStarted = new Date(year, month - 1, day, hour, minute, second);
+  var timestampStarted = Math.floor(dateTimeStarted);
 
-    var str = body.started;
-    var year = str.substring(0, 4);
-    var month = str.substring(4, 6);
-    var day = str.substring(6, 8);
-    var hour = str.substring(9, 11);
-    var minute = str.substring(11, 13);
-    var second = str.substring(13, 15);
-    var dateTimeStarted = new Date(year, month - 1, day, hour, minute, second);
-    var timestampStarted = Math.floor(dateTimeStarted);
+  var diff = timestamp - timestampStarted;
 
-    var diff = timestamp - timestampStarted;
+  // Create a new JavaScript Date object based on the timestamp
+  // multiplied by 1000 so that the argument is in milliseconds, not seconds.
+  var date = new Date(diff);
 
+  var days = Math.trunc(diff / (1000 * 60 * 60 * 24));
 
-    // Create a new JavaScript Date object based on the timestamp
-    // multiplied by 1000 so that the argument is in milliseconds, not seconds.
-    var date = new Date(diff);
+  // Hours part from the timestamp
+  var hours = date.getHours();
 
-    var days = Math.trunc((diff) / (1000 * 60 * 60 * 24))
+  // Minutes part from the timestamp
+  var minutes = "0" + date.getMinutes();
 
-    // Hours part from the timestamp
-    var hours = date.getHours();
+  // Seconds part from the timestamp
+  var seconds = "0" + date.getSeconds();
 
-    // Minutes part from the timestamp
-    var minutes = "0" + date.getMinutes();
+  // Will display time in 10:30:23 format
+  var formattedTime =
+    days +
+    " days, " +
+    hours +
+    "h " +
+    minutes.substr(-2) +
+    "m " +
+    seconds.substr(-2) +
+    "s";
 
-    // Seconds part from the timestamp
-    var seconds = "0" + date.getSeconds();
+  // Write the whole reading to Influxdb
+  globals.influx
+    .writePoints([
+      {
+        measurement: "sense_server",
+        tags: {
+          host: serverName
+        },
+        fields: {
+          version: body.version,
+          started: body.started,
+          uptime: formattedTime
+        }
+      },
+      {
+        measurement: "mem",
+        tags: {
+          host: serverName
+        },
+        fields: {
+          comitted: body.mem.comitted,
+          allocated: body.mem.allocated,
+          free: body.mem.free
+        }
+      },
+      {
+        measurement: "apps",
+        tags: {
+          host: serverName
+        },
+        fields: {
+          active_docs_count: body.apps.active_docs.length,
+          loaded_docs_count: body.apps.loaded_docs.length,
+          calls: body.apps.calls,
+          selections: body.apps.selections
+        }
+      },
+      {
+        measurement: "cpu",
+        tags: {
+          host: serverName
+        },
+        fields: {
+          total: body.cpu.total
+        }
+      },
+      {
+        measurement: "session",
+        tags: {
+          host: serverName
+        },
+        fields: {
+          active: body.session.active,
+          total: body.session.total
+        }
+      },
+      {
+        measurement: "users",
+        tags: {
+          host: serverName
+        },
+        fields: {
+          active: body.users.active,
+          total: body.users.total
+        }
+      },
+      {
+        measurement: "cache",
+        tags: {
+          host: serverName
+        },
+        fields: {
+          hits: body.cache.hits,
+          lookups: body.cache.lookups,
+          added: body.cache.added,
+          replaced: body.cache.replaced,
+          bytes_added: body.cache.bytes_added
+        }
+      }
+    ])
+    .then(err => {
+      globals.logger.verbose("Sent data to Influxdb: " + serverName);
+    })
 
-    // Will display time in 10:30:23 format
-    var formattedTime = days + ' days, ' + hours + 'h ' + minutes.substr(-2) + 'm ' + seconds.substr(-2) + 's';
-
-
-    // Write the whole reading to Influxdb
-    globals.influx.writePoints([{
-                measurement: 'sense_server',
-                tags: {
-                    host: serverName
-                },
-                fields: {
-                    version: body.version,
-                    started: body.started,
-                    uptime: formattedTime
-                }
-            },
-            {
-                measurement: 'mem',
-                tags: {
-                    host: serverName
-                },
-                fields: {
-                    comitted: body.mem.comitted,
-                    allocated: body.mem.allocated,
-                    free: body.mem.free
-                }
-            },
-            {
-                measurement: 'apps',
-                tags: {
-                    host: serverName
-                },
-                fields: {
-                    active_docs_count: body.apps.active_docs.length,
-                    loaded_docs_count: body.apps.loaded_docs.length,
-                    calls: body.apps.calls,
-                    selections: body.apps.selections
-                }
-            },
-            {
-                measurement: 'cpu',
-                tags: {
-                    host: serverName
-                },
-                fields: {
-                    total: body.cpu.total
-                }
-            },
-            {
-                measurement: 'session',
-                tags: {
-                    host: serverName
-                },
-                fields: {
-                    active: body.session.active,
-                    total: body.session.total
-                }
-            },
-            {
-                measurement: 'users',
-                tags: {
-                    host: serverName
-                },
-                fields: {
-                    active: body.users.active,
-                    total: body.users.total
-                }
-            },
-            {
-                measurement: 'cache',
-                tags: {
-                    host: serverName
-                },
-                fields: {
-                    hits: body.cache.hits,
-                    lookups: body.cache.lookups,
-                    added: body.cache.added,
-                    replaced: body.cache.replaced,
-                    bytes_added: body.cache.bytes_added
-                }
-            }
-
-        ])
-        .then(err => {
-            globals.logger.verbose('Sent data to Influxdb: ' + serverName);
-        })
-
-        .catch(err => {
-            console.error(`Error saving data to InfluxDB! ${err.stack}`)
-        })
-
+    .catch(err => {
+      console.error(`Error saving data to InfluxDB! ${err.stack}`);
+    });
 }
-
 
 function postToMQTT(host, serverName, body) {
+  // Get base MQTT topic
+  var baseTopic = globals.config.get("Butler-SOS.mqttConfig.baseTopic");
 
-    // Get base MQTT topic
-    var baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
+  // Send to MQTT
+  globals.mqttClient.publish(baseTopic + serverName + "/version", body.version);
+  globals.mqttClient.publish(baseTopic + serverName + "/started", body.started);
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/mem/comitted",
+    body.mem.comitted.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/mem/allocated",
+    body.mem.allocated.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/mem/free",
+    body.mem.free.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/cpu/total",
+    body.cpu.total.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/session/active",
+    body.session.active.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/session/total",
+    body.session.total.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/apps/active_docs",
+    body.apps.active_docs.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/apps/loaded_docs",
+    body.apps.loaded_docs.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/apps/calls",
+    body.apps.calls.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/apps/selections",
+    body.apps.selections.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/users/active",
+    body.users.active.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/users/total",
+    body.users.total.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/cache/hits",
+    body.cache.hits.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/cache/lookups",
+    body.cache.lookups.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/cache/added",
+    body.cache.added.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/cache/replaced",
+    body.cache.replaced.toString()
+  );
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/cache/bytes_added",
+    body.cache.bytes_added.toString()
+  );
 
-    // Send to MQTT
-    globals.mqttClient.publish(baseTopic + serverName + '/version', body.version);
-    globals.mqttClient.publish(baseTopic + serverName + '/started', body.started);
-    globals.mqttClient.publish(baseTopic + serverName + '/mem/comitted', body.mem.comitted.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/mem/allocated', body.mem.allocated.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/mem/free', body.mem.free.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/cpu/total', body.cpu.total.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/session/active', body.session.active.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/session/total', body.session.total.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/apps/active_docs', body.apps.active_docs.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/apps/loaded_docs', body.apps.loaded_docs.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/apps/calls', body.apps.calls.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/apps/selections', body.apps.selections.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/users/active', body.users.active.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/users/total', body.users.total.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/cache/hits', body.cache.hits.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/cache/lookups', body.cache.lookups.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/cache/added', body.cache.added.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/cache/replaced', body.cache.replaced.toString());
-    globals.mqttClient.publish(baseTopic + serverName + '/cache/bytes_added', body.cache.bytes_added.toString());
-
-    if (body.cache.lookups > 0) {
-        globals.mqttClient.publish(baseTopic + serverName + '/cache/hit_ratio', Math.floor(body.cache.hits / body.cache.lookups * 100).toString());
-    }
+  if (body.cache.lookups > 0) {
+    globals.mqttClient.publish(
+      baseTopic + serverName + "/cache/hit_ratio",
+      Math.floor(body.cache.hits / body.cache.lookups * 100).toString()
+    );
+  }
 }
-
-
-
 
 function getStatsFromSense(host, serverName) {
-    request({
-        followAllRedirects: true,
-        url: 'https://' + host + '/engine/healthcheck/',
-        headers: {
-            'Cache-Control': 'no-cache'
-        },
-        json: true
-    }, function (error, response, body) {
+  globals.logger.log(
+    "debug",
+    "URL=" + "https://" + host + "/engine/healthcheck/"
+  );
 
-        // Check for error
-        if (error) {
-            return globals.logger.error('Error:', error);
+  request(
+    {
+      followAllRedirects: true,
+      url: "https://" + host + "/engine/healthcheck/",
+      headers: {
+        "Cache-Control": "no-cache"
+      },
+      json: true,
+      cert: fs.readFileSync(certFile),
+      key: fs.readFileSync(keyFile),
+      ca: fs.readFileSync(caFile)
+    },
+    function(error, response, body) {
+      // Check for error
+      if (error) {
+        return globals.logger.error("Error:", error);
+      }
+
+      if (!error && response.statusCode === 200) {
+        globals.logger.verbose("Received ok response from " + serverName);
+        globals.logger.debug(body);
+
+        // Post to MQTT (if enabled)
+        if (globals.config.get("Butler-SOS.mqttConfig.enableMQTT")) {
+          globals.logger.debug("Calling MQTT posting method");
+          postToMQTT(host, serverName, body);
         }
 
-        if (!error && response.statusCode === 200) {
-            globals.logger.verbose('Received ok response from ' + serverName);
-            globals.logger.debug(body);
-
-            // Post to MQTT (if enabled)
-            if ( globals.config.get('Butler-SOS.mqttConfig.enableMQTT') ) {
-                globals.logger.debug('Calling MQTT posting method');
-                postToMQTT(host, serverName, body);
-            }
-
-            // Post to Influxdb (if enabled)
-            if ( globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') ) {
-                globals.logger.debug('Calling Influxdb posting method');
-                postToInfluxdb(host, serverName, body);
-            }
+        // Post to Influxdb (if enabled)
+        if (globals.config.get("Butler-SOS.influxdbConfig.enableInfluxdb")) {
+          globals.logger.debug("Calling Influxdb posting method");
+          postToInfluxdb(host, serverName, body);
         }
-    })
+      }
+    }
+  );
 }
 
+// --------------------------------------------------------
+// Set up UDP server handlers for acting on Sense failed task events
+// --------------------------------------------------------
+udpInitErrorWarningServer = function() {
+  // Handler for log error events
+  globals.udpServerErrorWarningEventSocket.on("listening", function(
+    message,
+    remote
+  ) {
+    var address = globals.udpServerErrorWarningEventSocket.address();
 
+    var oldLogLevel = globals.logger.transports.console.level;
+    globals.logger.transports.console.level = "info";
+    globals.logger.log(
+      "info",
+      "UDP server listening on %s:%s",
+      address.address,
+      address.port
+    );
+    globals.logger.transports.console.level = oldLogLevel;
 
-setInterval(function () {
-    globals.logger.verbose('Event started: Statistics collection');
+    // Publish MQTT message that UDP server has started
+    // globals.mqttClient.publish(globals.config.get('Butler.mqttConfig.taskFailureServerStatusTopic'), 'start');
+  });
 
-    var serverList = globals.config.get('Butler-SOS.serversToMonitor.servers');
-    serverList.forEach(function (server) {
-        globals.logger.verbose('Getting stats for server: ' + server.serverName);
+  // Handler for UDP error event
+  globals.udpServerErrorWarningEventSocket.on("error", function(
+    message,
+    remote
+  ) {
+    var address = globals.udpServerErrorWarningEventSocket.address();
+    globals.logger.log(
+      "error",
+      "UDP server error on %s:%s",
+      address.address,
+      address.port
+    );
 
+    // Publish MQTT message that UDP server has reported an error
+    // globals.mqttClient.publish(globals.config.get('Butler.mqttConfig.taskFailureServerStatusTopic'), 'error');
+  });
 
-        getStatsFromSense(server.host, server.serverName);
-    });
+  // Main handler for UDP messages relating to log errors
+  globals.udpServerErrorWarningEventSocket.on("message", function(
+    message,
+    remote
+  ) {
+    console.info("Received message...");
+    console.info(message.toString());
 
-}, globals.config.get('Butler-SOS.pollingInterval'));
+    var msg = message.toString().split(";");
+    globals.logger.log("warning", '%s: %s: "%s', msg[0], msg[1], msg[2]);
+    // console.info('%s: Task "%s" failed, associated with app "%s', msg[0], msg[1], msg[2], msg[3]);
+
+    // Publish MQTT message when a task has failed
+    // globals.mqttClient.publish(globals.config.get('Butler.mqttConfig.taskFailureTopic'), msg[1]);
+  });
+};
+
+// ---------------------------------------------------
+// Set up UDP handlers
+udpInitErrorWarningServer();
+
+setInterval(function() {
+  globals.logger.verbose("Event started: Statistics collection");
+
+  var serverList = globals.config.get("Butler-SOS.serversToMonitor.servers");
+  serverList.forEach(function(server) {
+    globals.logger.verbose("Getting stats for server: " + server.serverName);
+
+    getStatsFromSense(server.host, server.serverName);
+  });
+}, globals.config.get("Butler-SOS.pollingInterval"));
+
+// Start UDP server for Session and Connection events
+globals.udpServerErrorWarningEventSocket.bind(
+  globals.udp_port_error_warning_events,
+  globals.udp_host
+);

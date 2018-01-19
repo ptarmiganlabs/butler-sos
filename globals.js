@@ -1,126 +1,136 @@
-var mqtt = require('mqtt');
-var config = require('config');
-var winston = require('winston');
-const Influx = require('influx');
-
-
+var mqtt = require("mqtt");
+var config = require("config");
+var winston = require("winston");
+const Influx = require("influx");
+var dgram = require("dgram");
 
 // Set up logger with timestamps and colors
-var logger = new(winston.Logger)({
-    transports: [
-        new(winston.transports.Console)({
-            'timestamp': true,
-            'colorize': true
-        })
-    ]
+var logger = new winston.Logger({
+  transports: [
+    new winston.transports.Console({
+      timestamp: true,
+      colorize: true
+    })
+  ]
 });
 
+// ------------------------------------
+// UDP server connection parameters
+var udp_host = config.get("Butler-SOS.udpServerConfig.serverIP");
+
+// Prepare to listen on port X for incoming UDP connections regarding log warnings
+var udpServerErrorWarningEventSocket = dgram.createSocket({
+  type: "udp4",
+  reuseAddr: true
+});
+var udp_port_error_warning_events = config.get(
+  "Butler-SOS.udpServerConfig.portErrorWarningEvents"
+);
 
 // Set up Influxdb client
 const influx = new Influx.InfluxDB({
-    host: config.get('Butler-SOS.influxdbConfig.hostIP'),
-    database: config.get('Butler-SOS.influxdbConfig.dbName'),
-    schema: [
-        {
-            measurement: 'sense_server',
-            fields: {
-                version: Influx.FieldType.STRING,
-                started: Influx.FieldType.STRING,
-                uptime: Influx.FieldType.STRING
-            },
-            tags: [
-                'host'
-            ]
-        },
-        {
-            measurement: 'mem',
-            fields: {
-                comitted: Influx.FieldType.INTEGER,
-                allocated: Influx.FieldType.INTEGER,
-                free: Influx.FieldType.INTEGER
-            },
-            tags: [
-                'host'
-            ]
-        },
-        {
-            measurement: 'apps',
-            fields: {
-                active_docs_count: Influx.FieldType.INTEGER,
-                loaded_docs_count: Influx.FieldType.INTEGER,
-                calls: Influx.FieldType.INTEGER,
-                selections: Influx.FieldType.INTEGER
-            },
-            tags: [
-                'host'
-            ]
-        },
-        {
-            measurement: 'cpu',
-            fields: {
-                total: Influx.FieldType.INTEGER
-            },
-            tags: [
-                'host'
-            ]
-        },
-        {
-            measurement: 'session',
-            fields: {
-                active: Influx.FieldType.INTEGER,
-                total: Influx.FieldType.INTEGER
-            },
-            tags: [
-                'host'
-            ]
-        },
-        {
-            measurement: 'users',
-            fields: {
-                active: Influx.FieldType.INTEGER,
-                total: Influx.FieldType.INTEGER
-            },
-            tags: [
-                'host'
-            ]
-        },
-        {
-            measurement: 'cache',
-            fields: {
-                hits: Influx.FieldType.INTEGER,
-                lookups: Influx.FieldType.INTEGER,
-                added: Influx.FieldType.INTEGER,
-                replaced: Influx.FieldType.INTEGER,
-                bytes_added: Influx.FieldType.INTEGER
-            },
-            tags: [
-                'host'
-            ]
-        }
-    ]
-})
+  host: config.get("Butler-SOS.influxdbConfig.hostIP"),
+  database: config.get("Butler-SOS.influxdbConfig.dbName"),
+  schema: [
+    {
+      measurement: "sense_server",
+      fields: {
+        version: Influx.FieldType.STRING,
+        started: Influx.FieldType.STRING,
+        uptime: Influx.FieldType.STRING
+      },
+      tags: ["host"]
+    },
+    {
+      measurement: "mem",
+      fields: {
+        comitted: Influx.FieldType.INTEGER,
+        allocated: Influx.FieldType.INTEGER,
+        free: Influx.FieldType.INTEGER
+      },
+      tags: ["host"]
+    },
+    {
+      measurement: "apps",
+      fields: {
+        active_docs_count: Influx.FieldType.INTEGER,
+        loaded_docs_count: Influx.FieldType.INTEGER,
+        calls: Influx.FieldType.INTEGER,
+        selections: Influx.FieldType.INTEGER
+      },
+      tags: ["host"]
+    },
+    {
+      measurement: "cpu",
+      fields: {
+        total: Influx.FieldType.INTEGER
+      },
+      tags: ["host"]
+    },
+    {
+      measurement: "session",
+      fields: {
+        active: Influx.FieldType.INTEGER,
+        total: Influx.FieldType.INTEGER
+      },
+      tags: ["host"]
+    },
+    {
+      measurement: "users",
+      fields: {
+        active: Influx.FieldType.INTEGER,
+        total: Influx.FieldType.INTEGER
+      },
+      tags: ["host"]
+    },
+    {
+      measurement: "cache",
+      fields: {
+        hits: Influx.FieldType.INTEGER,
+        lookups: Influx.FieldType.INTEGER,
+        added: Influx.FieldType.INTEGER,
+        replaced: Influx.FieldType.INTEGER,
+        bytes_added: Influx.FieldType.INTEGER
+      },
+      tags: ["host"]
+    },
+    {
+      measurement: "log_event",
+      fields: {
+        hits: Influx.FieldType.INTEGER,
+        lookups: Influx.FieldType.INTEGER,
+        added: Influx.FieldType.INTEGER,
+        replaced: Influx.FieldType.INTEGER,
+        bytes_added: Influx.FieldType.INTEGER
+      },
+      tags: ["host"]
+    }
+  ]
+});
 
-
-influx.getDatabaseNames()
-    .then(names => {
-        if (!names.includes(config.get('Butler-SOS.influxdbConfig.dbName'))) {
-            logger.info('Creating Influx database.');
-            return influx.createDatabase(config.get('Butler-SOS.influxdbConfig.dbName'));
-        }
-    })
-    .then(() => {
-        logger.info('Connected to Influx database.');
-        return;
-    })
-    .catch(err => {
-        logger.error(`Error creating Influx database!`);
-    })
-
-
+influx
+  .getDatabaseNames()
+  .then(names => {
+    if (!names.includes(config.get("Butler-SOS.influxdbConfig.dbName"))) {
+      logger.info("Creating Influx database.");
+      return influx.createDatabase(
+        config.get("Butler-SOS.influxdbConfig.dbName")
+      );
+    }
+  })
+  .then(() => {
+    logger.info("Connected to Influx database.");
+    return;
+  })
+  .catch(err => {
+    logger.error(`Error creating Influx database!`);
+  });
 
 // ------------------------------------
 // Create MQTT client object and connect to MQTT broker
-var mqttClient = mqtt.connect('mqtt://' + config.get('Butler-SOS.mqttConfig.brokerIP'));
+var mqttClient = mqtt.connect(
+  "mqtt://" + config.get("Butler-SOS.mqttConfig.brokerIP")
+);
 /*
 Following might be needed for conecting to older Mosquitto versions
 var mqttClient  = mqtt.connect('mqtt://<IP of MQTT server>', {
@@ -129,10 +139,12 @@ var mqttClient  = mqtt.connect('mqtt://<IP of MQTT server>', {
 });
 */
 
-
 module.exports = {
-    config,
-    mqttClient,
-    logger,
-    influx
+  config,
+  mqttClient,
+  logger,
+  influx,
+  udp_host,
+  udpServerErrorWarningEventSocket,
+  udp_port_error_warning_events
 };
