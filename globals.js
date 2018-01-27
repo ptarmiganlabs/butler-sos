@@ -3,6 +3,7 @@ var config = require("config");
 var winston = require("winston");
 const Influx = require("influx");
 var dgram = require("dgram");
+const { Pool } = require("pg");
 
 // Set up logger with timestamps and colors
 var logger = new winston.Logger({
@@ -12,6 +13,22 @@ var logger = new winston.Logger({
       colorize: true
     })
   ]
+});
+
+// Set up connection pool for accessing Qlik Sense log db
+const pgPool = new Pool({
+  user: "qlogs_reader",
+  host: config.get("Butler-SOS.logdb.host"),
+  database: "QLogs",
+  password: config.get("Butler-SOS.logdb.qlogsReaderPwd"),
+  port: config.get("Butler-SOS.logdb.port")
+});
+
+// the pool with emit an error on behalf of any idle clients
+// it contains if a backend error or network partition happens
+pgPool.on("error", (err, client) => {
+  logger.log("error", "Unexpected error on idle client" + err);
+  process.exit(-1);
 });
 
 // ------------------------------------
@@ -144,6 +161,7 @@ module.exports = {
   mqttClient,
   logger,
   influx,
+  pgPool,
   udp_host,
   udpServerErrorWarningEventSocket,
   udp_port_error_warning_events

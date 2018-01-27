@@ -149,11 +149,11 @@ function postToInfluxdb(host, serverName, body) {
       }
     ])
     .then(err => {
-      globals.logger.verbose("Sent data to Influxdb: " + serverName);
+      globals.logger.verbose("Sent health Influxdb: " + serverName);
     })
 
     .catch(err => {
-      console.error(`Error saving data to InfluxDB! ${err.stack}`);
+      console.error(`Error saving health data to InfluxDB! ${err.stack}`);
     });
 }
 
@@ -332,13 +332,37 @@ udpInitErrorWarningServer = function() {
     message,
     remote
   ) {
-    console.info("Received message...");
-    console.info(message.toString());
-
-    var msg = message.toString().split(";");
-    globals.logger.log("warning", '%s: %s: "%s', msg[0], msg[1], msg[2]);
-    // console.info('%s: Task "%s" failed, associated with app "%s', msg[0], msg[1], msg[2], msg[3]);
-
+    // // Message has following format: hostname; Repository; level; message
+    // var msg = message.toString().split(";");
+    // globals.logger.log(
+    //   "debug",
+    //   "Host=%s, Source log file=%s, Log level=%s, Message=%s",
+    //   msg[0],
+    //   msg[1],
+    //   msg[2],
+    //   msg[3]
+    // );
+    // // Write the whole reading to Influxdb
+    // globals.influx
+    //   .writePoints([
+    //     {
+    //       measurement: "log_entry",
+    //       tags: {
+    //         host: msg[0],
+    //         source_process: msg[1],
+    //         log_level: msg[2]
+    //       },
+    //       fields: {
+    //         message: msg[3]
+    //       }
+    //     }
+    //   ])
+    //   .then(err => {
+    //     globals.logger.verbose("Sent log event to Influxdb: " + msg[0]);
+    //   })
+    //   .catch(err => {
+    //     console.error(`Error saving log event to InfluxDB! ${err.stack}`);
+    //   });
     // Publish MQTT message when a task has failed
     // globals.mqttClient.publish(globals.config.get('Butler.mqttConfig.taskFailureTopic'), msg[1]);
   });
@@ -348,6 +372,92 @@ udpInitErrorWarningServer = function() {
 // Set up UDP handlers
 udpInitErrorWarningServer();
 
+// Set up timer for getting log data
+setInterval(function() {
+  globals.logger.verbose("Event started: Log db query");
+
+  // checkout a Postgres client from connection pool
+  globals.pgPool.connect().then(pgClient => {
+    return pgClient
+      .query(
+        `select
+          id,
+          entry_timestamp as timestamp,
+          entry_level,
+          process_host,
+          process_name,
+          payload
+        from public.log_entries
+        where
+          entry_level in ('WARN', 'ERROR') and
+          (entry_timestamp > now() - INTERVAL '2 minutes' )
+        order by
+          entry_timestamp desc
+        `
+      )
+      .then(res => {
+        pgClient.release();
+        globals.logger.debug(
+          "Log db query got a response. Sending to Influxdb "
+        );
+
+        var rows = res.rows;
+        rows.forEach(function(row) {
+          globals.logger.silly("Log db row: " + JSON.stringify(row));
+
+          // console.log(row.id);
+          // console.log(row.entry_level);
+          // console.log(row.process_host);
+          // console.log(row.process_name);
+          // console.log(row.timestamp);
+          // var logMsg;
+          // if (row.payload.hasOwnProperty("Message")) {
+          //   logMsg = row.payload.Message;
+          // } else {
+          //   logMsg = "";
+          // }
+
+          // console.log(row.payload.Message);
+
+          // Write the whole reading to Influxdb
+          globals.influx
+            .writePoints([
+              {
+                measurement: "log_entry",
+                tags: {
+                  host: row.process_host,
+                  source_process: row.process_name,
+                  log_level: row.entry_level
+                },
+                fields: {
+                  message: row.payload.Message
+                },
+                timestamp: row.timestamp
+              }
+            ])
+            .then(err => {
+              globals.logger.silly("Sent log event to Influxdb. ");
+            })
+
+            .catch(err => {
+              console.error(`Error saving log event to InfluxDB! ${err.stack}`);
+            });
+
+          // Publish MQTT message when a task has failed
+          // globals.mqttClient.publish(globals.config.get('Butler.mqttConfig.taskFailureTopic'), msg[1]);
+        });
+      })
+      .then(res => {
+        globals.logger.verbose("Sent log event to Influxdb. ");
+      })
+      .catch(e => {
+        pgClient.release();
+        globals.logger.error("Log db query error: " + err.stack);
+      });
+  });
+}, globals.config.get("Butler-SOS.logdb.pollingInterval"));
+
+// Set up timer for getting healthcheck data
 setInterval(function() {
   globals.logger.verbose("Event started: Statistics collection");
 
@@ -357,7 +467,7 @@ setInterval(function() {
 
     getStatsFromSense(server.host, server.serverName);
   });
-}, globals.config.get("Butler-SOS.pollingInterval"));
+}, globals.config.get("Butler-SOS.serversToMonitor.pollingInterval"));
 
 // Start UDP server for Session and Connection events
 globals.udpServerErrorWarningEventSocket.bind(
