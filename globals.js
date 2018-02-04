@@ -16,9 +16,9 @@ var logger = new winston.Logger({
 
 // Set up connection pool for accessing Qlik Sense log db
 const pgPool = new Pool({
-  user: "qlogs_reader",
   host: config.get("Butler-SOS.logdb.host"),
   database: "QLogs",
+  user: config.get("Butler-SOS.logdb.qlogsReaderUser"),
   password: config.get("Butler-SOS.logdb.qlogsReaderPwd"),
   port: config.get("Butler-SOS.logdb.port")
 });
