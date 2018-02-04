@@ -7,9 +7,12 @@ var globals = require("./globals");
 // Load certificates to use when connecting to healthcheck API
 var fs = require("fs"),
   path = require("path"),
-  certFile = path.resolve(__dirname, "ssl/client.pem"),
-  keyFile = path.resolve(__dirname, "ssl/client_key.pem"),
-  caFile = path.resolve(__dirname, "ssl/root.pem");
+  certFile = path.resolve(__dirname, globals.config.get("Butler-SOS.cert.clientCert")),
+  keyFile = path.resolve(__dirname, globals.config.get("Butler-SOS.cert.clientCertKey")),
+  caFile = path.resolve(__dirname, globals.config.get("Butler-SOS.cert.clientCertCA"));
+  // certFile = path.resolve(__dirname, "ssl/client.pem"),
+  // keyFile = path.resolve(__dirname, "ssl/client_key.pem"),
+  // caFile = path.resolve(__dirname, "ssl/root.pem");
 
 // Set specific log level (if/when needed)
 // Possible values are { error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
@@ -101,6 +104,7 @@ function postToInfluxdb(host, serverName, body) {
         fields: {
           active_docs_count: body.apps.active_docs.length,
           loaded_docs_count: body.apps.loaded_docs.length,
+          in_memory_docs_count: body.apps.in_memory_docs.length,
           calls: body.apps.calls,
           selections: body.apps.selections
         }
@@ -197,6 +201,10 @@ function postToMQTT(host, serverName, body) {
     body.apps.loaded_docs.toString()
   );
   globals.mqttClient.publish(
+    baseTopic + serverName + "/apps/in_memory_docs",
+    body.apps.in_memory_docs.toString()
+  );
+  globals.mqttClient.publish(
     baseTopic + serverName + "/apps/calls",
     body.apps.calls.toString()
   );
@@ -285,93 +293,6 @@ function getStatsFromSense(host, serverName) {
   );
 }
 
-// --------------------------------------------------------
-// Set up UDP server handlers for acting on Sense failed task events
-// --------------------------------------------------------
-udpInitErrorWarningServer = function() {
-  // Handler for log error events
-  globals.udpServerErrorWarningEventSocket.on("listening", function(
-    message,
-    remote
-  ) {
-    var address = globals.udpServerErrorWarningEventSocket.address();
-
-    var oldLogLevel = globals.logger.transports.console.level;
-    globals.logger.transports.console.level = "info";
-    globals.logger.log(
-      "info",
-      "UDP server listening on %s:%s",
-      address.address,
-      address.port
-    );
-    globals.logger.transports.console.level = oldLogLevel;
-
-    // Publish MQTT message that UDP server has started
-    // globals.mqttClient.publish(globals.config.get('Butler.mqttConfig.taskFailureServerStatusTopic'), 'start');
-  });
-
-  // Handler for UDP error event
-  globals.udpServerErrorWarningEventSocket.on("error", function(
-    message,
-    remote
-  ) {
-    var address = globals.udpServerErrorWarningEventSocket.address();
-    globals.logger.log(
-      "error",
-      "UDP server error on %s:%s",
-      address.address,
-      address.port
-    );
-
-    // Publish MQTT message that UDP server has reported an error
-    // globals.mqttClient.publish(globals.config.get('Butler.mqttConfig.taskFailureServerStatusTopic'), 'error');
-  });
-
-  // Main handler for UDP messages relating to log errors
-  globals.udpServerErrorWarningEventSocket.on("message", function(
-    message,
-    remote
-  ) {
-    // // Message has following format: hostname; Repository; level; message
-    // var msg = message.toString().split(";");
-    // globals.logger.log(
-    //   "debug",
-    //   "Host=%s, Source log file=%s, Log level=%s, Message=%s",
-    //   msg[0],
-    //   msg[1],
-    //   msg[2],
-    //   msg[3]
-    // );
-    // // Write the whole reading to Influxdb
-    // globals.influx
-    //   .writePoints([
-    //     {
-    //       measurement: "log_entry",
-    //       tags: {
-    //         host: msg[0],
-    //         source_process: msg[1],
-    //         log_level: msg[2]
-    //       },
-    //       fields: {
-    //         message: msg[3]
-    //       }
-    //     }
-    //   ])
-    //   .then(err => {
-    //     globals.logger.verbose("Sent log event to Influxdb: " + msg[0]);
-    //   })
-    //   .catch(err => {
-    //     console.error(`Error saving log event to InfluxDB! ${err.stack}`);
-    //   });
-    // Publish MQTT message when a task has failed
-    // globals.mqttClient.publish(globals.config.get('Butler.mqttConfig.taskFailureTopic'), msg[1]);
-  });
-};
-
-// ---------------------------------------------------
-// Set up UDP handlers
-udpInitErrorWarningServer();
-
 // Set up timer for getting log data
 setInterval(function() {
   globals.logger.verbose("Event started: Log db query");
@@ -405,20 +326,6 @@ setInterval(function() {
         rows.forEach(function(row) {
           globals.logger.silly("Log db row: " + JSON.stringify(row));
 
-          // console.log(row.id);
-          // console.log(row.entry_level);
-          // console.log(row.process_host);
-          // console.log(row.process_name);
-          // console.log(row.timestamp);
-          // var logMsg;
-          // if (row.payload.hasOwnProperty("Message")) {
-          //   logMsg = row.payload.Message;
-          // } else {
-          //   logMsg = "";
-          // }
-
-          // console.log(row.payload.Message);
-
           // Write the whole reading to Influxdb
           globals.influx
             .writePoints([
@@ -443,7 +350,7 @@ setInterval(function() {
               console.error(`Error saving log event to InfluxDB! ${err.stack}`);
             });
 
-          // Publish MQTT message when a task has failed
+          // Publish MQTT message
           // globals.mqttClient.publish(globals.config.get('Butler.mqttConfig.taskFailureTopic'), msg[1]);
         });
       })
@@ -468,9 +375,3 @@ setInterval(function() {
     getStatsFromSense(server.host, server.serverName);
   });
 }, globals.config.get("Butler-SOS.serversToMonitor.pollingInterval"));
-
-// Start UDP server for Session and Connection events
-globals.udpServerErrorWarningEventSocket.bind(
-  globals.udp_port_error_warning_events,
-  globals.udp_host
-);

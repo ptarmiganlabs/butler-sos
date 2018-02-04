@@ -2,7 +2,6 @@ var mqtt = require("mqtt");
 var config = require("config");
 var winston = require("winston");
 const Influx = require("influx");
-var dgram = require("dgram");
 const { Pool } = require("pg");
 
 // Set up logger with timestamps and colors
@@ -30,19 +29,6 @@ pgPool.on("error", (err, client) => {
   logger.log("error", "Unexpected error on idle client" + err);
   process.exit(-1);
 });
-
-// ------------------------------------
-// UDP server connection parameters
-var udp_host = config.get("Butler-SOS.udpServerConfig.serverIP");
-
-// Prepare to listen on port X for incoming UDP connections regarding log warnings
-var udpServerErrorWarningEventSocket = dgram.createSocket({
-  type: "udp4",
-  reuseAddr: true
-});
-var udp_port_error_warning_events = config.get(
-  "Butler-SOS.udpServerConfig.portErrorWarningEvents"
-);
 
 // Set up Influxdb client
 const influx = new Influx.InfluxDB({
@@ -72,6 +58,7 @@ const influx = new Influx.InfluxDB({
       fields: {
         active_docs_count: Influx.FieldType.INTEGER,
         loaded_docs_count: Influx.FieldType.INTEGER,
+        in_memory_docs_count: Influx.FieldType.INTEGER,
         calls: Influx.FieldType.INTEGER,
         selections: Influx.FieldType.INTEGER
       },
@@ -161,8 +148,5 @@ module.exports = {
   mqttClient,
   logger,
   influx,
-  pgPool,
-  udp_host,
-  udpServerErrorWarningEventSocket,
-  udp_port_error_warning_events
+  pgPool
 };

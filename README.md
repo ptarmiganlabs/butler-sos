@@ -9,9 +9,10 @@
   
 # Butler SOS
 Butler SenseOps Stats ("Butler SOS") is a Node.js service publishing operational Qlik Sense Enterprise metrics to MQTT and Influxdb.  
-It uses the [Sense healthcheck API](http://help.qlik.com/en-US/sense-developer/3.2/Subsystems/EngineAPI/Content/GettingSystemInformation/HealthCheckStatus.htm) to gather operational metrics for the Sense servers specified in the JSON config file.
+It uses the [Sense healthcheck API](http://help.qlik.com/en-US/sense-developer/November2017/Subsystems/EngineAPI/Content/GettingSystemInformation/HealthCheckStatus.htm) to gather operational metrics for the Sense servers specified in the JSON config file.  
+It also pulls warnings and errors from Sense's Postgres logging database, and forward these to Influx.
 
-The most interesting use of Butler SOS is probably to create real-time dashboards, showing operational metrics for a Qlik Sense Enterprise environment:
+The most interesting use of Butler SOS is probably to create real-time dashboards based on the data in the Influx database, showing operational metrics for a Qlik Sense Enterprise environment:
 
 ![Grafana dashboard](img/senseops-1.png "SenseOps dashboard using Grafana")
 
@@ -21,42 +22,48 @@ Butler SOS can however also send the data to [MQTT](https://en.wikipedia.org/wik
 
 
 ## Install and setup
-* Clone [the repository](https://github.com/mountaindude/butler-sos) from GitHub to desired location.  
-* Make sure [Node.js](https://nodejs.org) is installed. Butler-SOS has been tested with Node.js 6.10.0. 
+* Butler SOS has been developed with Qlik Sense Enterprise November 2017 in mind. In order to use Butler SOS with other Sense versions, some adaptations may be needed.
+* Clone [the repository](https://github.com/ptarmiganlabs/butler-sos) from GitHub to desired location.  
+* Make sure [Node.js](https://nodejs.org) is installed. Butler-SOS has been tested with Node.js 8.9.4. 
 * Run "npm install" from within the main butler-sos directory to download and install all Node.js dependencies.
-* Make a copy of the [config/default_template.json](https://github.com/mountaindude/butler-sos/blob/master/config/default_template.json) configuration file. Edit the file as needed, save it as "default.json" in the ./config directory.
+* Make a copy of the [config/default_template.json](https://github.com/ptarmiganlabs/butler-sos/blob/master/config/default_template.json) configuration file. Edit the file as needed, save it as "default.json" in the ./config directory.
 Butler SOS will read its config settings from the default.json file.
-* Install [Influxdb](https://docs.influxdata.com/influxdb/v1.2/introduction) (only needed if data is to be stored in Influxdb, of course).
+* Install [Influxdb](https://docs.influxdata.com/influxdb/v1.4/introduction) (only needed if data is to be stored in Influxdb, of course).
 * Install [Mosquitto](https://mosquitto.org) or another MQTT broker (only needed if data is to be forwarded to MQTT).
 
-### Virtual proxies
-Butler SOS relies on a [Qlik Sense virtual proxy](http://help.qlik.com/en-US/sense/3.2/Subsystems/ManagementConsole/Content/create-virtual-proxy.htm) to be available for each Sense server that is to be monitored.  
-Existing virtual proxies or new ones can be used - just make sure authentication etc work, and that the host name in the config file points to the correct virtual proxy of each server.
-  
-For example, let's say the config/default.json config file contains 
 
-    "serversToMonitor": {
-        "servers": [{
-                "host": "server1.my.domain/virtualproxyname",
-                "serverName": "Server 1",
-                "availableRAM": 32000
-            }]
 
-Butler SOS will then query https://server1.my.domain/virtualproxyname/engine/healthcheck to get operational metrics for the Qlik Sense engine on server1.my.domain.
-Make sure that the "virtualproxyname" virtual proxy has authentication suitable to your Qlik Sense setup.
 
-Future versions of Butler SOS may not need these virtual proxies - maybe the needed data can be retrieved straight from the engine. Further work needed to make this happen though.
+### Configuration files
+The latst version of Butler SOS introduce several breaking changes to its configuration file:
+
+* The configuration file format is now YAML rather than JSON. YAML is a more human readable and compact file format compared to JSON. It also allows comments to be used.  
+* Virtual proxies are no longer used to get the Sense healthcheck data. Instead of virtual proxies the main Qlik Sense Engine Service (QES) of 4747 is queried directly for the health data of each Sense server.   
+A consequency of this is that certificates are now used to authenticate with Qlik Sense, rather than the security-by-obscurity that was the most commonly used security solution in the past for Butler SOS.
+Please note that the path to these certificates must be properly configured int he config file's Butler-SOS.qrs section. 
+
+Pleae refer to the conig/default.yaml for further configuration instructions.
+
+
+
+
+
+Butler SOS will then query https://server1.my.domain:4747/engine/healthcheck to get operational metrics for the Qlik Sense engine on server1.my.domain.
+
+The certificates used are [created from the Sense QMC](http://help.qlik.com/en-US/sense/November2017/Subsystems/ManagementConsole/Content/export-certificates.htm). Export certificates based on instructions at that link, then place them in Butler SOS' ./ssl directory.
+
+### Certificates
+
+
 
 
 ## Usage
 Start Influxdb and Mosquitto (or other MQTT broker).   
-Both Influxdb and Mosquitto should work right after installation - for production use their respective config files should of course be edited as needed, to ensure they work as desired.
+Both Influxdb and Mosquitto should work right after installation - for production use their respective config files should be edited as needed, with respect to use of https etc.
 
-Starting Influxdb on OSX will look something like this:
+Starting Influxdb on OSX will look something like this (for Influx v1.2.3):
 
 ![Starting Influxdb](img/influxdb-1.png "Starting Influxdb")
-
-
 
 Then start Butler SOS itself from the main butler-sos directory:  
 "node butler-sos.js".  
@@ -86,7 +93,7 @@ Install and start Grafana
     brew install grafana
     brew services start grafana
 
-Connect to Grafana by visiting http://localhost:3000  
+Connect to Grafana by visiting http://localhost:3000
 Default username/pwd is admin/admin.
 
 
