@@ -1,0 +1,42 @@
+Butler-SOS:
+  # Possible log levels are silly, debug, verbose, info, warn, error
+  logLevel: verbose
+
+  # Qlik Sense logging db config parameters
+  logdb:
+    pollingInterval: 15000
+    host: <IP or FQDN of Qlik Sense logging db>
+    port: 4432
+    qlogsReaderUser: qlogs_reader
+    qlogsReaderPwd: <pwd>
+
+  # Certificates to use when querying Sense for healthcheck data
+  cert:
+    clientCert: <path/to/cert/client.pem>
+    clientCertKey: <path/to/cert/client_key.pem>
+    clientCertCA: <path/to/cert/root.pem>
+
+  # MQTT config parameters
+  mqttConfig:
+    enableMQTT: true
+    brokerIP: <IP of MQTT server>
+    baseTopic: butler-sos/
+
+  # Influx db config parameters
+  influxdbConfig:
+    enableInfluxdb: true
+    hostIP: <IP or FQDN of Influxdb server>
+    dbName: SenseOps
+
+  serversToMonitor:
+    # How often (milliseconds) should the healthcheck API be polled?
+    pollingInterval: 5000
+
+    # Sense Servers that should be queried for healthcheck data 
+    servers:
+    - host: <server1.my.domain>
+      serverName: <server1>
+      availableRAM: 32000
+    - host: <server2.my.domain>
+      serverName: <server2>
+      availableRAM: 24000
