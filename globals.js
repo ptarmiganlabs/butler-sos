@@ -132,9 +132,14 @@ influx
 
 // ------------------------------------
 // Create MQTT client object and connect to MQTT broker
-var mqttClient = mqtt.connect(
-  "mqtt://" + config.get("Butler-SOS.mqttConfig.brokerIP")
-);
+var mqttClient = mqtt.connect({
+  port: config.get("Butler-SOS.mqttConfig.brokerPort"), 
+  host: config.get("Butler-SOS.mqttConfig.brokerHost")
+});
+
+
+mqttClient.publish("butler-sos/hej", "1234");
+
 /*
 Following might be needed for conecting to older Mosquitto versions
 var mqttClient  = mqtt.connect('mqtt://<IP of MQTT server>', {

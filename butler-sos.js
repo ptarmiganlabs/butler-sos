@@ -7,12 +7,21 @@ var globals = require("./globals");
 // Load certificates to use when connecting to healthcheck API
 var fs = require("fs"),
   path = require("path"),
-  certFile = path.resolve(__dirname, globals.config.get("Butler-SOS.cert.clientCert")),
-  keyFile = path.resolve(__dirname, globals.config.get("Butler-SOS.cert.clientCertKey")),
-  caFile = path.resolve(__dirname, globals.config.get("Butler-SOS.cert.clientCertCA"));
-  // certFile = path.resolve(__dirname, "ssl/client.pem"),
-  // keyFile = path.resolve(__dirname, "ssl/client_key.pem"),
-  // caFile = path.resolve(__dirname, "ssl/root.pem");
+  certFile = path.resolve(
+    __dirname,
+    globals.config.get("Butler-SOS.cert.clientCert")
+  ),
+  keyFile = path.resolve(
+    __dirname,
+    globals.config.get("Butler-SOS.cert.clientCertKey")
+  ),
+  caFile = path.resolve(
+    __dirname,
+    globals.config.get("Butler-SOS.cert.clientCertCA")
+  );
+// certFile = path.resolve(__dirname, "ssl/client.pem"),
+// keyFile = path.resolve(__dirname, "ssl/client_key.pem"),
+// caFile = path.resolve(__dirname, "ssl/root.pem");
 
 // Set specific log level (if/when needed)
 // Possible values are { error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
@@ -161,7 +170,24 @@ function postToInfluxdb(host, serverName, body) {
     });
 }
 
-function postToMQTT(host, serverName, body) {
+function postLogDbToMQTT(
+  process_host,
+  process_name,
+  entry_level,
+  message,
+  timestamp
+) {
+  // Get base MQTT topic
+  var baseTopic = globals.config.get("Butler-SOS.mqttConfig.baseTopic");
+
+  // Send to MQTT
+  globals.mqttClient.publish(
+    baseTopic + process_host + "/" + process_name + "/" + entry_level,
+    message
+  );
+}
+
+function postHealthToMQTT(host, serverName, body) {
   // Get base MQTT topic
   var baseTopic = globals.config.get("Butler-SOS.mqttConfig.baseTopic");
 
@@ -170,7 +196,7 @@ function postToMQTT(host, serverName, body) {
   globals.mqttClient.publish(baseTopic + serverName + "/started", body.started);
   globals.mqttClient.publish(
     baseTopic + serverName + "/mem/comitted",
-    body.mem.comitted.toString()
+    body.mem.committed.toString()
   );
   globals.mqttClient.publish(
     baseTopic + serverName + "/mem/allocated",
@@ -280,7 +306,7 @@ function getStatsFromSense(host, serverName) {
         // Post to MQTT (if enabled)
         if (globals.config.get("Butler-SOS.mqttConfig.enableMQTT")) {
           globals.logger.debug("Calling MQTT posting method");
-          postToMQTT(host, serverName, body);
+          postHealthToMQTT(host, serverName, body);
         }
 
         // Post to Influxdb (if enabled)
@@ -293,9 +319,9 @@ function getStatsFromSense(host, serverName) {
   );
 }
 
-// Set up timer for getting log data
+// Configure timer for getting log data from Postgres
 setInterval(function() {
-  globals.logger.verbose("Event started: Log db query");
+  globals.logger.verbose("Event started: Query log db");
 
   // checkout a Postgres client from connection pool
   globals.pgPool.connect().then(pgClient => {
@@ -318,40 +344,53 @@ setInterval(function() {
       )
       .then(res => {
         pgClient.release();
-        globals.logger.debug(
-          "Log db query got a response. Sending to Influxdb "
-        );
+        globals.logger.debug("Log db query got a response.");
 
         var rows = res.rows;
         rows.forEach(function(row) {
           globals.logger.silly("Log db row: " + JSON.stringify(row));
 
-          // Write the whole reading to Influxdb
-          globals.influx
-            .writePoints([
-              {
-                measurement: "log_entry",
-                tags: {
-                  host: row.process_host,
-                  source_process: row.process_name,
-                  log_level: row.entry_level
-                },
-                fields: {
-                  message: row.payload.Message
-                },
-                timestamp: row.timestamp
-              }
-            ])
-            .then(err => {
-              globals.logger.silly("Sent log event to Influxdb. ");
-            })
+          // Post to Influxdb (if enabled)
+          if (globals.config.get("Butler-SOS.influxdbConfig.enableInfluxdb")) {
+            globals.logger.debug("Posting log db data to Influxdb...");
 
-            .catch(err => {
-              console.error(`Error saving log event to InfluxDB! ${err.stack}`);
-            });
+            // Write the whole reading to Influxdb
+            globals.influx
+              .writePoints([
+                {
+                  measurement: "log_entry",
+                  tags: {
+                    host: row.process_host,
+                    source_process: row.process_name,
+                    log_level: row.entry_level
+                  },
+                  fields: {
+                    message: row.payload.Message
+                  },
+                  timestamp: row.timestamp
+                }
+              ])
+              .then(err => {
+                globals.logger.silly("Sent log db event to Influxdb. ");
+              })
+              .catch(err => {
+                console.error(
+                  `Error saving log event to InfluxDB! ${err.stack}`
+                );
+              });
+          }
 
-          // Publish MQTT message
-          // globals.mqttClient.publish(globals.config.get('Butler.mqttConfig.taskFailureTopic'), msg[1]);
+          // Post to MQTT (if enabled)
+          if (globals.config.get("Butler-SOS.mqttConfig.enableMQTT")) {
+            globals.logger.debug("Posting log db data to MQTT...");
+            postLogDbToMQTT(
+              row.process_host,
+              row.process_name,
+              row.entry_level,
+              row.payload.Message,
+              row.timestamp
+            );
+          }
         });
       })
       .then(res => {
@@ -364,7 +403,7 @@ setInterval(function() {
   });
 }, globals.config.get("Butler-SOS.logdb.pollingInterval"));
 
-// Set up timer for getting healthcheck data
+// Configure timer for getting healthcheck data
 setInterval(function() {
   globals.logger.verbose("Event started: Statistics collection");
 
