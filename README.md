@@ -9,10 +9,13 @@
   
 # Butler SOS v2
 Butler SenseOps Stats ("Butler SOS") is a Node.js service publishing operational Qlik Sense Enterprise metrics to MQTT and Influxdb.  
-It uses the [Sense healthcheck API](http://help.qlik.com/en-US/sense-developer/November2017/Subsystems/EngineAPI/Content/GettingSystemInformation/HealthCheckStatus.htm) to gather operational metrics for the Sense servers specified in the JSON config file.  
+It uses the [Sense healthcheck API](http://help.qlik.com/en-US/sense-developer/November2017/Subsystems/EngineAPI/Content/GettingSystemInformation/HealthCheckStatus.htm) to gather operational metrics for the Sense servers specified in the YAML config file.  
 It also pulls warnings and errors from [Sense's Postgres logging database](http://help.qlik.com/en-US/sense/November2017/Subsystems/PlanningQlikSenseDeployments/Content/Deployment/Qlik-Logging-Service.htm), and forwards these to Influx and MQTT.
 
-The most interesting use of Butler SOS is probably to create real-time dashboards based on the data in the Influx database, showing operational metrics for a Qlik Sense Enterprise environment:
+The most interesting use of Butler SOS is probably to create real-time dashboards based on the data in the Influx database, showing operational metrics for a Qlik Sense Enterprise environment.  
+A fully interactive demo dashboard is available [here](https://snapshot.raintank.io/dashboard/snapshot/1hNwAmi50lykKYXr6mswhKmll9myrH20?orgId=2).  
+  
+Sample screen shots:
 
 ![Grafana dashboard](img/SenseOps_dashboard_3.png "SenseOps dashboard showing errors and warnings, using Grafana")
   
@@ -24,6 +27,16 @@ The most interesting use of Butler SOS is probably to create real-time dashboard
 Butler SOS can however also send the data to [MQTT](https://en.wikipedia.org/wiki/MQTT), for use in any MQTT enabled tool or system.
 
 
+## What's new
+Updates and new features in v2: 
+
+* Close to real-time metrics on warnings and errors appearing in the QLik Sense logs
+* Improved posting of data to MQTT 
+* YAML config files instead of JSON
+* New and more comprehensive sample Grafana dashboards
+* A [demo dashboard](https://snapshot.raintank.io/dashboard/snapshot/1hNwAmi50lykKYXr6mswhKmll9myrH20?orgId=2) that anyone can try out
+
+
 
 ## Install and setup
 * Butler SOS v2 has been developed with Qlik Sense Enterprise November 2017 in mind. In order to use Butler SOS with other Sense versions, some adaptations may be needed.
@@ -32,6 +45,7 @@ Butler SOS can however also send the data to [MQTT](https://en.wikipedia.org/wik
 * Run "npm install" from within the main butler-sos directory to download and install all Node.js dependencies.
 * Make a copy of the [config/default_template.yaml](https://github.com/ptarmiganlabs/butler-sos/blob/master/config/default_template.yaml) configuration file. Edit the file as needed, save it as "default.yaml" in the ./config directory.
 Butler SOS will read its config settings from this file.
+* [Export certificates](http://help.qlik.com/en-US/sense/November2017/Subsystems/ManagementConsole/Content/export-certificates.htm) from Qlik Sense QMC, then place them in the ./cert folder under Butler SOS' main folder.
 * Install [Influxdb](https://docs.influxdata.com/influxdb/v1.4/introduction) (only needed if data is to be stored in Influxdb, of course).
 * Install [Mosquitto](https://mosquitto.org) or another MQTT broker (only needed if data is to be forwarded to MQTT). If you already have an MQTT broker you do not need to install a new one, Butler SOS can use the existing broker.
 
@@ -49,14 +63,11 @@ Please note that the path to these certificates must be properly configured in t
 Pleae refer to the conig/default.yaml for further configuration instructions.
 
 
-### Certificates
-The certificates used when connecting to the Sense engine are [created from the Sense QMC](http://help.qlik.com/en-US/sense/November2017/Subsystems/ManagementConsole/Content/export-certificates.htm). Export certificates as described there, then place them in Butler SOS' ./cert directory.
-
 ### Postgres log database
 The config file allows you to set how often Butler should query the Sense log database for warnings and errors. In order to get real-time (-ish) notifications of warnings and errors, you should set the polling frequency to a reasonably low level. On the other hand, this polling will consume server resources and put some load on the Sense logging database - i.e. you should not set a too low polling frequency... 
 Experience shows that polling every 15-30 seconds work well and doesn't put too much load on the database.
   
-Finally, there is one caveat to be aware of when it comes to the Butler-SOS.logdb.pollingInterval setting:   
+There is one caveat to be aware of when it comes to the Butler-SOS.logdb.pollingInterval setting:   
 By default Butler SOS will query the log database for any warnings and errors that have occured during the last 2 minutes. The reason for having such a limit is simply to limit the query load on the Postgres server.  
 This however also means that you should **not** configure a polling frequency of 2 minutes or more, as such a setting would mean that Butler SOS would not capture all warnings and errors.   
   
