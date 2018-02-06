@@ -1,6 +1,12 @@
 # Project specific
 config/default.json
+config/production.json
+config/default.yaml
+config/production.yaml
+cert/*.pem
+cert/*.pfx
 .DS_Store
+ssl/*
 
 
 # Logs
