@@ -12,6 +12,11 @@ Butler SenseOps Stats ("Butler SOS") is a Node.js service publishing operational
 It uses the [Sense healthcheck API](http://help.qlik.com/en-US/sense-developer/November2017/Subsystems/EngineAPI/Content/GettingSystemInformation/HealthCheckStatus.htm) to gather operational metrics for the Sense servers specified in the YAML config file.  
 It also pulls warnings and errors from [Sense's Postgres logging database](http://help.qlik.com/en-US/sense/November2017/Subsystems/PlanningQlikSenseDeployments/Content/Deployment/Qlik-Logging-Service.htm), and forwards these to Influx and MQTT.
 
+**Why a separate tool for this?**  
+Good question. While Qlik Sense ships with a great Operations Monitor application, it is useful for real-time operational monitoring.  
+It is great for retrospective analysis of what happened in a Qlik Sense environment, but for a real-time view into a Sense environment, something else is needed - enter Butler SOS.
+
+
 The most interesting use of Butler SOS is probably to create real-time dashboards based on the data in the Influx database, showing operational metrics for a Qlik Sense Enterprise environment.  
 A fully interactive demo dashboard is available [here](https://snapshot.raintank.io/dashboard/snapshot/1hNwAmi50lykKYXr6mswhKmll9myrH20?orgId=2).  
   
