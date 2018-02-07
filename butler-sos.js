@@ -170,13 +170,7 @@ function postToInfluxdb(host, serverName, body) {
     });
 }
 
-function postLogDbToMQTT(
-  process_host,
-  process_name,
-  entry_level,
-  message,
-  timestamp
-) {
+function postLogDbToMQTT(process_host, process_name, entry_level, message, timestamp) {
   // Get base MQTT topic
   var baseTopic = globals.config.get("Butler-SOS.mqttConfig.baseTopic");
 
