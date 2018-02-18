@@ -1,8 +1,8 @@
 # Project specific
-config/default.json
-config/production.json
-config/default.yaml
-config/production.yaml
+// config/default.json
+// config/production.json
+// config/default.yaml
+// config/production.yaml
 cert
 .DS_Store
 ssl/*
