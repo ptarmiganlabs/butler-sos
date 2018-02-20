@@ -6,29 +6,29 @@ Butler-SOS:
   logdb:
     # How often (milliseconds) should Postgres log db be queried for warnings and errors?
     pollingInterval: 15000
-    host: <IP or FQDN of Qlik Sense logging db>
+    host: senselogdb.ptarmiganlabs.net
     port: 4432
     qlogsReaderUser: qlogs_reader
-    qlogsReaderPwd: <pwd>
+    qlogsReaderPwd: BvpvIqJMEZ9d
 
   # Certificates to use when querying Sense for healthcheck data. Get these from the Certificate Export in QMC.
   cert:
-    clientCert: <path/to/cert/client.pem>
-    clientCertKey: <path/to/cert/client_key.pem>
-    clientCertCA: <path/to/cert/root.pem>
+    clientCert: C:\\secret\\sense_cert\\client.pem
+    clientCertKey: C:\\secret\\sense_cert\\client_key.pem
+    clientCertCA: C:\\secret\\sense_cert\\root.pem
 
   # MQTT config parameters
   mqttConfig:
-    enableMQTT: true
-    brokerIP: <IP of MQTT server>
-    brokerHost: 1883
+    enableMQTT: false
+    brokerHost: mqtt.ptarmiganlabs.net
+    brokerPort: 1883
     # Topic should end with /
     baseTopic: butler-sos/
 
   # Influx db config parameters
   influxdbConfig:
     enableInfluxdb: true
-    hostIP: <IP or FQDN of Influxdb server>
+    hostIP: influxdb.ptarmiganlabs.net
     dbName: SenseOps
 
   serversToMonitor:
@@ -37,9 +37,6 @@ Butler-SOS:
 
     # Sense Servers that should be queried for healthcheck data 
     servers:
-    - host: <server1.my.domain>
-      serverName: <server1>
-      availableRAM: 32000
-    - host: <server2.my.domain>
-      serverName: <server2>
-      availableRAM: 24000
+    - host: sense1.ptarmiganlabs.local:4747
+      serverName: CENTRAL
+      availableRAM: 12000

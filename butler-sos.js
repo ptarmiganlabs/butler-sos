@@ -276,8 +276,7 @@ function postHealthToMQTT(host, serverName, body) {
 }
 
 function getStatsFromSense(host, serverName) {
-  globals.logger.log(
-    "debug",
+  globals.logger.debug(
     "URL=" + "https://" + host + "/engine/healthcheck/"
   );
 
