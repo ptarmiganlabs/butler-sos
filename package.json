@@ -24,12 +24,12 @@
   },
   "homepage": "https://github.com/mountaindude/butler-sos#readme",
   "dependencies": {
-    "config": "^1.25.1",
+    "config": "^1.30.0",
     "influx": "^5.0.0-alpha.4",
-    "js-yaml": "^3.10.0",
-    "mqtt": "^2.5.0",
+    "js-yaml": "^3.11.0",
+    "mqtt": "^2.16.0",
     "pg": "^7.4.1",
-    "request": "^2.81.0",
-    "winston": "^2.3.1"
+    "request": "^2.85.0",
+    "winston": "^2.4.1"
   }
 }
