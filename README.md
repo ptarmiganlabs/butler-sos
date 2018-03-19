@@ -30,7 +30,7 @@ Sample screen shots:
 
 
 Butler SOS can however also send the data to [MQTT](https://en.wikipedia.org/wiki/MQTT), for use in any MQTT enabled tool or system.
-
+ 
 
 ## What's new
 
