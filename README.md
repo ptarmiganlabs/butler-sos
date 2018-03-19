@@ -30,10 +30,15 @@ Sample screen shots:
 
 
 Butler SOS can however also send the data to [MQTT](https://en.wikipedia.org/wiki/MQTT), for use in any MQTT enabled tool or system.
-
+ 
 
 ## What's new
-Updates and new features in v2: 
+
+### Updates and new features in v2.1 and v2.1.1:
+
+* Updated package dependecies
+
+### Updates and new features in v2: 
 
 * Close to real-time metrics on warnings and errors appearing in the QLik Sense logs
 * Improved posting of data to MQTT 
