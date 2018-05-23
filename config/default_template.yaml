@@ -20,8 +20,8 @@ Butler-SOS:
   # MQTT config parameters
   mqttConfig:
     enableMQTT: true
-    brokerIP: <IP of MQTT server>
-    brokerHost: 1883
+    brokerHost: <IP of MQTT server>
+    brokerPort: 1883
     # Topic should end with /
     baseTopic: butler-sos/
 
