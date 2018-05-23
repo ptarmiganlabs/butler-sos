@@ -37,6 +37,7 @@ Butler SOS can however also send the data to [MQTT](https://en.wikipedia.org/wik
 ### Updates and new features in v2.1 and v2.1.1:
 
 * Updated package dependecies
+* Tested with Node.js 8.11.2 (LTS), Influxdb 1.5.2, Grafana 5.1.3
 
 ### Updates and new features in v2: 
 
