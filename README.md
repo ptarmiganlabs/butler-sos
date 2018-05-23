@@ -65,20 +65,77 @@ Butler SOS will read its config settings from this file.
 ### Configuration files
 The latst version of Butler SOS introduce several breaking changes to its configuration file:
 
-* The configuration file format is now YAML rather than JSON. YAML is a more human readable and compact file format compared to JSON. It also allows comments to be used.  
+* The configuration file format is now YAML rather than JSON. YAML is more human readable and compact  compared to JSON. It also allows comments to be used.  
 * Virtual proxies are no longer used to get the Sense healthcheck data.  
 Instead of virtual proxies the main Qlik Sense Engine Service (QES) is called on TCP port 4747  to get the health data of each Sense server that should be monitored.   
-A consequency of this is that certificates are now used to authenticate with Qlik Sense, rather than the security-by-obscurity that was the most commonly used security solution in the past for Butler SOS.
-Please note that the path to these certificates must be properly configured in the config file's Butler-SOS.cert section. 
+A consequence of this is that certificates are now used to authenticate with Qlik Sense, rather than the security-by-obscurity that was the most commonly used security solution in the past for Butler SOS.
+Please note that the path to these certificates must be properly configured in the config file's Butler-SOS.cert section.  
 
-Pleae refer to the conig/default.yaml for further configuration instructions.
+When using certificates to authenticate with the Qlik engine, the ```serversToMonitor``` section of the config file could look like this:
+
+``` yaml
+serversToMonitor:
+    # How often (milliseconds) should the healthcheck API be polled?
+    pollingInterval: 5000
+
+    # Sense Servers that should be queried for healthcheck data 
+    servers:
+    - host: server1.company.net:4747
+      serverName: Server1
+      availableRAM: 32000
+    - host: serfver2.company.net:4747
+      serverName: Server2
+      availableRAM: 24000
+
+```
+
+
+Pleae refer to the config/default_template.yaml file for further configuration instructions.
+
+### Where should Butler SOS run?
+Given that Butler SOS can be deployed in so many different configurations, it is difficult to give precise instructions that will work for all configurations. Especially the fact that Butler SOS uses certificates to authenticate with Sense is a complicating factor. Certificates are (when correctly used) great for securing systems, but they can alse cause headaches. 
+
+First we must recognize that Sense uses [self signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate). This is fine, and as long as you work on a server where Sense Enterprise is installed, that server will have the Sense-provided Certificate Authority (CA) certificate installed. 
+
+This means that the easiest option for getting Butler SOS up and running is usually to install it on one of your Sense servers.
+
+That said, it is probably better system design to run Butler SOS (and maybe other members of the [Butler family](https://github.com/ptarmiganlabs)) on their own server, maybe using some flavour of Linux (lower cost compared to Windows).  
+In this case you might want to consider exporting the Sense CA certificate from one of your Sense servers, and then install it on the Linux server.
+This *should* technically not be needed for Butler SOS to work correctly - as long as you specify the correct root.pem file in the Butler SOS config file, you should be ok. 
+
+If you specify an incorrect root CA certificate file in the ```clientCertCA``` config option, you will get an error like this:
+
+``` bash
+2018-05-23T20:36:44.393Z - error: Error: Error: unable to verify the first certificate
+    at TLSSocket.<anonymous> (_tls_wrap.js:1105:38)
+    at emitNone (events.js:106:13)
+    at TLSSocket.emit (events.js:208:7)
+    at TLSSocket._finishInit (_tls_wrap.js:639:8)
+    at TLSWrap.ssl.onhandshakedone (_tls_wrap.js:469:38)
+2018-05-23T20:36:49.164Z - verbose: Event started: Query log db
+2018-05-23T20:36:49.180Z - verbose: Event started: Statistics collection
+```
+
+A general note on host names is also relevant.  
+If you specify a server name of "myserver.company.com" while exporting certificates from the QMC, you **must** use that same server name in the Butler SOS config file.  Failing to do so will (most likely) result in an error:
+
+```
+2018-05-23T19:51:03.087Z - error: Error: Error: Hostname/IP doesn't match certificate's altnames: "Host: serveralias.company.net. is not in the cert's altnames: DNS:myserver.company.com"
+    at Object.checkServerIdentity (tls.js:223:17)
+    at TLSSocket.<anonymous> (_tls_wrap.js:1111:29)
+    at emitNone (events.js:106:13)
+    at TLSSocket.emit (events.js:208:7)
+    at TLSSocket._finishInit (_tls_wrap.js:639:8)
+    at TLSWrap.ssl.onhandshakedone (_tls_wrap.js:469:38)
+2018-05-23T19:51:07.701Z - verbose: Event started: Statistics collection
+```
 
 
 ### Postgres log database
-The config file allows you to set how often Butler should query the Sense log database for warnings and errors. In order to get real-time (-ish) notifications of warnings and errors, you should set the polling frequency to a reasonably low level. On the other hand, this polling will consume server resources and put some load on the Sense logging database - i.e. you should not set a too low polling frequency... 
+The config file allows you to set how often Butler should query the Sense log database for warnings and errors. In order to get real-time (-ish) notifications of warnings and errors, you should set the polling frequency to a reasonably low level. On the other hand, this polling will consume server resources and put some load on the Sense logging database - i.e. you should poll too often...  
 Experience shows that polling every 15-30 seconds work well and doesn't put too much load on the database.
   
-There is one caveat to be aware of when it comes to the Butler-SOS.logdb.pollingInterval setting:   
+There is one caveat to be aware of when it comes to the ```Butler-SOS.logdb.pollingInterval``` setting:   
 By default Butler SOS will query the log database for any warnings and errors that have occured during the last 2 minutes. The reason for having such a limit is simply to limit the query load on the Postgres server.  
 This however also means that you should **not** configure a polling frequency of 2 minutes or more, as such a setting would mean that Butler SOS would not capture all warnings and errors.   
   
@@ -86,10 +143,10 @@ If you need a log database polling frequency longer than 2 minutes, you also nee
 
 
 ## Usage 
-Start Influxdb and Mosquitto (or other MQTT broker).   
+Start Influxdb and Mosquitto (or other MQTT broker). Ideally these should start automatically on server boot, please refer to the documentation for those tools for details on how to achieve this.    
 Both Influxdb and Mosquitto should work right after installation - for production use their respective config files should be reviewed and edited as needed, with respect to use of https etc.
 
-Starting Influxdb on OSX will look something like this (for Influx v1.2.3):
+Starting Influxdb on OSX will look something like this (the screenshot is for an older Influx 1.2.3 version, the most recent version might output different logs):
 
 ![Starting Influxdb](img/influxdb-1.png "Starting Influxdb")
 
