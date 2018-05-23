@@ -7,18 +7,9 @@ var globals = require("./globals");
 // Load certificates to use when connecting to healthcheck API
 var fs = require("fs"),
   path = require("path"),
-  certFile = path.resolve(
-    __dirname,
-    globals.config.get("Butler-SOS.cert.clientCert")
-  ),
-  keyFile = path.resolve(
-    __dirname,
-    globals.config.get("Butler-SOS.cert.clientCertKey")
-  ),
-  caFile = path.resolve(
-    __dirname,
-    globals.config.get("Butler-SOS.cert.clientCertCA")
-  );
+  certFile = path.resolve(__dirname, globals.config.get("Butler-SOS.cert.clientCert")),
+  keyFile = path.resolve(__dirname, globals.config.get("Butler-SOS.cert.clientCertKey")),
+  caFile = path.resolve(__dirname, globals.config.get("Butler-SOS.cert.clientCertCA"));
 // certFile = path.resolve(__dirname, "ssl/client.pem"),
 // keyFile = path.resolve(__dirname, "ssl/client_key.pem"),
 // caFile = path.resolve(__dirname, "ssl/root.pem");
@@ -82,8 +73,7 @@ function postToInfluxdb(host, serverName, body) {
 
   // Write the whole reading to Influxdb
   globals.influx
-    .writePoints([
-      {
+    .writePoints([{
         measurement: "sense_server",
         tags: {
           host: serverName
@@ -280,8 +270,7 @@ function getStatsFromSense(host, serverName) {
     "URL=" + "https://" + host + "/engine/healthcheck/"
   );
 
-  request(
-    {
+  request({
       followAllRedirects: true,
       url: "https://" + host + "/engine/healthcheck/",
       headers: {
@@ -292,7 +281,7 @@ function getStatsFromSense(host, serverName) {
       key: fs.readFileSync(keyFile),
       ca: fs.readFileSync(caFile)
     },
-    function(error, response, body) {
+    function (error, response, body) {
       // Check for error
       if (error) {
         return globals.logger.error("Error:", error);
@@ -319,7 +308,7 @@ function getStatsFromSense(host, serverName) {
 }
 
 // Configure timer for getting log data from Postgres
-setInterval(function() {
+setInterval(function () {
   globals.logger.verbose("Event started: Query log db");
 
   // checkout a Postgres client from connection pool
@@ -346,7 +335,7 @@ setInterval(function() {
         globals.logger.debug("Log db query got a response.");
 
         var rows = res.rows;
-        rows.forEach(function(row) {
+        rows.forEach(function (row) {
           globals.logger.silly("Log db row: " + JSON.stringify(row));
 
           // Post to Influxdb (if enabled)
@@ -355,20 +344,18 @@ setInterval(function() {
 
             // Write the whole reading to Influxdb
             globals.influx
-              .writePoints([
-                {
-                  measurement: "log_entry",
-                  tags: {
-                    host: row.process_host,
-                    source_process: row.process_name,
-                    log_level: row.entry_level
-                  },
-                  fields: {
-                    message: row.payload.Message
-                  },
-                  timestamp: row.timestamp
-                }
-              ])
+              .writePoints([{
+                measurement: "log_entry",
+                tags: {
+                  host: row.process_host,
+                  source_process: row.process_name,
+                  log_level: row.entry_level
+                },
+                fields: {
+                  message: row.payload.Message
+                },
+                timestamp: row.timestamp
+              }])
               .then(err => {
                 globals.logger.silly("Sent log db event to Influxdb. ");
               })
@@ -403,11 +390,11 @@ setInterval(function() {
 }, globals.config.get("Butler-SOS.logdb.pollingInterval"));
 
 // Configure timer for getting healthcheck data
-setInterval(function() {
+setInterval(function () {
   globals.logger.verbose("Event started: Statistics collection");
 
   var serverList = globals.config.get("Butler-SOS.serversToMonitor.servers");
-  serverList.forEach(function(server) {
+  serverList.forEach(function (server) {
     globals.logger.verbose("Getting stats for server: " + server.serverName);
 
     getStatsFromSense(server.host, server.serverName);
