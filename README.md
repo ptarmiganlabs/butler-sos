@@ -119,7 +119,7 @@ If you specify an incorrect root CA certificate file in the ```clientCertCA``` c
 A general note on host names is also relevant.  
 If you specify a server name of "myserver.company.com" while exporting certificates from the QMC, you **must** use that same server name in the Butler SOS config file.  Failing to do so will (most likely) result in an error:
 
-```
+``` bash
 2018-05-23T19:51:03.087Z - error: Error: Error: Hostname/IP doesn't match certificate's altnames: "Host: serveralias.company.net. is not in the cert's altnames: DNS:myserver.company.com"
     at Object.checkServerIdentity (tls.js:223:17)
     at TLSSocket.<anonymous> (_tls_wrap.js:1111:29)
