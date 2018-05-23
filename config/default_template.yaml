@@ -32,7 +32,7 @@ Butler-SOS:
     dbName: SenseOps
 
   serversToMonitor:
-    # How often (milliseconds) should the healthcheck API be polled?
+    # How often (milliseconds) should the healthcheck API be polled? 
     pollingInterval: 5000
 
     # Sense Servers that should be queried for healthcheck data 
