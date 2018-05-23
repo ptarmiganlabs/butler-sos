@@ -83,7 +83,7 @@ serversToMonitor:
     - host: server1.company.net:4747
       serverName: Server1
       availableRAM: 32000
-    - host: serfver2.company.net:4747
+    - host: server2.company.net:4747
       serverName: Server2
       availableRAM: 24000
 
