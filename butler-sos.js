@@ -382,7 +382,7 @@ setInterval(function () {
       .then(res => {
         globals.logger.verbose("Sent log event to Influxdb. ");
       })
-      .catch(e => {
+      .catch(err => {
         pgClient.release();
         globals.logger.error("Log db query error: " + err.stack);
       });
