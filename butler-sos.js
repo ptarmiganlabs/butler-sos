@@ -10,9 +10,6 @@ var fs = require("fs"),
   certFile = path.resolve(__dirname, globals.config.get("Butler-SOS.cert.clientCert")),
   keyFile = path.resolve(__dirname, globals.config.get("Butler-SOS.cert.clientCertKey")),
   caFile = path.resolve(__dirname, globals.config.get("Butler-SOS.cert.clientCertCA"));
-// certFile = path.resolve(__dirname, "ssl/client.pem"),
-// keyFile = path.resolve(__dirname, "ssl/client_key.pem"),
-// caFile = path.resolve(__dirname, "ssl/root.pem");
 
 // Set specific log level (if/when needed)
 // Possible values are { error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
