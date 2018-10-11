@@ -1,0 +1,15 @@
+# docker-compose.yml
+version: '2.2'
+services:
+  butler-sos:
+    image: ptarmiganlabs/butler-sos:latest
+    init: true
+    container_name: butler-sos
+    restart: always
+    volumes:
+      # Make config file accessible outside of container
+      - "./config:/nodeapp/config"
+    environment:
+      - "NODE_ENV=production"
+    logging:
+      driver: json-file

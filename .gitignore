@@ -7,7 +7,7 @@ cert/*.pem
 cert/*.pfx
 .DS_Store
 ssl/*
-
+*.tmp
 
 # Logs
 logs
