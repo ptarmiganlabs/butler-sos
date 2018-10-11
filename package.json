@@ -1,6 +1,6 @@
 {
   "name": "butler-sos",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Butler SenseOps Stats (\"Butler SOS\") is a Node.js service publishing operational Qlik Sense metrics to MQTT and Influxdb.",
   "main": "butler-sos.js",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mountaindude/butler-sos.git"
+    "url": "git+https://github.com/ptarmiganlabs/butler-sos.git"
   },
   "keywords": [
     "butler",
@@ -20,9 +20,9 @@
   "author": "Göran Sander",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mountaindude/butler-sos/issues"
+    "url": "https://github.com/ptarmiganlabs/butler-sos/issues"
   },
-  "homepage": "https://github.com/mountaindude/butler-sos#readme",
+  "homepage": "https://github.com/ptarmiganlabs/butler-sos#readme",
   "dependencies": {
     "config": "^1.30.0",
     "influx": "^5.0.0-alpha.4",
