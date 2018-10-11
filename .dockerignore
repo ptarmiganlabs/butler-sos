@@ -1,4 +1,5 @@
 config/*
+config/certificate/*
 cert/*
 img/*
 .dockerignore
@@ -6,3 +7,4 @@ img/*
 docker-compose.yml
 Dockerfile
 package-lock.json
+node_modules

@@ -3,6 +3,7 @@ config/default.json
 config/production.json
 config/default.yaml
 config/production.yaml
+config/certificate/*
 cert/*.pem
 cert/*.pfx
 .DS_Store
