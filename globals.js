@@ -2,17 +2,37 @@ var mqtt = require("mqtt");
 var config = require("config");
 var winston = require("winston");
 const Influx = require("influx");
-const { Pool } = require("pg");
+const {
+  Pool
+} = require("pg");
 
 // Set up logger with timestamps and colors
-var logger = new winston.Logger({
+
+
+const logTransports = {
+  console: new winston.transports.Console({
+    name: 'console_log',
+    level: config.get('Butler-SOS.logLevel'),
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.colorize(),
+      winston.format.simple(),
+      winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`)
+    )
+  })
+};
+
+
+const logger = winston.createLogger({
   transports: [
-    new winston.transports.Console({
-      timestamp: true,
-      colorize: true
-    })
-  ]
+    logTransports.console
+  ],
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`)
+  )
 });
+
 
 // Set up connection pool for accessing Qlik Sense log db
 const pgPool = new Pool({
@@ -34,8 +54,7 @@ pgPool.on("error", (err, client) => {
 const influx = new Influx.InfluxDB({
   host: config.get("Butler-SOS.influxdbConfig.hostIP"),
   database: config.get("Butler-SOS.influxdbConfig.dbName"),
-  schema: [
-    {
+  schema: [{
       measurement: "sense_server",
       fields: {
         version: Influx.FieldType.STRING,
@@ -149,6 +168,7 @@ module.exports = {
   config,
   mqttClient,
   logger,
+  logTransports,
   influx,
   pgPool
 };

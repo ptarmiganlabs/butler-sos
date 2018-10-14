@@ -11,18 +11,14 @@ var fs = require("fs"),
   keyFile = path.resolve(__dirname, globals.config.get("Butler-SOS.cert.clientCertKey")),
   caFile = path.resolve(__dirname, globals.config.get("Butler-SOS.cert.clientCertCA"));
 
-// Set specific log level (if/when needed)
+// Set specific log level (if/when needed to override the config file setting)
 // Possible values are { error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
-// globals.logger.transports.console.level = 'info';
-// globals.logger.transports.console.level = 'verbose';
-// globals.logger.transports.console.level = 'debug';
 // Default is to use log level defined in config file
-globals.logger.transports.console.level = globals.config.get(
-  "Butler-SOS.logLevel"
-);
+// globals.logTransports.console.level = 'verbose';
+
 
 globals.logger.info("Starting Butler SOS");
-globals.logger.info("Log level is: " + globals.logger.transports.console.level);
+globals.logger.info("Log level is: " + globals.logTransports.console.level);
 
 function postToInfluxdb(host, serverName, body) {
   // Calculate server uptime
@@ -286,7 +282,7 @@ function getStatsFromSense(host, serverName) {
 
       if (!error && response.statusCode === 200) {
         globals.logger.verbose("Received ok response from " + serverName);
-        globals.logger.debug(body);
+        globals.logger.debug(JSON.stringify(body));
 
         // Post to MQTT (if enabled)
         if (globals.config.get("Butler-SOS.mqttConfig.enableMQTT")) {
