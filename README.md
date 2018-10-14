@@ -150,6 +150,7 @@ If you need a log database polling frequency longer than 2 minutes, you also nee
 #### Running Butler SOS
 
 Start Butler SOS itself from the main butler-sos directory:  
+
 ```node butler-sos.js```  
   
 If the Influxdb database specified in the config file does not exist, it will be created.
@@ -176,9 +177,11 @@ Installing and getting started with Butler SOS in Docker can look something like
 Create a directory for Butler SOS. Config files and logs will be stored here.
 
 ```bash
+
 proton:code goran$ mkdir -p butler-sos-docker/config/certificate
 proton:code goran$ cd butler-sos-docker
 proton:butler-sos-docker goran$
+
 ```
 
 * Copy the [YAML config file](https://github.com/ptarmiganlabs/butler-sos/blob/master/config/default_template.yaml) from the GitHub repository into the ./config directory, rename it to `production.yaml` (or something else, as long as it matches the NODE_ENV environment variable) and edit it as needed. Note that for the Docker setup the path to certificates should be `/nodeapp/config/certificate/` (this is the Docker container's internal path to the certificate directory).
@@ -212,11 +215,13 @@ drwxr-xr-x  4 goran  staff   128 Oct 14 17:11 ..
 -rw-r--r--@ 1 goran  staff  1702 Oct 14 17:13 client_key.pem
 -rw-r--r--@ 1 goran  staff  1192 Oct 14 17:13 root.pem
 proton:butler-sos-docker goran$
+
 ```
 
 What do the config files look like?
 
 ```bash
+
 proton:butler-sos-docker goran$ cat config/production.yaml
 Butler-SOS:
   # Possible log levels are silly, debug, verbose, info, warn, error
@@ -264,11 +269,13 @@ Butler-SOS:
       serverName: <server2>
       availableRAM: 24000
 proton:butler-sos-docker goran$
+
 ```
 
 What does the docker-compose.yml file look like?
 
 ```bash
+
 proton:butler-sos-docker goran$ cat docker-compose.yml
 # docker-compose.yml
 version: '2.2'
@@ -286,11 +293,13 @@ services:
     logging:
       driver: json-file
 proton:butler-sos-docker goran$
+
 ```
 
 Ok, all good. Let's start Butler SOS using docker-compose:
 
 ```bash
+
 proton:butler-sos-docker goran$ docker-compose up
 Pulling butler-sos (ptarmiganlabs/butler-sos:latest)...
 latest: Pulling from ptarmiganlabs/butler-sos
@@ -332,14 +341,17 @@ butler-sos    | 2018-10-14T18:28:04.864Z - debug: Calling Influxdb posting metho
 butler-sos    | 2018-10-14T18:28:04.915Z - verbose: Sent health Influxdb: sense1
 ...
 ...
+
 ```
 
 Once everything everything looks good you can start the container in daemon mode (i.e. running unattended in the background):
 
-```
+```bash
+
 proton:butler-sos-docker goran$ docker-compose up -d
 Starting butler-sos ... done
 proton:butler-sos-docker goran$
+
 ```
 
 
@@ -388,4 +400,3 @@ Grafana is extremely powerful. Creating automatically updating dashboards for an
 Please see [https://ptarmiganlabs.com](https://ptarmiganlabs.com/blog/2017/04/24/butler-sos-real-time-server-stats-qlik-sense/) and [https://github.com/ptarmiganlabs/butler](https://github.com/ptarmiganlabs/butler) for more in-depth info on the Butler family of micro services for Qlik Sense.
   
 At [https://senseops.rocks](https://senseops.rocks) you also find thoughts on using DevOps best practices in the Qlik Sense ecosystem.
-	

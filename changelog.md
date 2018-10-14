@@ -1,10 +1,10 @@
 # Change log
 
-## v
+## v2.2
 
-1. 
-2. 
-3. 
+1. Running Butler SOS in a Docker container
+2. Documentation refactoring
+3. Updated all dependencies to (at the time) latest versions
 
 ## v1
 
