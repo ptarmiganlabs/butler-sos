@@ -142,6 +142,15 @@ function postToInfluxdb(host, serverName, body) {
           replaced: body.cache.replaced,
           bytes_added: body.cache.bytes_added
         }
+      },
+      {
+        measurement: "saturated",
+        tags: {
+          host: serverName
+        },
+        fields: {
+          saturated: body.saturated
+        }
       }
     ])
     .then(err => {
@@ -256,6 +265,11 @@ function postHealthToMQTT(host, serverName, body) {
       Math.floor(body.cache.hits / body.cache.lookups * 100).toString()
     );
   }
+
+  globals.mqttClient.publish(
+    baseTopic + serverName + "/saturated",
+    body.saturated.toString()
+  );
 }
 
 function getStatsFromSense(host, serverName) {
