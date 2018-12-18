@@ -4,6 +4,7 @@ Butler-SOS:
 
   # Qlik Sense logging db config parameters
   logdb:
+    enableLogDb: true
     # How often (milliseconds) should Postgres log db be queried for warnings and errors?
     pollingInterval: 15000
     host: <IP or FQDN of Qlik Sense logging db>
