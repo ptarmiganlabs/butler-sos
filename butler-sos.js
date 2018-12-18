@@ -314,16 +314,18 @@ function getStatsFromSense(host, serverName) {
   );
 }
 
-// Configure timer for getting log data from Postgres
-setInterval(function () {
-  globals.logger.verbose("Event started: Query log db");
+if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
 
-  // checkout a Postgres client from connection pool
-  globals.pgPool.connect()
-    .then(pgClient => {
-      return pgClient
-        .query(
-          `select
+  // Configure timer for getting log data from Postgres
+  setInterval(function () {
+    globals.logger.verbose("Event started: Query log db");
+
+    // checkout a Postgres client from connection pool
+    globals.pgPool.connect()
+      .then(pgClient => {
+        return pgClient
+          .query(
+            `select
           id,
           entry_timestamp as timestamp,
           entry_level,
@@ -337,68 +339,70 @@ setInterval(function () {
         order by
           entry_timestamp desc
         `
-        )
-        .then(res => {
-          pgClient.release();
-          globals.logger.debug("Log db query got a response.");
+          )
+          .then(res => {
+            pgClient.release();
+            globals.logger.debug("Log db query got a response.");
 
-          var rows = res.rows;
-          rows.forEach(function (row) {
-            globals.logger.silly("Log db row: " + JSON.stringify(row));
+            var rows = res.rows;
+            rows.forEach(function (row) {
+              globals.logger.silly("Log db row: " + JSON.stringify(row));
 
-            // Post to Influxdb (if enabled)
-            if (globals.config.get("Butler-SOS.influxdbConfig.enableInfluxdb")) {
-              globals.logger.debug("Posting log db data to Influxdb...");
+              // Post to Influxdb (if enabled)
+              if (globals.config.get("Butler-SOS.influxdbConfig.enableInfluxdb")) {
+                globals.logger.debug("Posting log db data to Influxdb...");
 
-              // Write the whole reading to Influxdb
-              globals.influx
-                .writePoints([{
-                  measurement: "log_entry",
-                  tags: {
-                    host: row.process_host,
-                    source_process: row.process_name,
-                    log_level: row.entry_level
-                  },
-                  fields: {
-                    message: row.payload.Message
-                  },
-                  timestamp: row.timestamp
-                }])
-                .then(err => {
-                  globals.logger.silly("Sent log db event to Influxdb. ");
-                })
-                .catch(err => {
-                  console.error(
-                    `Error saving log event to InfluxDB! ${err.stack}`
-                  );
-                });
-            }
+                // Write the whole reading to Influxdb
+                globals.influx
+                  .writePoints([{
+                    measurement: "log_entry",
+                    tags: {
+                      host: row.process_host,
+                      source_process: row.process_name,
+                      log_level: row.entry_level
+                    },
+                    fields: {
+                      message: row.payload.Message
+                    },
+                    timestamp: row.timestamp
+                  }])
+                  .then(err => {
+                    globals.logger.silly("Sent log db event to Influxdb. ");
+                  })
+                  .catch(err => {
+                    console.error(
+                      `Error saving log event to InfluxDB! ${err.stack}`
+                    );
+                  });
+              }
 
-            // Post to MQTT (if enabled)
-            if (globals.config.get("Butler-SOS.mqttConfig.enableMQTT")) {
-              globals.logger.debug("Posting log db data to MQTT...");
-              postLogDbToMQTT(
-                row.process_host,
-                row.process_name,
-                row.entry_level,
-                row.payload.Message,
-                row.timestamp
-              );
-            }
+              // Post to MQTT (if enabled)
+              if (globals.config.get("Butler-SOS.mqttConfig.enableMQTT")) {
+                globals.logger.debug("Posting log db data to MQTT...");
+                postLogDbToMQTT(
+                  row.process_host,
+                  row.process_name,
+                  row.entry_level,
+                  row.payload.Message,
+                  row.timestamp
+                );
+              }
+            });
+          })
+          .then(res => {
+            globals.logger.verbose("Sent log event to Influxdb. ");
+          })
+          .catch(err => {
+            pgClient.release();
+            globals.logger.error("Log db query error: " + err.stack);
           });
-        })
-        .then(res => {
-          globals.logger.verbose("Sent log event to Influxdb. ");
-        })
-        .catch(err => {
-          pgClient.release();
-          globals.logger.error("Log db query error: " + err.stack);
-        });
-    })
-    .catch(err => {
-      globals.logger.error("ERROR: Could not connect to Postgre log db: " + err.stack);
-    });
-}, globals.config.get("Butler-SOS.logdb.pollingInterval"));
+      })
+      .catch(err => {
+        globals.logger.error("ERROR: Could not connect to Postgres log db: " + err.stack);
+      });
+  }, globals.config.get("Butler-SOS.logdb.pollingInterval"));
+}
+
 
 // Configure timer for getting healthcheck data
 setInterval(function () {
