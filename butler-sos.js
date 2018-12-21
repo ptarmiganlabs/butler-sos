@@ -291,7 +291,10 @@ function getStatsFromSense(host, serverName) {
     function (error, response, body) {
       // Check for error
       if (error) {
-        return globals.logger.error("Error:", error);
+        globals.logger.error(`Error: ${error}`);
+        globals.logger.error(`Response: ${response}`);
+        globals.logger.error(`Body: ${body}`);
+        return;
       }
 
       if (!error && response.statusCode === 200) {
