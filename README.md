@@ -75,8 +75,9 @@ Linux: `export NODE_ENV=production`
 
 As of version 2 of Butler SOS there are several breaking changes in the configuration file:
 
-* The configuration file format is now YAML rather than JSON. YAML is more human readable and compact  compared to JSON. It also allows comments to be used.  
-* Virtual proxies are no longer used to get the Sense healthcheck data.  
+* The configuration file format is now YAML rather than JSON. YAML is more human readable and compact  compared to JSON. It also allows comments to be used.
+
+* Virtual proxies are no longer used to get the Sense healthcheck data.
 Instead of virtual proxies the main Qlik Sense Engine Service (QES) is called on TCP port 4747  to get the health data of each Sense server that should be monitored.  
 A consequence of this is that certificates are now used to authenticate with Qlik Sense, rather than the security-by-obscurity that was the most commonly used security solution in the past for Butler SOS.
 Please note that the path to these certificates must be properly configured in the config file's Butler-SOS.cert section.  
@@ -101,7 +102,7 @@ serversToMonitor:
 
 Pleae refer to the config/default_template.yaml file for further configuration instructions.
 
-#### Where should Butler SOS run?
+#### Where to run Butler SOS
 
 Given that Butler SOS can be deployed in so many different configurations, it is difficult to give precise instructions that will work for all configurations. Especially the fact that Butler SOS uses certificates to authenticate with Sense is a complicating factor. Certificates are (when correctly used) great for securing systems, but they can alse cause headaches.
 
@@ -389,7 +390,7 @@ Install and start Grafana
     brew install grafana
     brew services start grafana
 
-Connect to Grafana by visiting http://localhost:3000
+Connect to Grafana by visiting [http://localhost:3000](http://localhost:3000)
 Default username/pwd is admin/admin.
 
 ### Retention policies in Influxdb
