@@ -29,6 +29,10 @@ Please see the [change log](https://github.com/ptarmiganlabs/butler-sos/blob/mas
 
 Highlights in the recent releases are
 
+### v2.3 - v2.5
+
+Various minor changes, for example making reading data from Sense's log db optional, and inclusion of the "saturated" metric from the health API.
+
 ### v2.2
 
 * Added support for running Butler SOS in Docker.
@@ -387,6 +391,30 @@ Install and start Grafana
 
 Connect to Grafana by visiting http://localhost:3000
 Default username/pwd is admin/admin.
+
+### Retention policies in Influxdb
+
+Sometimes you only want to keep data for the last week/month/year/...
+If that is the case, there is a Influxdb feature called "retention policies" that can be used to automatically delete all data older than the specified threshold.
+
+There is a good into to this topic [here](https://www.influxdata.com/blog/influxdb-shards-retention-policies/).
+The main [doc site](https://docs.influxdata.com/influxdb/v1.7/query_language/database_management/#retention-policy-management) is also good.
+
+Easiest option is usually to add a new retention policy in addition to the default one.
+That way you can easily delete the new policy and revert back to the original one if needed.
+
+    $ influx -host <ip>
+    Connected to http://<ip>:8086 version 1.6.4
+    InfluxDB shell version: v1.6.3
+    >
+    > use SenseOps
+    Using database SenseOps
+    >
+    > CREATE RETENTION POLICY "one_hour" ON "SenseOps" DURATION 10w REPLICATION 1 DEFAULT
+    >
+
+The above commands will ensure only 10 weeks worth of data is stored in the SenseOps database.
+NOTE: The command will delete any data in database SenseOps older than 10 weeks! Use with caution.
 
 ## Real-time dashboards using Grafana
 
