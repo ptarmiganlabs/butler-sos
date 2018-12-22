@@ -281,7 +281,8 @@ function getStatsFromSense(host, serverName) {
       followAllRedirects: true,
       url: "https://" + host + "/engine/healthcheck/",
       headers: {
-        "Cache-Control": "no-cache"
+        "Cache-Control": "no-cache",
+        "Content-Type": "application/json"
       },
       json: true,
       cert: fs.readFileSync(certFile),
