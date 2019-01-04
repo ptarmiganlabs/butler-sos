@@ -131,23 +131,26 @@ const influx = new Influx.InfluxDB({
   ]
 });
 
-influx
-  .getDatabaseNames()
-  .then(names => {
-    if (!names.includes(config.get("Butler-SOS.influxdbConfig.dbName"))) {
-      logger.info("Creating Influx database.");
-      return influx.createDatabase(
-        config.get("Butler-SOS.influxdbConfig.dbName")
-      );
-    }
-  })
-  .then(() => {
-    logger.info("Connected to Influx database.");
-    return;
-  })
-  .catch(err => {
-    logger.error(`Error creating Influx database!`);
-  });
+
+if (config.get("Butler-SOS.influxdbConfig.enableInfluxdb")) {
+  influx
+    .getDatabaseNames()
+    .then(names => {
+      if (!names.includes(config.get("Butler-SOS.influxdbConfig.dbName"))) {
+        logger.info("Creating Influx database.");
+        return influx.createDatabase(
+          config.get("Butler-SOS.influxdbConfig.dbName")
+        );
+      }
+    })
+    .then(() => {
+      logger.info("Connected to Influx database.");
+      return;
+    })
+    .catch(err => {
+      logger.error(`Error creating Influx database!`);
+    });
+}
 
 // ------------------------------------
 // Create MQTT client object and connect to MQTT broker
