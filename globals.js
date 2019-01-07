@@ -6,9 +6,12 @@ const {
   Pool
 } = require("pg");
 
+
+// Get app version from package.json file
+var appVersion = require('./package.json').version;
+
+
 // Set up logger with timestamps and colors
-
-
 const logTransports = {
   console: new winston.transports.Console({
     name: 'console_log',
@@ -173,5 +176,6 @@ module.exports = {
   logger,
   logTransports,
   influx,
-  pgPool
+  pgPool,
+  appVersion
 };
