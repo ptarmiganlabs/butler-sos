@@ -18,6 +18,8 @@ RUN groupadd -r nodejs \
 
 USER nodejs
 
+# Set up Docker healthcheck
+HEALTHCHECK --interval=12s --timeout=12s --start-period=30s CMD ["node", "healthcheck.js"]
 
 CMD ["node", "butler-sos.js"]
 
