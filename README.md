@@ -1,4 +1,4 @@
-# Butler SOS v2
+# Butler SOS
 
 [![NSP Status](https://nodesecurity.io/orgs/ptarmiganlabscom/projects/adfd09d2-140c-42ae-9f2f-6376c6d45f6d/badge)](https://nodesecurity.io/orgs/ptarmiganlabscom/projects/adfd09d2-140c-42ae-9f2f-6376c6d45f6d)
   
@@ -77,7 +77,8 @@ As of version 2 of Butler SOS there are several breaking changes in the configur
 
 * The configuration file format is now YAML rather than JSON. YAML is more human readable and compact  compared to JSON. It also allows comments to be used.
 
-* Virtual proxies are no longer used to get the Sense healthcheck data.
+* Virtual proxies are no longer used to get the Sense healthcheck data
+
 Instead of virtual proxies the main Qlik Sense Engine Service (QES) is called on TCP port 4747  to get the health data of each Sense server that should be monitored.  
 A consequence of this is that certificates are now used to authenticate with Qlik Sense, rather than the security-by-obscurity that was the most commonly used security solution in the past for Butler SOS.
 Please note that the path to these certificates must be properly configured in the config file's Butler-SOS.cert section.  
@@ -361,6 +362,8 @@ proton:butler-sos-docker goran$
 
 
 Setting the log level to info in the config file will reduce log output.
+
+The Docker container implements Docker healthchecks, which means you can run `docker ps` to see whether the container is health or not.
 
 ## Influxdb, Mosquitto & Grafana
 
