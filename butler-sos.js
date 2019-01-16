@@ -24,7 +24,10 @@ var restServer = restify.createServer({
 restServer.use(restify.plugins.queryParser());
 
 // Set up endpoint for REST server
-restServer.get({path: '/', flags: 'i'}, (req, res, next) => {
+restServer.get({
+  path: '/',
+  flags: 'i'
+}, (req, res, next) => {
   globals.logger.verbose(`Docker healthcheck API endpoint called.`);
 
   res.send(0);
@@ -40,15 +43,19 @@ globals.logger.info("Starting Butler SOS");
 globals.logger.info("Log level is: " + globals.logTransports.console.level);
 globals.logger.info("App version is: " + globals.appVersion);
 
+// Log info about what Qlik Sense certificates are being used
+globals.logger.debug(`Client cert: ${certFile}`);
+globals.logger.debug(`Client cert key: ${keyFile}`);
+globals.logger.debug(`CA cert: ${caFile}`);
 
 // ---------------------------------------------------
 // Start Docker healthcheck REST server on port 12398
-restServer.listen(12398, function() {
+restServer.listen(12398, function () {
   globals.logger.info('Docker healthcheck server now listening');
 });
 
 
-function postToInfluxdb(host, serverName, body) {
+function postToInfluxdb(host, body, influxTags) {
   // Calculate server uptime
 
   var dateTime = Date.now();
@@ -92,13 +99,14 @@ function postToInfluxdb(host, serverName, body) {
     seconds.substr(-2) +
     "s";
 
+  // Build tags structure that will be passed to InfluxDB
+  globals.logger.debug(`Tags sent to InfluxDB: ${JSON.stringify(influxTags)}`);
+
   // Write the whole reading to Influxdb
   globals.influx
     .writePoints([{
         measurement: "sense_server",
-        tags: {
-          host: serverName
-        },
+        tags: influxTags,
         fields: {
           version: body.version,
           started: body.started,
@@ -107,9 +115,7 @@ function postToInfluxdb(host, serverName, body) {
       },
       {
         measurement: "mem",
-        tags: {
-          host: serverName
-        },
+        tags: influxTags,
         fields: {
           comitted: body.mem.comitted,
           allocated: body.mem.allocated,
@@ -118,9 +124,7 @@ function postToInfluxdb(host, serverName, body) {
       },
       {
         measurement: "apps",
-        tags: {
-          host: serverName
-        },
+        tags: influxTags,
         fields: {
           active_docs_count: body.apps.active_docs.length,
           loaded_docs_count: body.apps.loaded_docs.length,
@@ -131,18 +135,14 @@ function postToInfluxdb(host, serverName, body) {
       },
       {
         measurement: "cpu",
-        tags: {
-          host: serverName
-        },
+        tags: influxTags,
         fields: {
           total: body.cpu.total
         }
       },
       {
         measurement: "session",
-        tags: {
-          host: serverName
-        },
+        tags: influxTags,
         fields: {
           active: body.session.active,
           total: body.session.total
@@ -150,9 +150,7 @@ function postToInfluxdb(host, serverName, body) {
       },
       {
         measurement: "users",
-        tags: {
-          host: serverName
-        },
+        tags: influxTags,
         fields: {
           active: body.users.active,
           total: body.users.total
@@ -160,9 +158,7 @@ function postToInfluxdb(host, serverName, body) {
       },
       {
         measurement: "cache",
-        tags: {
-          host: serverName
-        },
+        tags: influxTags,
         fields: {
           hits: body.cache.hits,
           lookups: body.cache.lookups,
@@ -173,16 +169,14 @@ function postToInfluxdb(host, serverName, body) {
       },
       {
         measurement: "saturated",
-        tags: {
-          host: serverName
-        },
+        tags: influxTags,
         fields: {
           saturated: body.saturated
         }
       }
     ])
     .then(err => {
-      globals.logger.verbose("Sent health Influxdb: " + serverName);
+      globals.logger.verbose("Sent health data to Influxdb: " + influxTags.host);
     })
 
     .catch(err => {
@@ -300,14 +294,15 @@ function postHealthToMQTT(host, serverName, body) {
   );
 }
 
-function getStatsFromSense(host, serverName) {
+function getStatsFromSense(host, influxTags) {
   globals.logger.debug(
     "URL=" + "https://" + host + "/engine/healthcheck/"
   );
 
   request({
-      followAllRedirects: true,
+      followRedirect: true,
       url: "https://" + host + "/engine/healthcheck/",
+      method: 'GET',
       headers: {
         "Cache-Control": "no-cache",
         "Content-Type": "application/json"
@@ -315,7 +310,10 @@ function getStatsFromSense(host, serverName) {
       json: true,
       cert: fs.readFileSync(certFile),
       key: fs.readFileSync(keyFile),
-      ca: fs.readFileSync(caFile)
+      ca: fs.readFileSync(caFile),
+      rejectUnauthorized: false,
+      requestCert: true,
+      agent: false
     },
     function (error, response, body) {
       // Check for error
@@ -327,19 +325,19 @@ function getStatsFromSense(host, serverName) {
       }
 
       if (!error && response.statusCode === 200) {
-        globals.logger.verbose("Received ok response from " + serverName);
+        globals.logger.verbose("Received ok response from " + influxTags.host);
         globals.logger.debug(JSON.stringify(body));
 
         // Post to MQTT (if enabled)
         if (globals.config.get("Butler-SOS.mqttConfig.enableMQTT")) {
           globals.logger.debug("Calling MQTT posting method");
-          postHealthToMQTT(host, serverName, body);
+          postHealthToMQTT(host, influxTags.host, body);
         }
 
         // Post to Influxdb (if enabled)
         if (globals.config.get("Butler-SOS.influxdbConfig.enableInfluxdb")) {
           globals.logger.debug("Calling Influxdb posting method");
-          postToInfluxdb(host, serverName, body);
+          postToInfluxdb(host, body, influxTags);
         }
       }
     }
@@ -444,6 +442,26 @@ setInterval(function () {
   serverList.forEach(function (server) {
     globals.logger.verbose("Getting stats for server: " + server.serverName);
 
-    getStatsFromSense(server.host, server.serverName);
+    globals.logger.debug(JSON.stringify(server));
+
+    var tags = {
+      host: server.serverName
+    };
+    // Check if there are any extra tags for this server that should be sent to InfluxDB 
+    if (server.hasOwnProperty('influxTags')) {
+
+      // Check if there is a config entry "serverType". Add it if so
+      if (server.influxTags.hasOwnProperty('serverType')) {
+        globals.logger.debug(`InfluxDB serverType tag for current server: ${JSON.stringify(server.influxTags)}`)
+        tags = Object.assign(tags, {
+          server_type: server.influxTags.serverType
+        });
+      }
+
+    }
+    globals.logger.debug(`Complete list of tags for server ${server.serverName}: ${JSON.stringify(tags)}`);
+
+    getStatsFromSense(server.host, tags);
   });
 }, globals.config.get("Butler-SOS.serversToMonitor.pollingInterval"));
+

@@ -64,7 +64,7 @@ const influx = new Influx.InfluxDB({
         started: Influx.FieldType.STRING,
         uptime: Influx.FieldType.STRING
       },
-      tags: ["host"]
+      tags: ["host", "server_type"]
     },
     {
       measurement: "mem",
@@ -73,7 +73,7 @@ const influx = new Influx.InfluxDB({
         allocated: Influx.FieldType.INTEGER,
         free: Influx.FieldType.INTEGER
       },
-      tags: ["host"]
+      tags: ["host", "server_type"]
     },
     {
       measurement: "apps",
@@ -84,14 +84,14 @@ const influx = new Influx.InfluxDB({
         calls: Influx.FieldType.INTEGER,
         selections: Influx.FieldType.INTEGER
       },
-      tags: ["host"]
+      tags: ["host", "server_type"]
     },
     {
       measurement: "cpu",
       fields: {
         total: Influx.FieldType.INTEGER
       },
-      tags: ["host"]
+      tags: ["host", "server_type"]
     },
     {
       measurement: "session",
@@ -99,7 +99,7 @@ const influx = new Influx.InfluxDB({
         active: Influx.FieldType.INTEGER,
         total: Influx.FieldType.INTEGER
       },
-      tags: ["host"]
+      tags: ["host", "server_type"]
     },
     {
       measurement: "users",
@@ -107,7 +107,7 @@ const influx = new Influx.InfluxDB({
         active: Influx.FieldType.INTEGER,
         total: Influx.FieldType.INTEGER
       },
-      tags: ["host"]
+      tags: ["host", "server_type"]
     },
     {
       measurement: "cache",
@@ -118,7 +118,7 @@ const influx = new Influx.InfluxDB({
         replaced: Influx.FieldType.INTEGER,
         bytes_added: Influx.FieldType.INTEGER
       },
-      tags: ["host"]
+      tags: ["host", "server_type"]
     },
     {
       measurement: "log_event",
@@ -129,7 +129,7 @@ const influx = new Influx.InfluxDB({
         replaced: Influx.FieldType.INTEGER,
         bytes_added: Influx.FieldType.INTEGER
       },
-      tags: ["host"]
+      tags: ["host", "server_type"]
     }
   ]
 });
