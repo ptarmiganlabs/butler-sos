@@ -346,6 +346,12 @@ function getStatsFromSense(host, influxTags) {
 
 if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
 
+  // Get query period from config file. If not specified there use default value.
+  var queryPeriod = '5 minutes';
+  if (globals.config.has("Butler-SOS.logdb.queryPeriod")) {
+    queryPeriod = globals.config.get("Butler-SOS.logdb.queryPeriod");
+  }
+
   // Configure timer for getting log data from Postgres
   setInterval(function () {
     globals.logger.verbose("Event started: Query log db");
@@ -365,7 +371,7 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
         from public.log_entries
         where
           entry_level in ('WARN', 'ERROR') and
-          (entry_timestamp > now() - INTERVAL '2 minutes' )
+          (entry_timestamp > now() - INTERVAL '${queryPeriod}' )
         order by
           entry_timestamp desc
         `

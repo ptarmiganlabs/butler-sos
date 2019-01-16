@@ -7,6 +7,8 @@ Butler-SOS:
     enableLogDb: true
     # How often (milliseconds) should Postgres log db be queried for warnings and errors?
     pollingInterval: 60000
+    # How far back should Butler SOS query for log entries? Default is 5 min
+    queryPeriod: 5 minutes
     host: <IP or FQDN of Qlik Sense logging db>
     port: 4432
     qlogsReaderUser: qlogs_reader
