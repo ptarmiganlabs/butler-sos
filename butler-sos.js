@@ -470,4 +470,3 @@ setInterval(function () {
     getStatsFromSense(server.host, tags);
   });
 }, globals.config.get("Butler-SOS.serversToMonitor.pollingInterval"));
-
