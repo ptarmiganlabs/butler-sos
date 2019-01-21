@@ -42,11 +42,9 @@ Butler-SOS:
     servers:
     - host: <server1.my.domain>
       serverName: <server1>
-      availableRAM: 32000
       influxTags:
-        serverType: DEV
+        serverGroup: DEV
     - host: <server2.my.domain>
       serverName: <server2>
-      availableRAM: 24000
       influxTags:
         serverGroup: PROD
