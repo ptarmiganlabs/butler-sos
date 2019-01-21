@@ -35,7 +35,7 @@ Highlights in the recent releases are
 
 **Breaking change!!**
 
-The format of the database where Butler SOS stores the data it retreives has been slightly modified. v3.0 will not work properly with a database created by earlier Butler SOS versions. See [readme file](#upgrading-to-v3) for further info on dealing with this.
+The format of the database where Butler SOS stores the data it retrieves has been slightly modified. v3.0 will not work properly with a database created by earlier Butler SOS versions. See [readme file](#upgrading-to-v3) for further info on dealing with this.
 
 v3.0 is a major rewrite of Butler SOS. Most changes are incremental increases and improvements under the hood, with a couple of exceptions:
 
