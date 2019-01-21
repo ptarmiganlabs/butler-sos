@@ -4,13 +4,15 @@
   
 ![Butler SOS](img/butler-sos-small.png)  
 
-Butler SenseOps Stats ("Butler SOS") is a Node.js service publishing operational Qlik Sense Enterprise metrics to MQTT and Influxdb.  
-It uses the [Sense healthcheck API](http://help.qlik.com/en-US/sense-developer/November2017/Subsystems/EngineAPI/Content/GettingSystemInformation/HealthCheckStatus.htm) to gather operational metrics for the Sense servers specified in the YAML config file.  
+Butler SenseOps Stats ("Butler SOS") is a DevOps monitoring tool for [Qlik Sense](https://www.qlik.com/us/products/qlik-sense).  
+It publishes operational Qlik Sense Enterprise metrics to [MQTT](https://en.wikipedia.org/wiki/MQTT) and [InfluxDB](https://www.influxdata.com/time-series-platform/influxdb/), from where it can be charted using tools like Grafana or acted on by downstream systems that listen to the MQTT topics used by Butler SOS.
+
+Butler SOS uses the [Sense healthcheck API](http://help.qlik.com/en-US/sense-developer/November2017/Subsystems/EngineAPI/Content/GettingSystemInformation/HealthCheckStatus.htm) to gather operational metrics for the Sense servers specified in the YAML config file.  
 It also pulls warnings and errors from [Sense's Postgres logging database](http://help.qlik.com/en-US/sense/November2017/Subsystems/PlanningQlikSenseDeployments/Content/Deployment/Qlik-Logging-Service.htm), and forwards these to Influx and MQTT.
 
 **Why a separate tool for this?**  
 Good question. While Qlik Sense ships with a great Operations Monitor application, it is not useful or intended for real-time operational monitoring.  
-It is great for retrospective analysis of what happened in a Qlik Sense environment, but for a real-time view something else is needed - enter Butler SOS.
+It is great for retrospective analysis of what happened in a Qlik Sense environment, but for a real-time understanding of what's going on in a Sense environment something else is needed - enter Butler SOS.
 
 The most interesting use of Butler SOS is probably to create real-time dashboards based on the data in the Influx database, showing operational metrics for a Qlik Sense Enterprise environment.  
 A fully interactive demo dashboard is available [here](https://snapshot.raintank.io/dashboard/snapshot/1hNwAmi50lykKYXr6mswhKmll9myrH20?orgId=2).  
@@ -21,7 +23,7 @@ Sample screen shots:
 
 ![Grafana dashboard](img/SenseOps_dashboard_4.png "SenseOps dashboard showing Qlik Sense metrics, using Grafana")
 
-Butler SOS can however also send the data to [MQTT](https://en.wikipedia.org/wiki/MQTT), for use in any MQTT enabled tool or system.
+As mentioned above, Butler SOS can also send data to [MQTT](https://en.wikipedia.org/wiki/MQTT), for use in any MQTT enabled tool or system.
 
 ## What's new
 
@@ -29,40 +31,62 @@ Please see the [change log](https://github.com/ptarmiganlabs/butler-sos/blob/mas
 
 Highlights in the recent releases are
 
-### v2.3 - v2.5
+### v3.0
 
-Various minor changes, for example making reading data from Sense's log db optional, and inclusion of the "saturated" metric from the health API.
+**Breaking change!!**
 
-### v2.2
+The format of the database where Butler SOS stores the data it retrieves has been slightly modified. v3.0 will not work properly with a database created by earlier Butler SOS versions. See [readme file](#upgrading-to-v3) for further info on dealing with this.
 
-* Added support for running Butler SOS in Docker.
-* Updated package dependenies.
+v3.0 is a major rewrite of Butler SOS. Most changes are incremental increases and improvements under the hood, with a couple of exceptions:
 
-### v2.1 and v2.1.1
+* FEATURE: New per-server config option "serverGroup". Use this to group or categorize servers, for example as being part of a production vs development Qlik Sense cluster.
+* FEATURE: New config option "queryPeriod" for controlling how far back querying for Sense log entries should be done.
 
-* Updated package dependecies
-* Tested with Node.js 8.11.2 (LTS), Influxdb 1.5.2, Grafana 5.1.3
+### v2.6
 
-### v2
+When running as a Docker container, Butler SOS will now use Docker health checks to let Docker know that all is well.
 
-* Close to real-time metrics on warnings and errors appearing in the QLik Sense logs
-* Improved posting of data to MQTT
-* YAML config files instead of JSON
-* New and more comprehensive sample Grafana dashboards
-* A [demo dashboard](https://snapshot.raintank.io/dashboard/snapshot/1hNwAmi50lykKYXr6mswhKmll9myrH20?orgId=2) that anyone can try out
+### v2.5
+
+Improved logging
+
 
 ## Install and setup
 
-* Butler SOS has been tested with Qlik Sense Enterprise up until and including September 2018. Butler SOS uses core Sense APIs that are unlikely to change in future Sense versions. For that reasons Butler SOS is likely to work also with future Sense versions.
+* Butler SOS has been tested with Qlik Sense Enterprise up until and including November 2018. Butler SOS uses core Sense APIs that are unlikely to change in future Sense versions. For that reasons Butler SOS is likely to work also with future Sense versions.
+
+### Upgrading to v3
+
+Version 3.0 introduces a slightly different schema for the InfluxDB database.  
+While it certainly is possible to migrate existing data, that will not be covered here. Let's instead drop the old InfluxDB database and start over with an empty one.
+
+There steps to achieve this differ slightly depending on how you run Butler SOS. Conceptually they are:
+
+*Running Butler SOS as a native Node.js app:*
+
+* Stop Butler SOS if it is running
+* From command line, run `influxdb -host <localhost or IP of InfluxDB server>`
+* `show databases` to list available InfluxDB databases
+* `use SenseOps` within influx to select the Butler SOS database
+* `drop database SenseOps` to delete the existing database. **WARNING! THERE IS NO WAY OF UN-DOING THIS!**
+* `exit` will close the influx client
+* Next time Butler SOS is started, an empty Influx database with the correct schema will be created
+
+*Running Butler SOS as a Docker container:*
+
+* From command line, connect to the Docker container: `docker exec -it <container-name> /bin/bash`. <container-name> is the name given in the `docker-compose.yml` file, usually butler-sos.
+* From within the container, run `influxdb`.
+* Follow the same steps as above ("use SenseOps", "drop database SenseOps", "exit"
+* Exit the container by running `exit` 
 
 ### Running as a native Node.js app
 
 * Clone [the repository](https://github.com/ptarmiganlabs/butler-sos) from GitHub to desired location.
-* Make sure [Node.js](https://nodejs.org) is installed. Butler-SOS has been tested with Node.js 8.11.4.
+* Make sure [Node.js](https://nodejs.org) is installed. Butler-SOS has been tested with Node.js 10.15.0.
 * Run "npm install" from within the main butler-sos directory to download and install all Node.js dependencies.
 * Make a copy of the [config/default_template.yaml](https://github.com/ptarmiganlabs/butler-sos/blob/master/config/default_template.yaml) configuration file. Edit the file as needed, save it as "production.yaml" in the ./config directory. Butler SOS will read its config settings from this file.
 * [Export certificates](http://help.qlik.com/en-US/sense/November2017/Subsystems/ManagementConsole/Content/export-certificates.htm) from Qlik Sense QMC, then place them in the ./config/certificate folder under Butler SOS' main folder.
-* Install [Influxdb](https://docs.influxdata.com/influxdb/v1.4/introduction) (only needed if data is to be stored in Influxdb).
+* Install [InfluxDB](https://docs.influxdata.com/influxdb/v1.4/introduction) (only needed if data is to be stored in Influxdb).
 * Install [Mosquitto](https://mosquitto.org) or another MQTT broker (only needed if data is to be forwarded to MQTT). If you already have an MQTT broker you do not need to install a new one, Butler SOS can use the existing one.
 
 The `production.yaml` file can be named anything, as long as it matches the value of the `NODE_ENV` environment variable.  
@@ -168,7 +192,7 @@ The responses are retrived asyncronously as they arrive from the different serve
 Finally, the data is stored to Influxdb and sent as MQTT messages.
 
 
-### Running in a Docker container
+### Run Butler SOS in a Docker
 
 This is in most cases the preferred way of running Butler SOS:
 
@@ -235,8 +259,10 @@ Butler-SOS:
 
   # Qlik Sense logging db config parameters
   logdb:
+    enableLogDb: true
     # How often (milliseconds) should Postgres log db be queried for warnings and errors?
     pollingInterval: 15000
+    queryPeriod: 5 minutes
     host: <IP or FQDN of Qlik Sense logging db>
     port: 4432
     qlogsReaderUser: qlogs_reader
@@ -270,10 +296,12 @@ Butler-SOS:
     servers:
     - host: <server1.my.domain>
       serverName: <server1>
-      availableRAM: 32000
+      influxTags:
+        serverGroup: DEV
     - host: <server2.my.domain>
       serverName: <server2>
-      availableRAM: 24000
+      influxTags:
+        serverGroup: PROD
 proton:butler-sos-docker goran$
 
 ```
@@ -401,7 +429,7 @@ Default username/pwd is admin/admin.
 Sometimes you only want to keep data for the last week/month/year/...
 If that is the case, there is a Influxdb feature called "retention policies" that can be used to automatically delete all data older than the specified threshold.
 
-There is a good into to this topic [here](https://www.influxdata.com/blog/influxdb-shards-retention-policies/).
+There is a good intro to this topic [here](https://www.influxdata.com/blog/influxdb-shards-retention-policies/).
 The main [doc site](https://docs.influxdata.com/influxdb/v1.7/query_language/database_management/#retention-policy-management) is also good.
 
 Easiest option is usually to add a new retention policy in addition to the default one.
@@ -414,7 +442,7 @@ That way you can easily delete the new policy and revert back to the original on
     > use SenseOps
     Using database SenseOps
     >
-    > CREATE RETENTION POLICY "one_hour" ON "SenseOps" DURATION 10w REPLICATION 1 DEFAULT
+    > CREATE RETENTION POLICY "ten_weeks" ON "SenseOps" DURATION 10w REPLICATION 1 DEFAULT
     >
 
 The above commands will ensure only 10 weeks worth of data is stored in the SenseOps database.
@@ -425,7 +453,9 @@ NOTE: The command will delete any data in database SenseOps older than 10 weeks!
 Once the data exists in Influxdb it can be visualised using [Grafana](https://grafana.com).
   
 A sample dashboard is included in the Grafana directory. Import it into your Grafana environment, then modify it to reflect your server host names, after which it should show real-time metrics for your Sense servers.  
-Grafana is extremely powerful. Creating automatically updating dashboards for any number of servers is a matter of a few minutes work. Tutorials and docs can be found on their site.
+Grafana is extremely powerful. Creating automatically updating dashboards for any number of servers is a matter of a few minutes work.  
+Grafana also has good alerting features, making it easy to send out-of-bound alerts to Slack, Microsoft Teams, PagerDuty, email etc.  
+Tutorials and docs can be found on the main Grafana site and elsewhere.
 
 ## References
   

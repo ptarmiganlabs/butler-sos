@@ -6,7 +6,9 @@ Butler-SOS:
   logdb:
     enableLogDb: true
     # How often (milliseconds) should Postgres log db be queried for warnings and errors?
-    pollingInterval: 15000
+    pollingInterval: 60000
+    # How far back should Butler SOS query for log entries? Default is 5 min
+    queryPeriod: 5 minutes
     host: <IP or FQDN of Qlik Sense logging db>
     port: 4432
     qlogsReaderUser: qlogs_reader
@@ -34,13 +36,15 @@ Butler-SOS:
 
   serversToMonitor:
     # How often (milliseconds) should the healthcheck API be polled? 
-    pollingInterval: 5000
+    pollingInterval: 30000
 
     # Sense Servers that should be queried for healthcheck data 
     servers:
     - host: <server1.my.domain>
       serverName: <server1>
-      availableRAM: 32000
+      influxTags:
+        serverGroup: DEV
     - host: <server2.my.domain>
       serverName: <server2>
-      availableRAM: 24000
+      influxTags:
+        serverGroup: PROD
