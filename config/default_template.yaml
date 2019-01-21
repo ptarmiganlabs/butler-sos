@@ -49,4 +49,4 @@ Butler-SOS:
       serverName: <server2>
       availableRAM: 24000
       influxTags:
-        serverType: PROD
+        serverGroup: PROD

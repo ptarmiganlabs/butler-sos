@@ -64,7 +64,7 @@ const influx = new Influx.InfluxDB({
         started: Influx.FieldType.STRING,
         uptime: Influx.FieldType.STRING
       },
-      tags: ["host", "server_type"]
+      tags: ["host", "server_group"]
     },
     {
       measurement: "mem",
@@ -73,7 +73,7 @@ const influx = new Influx.InfluxDB({
         allocated: Influx.FieldType.INTEGER,
         free: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_type"]
+      tags: ["host", "server_group"]
     },
     {
       measurement: "apps",
@@ -84,14 +84,14 @@ const influx = new Influx.InfluxDB({
         calls: Influx.FieldType.INTEGER,
         selections: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_type"]
+      tags: ["host", "server_group"]
     },
     {
       measurement: "cpu",
       fields: {
         total: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_type"]
+      tags: ["host", "server_group"]
     },
     {
       measurement: "session",
@@ -99,7 +99,7 @@ const influx = new Influx.InfluxDB({
         active: Influx.FieldType.INTEGER,
         total: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_type"]
+      tags: ["host", "server_group"]
     },
     {
       measurement: "users",
@@ -107,7 +107,7 @@ const influx = new Influx.InfluxDB({
         active: Influx.FieldType.INTEGER,
         total: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_type"]
+      tags: ["host", "server_group"]
     },
     {
       measurement: "cache",
@@ -118,7 +118,7 @@ const influx = new Influx.InfluxDB({
         replaced: Influx.FieldType.INTEGER,
         bytes_added: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_type"]
+      tags: ["host", "server_group"]
     },
     {
       measurement: "log_event",
@@ -129,7 +129,7 @@ const influx = new Influx.InfluxDB({
         replaced: Influx.FieldType.INTEGER,
         bytes_added: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_type"]
+      tags: ["host", "server_group"]
     }
   ]
 });

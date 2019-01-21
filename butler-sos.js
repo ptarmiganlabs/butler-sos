@@ -456,11 +456,11 @@ setInterval(function () {
     // Check if there are any extra tags for this server that should be sent to InfluxDB 
     if (server.hasOwnProperty('influxTags')) {
 
-      // Check if there is a config entry "serverType". Add it if so
-      if (server.influxTags.hasOwnProperty('serverType')) {
-        globals.logger.debug(`InfluxDB serverType tag for current server: ${JSON.stringify(server.influxTags)}`)
+      // Check if there is a config entry "serverGroup". Add it if so
+      if (server.influxTags.hasOwnProperty('serverGroup')) {
+        globals.logger.debug(`InfluxDB serverGroup tag for current server: ${JSON.stringify(server.influxTags)}`)
         tags = Object.assign(tags, {
-          server_type: server.influxTags.serverType
+          server_group: server.influxTags.serverGroup
         });
       }
 
