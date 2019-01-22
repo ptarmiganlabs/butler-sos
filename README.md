@@ -31,6 +31,16 @@ Please see the [change log](https://github.com/ptarmiganlabs/butler-sos/blob/mas
 
 Highlights in the recent releases are
 
+### v3.1
+
+**Breaking change!!**
+
+Once again some changes that require change in the underlyding database used by Butler SOS.
+The procedure for upgrading is the same as for V3.0: The simplest option is to drop the InfluxDB database and start anew with an empty database. You will loose past logging history, but as Butler SOS deals with *operational* monitoring that should in most cases be fine. 
+
+* FEATURE: New options influxdbConfig.includeFields.* control whether Butler SOS should store lists of currently loaded, active and in_memory apps in InfluxDB. Storing this data can be increadibly helpful when trying to understand what apps cause issues when loaded from disk. **NOTE** that enabling these features may significantly increase the amount of data stored in InfluxDB!
+
+
 ### v3.0
 
 **Breaking change!!**
@@ -119,9 +129,13 @@ serversToMonitor:
     - host: server1.company.net:4747
       serverName: Server1
       availableRAM: 32000
+      influxTags:
+        serverGroup: DEV
     - host: server2.company.net:4747
       serverName: Server2
       availableRAM: 24000
+      influxTags:
+        serverGroup: PROD
 
 ```
 
@@ -287,6 +301,12 @@ Butler-SOS:
     enableInfluxdb: true
     hostIP: <IP or FQDN of Influxdb server>
     dbName: SenseOps
+    # Control whether certain fields are stored in InfluxDB or not
+    # Use with caution! Enabling activeDocs, loadedDocs or inMemoryDocs may result in lots of data sent to InfluxDB.
+    includeFields:
+      activeDocs: false
+      loadedDocs: false
+      inMemoryDocs: false
 
   serversToMonitor:
     # How often (milliseconds) should the healthcheck API be polled?
