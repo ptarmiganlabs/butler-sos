@@ -27,11 +27,6 @@ Butler-SOS:
     brokerPort: 1883
     # Topic should end with /
     baseTopic: butler-sos/
-    # Control whether certain fields are sent over MQTT or not
-    includeFields:
-      activeDocs: false
-      loadedDocs: false
-      inMemoryDocs: false
 
   # Influx db config parameters
   influxdbConfig:
@@ -39,10 +34,11 @@ Butler-SOS:
     hostIP: <IP or FQDN of Influxdb server>
     dbName: SenseOps
     # Control whether certain fields are stored in InfluxDB or not
+    # Use with caution! Enabling activeDocs, loadedDocs or inMemoryDocs may result in lots of data sent to InfluxDB.
     includeFields:
-      activeDocs: true
-      loadedDocs: true
-      inMemoryDocs: true
+      activeDocs: false
+      loadedDocs: false
+      inMemoryDocs: false
 
   serversToMonitor:
     # How often (milliseconds) should the healthcheck API be polled? 
