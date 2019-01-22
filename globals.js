@@ -81,6 +81,9 @@ const influx = new Influx.InfluxDB({
         active_docs_count: Influx.FieldType.INTEGER,
         loaded_docs_count: Influx.FieldType.INTEGER,
         in_memory_docs_count: Influx.FieldType.INTEGER,
+        active_docs: Influx.FieldType.STRING,
+        loaded_docs: Influx.FieldType.STRING,
+        in_memory_docs: Influx.FieldType.STRING,
         calls: Influx.FieldType.INTEGER,
         selections: Influx.FieldType.INTEGER
       },
