@@ -321,7 +321,7 @@ function getStatsFromSense(host, influxTags) {
     function (error, response, body) {
       // Check for error
       if (error) {
-        globals.logger.error(`Error: ${error}`);
+        globals.logger.error(`Error when calling health check API: ${error}`);
         globals.logger.error(`Response: ${response}`);
         globals.logger.error(`Body: ${body}`);
         return;
@@ -390,6 +390,12 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
               // Post to Influxdb (if enabled)
               if (globals.config.get("Butler-SOS.influxdbConfig.enableInfluxdb")) {
                 globals.logger.silly("Posting log db data to Influxdb...");
+
+
+                // Make sure that the payload message exists - storing it to Influx would otherwise throw an error
+                if (!row.payload.hasOwnProperty('Message')) {
+                  row.payload.Message = '';
+                }
 
                 // Write the whole reading to Influxdb
                 globals.influx
