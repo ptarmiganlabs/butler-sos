@@ -129,6 +129,9 @@ function postToInfluxdb(host, body, influxTags) {
           active_docs_count: body.apps.active_docs.length,
           loaded_docs_count: body.apps.loaded_docs.length,
           in_memory_docs_count: body.apps.in_memory_docs.length,
+          active_docs: ( globals.config.get("Butler-SOS.influxdbConfig.includeFields.activeDocs") ? body.apps.active_docs: '' ),
+          loaded_docs: ( globals.config.get("Butler-SOS.influxdbConfig.includeFields.loadedDocs") ? body.apps.loaded_docs: '' ),
+          in_memory_docs: ( globals.config.get("Butler-SOS.influxdbConfig.includeFields.inMemoryDocs") ? body.apps.in_memory_docs: '' ),
           calls: body.apps.calls,
           selections: body.apps.selections
         }
@@ -318,7 +321,7 @@ function getStatsFromSense(host, influxTags) {
     function (error, response, body) {
       // Check for error
       if (error) {
-        globals.logger.error(`Error: ${error}`);
+        globals.logger.error(`Error when calling health check API: ${error}`);
         globals.logger.error(`Response: ${response}`);
         globals.logger.error(`Body: ${body}`);
         return;
@@ -386,7 +389,13 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
 
               // Post to Influxdb (if enabled)
               if (globals.config.get("Butler-SOS.influxdbConfig.enableInfluxdb")) {
-                globals.logger.debug("Posting log db data to Influxdb...");
+                globals.logger.silly("Posting log db data to Influxdb...");
+
+
+                // Make sure that the payload message exists - storing it to Influx would otherwise throw an error
+                if (!row.payload.hasOwnProperty('Message')) {
+                  row.payload.Message = '';
+                }
 
                 // Write the whole reading to Influxdb
                 globals.influx
@@ -414,7 +423,7 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
 
               // Post to MQTT (if enabled)
               if (globals.config.get("Butler-SOS.mqttConfig.enableMQTT")) {
-                globals.logger.debug("Posting log db data to MQTT...");
+                globals.logger.silly("Posting log db data to MQTT...");
                 postLogDbToMQTT(
                   row.process_host,
                   row.process_name,
@@ -468,5 +477,5 @@ setInterval(function () {
     globals.logger.debug(`Complete list of tags for server ${server.serverName}: ${JSON.stringify(tags)}`);
 
     getStatsFromSense(server.host, tags);
-  });
+    });
 }, globals.config.get("Butler-SOS.serversToMonitor.pollingInterval"));
