@@ -48,9 +48,13 @@ Butler-SOS:
     servers:
     - host: <server1.my.domain>
       serverName: <server1>
+      serverDescription: <description>
+      logDbHost: <host name as used in QLogs db>
       influxTags:
         serverGroup: DEV
     - host: <server2.my.domain>
       serverName: <server2>
+      serverDescription: <description>
+      logDbHost: <host name as used in QLogs db>
       influxTags:
         serverGroup: PROD

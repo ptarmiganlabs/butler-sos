@@ -129,9 +129,9 @@ function postToInfluxdb(host, body, influxTags) {
           active_docs_count: body.apps.active_docs.length,
           loaded_docs_count: body.apps.loaded_docs.length,
           in_memory_docs_count: body.apps.in_memory_docs.length,
-          active_docs: ( globals.config.get("Butler-SOS.influxdbConfig.includeFields.activeDocs") ? body.apps.active_docs: '' ),
-          loaded_docs: ( globals.config.get("Butler-SOS.influxdbConfig.includeFields.loadedDocs") ? body.apps.loaded_docs: '' ),
-          in_memory_docs: ( globals.config.get("Butler-SOS.influxdbConfig.includeFields.inMemoryDocs") ? body.apps.in_memory_docs: '' ),
+          active_docs: (globals.config.get("Butler-SOS.influxdbConfig.includeFields.activeDocs") ? body.apps.active_docs : ''),
+          loaded_docs: (globals.config.get("Butler-SOS.influxdbConfig.includeFields.loadedDocs") ? body.apps.loaded_docs : ''),
+          in_memory_docs: (globals.config.get("Butler-SOS.influxdbConfig.includeFields.inMemoryDocs") ? body.apps.in_memory_docs : ''),
           calls: body.apps.calls,
           selections: body.apps.selections
         }
@@ -223,10 +223,12 @@ function postHealthToMQTT(host, serverName, body) {
     baseTopic + serverName + "/mem/free",
     body.mem.free.toString()
   );
+
   globals.mqttClient.publish(
     baseTopic + serverName + "/cpu/total",
     body.cpu.total.toString()
   );
+
   globals.mqttClient.publish(
     baseTopic + serverName + "/session/active",
     body.session.active.toString()
@@ -235,6 +237,7 @@ function postHealthToMQTT(host, serverName, body) {
     baseTopic + serverName + "/session/total",
     body.session.total.toString()
   );
+
   globals.mqttClient.publish(
     baseTopic + serverName + "/apps/active_docs",
     body.apps.active_docs.toString()
@@ -255,6 +258,7 @@ function postHealthToMQTT(host, serverName, body) {
     baseTopic + serverName + "/apps/selections",
     body.apps.selections.toString()
   );
+
   globals.mqttClient.publish(
     baseTopic + serverName + "/users/active",
     body.users.active.toString()
@@ -263,6 +267,7 @@ function postHealthToMQTT(host, serverName, body) {
     baseTopic + serverName + "/users/total",
     body.users.total.toString()
   );
+
   globals.mqttClient.publish(
     baseTopic + serverName + "/cache/hits",
     body.cache.hits.toString()
@@ -283,7 +288,6 @@ function postHealthToMQTT(host, serverName, body) {
     baseTopic + serverName + "/cache/bytes_added",
     body.cache.bytes_added.toString()
   );
-
   if (body.cache.lookups > 0) {
     globals.mqttClient.publish(
       baseTopic + serverName + "/cache/hit_ratio",
@@ -391,20 +395,37 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
               if (globals.config.get("Butler-SOS.influxdbConfig.enableInfluxdb")) {
                 globals.logger.silly("Posting log db data to Influxdb...");
 
-
                 // Make sure that the payload message exists - storing it to Influx would otherwise throw an error
                 if (!row.payload.hasOwnProperty('Message')) {
                   row.payload.Message = '';
                 }
 
+                // Look up server_group tag. The host value returned from Postgres should match the logDbHost property from 
+                // the YAML config file. Then use the server_group for the server that matched the Postgres host.
+                serverItem = globals.serverList.find(item => {
+                  globals.logger.silly(`Matching logdb host "${row.process_host}" against config file logDbHost "${item.logDbHost}"`);
+                  return item.logDbHost == row.process_host;
+                }) ;
+                if (serverItem == undefined) {
+                  group = '<no group>';
+                  srvName = '<no server>';
+                } else {
+                  group = serverItem.influxTags.serverGroup;
+                  srvName = serverItem.serverName;
+                };
+
+                globals.logger.silly(`Server group for log_entry: ${group}`);
+
                 // Write the whole reading to Influxdb
                 globals.influx
                   .writePoints([{
-                    measurement: "log_entry",
+                    measurement: "log_event",
                     tags: {
                       host: row.process_host,
+                      server_name: srvName,
                       source_process: row.process_name,
-                      log_level: row.entry_level
+                      log_level: row.entry_level,
+                      server_group: group
                     },
                     fields: {
                       message: row.payload.Message
@@ -453,14 +474,15 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
 setInterval(function () {
   globals.logger.verbose("Event started: Statistics collection");
 
-  var serverList = globals.config.get("Butler-SOS.serversToMonitor.servers");
-  serverList.forEach(function (server) {
+  globals.serverList.forEach(function (server) {
     globals.logger.verbose("Getting stats for server: " + server.serverName);
 
     globals.logger.debug(JSON.stringify(server));
 
     var tags = {
-      host: server.serverName
+      host: server.host,
+      server_name: server.serverName,
+      server_description: server.serverDescription
     };
     // Check if there are any extra tags for this server that should be sent to InfluxDB 
     if (server.hasOwnProperty('influxTags')) {
@@ -477,5 +499,5 @@ setInterval(function () {
     globals.logger.debug(`Complete list of tags for server ${server.serverName}: ${JSON.stringify(tags)}`);
 
     getStatsFromSense(server.host, tags);
-    });
+  });
 }, globals.config.get("Butler-SOS.serversToMonitor.pollingInterval"));
