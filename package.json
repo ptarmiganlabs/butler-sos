@@ -1,6 +1,6 @@
 {
   "name": "butler-sos",
-  "version": "3.2.0.beta",
+  "version": "3.2.0beta",
   "description": "Butler SenseOps Stats (\"Butler SOS\") is a Node.js service publishing operational Qlik Sense metrics to MQTT and Influxdb.",
   "main": "butler-sos.js",
   "scripts": {
@@ -27,13 +27,13 @@
   "homepage": "https://github.com/ptarmiganlabs/butler-sos#readme",
   "dependencies": {
     "config": "^3.0.1",
-    "influx": "^5.0.0-alpha.4",
+    "influx": "^5.0.7",
     "js-yaml": "^3.12.1",
     "mqtt": "^2.18.8",
     "pg": "^7.8.0",
     "request": "^2.88.0",
     "restify": "^7.6.0",
-    "winston": "^3.1.0"
+    "winston": "^3.2.0"
   },
   "devDependencies": {
     "release-it": "^9.8.1"
