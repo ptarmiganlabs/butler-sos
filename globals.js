@@ -131,7 +131,7 @@ const influx = new Influx.InfluxDB({
       fields: {
         message: Influx.FieldType.STRING
       },
-      tags: ["host", "server_name", "source_process", "log_level", "server_group"]
+      tags: ["host", "server_name", "server_description", "source_process", "log_level", "server_group"]
     }
   ]
 });
