@@ -409,9 +409,11 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
                 if (serverItem == undefined) {
                   group = '<no group>';
                   srvName = '<no server>';
+                  srvDesc = '<no description>';
                 } else {
                   group = serverItem.influxTags.serverGroup;
                   srvName = serverItem.serverName;
+                  srvDesc = serverItem.serverDescription;
                 };
 
                 globals.logger.silly(`Server group for log_entry: ${group}`);
@@ -423,6 +425,7 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
                     tags: {
                       host: row.process_host,
                       server_name: srvName,
+                      server_description: srvDesc,
                       source_process: row.process_name,
                       log_level: row.entry_level,
                       server_group: group
