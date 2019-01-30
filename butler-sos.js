@@ -39,9 +39,11 @@ restServer.get({
 // Possible values are { error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
 // Default is to use log level defined in config file
 // globals.logTransports.console.level = 'verbose';
+globals.logger.info("--------------------------------------");
 globals.logger.info("Starting Butler SOS");
 globals.logger.info("Log level is: " + globals.logTransports.console.level);
 globals.logger.info("App version is: " + globals.appVersion);
+globals.logger.info("--------------------------------------");
 
 // Log info about what Qlik Sense certificates are being used
 globals.logger.debug(`Client cert: ${certFile}`);
