@@ -462,8 +462,8 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
             globals.logger.verbose("Sent log event to Influxdb. ");
           })
           .catch(err => {
-            pgClient.release();
             globals.logger.error("Log db query error: " + err.stack);
+            // pgClient.release();
           });
       })
       .catch(err => {
