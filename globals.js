@@ -79,7 +79,7 @@ const pgPool = new Pool({
 // the pool with emit an error on behalf of any idle clients
 // it contains if a backend error or network partition happens
 pgPool.on("error", (err, client) => {
-  logger.log("error", "Unexpected error on idle client" + err);
+  logger.error(`Unexpected error on idle client: ${err}`);
   process.exit(-1);
 });
 
@@ -169,14 +169,14 @@ if (config.get("Butler-SOS.influxdbConfig.enableInfluxdb")) {
     .getDatabaseNames()
     .then(names => {
       if (!names.includes(config.get("Butler-SOS.influxdbConfig.dbName"))) {
-        logger.info("Creating Influx database.");
+        logger.info(`Creating Influx database.`);
         return influx.createDatabase(
           config.get("Butler-SOS.influxdbConfig.dbName")
         );
       }
     })
     .then(() => {
-      logger.info("Connected to Influx database.");
+      logger.info(`Connected to Influx database.`);
       return;
     })
     .catch(err => {

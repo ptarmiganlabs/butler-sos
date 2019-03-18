@@ -41,8 +41,8 @@ restServer.get({
 // globals.logTransports.console.level = 'verbose';
 globals.logger.info("--------------------------------------");
 globals.logger.info("Starting Butler SOS");
-globals.logger.info("Log level is: " + globals.getLoggingLevel());
-globals.logger.info("App version is: " + globals.appVersion);
+globals.logger.info(`Log level is: ${globals.getLoggingLevel()}`);
+globals.logger.info(`App version is: ${globals.appVersion}`);
 globals.logger.info("--------------------------------------");
 
 // Log info about what Qlik Sense certificates are being used
@@ -181,7 +181,7 @@ function postToInfluxdb(host, body, influxTags) {
       }
     ])
     .then(err => {
-      globals.logger.verbose("Sent health data to Influxdb: " + influxTags.host);
+      globals.logger.verbose(`Sent health data to Influxdb: ${influxTags.host}`);
     })
 
     .catch(err => {
@@ -391,7 +391,7 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
 
             var rows = res.rows;
             rows.forEach(function (row) {
-              globals.logger.silly("Log db row: " + JSON.stringify(row));
+              globals.logger.silly(`Log db row: ${JSON.stringify(row)}`);
 
               // Post to Influxdb (if enabled)
               if (globals.config.get("Butler-SOS.influxdbConfig.enableInfluxdb")) {
@@ -438,7 +438,7 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
                     timestamp: row.timestamp
                   }])
                   .then(err => {
-                    globals.logger.silly("Sent log db event to Influxdb. ");
+                    globals.logger.silly("Sent log db event to Influxdb");
                   })
                   .catch(err => {
                     console.error(
@@ -464,12 +464,12 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
             globals.logger.verbose("Sent log event to Influxdb. ");
           })
           .catch(err => {
-            globals.logger.error("Log db query error: " + err.stack);
+            globals.logger.error(`Log db query error: ${err.stack}`);
             // pgClient.release();
           });
       })
       .catch(err => {
-        globals.logger.error("ERROR: Could not connect to Postgres log db: " + err.stack);
+        globals.logger.error(`ERROR: Could not connect to Postgres log db: ${err.stack}`);
       });
   }, globals.config.get("Butler-SOS.logdb.pollingInterval"));
 }
@@ -480,7 +480,7 @@ setInterval(function () {
   globals.logger.verbose("Event started: Statistics collection");
 
   globals.serverList.forEach(function (server) {
-    globals.logger.verbose("Getting stats for server: " + server.serverName);
+    globals.logger.verbose(`Getting stats for server: ${server.serverName}`);
 
     globals.logger.debug(JSON.stringify(server));
 
