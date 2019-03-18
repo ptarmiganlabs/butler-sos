@@ -41,7 +41,7 @@ restServer.get({
 // globals.logTransports.console.level = 'verbose';
 globals.logger.info("--------------------------------------");
 globals.logger.info("Starting Butler SOS");
-globals.logger.info("Log level is: " + globals.logTransports.console.level);
+globals.logger.info("Log level is: " + globals.getLoggingLevel());
 globals.logger.info("App version is: " + globals.appVersion);
 globals.logger.info("--------------------------------------");
 
