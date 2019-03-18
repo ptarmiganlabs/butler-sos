@@ -1,9 +1,8 @@
 # docker-compose.yml
-version: '2.2'
+version: '3.3'
 services:
   butler-sos:
     image: ptarmiganlabs/butler-sos:latest
-    init: true
     container_name: butler-sos
     restart: always
     volumes:
