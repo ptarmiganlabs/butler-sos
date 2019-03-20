@@ -8,7 +8,7 @@ Butler SenseOps Stats ("Butler SOS") is a DevOps monitoring tool for [Qlik Sense
 It publishes operational Qlik Sense Enterprise metrics to [MQTT](https://en.wikipedia.org/wiki/MQTT) and [InfluxDB](https://www.influxdata.com/time-series-platform/influxdb/), from where it can be charted using tools like Grafana or acted on by downstream systems that listen to the MQTT topics used by Butler SOS.
 
 Butler SOS uses the [Sense healthcheck API](http://help.qlik.com/en-US/sense-developer/November2017/Subsystems/EngineAPI/Content/GettingSystemInformation/HealthCheckStatus.htm) to gather operational metrics for the Sense servers specified in the YAML config file.  
-It also pulls warnings and errors from [Sense's Postgres logging database](http://help.qlik.com/en-US/sense/November2017/Subsystems/PlanningQlikSenseDeployments/Content/Deployment/Qlik-Logging-Service.htm), and forwards these to Influx and MQTT.
+It also pulls log events from [Sense's Postgres logging database](http://help.qlik.com/en-US/sense/November2017/Subsystems/PlanningQlikSenseDeployments/Content/Deployment/Qlik-Logging-Service.htm), and forwards these to Influx and MQTT.
 
 **Why a separate tool for this?**  
 Good question. While Qlik Sense ships with a great Operations Monitor application, it is not useful or intended for real-time operational monitoring.  
@@ -29,54 +29,38 @@ As mentioned above, Butler SOS can also send data to [MQTT](https://en.wikipedia
 
 Please see the [change log](https://github.com/ptarmiganlabs/butler-sos/blob/master/changelog.md) for a comprehensive list of changes.
 
-Highlights in the recent releases are
+Highlights in the most recent release are
 
-### v3.1
+### v4.0
 
-**Breaking change!!**
+Butler SOS is going through very active development, with significant new features added.  
+Once again, the format of the both the config file and the Influxdb schema has changed, which means that the SenseOps database in Influxdb has to be recreated.
 
-Once again some changes that require change in the underlyding database used by Butler SOS.
-The procedure for upgrading is the same as for V3.0: The simplest option is to drop the InfluxDB database and start anew with an empty database. You will loose past logging history, but as Butler SOS deals with *operational* monitoring that should in most cases be fine. 
+The upside is that version 4.0 adds several features that make Butler SOS easier to use in large Qlik Sense Enterprise environments with separated development, QA/acceptance, and production environments.
 
-* FEATURE: New options influxdbConfig.includeFields.* control whether Butler SOS should store lists of currently loaded, active and in_memory apps in InfluxDB. Storing this data can be increadibly helpful when trying to understand what apps cause issues when loaded from disk. **NOTE** that enabling these features may significantly increase the amount of data stored in InfluxDB!
+Due to several new settings in the config file, it is recommended to completely review and update the file before deploying v4.0.
 
-
-### v3.0
-
-**Breaking change!!**
-
-The format of the database where Butler SOS stores the data it retrieves has been slightly modified. v3.0 will not work properly with a database created by earlier Butler SOS versions. See [readme file](#upgrading-to-v3) for further info on dealing with this.
-
-v3.0 is a major rewrite of Butler SOS. Most changes are incremental increases and improvements under the hood, with a couple of exceptions:
-
-* FEATURE: New per-server config option "serverGroup". Use this to group or categorize servers, for example as being part of a production vs development Qlik Sense cluster.
-* FEATURE: New config option "queryPeriod" for controlling how far back querying for Sense log entries should be done.
-
-### v2.6
-
-When running as a Docker container, Butler SOS will now use Docker health checks to let Docker know that all is well.
-
-### v2.5
-
-Improved logging
-
+* Added optional logging to disk file. If enabled, log files are rotated daily and stored for 30 days, after which they are automatically deleted.
+* Improved tagging of data logged in Influxdb. Data can now be tagged with any number of user defined tags. This makes it possible to create much more refined dashboards in Grafana.
+NOTE: these configurable tags are not compatible with previous Influx database schemas. The SenseOps database in Influxdb must be deleted before deploying Butler SOS v3.2. Next time Butler SOS is started a new SenseOps database in Influxdb will be created.
+* Let the user control (by means of properties in the config file) which entries are extracted from Qlik Sense log db. This is configured on a per log level basis, for example "extract warning and errors, but not info messages".
 
 ## Install and setup
 
-* Butler SOS has been tested with Qlik Sense Enterprise up until and including November 2018. Butler SOS uses core Sense APIs that are unlikely to change in future Sense versions. For that reasons Butler SOS is likely to work also with future Sense versions.
+* Butler SOS has been tested with Qlik Sense Enterprise up until and including February 2019. Butler SOS uses core Sense APIs that are unlikely to change in future Sense versions. For that reasons Butler SOS is likely to work also with future Sense versions.
 
-### Upgrading to v3
+### Upgrading to v4
 
-Version 3.0 introduces a slightly different schema for the InfluxDB database.  
+Version 4.0 introduces a slightly different schema for the InfluxDB database.  
 While it certainly is possible to migrate existing data, that will not be covered here. Let's instead drop the old InfluxDB database and start over with an empty one.
 
-There steps to achieve this differ slightly depending on how you run Butler SOS. Conceptually they are:
+The steps to achieve this differ slightly depending on how you run Butler SOS. Conceptually they are:
 
 *Running Butler SOS as a native Node.js app:*
 
 * Stop Butler SOS if it is running
 * From command line, run `influxdb -host <localhost or IP of InfluxDB server>`
-* `show databases` to list available InfluxDB databases
+* `show databases` to list InfluxDB databases on your Influxdb server
 * `use SenseOps` within influx to select the Butler SOS database
 * `drop database SenseOps` to delete the existing database. **WARNING! THERE IS NO WAY OF UN-DOING THIS!**
 * `exit` will close the influx client
@@ -87,11 +71,71 @@ There steps to achieve this differ slightly depending on how you run Butler SOS.
 * From command line, connect to the Docker container: `docker exec -it <container-name> /bin/bash`. <container-name> is the name given in the `docker-compose.yml` file, usually butler-sos.
 * From within the container, run `influxdb`.
 * Follow the same steps as above ("use SenseOps", "drop database SenseOps", "exit"
-* Exit the container by running `exit` 
+* Exit the container by running `exit`
+
+### Configuration file properties
+
+Make a copy of ```./config/default-template.yaml```, rename the new file production.yaml. Edit as needed to match your Qlik Sense Enterprise environment.
+
+The parameters in the config file are described below.
+All parameters must be defined in the config file - run time errors will occur otherwise.
+
+| Parameter | Description |
+| --------- | ----------- |
+| **Butler-SOS** |  |
+| logLevel | The level of details in the logs. Possible values are silly, debug, verbose, info, warn, error (in order of decreasing level of detail). |
+| fileLogging | true/false to enable/disable logging to disk file |
+| logDirectory | Subdirectory where log files are stored |
+|  |  |
+| **Butler-SOS.logdb** |  |
+| enableLogDb | Should Sense log db be queried for warnings/errors/info messages? true/false |
+| pollingInterval | How often to query log db. Milliseconds |
+| queryPeriod | How far back should log db be queried? Human readable, e.g. "5 minutes"|
+| host | IP or FQDN of server where Sense log db is running |
+| port | Port used by log db. 4432 unless changed during installation of Sense |
+| qlogsReaderUser | User to connect to log db as. "qlogs_reader" unless changed during installation of Sense |
+| qlogsReaderPwd | Password of above user |
+| extractErrors | Should error entries be extracted from log db? true/false |
+| extractWarnings | Should warning entries be extracted from log db? true/false |
+| extractInfo | Should info entries be extracted from log db? true/false |
+|  |  |
+| **Butler-SOS.cert** |  |
+| clientCert | Certificate file. Exported from QMC |
+| clientCertKey | Certificate key file. Exported from QMC |
+| clientCertCA | Root certificate for above certificate files. Exported from QMC |
+|  |  |
+| **Butler-SOS.mqttConfig** |  |
+| enableMQTT | Should health metrics be sent to MQTT? true/false |
+| brokerHost | IP or FQDN of MQTT broker |
+| brokerPort | Broker port |
+| baseTopic | The topic to which messages will be posted. Should end with /. For example butler-sos/ |
+|  |  |
+| **Butler-SOS.influxdbConfig** |  |
+| enableInfluxdb | Should health metrics be stored in Influxdb? true/false |
+| hostIP | IP or FQDN of Influxdb server |
+| dbName | Database namne in Influxdb to which health metrics will be stored. Database will be created if it does not already exist when Butler SOS is started |
+| activeDocs | Should a list of currently active Sense apps be stored in Influxdb? true/false |
+| loadedDocs | Should a list of Sense apps opened in a user session be stored in Influxdb? true/false |
+| activeDocs | Should a list of Sense apps loaded into memory (some apps might not currently be associated with a user session) be stored in Influxdb? true/false |
+|  |  |
+| **Butler-SOS.serversToMonitor** |  |
+| pollingInterval | How often to query the Sense healthcheck API |
+| serverTagsDefinition | List of tags to add to each server when storing the data in Influxdb. All tags defined here MUST be present in each server's definition section further down in the config file! |
+| servers | List of what servers to monitor. For each server a set of properties MUST be defined. |
+| host | FQDN of server. Domain should match that of the certificate exported from QMC - otherwise certificate warnings may appear |
+| serverName | Human friendly server name |
+| serverDescription | Human friendly server description |
+| logDbHost | Server's name as it appears in the ```process_host``` field log db. This is needed in order to link entries in logdb to the specific server at hand. See note below too! |
+| serverTags | A list of key-value pairs. Use to provide more metadata for servers. Can then (among other things) be used to created more advanced Grafana dashboards. |
+
+The ```logDbHost``` property is not entirely easy to understand. Easiest way to get it right is to look in the Nodes section in the QMC. In the ```Host name``` column you find the host names of the various nodes. ```logDbHost``` should be set to the first part of each host name:
+
+![Log db host name](img/logdb-host-name-1.png "Getting the log db host name property from QMC")
 
 ### Running as a native Node.js app
 
-* Clone [the repository](https://github.com/ptarmiganlabs/butler-sos) from GitHub to desired location.
+* Get the desired Butler SOS version from the [releases page](https://github.com/ptarmiganlabs/butler-sos/releases).
+  ***NOTE***: You should not just get the latest source code from the master branch. The master branch might very well be in active development and not do what you expect it to do... The releases have been tested - those are your best bet.
 * Make sure [Node.js](https://nodejs.org) is installed. Butler-SOS has been tested with Node.js 10.15.0.
 * Run "npm install" from within the main butler-sos directory to download and install all Node.js dependencies.
 * Make a copy of the [config/default_template.yaml](https://github.com/ptarmiganlabs/butler-sos/blob/master/config/default_template.yaml) configuration file. Edit the file as needed, save it as "production.yaml" in the ./config directory. Butler SOS will read its config settings from this file.
@@ -107,35 +151,33 @@ Linux: `export NODE_ENV=production`
 
 #### Configuration files
 
-As of version 2 of Butler SOS there are several breaking changes in the configuration file:
+Butler SOS calls the main Qlik Sense Engine service (QSE) n TCP port 4747 on each server that is to be monitored. This means that no virtual proxies are used, instead certificates are used to authenticate with Qlik Sense. This provides more flexibility and better security compared to getting the health data via virtual proxies.
 
-* The configuration file format is now YAML rather than JSON. YAML is more human readable and compact  compared to JSON. It also allows comments to be used.
-
-* Virtual proxies are no longer used to get the Sense healthcheck data
-
-Instead of virtual proxies the main Qlik Sense Engine Service (QES) is called on TCP port 4747  to get the health data of each Sense server that should be monitored.  
-A consequence of this is that certificates are now used to authenticate with Qlik Sense, rather than the security-by-obscurity that was the most commonly used security solution in the past for Butler SOS.
 Please note that the path to these certificates must be properly configured in the config file's Butler-SOS.cert section.  
 
-When using certificates to authenticate with the Qlik engine, the ```serversToMonitor``` section of the config file could look like this:
+When using certificates to authenticate with the Qlik engine, the ```servers``` section of the config file could look like this (note the :4747 after the host name!):
 
 ``` yaml
-serversToMonitor:
-    # How often (milliseconds) should the healthcheck API be polled?
-    pollingInterval: 5000
-
     # Sense Servers that should be queried for healthcheck data
     servers:
     - host: server1.company.net:4747
       serverName: Server1
-      availableRAM: 32000
-      influxTags:
-        serverGroup: DEV
+      serverDescription: Central node
+      logDbHost: server1
+      serverTags:
+        server_group: DEV
+        serverLocation: Europe
+        server-type: virtual
+        serverBrand: HP
     - host: server2.company.net:4747
-      serverName: Server2
-      availableRAM: 24000
-      influxTags:
-        serverGroup: PROD
+      serverName: Server1
+      serverDescription: Dev server 1
+      logDbHost: server1
+      serverTags:
+        server_group: DEV
+        serverLocation: Europe
+        server-type: physical
+        serverBrand: Dell
 
 ```
 
@@ -183,7 +225,7 @@ If you specify a server name of "myserver.company.com" while exporting certifica
 #### Postgres log database
 
 The config file allows you to set how often Butler should query the Sense log database for warnings and errors. In order to get real-time (-ish) notifications of warnings and errors, you should set the polling frequency to a reasonably low level. On the other hand, this polling will consume server resources and put some load on the Sense logging database - i.e. you should poll too often...  
-Experience shows that polling every 15-30 seconds work well and doesn't put too much load on the database.
+Experience shows that polling every 15-30 seconds work well and doesn't put too much load on the database. On a very busy system you might want to poll less frequently, to reduce load on Postgress.
   
 There is one caveat to be aware of when it comes to the ```Butler-SOS.logdb.pollingInterval``` setting:  
 By default Butler SOS will query the log database for any warnings and errors that have occured during the last 2 minutes. The reason for having such a limit is simply to limit the query load on the Postgres server.  
@@ -201,12 +243,11 @@ If the Influxdb database specified in the config file does not exist, it will be
 
 ![Starting Butler SOS](img/butler-sos-cli-1.png "Starting Butler SOS")
 
-Here we see how two servers are queried for data.  
+Here we see how three servers are queried for data.  
 The responses are retrived asyncronously as they arrive from the different servers.  
 Finally, the data is stored to Influxdb and sent as MQTT messages.
 
-
-### Run Butler SOS in a Docker
+### Run Butler SOS in Docker
 
 This is in most cases the preferred way of running Butler SOS:
 
@@ -214,7 +255,7 @@ This is in most cases the preferred way of running Butler SOS:
 * No need to install Node.js on your server(s). Less security, performance and maintenance concerns.
 * Make use of your existing Docker runtime environments, or use those offered by Amazon, Google, Microsoft etc.
 * Benefit from the extremely comprehensive tools ecosystem (monitoring, deployment etc) that is available for Docker.
-* Updating Butler SOS to the latest version is as easy as stopping the container, then doing a "docker pull ptarmiganlabs/butler-sos:latest", and finally starting the container again.
+* Updating Butler SOS to the latest version (assuming no config file changes are needed for that particular upgrade) is as easy as stopping the container, doing a "docker pull ptarmiganlabs/butler-sos:latest", and finally starting the container again.
 
 Installing and getting started with Butler SOS in Docker can look something like this:
 
@@ -223,6 +264,7 @@ Create a directory for Butler SOS. Config files and logs will be stored here.
 ```bash
 
 proton:code goran$ mkdir -p butler-sos-docker/config/certificate
+proton:code goran$ mkdir -p butler-sos-docker/logs
 proton:code goran$ cd butler-sos-docker
 proton:butler-sos-docker goran$
 
@@ -268,19 +310,23 @@ What do the config files look like?
 
 proton:butler-sos-docker goran$ cat config/production.yaml
 Butler-SOS:
-  # Possible log levels are silly, debug, verbose, info, warn, error
-  logLevel: debug
+  # Logging configuration
+  logLevel: info          # Log level. Possible log levels are silly, debug, verbose, info, warn, error
+  fileLogging: true       # true/false to enable/disable logging to disk file
+  logDirectory: logs      # Subdirectory where log files are stored
 
   # Qlik Sense logging db config parameters
   logdb:
     enableLogDb: true
-    # How often (milliseconds) should Postgres log db be queried for warnings and errors?
-    pollingInterval: 15000
-    queryPeriod: 5 minutes
+    pollingInterval: 10000    # How often (milliseconds) should Postgres log db be queried for warnings and errors?
+    queryPeriod: 5 minutes    # How far back should Butler SOS query for log entries? Default is 5 min
     host: <IP or FQDN of Qlik Sense logging db>
     port: 4432
     qlogsReaderUser: qlogs_reader
-    qlogsReaderPwd: <pwd>
+    qlogsReaderPwd: ......
+    extractErrors: true       # Should error level entries be extracted from log db into Influxdb?
+    extractWarnings: true     # Should warn level entries be extracted from log db into Influxdb?
+    extractInfo: true         # Should info level entries be extracted from log db into Influxdb?
 
   # Certificates to use when querying Sense for healthcheck data. Get these from the Certificate Export in QMC.
   cert:
@@ -290,11 +336,10 @@ Butler-SOS:
 
   # MQTT config parameters
   mqttConfig:
-    enableMQTT: true
-    brokerHost: <IP of MQTT server>
+    enableMQTT: false
+    brokerHost: <IP or FQDN of MQTT server>
     brokerPort: 1883
-    # Topic should end with /
-    baseTopic: butler-sos/
+    baseTopic: butler-sos/          # Topic should end with /
 
   # Influx db config parameters
   influxdbConfig:
@@ -304,24 +349,52 @@ Butler-SOS:
     # Control whether certain fields are stored in InfluxDB or not
     # Use with caution! Enabling activeDocs, loadedDocs or inMemoryDocs may result in lots of data sent to InfluxDB.
     includeFields:
-      activeDocs: false
-      loadedDocs: false
-      inMemoryDocs: false
+      activeDocs: true              # Should data on what docs are active be stored in Influxdb?
+      loadedDocs: true              # Should data on what docs are loaded be stored in Influxdb?
+      inMemoryDocs: true            # Should data on what docs are in memory be stored in Influxdb?
 
   serversToMonitor:
-    # How often (milliseconds) should the healthcheck API be polled?
-    pollingInterval: 5000
+    pollingInterval: 30000           # How often (milliseconds) should the healthcheck API be polled?
+
+    # List of extra tags for each server. Useful for creating more advanced Grafana dashboards.
+    # Each server below MUST include these tags in its serverTags property.
+    # The tags below are just examples - define your own as needed
+    serverTagsDefinition:
+      - server_group
+      - serverLocation
+      - server-type
+      - serverBrand
 
     # Sense Servers that should be queried for healthcheck data
     servers:
-    - host: <server1.my.domain>
-      serverName: <server1>
-      influxTags:
-        serverGroup: DEV
-    - host: <server2.my.domain>
-      serverName: <server2>
-      influxTags:
-        serverGroup: PROD
+    - host: <server1.my.domain>:4747
+      serverName: server1
+      serverDescription: Central
+      logDbHost: server1
+      serverTags:
+        server_group: DEV
+        serverLocation: Europe
+        server-type: virtual
+        serverBrand: HP
+    - host: <server2.my.domain>:4747
+      serverName: server2
+      serverDescription: Dev server 1
+      logDbHost: server2
+      serverTags:
+        server_group: DEV
+        serverLocation: Europe
+        server-type: virtual
+        serverBrand: HP
+    - host: <server3.my.domain>:4747
+      serverName: server3
+      serverDescription: Prod server 1
+      logDbHost: server3
+      serverTags:
+        server_group: PROD
+        serverLocation: US
+        server-type: physical
+        serverBrand: Dell
+
 proton:butler-sos-docker goran$
 
 ```
@@ -332,16 +405,16 @@ What does the docker-compose.yml file look like?
 
 proton:butler-sos-docker goran$ cat docker-compose.yml
 # docker-compose.yml
-version: '2.2'
+version: '3.3'
 services:
   butler-sos:
     image: ptarmiganlabs/butler-sos:latest
-    init: true
     container_name: butler-sos
     restart: always
     volumes:
       # Make config file accessible outside of container
       - "./config:/nodeapp/config"
+      - "./logs:/nodeapp/logs"
     environment:
       - "NODE_ENV=production"
     logging:
@@ -355,50 +428,59 @@ Ok, all good. Let's start Butler SOS using docker-compose:
 ```bash
 
 proton:butler-sos-docker goran$ docker-compose up
-Pulling butler-sos (ptarmiganlabs/butler-sos:latest)...
-latest: Pulling from ptarmiganlabs/butler-sos
-f189db1b88b3: Already exists
-3d06cf2f1b5e: Already exists
-687ebdda822c: Already exists
-99119ca3f34e: Already exists
-e771d6006054: Already exists
-b0cc28d0be2c: Already exists
-7225c154ac40: Already exists
-7659da3c5093: Already exists
-0eb542f4d7f6: Pull complete
-47df4c8bbfb8: Pull complete
-12b6708ead49: Pull complete
-d92f2cc6eee5: Pull complete
-2565ce6638be: Pull complete
-Digest: sha256:959f7d51e9bb60d55533921eb10c7da2c15438c0b87886dc9b6dd9824e4aa348
-Status: Downloaded newer image for ptarmiganlabs/butler-sos:latest
+Pulling butler-sos (ptarmiganlabs/butler-sos:4.0.0alpha1)...
+4.0.0alpha1: Pulling from ptarmiganlabs/butler-sos
+22dbe790f715: Already exists
+0250231711a0: Already exists
+6fba9447437b: Already exists
+c2b4d327b352: Already exists
+270e1baa5299: Already exists
+08ba2f9dd763: Already exists
+cda6d42744ae: Already exists
+7a747cc220a3: Already exists
+aa505e93552d: Pull complete
+5a4dda68a01d: Pull complete
+7623c75bac69: Pull complete
+43c951a29357: Pull complete
+90a1f8f835ee: Pull complete
 Creating butler-sos ... done
 Attaching to butler-sos
-butler-sos    | 2018-10-14T18:27:54.794Z - info: Starting Butler SOS
-butler-sos    | 2018-10-14T18:27:54.797Z - info: Log level is: debug
-butler-sos    | 2018-10-14T18:27:54.855Z - info: Connected to Influx database.
-butler-sos    | 2018-10-14T18:27:59.805Z - verbose: Event started: Statistics collection
-butler-sos    | 2018-10-14T18:27:59.805Z - verbose: Getting stats for server: sense1
-butler-sos    | 2018-10-14T18:27:59.808Z - debug: URL=https://sense1.int.ptarmiganlabs.net:4747/engine/healthcheck/
-butler-sos    | 2018-10-14T18:27:59.876Z - verbose: Received ok response from sense1
-butler-sos    | 2018-10-14T18:27:59.877Z - debug:  version=12.212.4, started=20181003T222957.000+0200, committed=212.2109375, allocated=444.609375, free=4737.62890625, total=0, active=0, total=0, active_docs=[], loaded_docs=[], in_memory_docs=[], calls=3642, selections=0, active=0, total=0, hits=0, lookups=0, added=0, replaced=0, bytes_added=0, saturated=false
-butler-sos    | 2018-10-14T18:27:59.878Z - debug: Calling MQTT posting method
-butler-sos    | 2018-10-14T18:27:59.881Z - debug: Calling Influxdb posting method
-butler-sos    | 2018-10-14T18:27:59.981Z - verbose: Sent health Influxdb: sense1
-butler-sos    | 2018-10-14T18:28:04.825Z - verbose: Event started: Statistics collection
-butler-sos    | 2018-10-14T18:28:04.827Z - verbose: Getting stats for server: sense1
-butler-sos    | 2018-10-14T18:28:04.828Z - debug: URL=https://sense1.int.ptarmiganlabs.net:4747/engine/healthcheck/
-butler-sos    | 2018-10-14T18:28:04.860Z - verbose: Received ok response from sense1
-butler-sos    | 2018-10-14T18:28:04.861Z - debug:  version=12.212.4, started=20181003T222957.000+0200, committed=212.2109375, allocated=444.609375, free=4737.62890625, total=0, active=0, total=0, active_docs=[], loaded_docs=[], in_memory_docs=[], calls=3642, selections=0, active=0, total=0, hits=0, lookups=0, added=0, replaced=0, bytes_added=0, saturated=false
-butler-sos    | 2018-10-14T18:28:04.862Z - debug: Calling MQTT posting method
-butler-sos    | 2018-10-14T18:28:04.864Z - debug: Calling Influxdb posting method
-butler-sos    | 2018-10-14T18:28:04.915Z - verbose: Sent health Influxdb: sense1
+butler-sos    | 2019-03-20T13:03:15.362Z info: --------------------------------------
+butler-sos    | 2019-03-20T13:03:15.368Z info: Starting Butler SOS
+butler-sos    | 2019-03-20T13:03:15.371Z info: Log level is: verbose
+butler-sos    | 2019-03-20T13:03:15.371Z info: App version is: 4.0.0alfa1
+butler-sos    | 2019-03-20T13:03:15.372Z info: --------------------------------------
+butler-sos    | 2019-03-20T13:03:15.415Z info: Docker healthcheck server now listening
+butler-sos    | 2019-03-20T13:03:15.439Z info: Connected to Influx database.
+butler-sos    | 2019-03-20T13:03:20.382Z verbose: Event started: Statistics collection
+butler-sos    | 2019-03-20T13:03:20.383Z verbose: Getting stats for server: sense1
+butler-sos    | 2019-03-20T13:03:20.435Z verbose: Getting stats for server: sense2
+butler-sos    | 2019-03-20T13:03:20.447Z verbose: Getting stats for server: sense3
+butler-sos    | 2019-03-20T13:03:21.542Z verbose: Received ok response from pro1-win1.ptarmiganlabs.net:4747
+butler-sos    | 2019-03-20T13:03:21.548Z verbose: Received ok response from pro1-win2.ptarmiganlabs.net:4747
+butler-sos    | 2019-03-20T13:03:21.551Z verbose: Received ok response from pro1-win3.ptarmiganlabs.net:4747
+butler-sos    | 2019-03-20T13:03:21.650Z verbose: Sent health data to Influxdb for server sense2
+butler-sos    | 2019-03-20T13:03:21.651Z verbose: Sent health data to Influxdb for server sense1
+butler-sos    | 2019-03-20T13:03:21.707Z verbose: Sent health data to Influxdb for server sense3
+butler-sos    | 2019-03-20T13:03:25.301Z verbose: Docker healthcheck API endpoint called.
+butler-sos    | 2019-03-20T13:03:25.382Z verbose: Event started: Query log db
+butler-sos    | 2019-03-20T13:03:25.462Z verbose: Event started: Statistics collection
+butler-sos    | 2019-03-20T13:03:25.463Z verbose: Getting stats for server: sense1
+butler-sos    | 2019-03-20T13:03:25.473Z verbose: Getting stats for server: sense2
+butler-sos    | 2019-03-20T13:03:25.481Z verbose: Getting stats for server: sense3
+butler-sos    | 2019-03-20T13:03:25.553Z verbose: Sent log event to Influxdb
+butler-sos    | 2019-03-20T13:03:25.564Z verbose: Received ok response from pro1-win3.ptarmiganlabs.net:4747
+butler-sos    | 2019-03-20T13:03:25.573Z verbose: Received ok response from pro1-win1.ptarmiganlabs.net:4747
+butler-sos    | 2019-03-20T13:03:25.580Z verbose: Received ok response from pro1-win2.ptarmiganlabs.net:4747
+butler-sos    | 2019-03-20T13:03:25.787Z verbose: Sent health data to Influxdb for server sense2
+butler-sos    | 2019-03-20T13:03:25.791Z verbose: Sent health data to Influxdb for server sense3
+butler-sos    | 2019-03-20T13:03:25.794Z verbose: Sent health data to Influxdb for server sense1
 ...
 ...
 
 ```
 
-Once everything everything looks good you can start the container in daemon mode (i.e. running unattended in the background):
+Once everything everything looks good you can stop the container (ctrl-C), then start it again in daemon mode (i.e. running unattended in the background):
 
 ```bash
 
@@ -408,10 +490,9 @@ proton:butler-sos-docker goran$
 
 ```
 
-
 Setting the log level to info in the config file will reduce log output.
 
-The Docker container implements Docker healthchecks, which means you can run `docker ps` to see whether the container is health or not.
+The Docker container implements Docker healthchecks, which means you can run `docker ps` to see whether the container is healthy or not.
 
 ## Influxdb, Mosquitto & Grafana
 

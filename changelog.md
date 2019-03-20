@@ -1,5 +1,29 @@
 # Change log
 
+## v4.0
+
+**Breaking change!!**
+
+Butler SOS is going through very active development, with significant new features added. Once again, the format of the both the config file and the Influxdb schema is incompatible with previous versions.
+
+The upside is that this version adds several features that make Butler SOS easier to use in large Qlik Sense Enterprise environments with separated development, QA/acceptance, and production environments.
+
+Due to several new settings in the config file, it is recommended to completely review and update the file before deploying v3.2.
+
+* Added optional logging to disk file. If enabled, log files are rotated daily and stored for 30 days, after which they are automatically deleted.
+* Improved tagging of data logged in Influxdb. Data can now be tagged with any number of user defined tags. This makes it possible to create much more refined dashboards in Grafana.
+NOTE: these configurable tags are not compatible with previous Influx database schemas. The SenseOps database in Influxdb must be deleted before deploying Butler SOS v3.2. Next time Butler SOS is started a new SenseOps database in Influxdb will be created.
+* Let the user control (by means of properties in the config file) which entries are extracted from Qlik Sense log db. This is configured on a per log level basis, for example "extract warning and errors, but not info messages".
+
+## v3.1
+
+**Breaking change!!**
+
+Once again some changes that require change in the underlyding database used by Butler SOS.
+The procedure for upgrading is the same as for V3.0: The simplest option is to drop the InfluxDB database and start anew with an empty database. You will loose past logging history, but as Butler SOS deals with *operational* monitoring that should in most cases be fine.
+
+* FEATURE: New options influxdbConfig.includeFields.* control whether Butler SOS should store lists of currently loaded, active and in_memory apps in InfluxDB. Storing this data can be increadibly helpful when trying to understand what apps cause issues (e.g. exessive RAM usage). **NOTE** that enabling these features may significantly increase the amount of data stored in InfluxDB!
+
 ## v3.0
 
 **Breaking change!!**
