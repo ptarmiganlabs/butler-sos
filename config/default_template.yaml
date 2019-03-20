@@ -13,9 +13,9 @@ Butler-SOS:
     port: 4432
     qlogsReaderUser: qlogs_reader
     qlogsReaderPwd: <pwd>
-    extractErrors: true
-    extractWarnings: true
-    extractInfo: false
+    extractErrors: true       # Should error level entries be extracted from log db into Influxdb?
+    extractWarnings: true     # Should warn level entries be extracted from log db into Influxdb?
+    extractInfo: true         # Should info level entries be extracted from log db into Influxdb?
 
   # Certificates to use when querying Sense for healthcheck data. Get these from the Certificate Export in QMC.
   cert:
@@ -38,9 +38,9 @@ Butler-SOS:
     # Control whether certain fields are stored in InfluxDB or not
     # Use with caution! Enabling activeDocs, loadedDocs or inMemoryDocs may result in lots of data sent to InfluxDB.
     includeFields:
-      activeDocs: false
-      loadedDocs: false
-      inMemoryDocs: false
+      activeDocs: false              # Should data on what docs are active be stored in Influxdb?
+      loadedDocs: false              # Should data on what docs are loaded be stored in Influxdb?
+      inMemoryDocs: false            # Should data on what docs are in memory be stored in Influxdb?
 
   serversToMonitor:
     pollingInterval: 30000      # How often (milliseconds) should the healthcheck API be polled?
