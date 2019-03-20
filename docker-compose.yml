@@ -8,6 +8,7 @@ services:
     volumes:
       # Make config file accessible outside of container
       - "./config:/nodeapp/config"
+      - "./logs:/nodeapp/logs"
     environment:
       - "NODE_ENV=production"
     logging:
