@@ -125,8 +125,12 @@ All parameters must be defined in the config file - run time errors will occur o
 | host | FQDN of server. Domain should match that of the certificate exported from QMC - otherwise certificate warnings may appear |
 | serverName | Human friendly server name |
 | serverDescription | Human friendly server description |
-| logDbHost | Server's name as it appears in the ```process_host``` field log db. This is needed in order to link entries in logdb to the specific server at hand |
+| logDbHost | Server's name as it appears in the ```process_host``` field log db. This is needed in order to link entries in logdb to the specific server at hand. See note below too! |
 | serverTags | A list of key-value pairs. Use to provide more metadata for servers. Can then (among other things) be used to created more advanced Grafana dashboards. |
+
+The ```logDbHost``` property is not entirely easy to understand. Easiest way to get it right is to look in the Nodes section in the QMC. In the ```Host name``` column you find the host names of the various nodes. ```logDbHost``` should be set to the first part of each host name:
+
+![Log db host name](img/logdb-host-name-1.png "Getting the log db host name property from QMC")
 
 ### Running as a native Node.js app
 
