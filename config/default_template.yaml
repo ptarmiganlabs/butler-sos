@@ -13,6 +13,9 @@ Butler-SOS:
     port: 4432
     qlogsReaderUser: qlogs_reader
     qlogsReaderPwd: <pwd>
+    extractErrors: true
+    extractWarnings: true
+    extractInfo: false
 
   # Certificates to use when querying Sense for healthcheck data. Get these from the Certificate Export in QMC.
   cert:

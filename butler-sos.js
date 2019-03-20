@@ -364,6 +364,24 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
   setInterval(function () {
     globals.logger.verbose("Event started: Query log db");
 
+
+    // Create list of logging levels to include in query
+    extractErrors: true
+    extractWarnings: true
+    extractInfo: false
+
+    let arrayincludeLogLevels = [];
+    if (globals.config.get("Butler-SOS.logdb.extractErrors")) {
+      arrayincludeLogLevels.push("'ERROR'");
+    }
+    if (globals.config.get("Butler-SOS.logdb.extractWarnings")) {
+      arrayincludeLogLevels.push("'WARN'");
+    }
+    if (globals.config.get("Butler-SOS.logdb.extractInfo")) {
+      arrayincludeLogLevels.push("'INFO'");
+    }
+    const includeLogLevels = arrayincludeLogLevels.join();
+
     // checkout a Postgres client from connection pool
     globals.pgPool.connect()
       .then(pgClient => {
@@ -378,7 +396,7 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
           payload
         from public.log_entries
         where
-          entry_level in ('WARN', 'ERROR') and
+          entry_level in (${includeLogLevels}) and
           (entry_timestamp > now() - INTERVAL '${queryPeriod}' )
         order by
           entry_timestamp desc
