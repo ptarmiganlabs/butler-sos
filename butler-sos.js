@@ -38,7 +38,6 @@ restServer.get({
 // Set specific log level (if/when needed to override the config file setting)
 // Possible values are { error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
 // Default is to use log level defined in config file
-// globals.logTransports.console.level = 'verbose';
 globals.logger.info("--------------------------------------");
 globals.logger.info("Starting Butler SOS");
 globals.logger.info(`Log level is: ${globals.getLoggingLevel()}`);
@@ -180,8 +179,8 @@ function postToInfluxdb(host, body, influxTags) {
         }
       }
     ])
-    .then(err => {
-      globals.logger.verbose(`Sent health data to Influxdb: ${influxTags.host}`);
+    .then(() => {
+      globals.logger.verbose(`Sent health data to Influxdb for server ${influxTags.server_name}`);
     })
 
     .catch(err => {
@@ -355,7 +354,7 @@ function getStatsFromSense(host, influxTags) {
 
 if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
 
-  // Get query period from config file. If not specified there use default value.
+  // Get query period from config file. If not specified there, use default value.
   var queryPeriod = '5 minutes';
   if (globals.config.has("Butler-SOS.logdb.queryPeriod")) {
     queryPeriod = globals.config.get("Butler-SOS.logdb.queryPeriod");
@@ -387,7 +386,7 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
           )
           .then(res => {
             pgClient.release();
-            globals.logger.debug("Log db query got a response.");
+            globals.logger.debug('Log db query got a response.');
 
             var rows = res.rows;
             rows.forEach(function (row) {
@@ -402,49 +401,63 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
                   row.payload.Message = '';
                 }
 
-                // Look up server_group tag. The host value returned from Postgres should match the logDbHost property from 
-                // the YAML config file. Then use the server_group for the server that matched the Postgres host.
+                // Get all tags for the current server. 
+                // Some special logic is needed to match the host value returned from Postgres with the logDbHost property from 
+                // the YAML config file. 
+                // Once we have that match we can add all the tags for that server.
                 serverItem = globals.serverList.find(item => {
                   globals.logger.silly(`Matching logdb host "${row.process_host}" against config file logDbHost "${item.logDbHost}"`);
                   return item.logDbHost == row.process_host;
-                }) ;
+                });
+
                 if (serverItem == undefined) {
                   group = '<no group>';
                   srvName = '<no server>';
                   srvDesc = '<no description>';
                 } else {
-                  group = serverItem.influxTags.serverGroup;
+                  group = serverItem.serverTags.serverGroup;
                   srvName = serverItem.serverName;
                   srvDesc = serverItem.serverDescription;
                 };
 
-                globals.logger.silly(`Server group for log_entry: ${group}`);
+                let tagsForDbEntry = {
+                  host: row.process_host,
+                  server_name: srvName,
+                  server_description: srvDesc,
+                  source_process: row.process_name,
+                  log_level: row.entry_level
+                };
+
+                // Add all tags defined for this server in the config file 
+                if (serverItem.hasOwnProperty('serverTags')) {
+                  // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
+                  Object.entries(serverItem.serverTags).forEach(entry => {
+                    tagsForDbEntry = Object.assign(tagsForDbEntry, {
+                      [entry[0]]: entry[1]
+                    });
+                  })
+
+                  globals.logger.debug(`Tags passed to Influxdb as part of logdb record: ${JSON.stringify(tagsForDbEntry)}`);
+                }
 
                 // Write the whole reading to Influxdb
                 globals.influx
                   .writePoints([{
                     measurement: "log_event",
-                    tags: {
-                      host: row.process_host,
-                      server_name: srvName,
-                      server_description: srvDesc,
-                      source_process: row.process_name,
-                      log_level: row.entry_level,
-                      server_group: group
-                    },
+                    tags: tagsForDbEntry,
                     fields: {
                       message: row.payload.Message
                     },
                     timestamp: row.timestamp
                   }])
                   .then(err => {
-                    globals.logger.silly("Sent log db event to Influxdb");
+                    globals.logger.silly('Sent log db event to Influxdb');
                   })
                   .catch(err => {
                     console.error(
                       `Error saving log event to InfluxDB! ${err.stack}`
                     );
-                  });
+                  })
               }
 
               // Post to MQTT (if enabled)
@@ -461,7 +474,7 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
             });
           })
           .then(res => {
-            globals.logger.verbose("Sent log event to Influxdb. ");
+            globals.logger.verbose("Sent log event to Influxdb");
           })
           .catch(err => {
             globals.logger.error(`Log db query error: ${err.stack}`);
@@ -490,16 +503,18 @@ setInterval(function () {
       server_description: server.serverDescription
     };
     // Check if there are any extra tags for this server that should be sent to InfluxDB 
-    if (server.hasOwnProperty('influxTags')) {
+    if (server.hasOwnProperty('serverTags')) {
 
-      // Check if there is a config entry "serverGroup". Add it if so
-      if (server.influxTags.hasOwnProperty('serverGroup')) {
-        globals.logger.debug(`InfluxDB serverGroup tag for current server: ${JSON.stringify(server.influxTags)}`)
-        tags = Object.assign(tags, {
-          server_group: server.influxTags.serverGroup
+      // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
+      Object.entries(server.serverTags).forEach(entry => {
+        globals.logger.debug(`Found server tag: ${JSON.stringify(entry)}`);
+
+         tags = Object.assign(tags, {
+          [entry[0]]: entry[1]
         });
-      }
+      })
 
+      globals.logger.debug(`All tags: ${JSON.stringify(tags)}`);
     }
     globals.logger.debug(`Complete list of tags for server ${server.serverName}: ${JSON.stringify(tags)}`);
 

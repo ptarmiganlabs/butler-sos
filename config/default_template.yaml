@@ -1,14 +1,14 @@
 Butler-SOS:
-  # Possible log levels are silly, debug, verbose, info, warn, error
-  logLevel: verbose
+  # Logging configuration
+  logLevel: info          # Log level. Possible log levels are silly, debug, verbose, info, warn, error
+  fileLogging: true       # true/false to enable/disable logging to disk file
+  logDirectory: logs      # Subdirectory where log files are stored
 
   # Qlik Sense logging db config parameters
   logdb:
     enableLogDb: true
-    # How often (milliseconds) should Postgres log db be queried for warnings and errors?
-    pollingInterval: 60000
-    # How far back should Butler SOS query for log entries? Default is 5 min
-    queryPeriod: 5 minutes
+    pollingInterval: 60000    # How often (milliseconds) should Postgres log db be queried for warnings and errors?
+    queryPeriod: 5 minutes    # How far back should Butler SOS query for log entries? Default is 5 min
     host: <IP or FQDN of Qlik Sense logging db>
     port: 4432
     qlogsReaderUser: qlogs_reader
@@ -22,11 +22,10 @@ Butler-SOS:
 
   # MQTT config parameters
   mqttConfig:
-    enableMQTT: true
+    enableMQTT: false
     brokerHost: <IP of MQTT server>
     brokerPort: 1883
-    # Topic should end with /
-    baseTopic: butler-sos/
+    baseTopic: butler-sos/          # Topic should end with /
 
   # Influx db config parameters
   influxdbConfig:
@@ -41,8 +40,16 @@ Butler-SOS:
       inMemoryDocs: false
 
   serversToMonitor:
-    # How often (milliseconds) should the healthcheck API be polled? 
-    pollingInterval: 30000
+    pollingInterval: 30000      # How often (milliseconds) should the healthcheck API be polled?
+
+    # List of extra tags for each server. Useful for creating more advanced Grafana dashboards.
+    # Each server below MUST include these tags in its serverTags property.
+    # The tags below are just examples - define your own as needed
+    serverTagsDefinition: 
+      - server_group
+      - serverLocation
+      - server-type
+      - serverBrand
 
     # Sense Servers that should be queried for healthcheck data 
     servers:
@@ -50,11 +57,18 @@ Butler-SOS:
       serverName: <server1>
       serverDescription: <description>
       logDbHost: <host name as used in QLogs db>
-      influxTags:
-        serverGroup: DEV
+      serverTags:
+        server_group: DEV
+        serverLocation: Asia
+        server-type: virtual
+        serverBrand: Dell
     - host: <server2.my.domain>
       serverName: <server2>
       serverDescription: <description>
       logDbHost: <host name as used in QLogs db>
-      influxTags:
-        serverGroup: PROD
+      serverTags:
+        server_group: PROD
+        serverLocation: Europe
+        server-type: physical
+        serverBrand: HP
+ 
