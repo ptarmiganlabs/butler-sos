@@ -558,9 +558,13 @@ Grafana is extremely powerful. Creating automatically updating dashboards for an
 Grafana also has good alerting features, making it easy to send out-of-bound alerts to Slack, Microsoft Teams, PagerDuty, email etc.  
 Tutorials and docs can be found on the main Grafana site and elsewhere.
 
+## Security / Disclosure
+
+If you discover any important bug with Butler SOS that may pose a security problem, please disclose it confidentially to security@ptarmiganlabs.com first, so that it can be assessed and hopefully fixed prior to being exploited. Please do not raise GitHub issues for security-related doubts or problems.
+
 ## References
   
 Please see [https://ptarmiganlabs.com](https://ptarmiganlabs.com/blog/2017/04/24/butler-sos-real-time-server-stats-qlik-sense/) and [https://github.com/ptarmiganlabs/butler](https://github.com/ptarmiganlabs/butler) for more in-depth info on the Butler family of micro services for Qlik Sense.
   
 At [https://senseops.rocks](https://senseops.rocks) you also find thoughts on using DevOps best practices in the Qlik Sense ecosystem.
-  
+
