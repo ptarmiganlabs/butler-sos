@@ -1,7 +1,7 @@
 # Butler SOS
 
-[![NSP Status](https://nodesecurity.io/orgs/ptarmiganlabscom/projects/adfd09d2-140c-42ae-9f2f-6376c6d45f6d/badge)](https://nodesecurity.io/orgs/ptarmiganlabscom/projects/adfd09d2-140c-42ae-9f2f-6376c6d45f6d)
-  
+[![Build Status](https://travis-ci.com/ptarmiganlabs/butler-sos.svg?branch=master)](https://travis-ci.com/ptarmiganlabs/butler-sos)
+
 ![Butler SOS](img/butler-sos-small.png)  
 
 Butler SenseOps Stats ("Butler SOS") is a DevOps monitoring tool for [Qlik Sense](https://www.qlik.com/us/products/qlik-sense).  
