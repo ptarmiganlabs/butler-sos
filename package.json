@@ -4,8 +4,7 @@
   "description": "Butler SenseOps Stats (\"Butler SOS\") is a Node.js service publishing operational Qlik Sense metrics to MQTT and Influxdb.",
   "main": "butler-sos.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "release": "release-it"
+    "test": "node_modules/jshint/bin/jshint index.js"
   },
   "repository": {
     "type": "git",
