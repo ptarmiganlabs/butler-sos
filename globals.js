@@ -16,8 +16,6 @@ const {
 var appVersion = require('./package.json').version;
 
 
-
-
 // Set up logger with timestamps and colors, and optional logging to disk file
 const logTransports = [];
 
@@ -83,6 +81,34 @@ pgPool.on("error", (err, client) => {
   process.exit(-1);
 });
 
+
+
+
+// Get list of standard and user configurable tags 
+// ..begin with standard tags
+let tagValues = [
+  "host",
+  "server_name",
+  "server_description"
+];
+
+// ..check if there are any extra tags for this server that should be sent to InfluxDB 
+if (config.has('Butler-SOS.serversToMonitor.serverTagsDefinition')) {
+
+  // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
+  config.get('Butler-SOS.serversToMonitor.serverTagsDefinition').forEach(entry => {
+    logger.debug(`Setting up new Influx database: Found server tag : ${entry}`);
+
+    tagValues.push(entry);
+  })
+
+}
+
+// Events need a couple of extra tags
+let tagValuesLogEvent = tagValues.slice();
+tagValuesLogEvent.push("source_process");
+tagValuesLogEvent.push("log_level");
+
 // Set up Influxdb client
 const influx = new Influx.InfluxDB({
   host: config.get("Butler-SOS.influxdbConfig.hostIP"),
@@ -94,7 +120,7 @@ const influx = new Influx.InfluxDB({
         started: Influx.FieldType.STRING,
         uptime: Influx.FieldType.STRING
       },
-      tags: ["host", "server_name", "server_description", "server_group"]
+      tags: tagValues
     },
     {
       measurement: "mem",
@@ -103,7 +129,7 @@ const influx = new Influx.InfluxDB({
         allocated: Influx.FieldType.INTEGER,
         free: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_name", "server_description", "server_group"]
+      tags: tagValues
     },
     {
       measurement: "apps",
@@ -117,14 +143,14 @@ const influx = new Influx.InfluxDB({
         calls: Influx.FieldType.INTEGER,
         selections: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_name", "server_description", "server_group"]
+      tags: tagValues
     },
     {
       measurement: "cpu",
       fields: {
         total: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_name", "server_description", "server_group"]
+      tags: tagValues
     },
     {
       measurement: "session",
@@ -132,7 +158,7 @@ const influx = new Influx.InfluxDB({
         active: Influx.FieldType.INTEGER,
         total: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_name", "server_description", "server_group"]
+      tags: tagValues
     },
     {
       measurement: "users",
@@ -140,7 +166,7 @@ const influx = new Influx.InfluxDB({
         active: Influx.FieldType.INTEGER,
         total: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_name", "server_description", "server_group"]
+      tags: tagValues
     },
     {
       measurement: "cache",
@@ -151,14 +177,14 @@ const influx = new Influx.InfluxDB({
         replaced: Influx.FieldType.INTEGER,
         bytes_added: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_name", "server_description", "server_group"]
+      tags: tagValues
     },
     {
       measurement: "log_event",
       fields: {
         message: Influx.FieldType.STRING
       },
-      tags: ["host", "server_name", "server_description", "source_process", "log_level", "server_group"]
+      tags: tagValuesLogEvent
     }
   ]
 });
