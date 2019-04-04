@@ -1,6 +1,11 @@
 var mqtt = require("mqtt");
 var config = require("config");
-var winston = require("winston");
+
+const winston = require('winston');
+require('winston-daily-rotate-file');
+var config = require('config');
+const path = require('path');
+
 const Influx = require("influx");
 const {
   Pool
@@ -11,31 +16,54 @@ const {
 var appVersion = require('./package.json').version;
 
 
-// Set up logger with timestamps and colors
-const logTransports = {
-  console: new winston.transports.Console({
-    name: 'console_log',
-    level: config.get('Butler-SOS.logLevel'),
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.colorize(),
-      winston.format.simple(),
-      winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`)
-    )
+// Set up logger with timestamps and colors, and optional logging to disk file
+const logTransports = [];
+
+logTransports.push(
+  new winston.transports.Console({
+      name: 'console',
+      level: config.get('Butler-SOS.logLevel'),
+      format: winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.colorize(),
+          winston.format.simple(),
+          winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`)
+      )
   })
-};
+);
 
 
-const logger = winston.createLogger({
-  transports: [
-    logTransports.console
-  ],
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`)
-  )
+if (config.get('Butler-SOS.fileLogging')) {
+  logTransports.push(
+      new(winston.transports.DailyRotateFile)({
+          dirname: path.join(__dirname, config.get('Butler-SOS.logDirectory')),
+          filename: 'butler-sos.%DATE%.log',
+          level: config.get('Butler-SOS.logLevel'),
+          datePattern: 'YYYY-MM-DD',
+          maxFiles: '30d'
+      })
+  );
+}
+
+
+logger = winston.createLogger({
+    transports: logTransports,
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`)
+    )
 });
 
+
+// Function to get current logging level
+getLoggingLevel = () => {
+  return logTransports.find(transport => {
+      return transport.name=='console';
+  }).level;
+}
+
+// Get info on what servers to monitor
+var serverList = config.get("Butler-SOS.serversToMonitor.servers");
 
 // Set up connection pool for accessing Qlik Sense log db
 const pgPool = new Pool({
@@ -49,9 +77,37 @@ const pgPool = new Pool({
 // the pool with emit an error on behalf of any idle clients
 // it contains if a backend error or network partition happens
 pgPool.on("error", (err, client) => {
-  logger.log("error", "Unexpected error on idle client" + err);
+  logger.error(`Unexpected error on idle client: ${err}`);
   process.exit(-1);
 });
+
+
+
+
+// Get list of standard and user configurable tags 
+// ..begin with standard tags
+let tagValues = [
+  "host",
+  "server_name",
+  "server_description"
+];
+
+// ..check if there are any extra tags for this server that should be sent to InfluxDB 
+if (config.has('Butler-SOS.serversToMonitor.serverTagsDefinition')) {
+
+  // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
+  config.get('Butler-SOS.serversToMonitor.serverTagsDefinition').forEach(entry => {
+    logger.debug(`Setting up new Influx database: Found server tag : ${entry}`);
+
+    tagValues.push(entry);
+  })
+
+}
+
+// Events need a couple of extra tags
+let tagValuesLogEvent = tagValues.slice();
+tagValuesLogEvent.push("source_process");
+tagValuesLogEvent.push("log_level");
 
 // Set up Influxdb client
 const influx = new Influx.InfluxDB({
@@ -64,7 +120,7 @@ const influx = new Influx.InfluxDB({
         started: Influx.FieldType.STRING,
         uptime: Influx.FieldType.STRING
       },
-      tags: ["host", "server_group"]
+      tags: tagValues
     },
     {
       measurement: "mem",
@@ -73,7 +129,7 @@ const influx = new Influx.InfluxDB({
         allocated: Influx.FieldType.INTEGER,
         free: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_group"]
+      tags: tagValues
     },
     {
       measurement: "apps",
@@ -87,14 +143,14 @@ const influx = new Influx.InfluxDB({
         calls: Influx.FieldType.INTEGER,
         selections: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_group"]
+      tags: tagValues
     },
     {
       measurement: "cpu",
       fields: {
         total: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_group"]
+      tags: tagValues
     },
     {
       measurement: "session",
@@ -102,7 +158,7 @@ const influx = new Influx.InfluxDB({
         active: Influx.FieldType.INTEGER,
         total: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_group"]
+      tags: tagValues
     },
     {
       measurement: "users",
@@ -110,7 +166,7 @@ const influx = new Influx.InfluxDB({
         active: Influx.FieldType.INTEGER,
         total: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_group"]
+      tags: tagValues
     },
     {
       measurement: "cache",
@@ -121,18 +177,14 @@ const influx = new Influx.InfluxDB({
         replaced: Influx.FieldType.INTEGER,
         bytes_added: Influx.FieldType.INTEGER
       },
-      tags: ["host", "server_group"]
+      tags: tagValues
     },
     {
       measurement: "log_event",
       fields: {
-        hits: Influx.FieldType.INTEGER,
-        lookups: Influx.FieldType.INTEGER,
-        added: Influx.FieldType.INTEGER,
-        replaced: Influx.FieldType.INTEGER,
-        bytes_added: Influx.FieldType.INTEGER
+        message: Influx.FieldType.STRING
       },
-      tags: ["host", "server_group"]
+      tags: tagValuesLogEvent
     }
   ]
 });
@@ -143,14 +195,14 @@ if (config.get("Butler-SOS.influxdbConfig.enableInfluxdb")) {
     .getDatabaseNames()
     .then(names => {
       if (!names.includes(config.get("Butler-SOS.influxdbConfig.dbName"))) {
-        logger.info("Creating Influx database.");
+        logger.info(`Creating Influx database.`);
         return influx.createDatabase(
           config.get("Butler-SOS.influxdbConfig.dbName")
         );
       }
     })
     .then(() => {
-      logger.info("Connected to Influx database.");
+      logger.info(`Connected to Influx database.`);
       return;
     })
     .catch(err => {
@@ -177,8 +229,9 @@ module.exports = {
   config,
   mqttClient,
   logger,
-  logTransports,
+  getLoggingLevel,
   influx,
   pgPool,
-  appVersion
+  appVersion,
+  serverList
 };
