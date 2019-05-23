@@ -1,6 +1,10 @@
 # Use Node 8 LTS
 FROM node:8
 
+# Add metadata about the image
+LABEL maintainer="Göran Sander mountaindude@ptarmiganlabs.com"
+LABEL description="Real-time operational metrics for Qlik Sense."
+
 # Create app dir inside container
 WORKDIR /nodeapp
 
@@ -10,7 +14,6 @@ RUN npm install
 
 # Copy app's source files
 COPY . .
-
 
 # Create and use non-root user 
 RUN groupadd -r nodejs \
