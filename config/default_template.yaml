@@ -22,6 +22,10 @@ Butler-SOS:
     clientCert: <path/to/cert/client.pem>
     clientCertKey: <path/to/cert/client_key.pem>
     clientCertCA: <path/to/cert/root.pem>
+    # If running Butler in a Docker container, the cert paths MUST be the following
+    # clientCert: /nodeapp/config/certificate/client.pem
+    # clientCertKey: /nodeapp/config/certificate/client_key.pem
+    # clientCertCA: /nodeapp/config/certificate/root.pem
 
   # MQTT config parameters
   mqttConfig:
@@ -38,9 +42,10 @@ Butler-SOS:
     # Control whether certain fields are stored in InfluxDB or not
     # Use with caution! Enabling activeDocs, loadedDocs or inMemoryDocs may result in lots of data sent to InfluxDB.
     includeFields:
-      activeDocs: false              # Should data on what docs are active be stored in Influxdb?
-      loadedDocs: false              # Should data on what docs are loaded be stored in Influxdb?
-      inMemoryDocs: false            # Should data on what docs are in memory be stored in Influxdb?
+      activeDocs: false              # Should data on what docs are active be stored in Influxdb (true/false)? 
+      loadedDocs: false              # Should data on what docs are loaded be stored in Influxdb (true/false)?
+      inMemoryDocs: false            # Should data on what docs are in memory be stored in Influxdb (true/false)?
+      userIds: true                  # Extract and store in Influxdb unique user IDs of what users have sessions open (true/false)?
 
   serversToMonitor:
     pollingInterval: 30000      # How often (milliseconds) should the healthcheck API be polled?
