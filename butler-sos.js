@@ -428,6 +428,9 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
                   return item.logDbHost == row.process_host;
                 });
 
+                // If data row returned from log db is about a server which is not defined in the YAML config file, we need to be careful:
+                // Simple solution: only store data into Influxdb for servers defined in YAML config file. 
+
                 if (serverItem == undefined) {
                   group = '<no group>';
                   srvName = '<no server>';
@@ -472,9 +475,8 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
                     globals.logger.silly('Sent log db event to Influxdb');
                   })
                   .catch(err => {
-                    console.error(
-                      `Error saving log event to InfluxDB! ${err.stack}`
-                    );
+                    console.error(`Error saving log event to InfluxDB! ${err.stack}`);
+                    console.error(`  Full error: ${JSON.stringify(err)}`);
                   })
               }
 
