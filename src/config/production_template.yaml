@@ -45,7 +45,15 @@ Butler-SOS:
       activeDocs: false              # Should data on what docs are active be stored in Influxdb (true/false)? 
       loadedDocs: false              # Should data on what docs are loaded be stored in Influxdb (true/false)?
       inMemoryDocs: false            # Should data on what docs are in memory be stored in Influxdb (true/false)?
-      userIds: true                  # Extract and store in Influxdb unique user IDs of what users have sessions open (true/false)?
+
+  # Sessions per virtual proxy
+  userSessions:
+    enableSessionExtract: true   # Query  unique user IDs of what users have sessions open (true/false)?
+    pollingInterval: 10000       # How often (milliseconds) should session data be polled?
+    virtualProxies:              # What virtual proxies should we get sessions for?
+      -                          # Get sessions for the default virtual proxy (i.e. /) 
+      - finance                  # Get sessions for "finance" virtual proxy (/finance)
+      - loadtest                 # Get sessions for "loadtest" virtual proxy (/loadtest)
 
   serversToMonitor:
     pollingInterval: 30000      # How often (milliseconds) should the healthcheck API be polled?

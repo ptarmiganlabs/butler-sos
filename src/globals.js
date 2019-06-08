@@ -63,7 +63,12 @@ getLoggingLevel = () => {
 }
 
 // Get info on what servers to monitor
-var serverList = config.get("Butler-SOS.serversToMonitor.servers");
+const serverList = config.get("Butler-SOS.serversToMonitor.servers");
+
+
+// Get info on what virtual proxies to get session data for
+const userSessionsServers = config.get("Butler-SOS.userSessions.servers");
+
 
 // Set up connection pool for accessing Qlik Sense log db
 const pgPool = new Pool({
@@ -100,7 +105,7 @@ if (config.has('Butler-SOS.serversToMonitor.serverTagsDefinition')) {
     logger.debug(`Setting up new Influx database: Found server tag : ${entry}`);
 
     tagValues.push(entry);
-  })
+  });
 
 }
 
@@ -233,5 +238,6 @@ module.exports = {
   influx,
   pgPool,
   appVersion,
-  serverList
+  serverList,
+  userSessionsServers
 };

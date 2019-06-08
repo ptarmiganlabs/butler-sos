@@ -1,3 +1,5 @@
+// Set up REST endpoint for Docker healthchecks
+
 var httpHealth = require("http");
 
 var optionsHealth = {  
