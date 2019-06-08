@@ -1,6 +1,5 @@
 const globals = require('../globals');
 
-
 function postToInfluxdb(host, body, influxTags) {
   // Calculate server uptime
 
@@ -29,100 +28,100 @@ function postToInfluxdb(host, body, influxTags) {
   var hours = date.getHours();
 
   // Minutes part from the timestamp
-  var minutes = "0" + date.getMinutes();
+  var minutes = '0' + date.getMinutes();
 
   // Seconds part from the timestamp
-  var seconds = "0" + date.getSeconds();
+  var seconds = '0' + date.getSeconds();
 
   // Will display time in 10:30:23 format
   var formattedTime =
-    days +
-    " days, " +
-    hours +
-    "h " +
-    minutes.substr(-2) +
-    "m " +
-    seconds.substr(-2) +
-    "s";
+    days + ' days, ' + hours + 'h ' + minutes.substr(-2) + 'm ' + seconds.substr(-2) + 's';
 
   // Build tags structure that will be passed to InfluxDB
   globals.logger.debug(`Tags sent to InfluxDB: ${JSON.stringify(influxTags)}`);
 
   // Write the whole reading to Influxdb
   globals.influx
-    .writePoints([{
-        measurement: "sense_server",
+    .writePoints([
+      {
+        measurement: 'sense_server',
         tags: influxTags,
         fields: {
           version: body.version,
           started: body.started,
-          uptime: formattedTime
-        }
+          uptime: formattedTime,
+        },
       },
       {
-        measurement: "mem",
+        measurement: 'mem',
         tags: influxTags,
         fields: {
           comitted: body.mem.comitted,
           allocated: body.mem.allocated,
-          free: body.mem.free
-        }
+          free: body.mem.free,
+        },
       },
       {
-        measurement: "apps",
+        measurement: 'apps',
         tags: influxTags,
         fields: {
           active_docs_count: body.apps.active_docs.length,
           loaded_docs_count: body.apps.loaded_docs.length,
           in_memory_docs_count: body.apps.in_memory_docs.length,
-          active_docs: (globals.config.get("Butler-SOS.influxdbConfig.includeFields.activeDocs") ? body.apps.active_docs : ''),
-          loaded_docs: (globals.config.get("Butler-SOS.influxdbConfig.includeFields.loadedDocs") ? body.apps.loaded_docs : ''),
-          in_memory_docs: (globals.config.get("Butler-SOS.influxdbConfig.includeFields.inMemoryDocs") ? body.apps.in_memory_docs : ''),
+          active_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
+            ? body.apps.active_docs
+            : '',
+          loaded_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
+            ? body.apps.loaded_docs
+            : '',
+          in_memory_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs')
+            ? body.apps.in_memory_docs
+            : '',
           calls: body.apps.calls,
-          selections: body.apps.selections
-        }
+          selections: body.apps.selections,
+        },
       },
       {
-        measurement: "cpu",
+        measurement: 'cpu',
         tags: influxTags,
         fields: {
-          total: body.cpu.total
-        }
+          total: body.cpu.total,
+        },
       },
       {
-        measurement: "session",
+        measurement: 'session',
         tags: influxTags,
         fields: {
           active: body.session.active,
-          total: body.session.total
-        }
+          total: body.session.total,
+        },
       },
       {
-        measurement: "users",
+        measurement: 'users',
         tags: influxTags,
         fields: {
           active: body.users.active,
-          total: body.users.total
-        }
+          total: body.users.total,
+        },
       },
       {
-        measurement: "cache",
+        measurement: 'cache',
         tags: influxTags,
         fields: {
           hits: body.cache.hits,
           lookups: body.cache.lookups,
           added: body.cache.added,
           replaced: body.cache.replaced,
-          bytes_added: body.cache.bytes_added
-        }
+          bytes_added: body.cache.bytes_added,
+        },
       },
       {
-        measurement: "saturated",
+        measurement: 'saturated',
         tags: influxTags,
         fields: {
-          saturated: body.saturated
-        }
-      }
+          saturated: body.saturated,
+        },
+      },
     ])
     .then(() => {
       globals.logger.verbose(`Sent health data to Influxdb for server ${influxTags.server_name}`);
@@ -133,8 +132,6 @@ function postToInfluxdb(host, body, influxTags) {
     });
 }
 
-
 module.exports = {
-  postToInfluxdb
+  postToInfluxdb,
 };
-
