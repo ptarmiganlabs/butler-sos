@@ -6,7 +6,7 @@
   "scripts": {
     "test": "npm run format",
     "format": "npm run format:prettier",
-    "format:prettier": "npx prettier --config .prettierrc \"./src/**/*.{ts,css,less,js}\" --write"
+    "format:prettier": "npx prettier --config .prettierrc \"./**/*.{ts,css,less,js}\" --write"
   },
   "repository": {
     "type": "git",
