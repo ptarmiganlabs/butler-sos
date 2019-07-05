@@ -1,4 +1,6 @@
 Butler-SOS:
+  # All configuration items are mandatory, unless otherwise noted.
+
   # Logging configuration
   logLevel: info          # Log level. Possible log levels are silly, debug, verbose, info, warn, error
   fileLogging: true       # true/false to enable/disable logging to disk file
@@ -7,6 +9,7 @@ Butler-SOS:
   # Qlik Sense logging db config parameters
   logdb:
     enableLogDb: true
+    # Items below are mandatory if enabledLogDb=true
     pollingInterval: 60000    # How often (milliseconds) should Postgres log db be queried for warnings and errors?
     queryPeriod: 5 minutes    # How far back should Butler SOS query for log entries? Default is 5 min
     host: <IP or FQDN of Qlik Sense logging db>
@@ -30,6 +33,7 @@ Butler-SOS:
   # MQTT config parameters
   mqttConfig:
     enableMQTT: false
+    # Items below are mandatory if enableMQTT=true
     brokerHost: <IP of MQTT server>
     brokerPort: 1883
     baseTopic: butler-sos/          # Topic should end with /
@@ -37,7 +41,13 @@ Butler-SOS:
   # Influx db config parameters
   influxdbConfig:
     enableInfluxdb: true
+    # Items below are mandatory if enableInfluxdb=true
     hostIP: <IP or FQDN of Influxdb server>
+    hostPort: <Port where Influxdb is listening>    # Optional. Default value=8086
+    auth:
+      enable: false                 # Does influxdb instance require authentication (true/false)?
+      username: <username>          # Username for Influxdb authentication. Mandatory if auth.enable=true
+      password: <password>          # Password for Influxdb authentication. Mandatory if auth.enable=true
     dbName: SenseOps
     # Control whether certain fields are stored in InfluxDB or not
     # Use with caution! Enabling activeDocs, loadedDocs or inMemoryDocs may result in lots of data sent to InfluxDB.
@@ -48,12 +58,17 @@ Butler-SOS:
 
   # Sessions per virtual proxy
   userSessions:
-    enableSessionExtract: true   # Query  unique user IDs of what users have sessions open (true/false)?
+    enableSessionExtract: true   # Query unique user IDs of what users have sessions open (true/false)?
+    # Items below are mandatory if enableSessionExtract=true    
     pollingInterval: 10000       # How often (milliseconds) should session data be polled?
-    virtualProxies:              # What virtual proxies should we get sessions for?
-      -                          # Get sessions for the default virtual proxy (i.e. /) 
-      - finance                  # Get sessions for "finance" virtual proxy (/finance)
-      - loadtest                 # Get sessions for "loadtest" virtual proxy (/loadtest)
+    influxDbRetentionPolicy: 7days
+    servers:                                  # What hosts and including virtual proxies, should we get sessions for?
+      - host: sense1.mydomain.com:4243      
+        virtualProxy:                         # Default virtual proxy
+      - host: sense2.mydomain.com:4243
+        virtualProxy: /finance                # "finance" virtual proxy           
+      - host: sense2.mydomain.com:4243
+        virtualProxy: /loadtest               # "loadtest" virtual proxy           
 
   serversToMonitor:
     pollingInterval: 30000      # How often (milliseconds) should the healthcheck API be polled?
