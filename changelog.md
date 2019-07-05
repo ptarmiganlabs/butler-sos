@@ -1,5 +1,18 @@
 # Change log
 
+## v5.0
+
+This release focuses on features requested by various people over the past years.
+They thus have their origins in real-life scenarios at various organisations around the world - hopefully they will also find wider use.
+
+* More flexible use of InfluxDB, including authenticated (using InfluxDB's standard username/password authentication) access, and configurable port InfluxDB listens on.
+
+* Extract data on what users have open sessions, broken down by virtual proxies.  
+This information is quite useful, it for example makes it easier to understand what users are affected by ongoing issues with a particular server, or for notifying all users connected to a particular virtual proxy about a pending server reboot etc.  
+The session information is stored in InfluxDB and/or sent as MQTT messages.
+
+* General cleanup of the source code to make it easier to add new features in the future.
+
 ## v4.0
 
 **Breaking change!!**
