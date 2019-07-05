@@ -1,3 +1,6 @@
+const globals = require('../globals');
+const postToMQTT = require('./post-to-mqtt');
+
 function setupLogDbTimer() {
   // Get query period from config file. If not specified there, use default value.
   var queryPeriod = '5 minutes';
@@ -136,7 +139,7 @@ function setupLogDbTimer() {
               // Post to MQTT (if enabled)
               if (globals.config.get('Butler-SOS.mqttConfig.enableMQTT')) {
                 globals.logger.silly('Posting log db data to MQTT...');
-                postLogDbToMQTT(
+                postToMQTT.postLogDbToMQTT(
                   row.process_host,
                   row.process_name,
                   row.entry_level,

@@ -13,7 +13,7 @@ function postLogDbToMQTT(process_host, process_name, entry_level, message, times
 
 function postHealthToMQTT(host, serverName, body) {
   // Get base MQTT topic
-  var baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
+  const baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
 
   // Send to MQTT
   globals.mqttClient.publish(baseTopic + serverName + '/version', body.version);
@@ -87,7 +87,17 @@ function postHealthToMQTT(host, serverName, body) {
   globals.mqttClient.publish(baseTopic + serverName + '/saturated', body.saturated.toString());
 }
 
+
+function postUserSessionsToMQTT(host, virtualProxy, body) {
+  // Get base MQTT topic
+  const baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
+
+  // Send to MQTT
+  globals.mqttClient.publish(baseTopic + host + '/usersession' + virtualProxy, body);
+}
+
 module.exports = {
   postLogDbToMQTT,
   postHealthToMQTT,
+  postUserSessionsToMQTT,
 };

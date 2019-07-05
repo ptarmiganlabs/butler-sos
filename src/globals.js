@@ -99,10 +99,22 @@ tagValuesLogEvent.push('log_level');
 // Set up Influxdb client
 const influx = new Influx.InfluxDB({
   host: config.get('Butler-SOS.influxdbConfig.hostIP'),
-  port: `${config.has('Butler-SOS.influxdbConfig.hostPort') ? config.get('Butler-SOS.influxdbConfig.hostPort') : '8086'}`,
+  port: `${
+    config.has('Butler-SOS.influxdbConfig.hostPort')
+      ? config.get('Butler-SOS.influxdbConfig.hostPort')
+      : '8086'
+  }`,
   database: config.get('Butler-SOS.influxdbConfig.dbName'),
-  username: `${config.get('Butler-SOS.influxdbConfig.auth.enable') ? config.get('Butler-SOS.influxdbConfig.auth.username') : ''}`,
-  password: `${config.get('Butler-SOS.influxdbConfig.auth.enable') ? config.get('Butler-SOS.influxdbConfig.auth.password') : ''}`,
+  username: `${
+    config.get('Butler-SOS.influxdbConfig.auth.enable')
+      ? config.get('Butler-SOS.influxdbConfig.auth.username')
+      : ''
+  }`,
+  password: `${
+    config.get('Butler-SOS.influxdbConfig.auth.enable')
+      ? config.get('Butler-SOS.influxdbConfig.auth.password')
+      : ''
+  }`,
   schema: [
     {
       measurement: 'sense_server',

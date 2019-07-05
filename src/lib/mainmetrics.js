@@ -1,6 +1,6 @@
 // Get metrics from the Sense health check API
 
-var request = require('request');
+const request = require('request');
 const globals = require('../globals');
 const postToInfluxdb = require('./post-to-influxdb');
 const postToMQTT = require('./post-to-mqtt');
@@ -49,7 +49,7 @@ function setupMainMetricsTimer() {
 }
 
 function getHealthStatsFromSense(host, influxTags) {
-  globals.logger.debug('URL=' + 'https://' + host + '/engine/healthcheck/');
+  globals.logger.debug(`URL=https://${host}/engine/healthcheck/`);
 
   request(
     {
