@@ -8,8 +8,9 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceFolder}/butler-sos.js",
+            "program": "${workspaceFolder}/src/butler-sos.js",
             "env": {
+                "NODE_CONFIG_DIR": "${workspaceFolder}/src/config",
                 "NODE_ENV": "production"
             }
         }
