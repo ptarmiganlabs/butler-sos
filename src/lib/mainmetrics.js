@@ -4,6 +4,7 @@ const request = require('request');
 const globals = require('../globals');
 const postToInfluxdb = require('./post-to-influxdb');
 const postToMQTT = require('./post-to-mqtt');
+const serverTags = require('./servertags');
 
 var fs = require('fs');
 var path = require('path'),
@@ -21,27 +22,7 @@ function setupMainMetricsTimer() {
 
       globals.logger.debug(JSON.stringify(server));
 
-      var tags = {
-        host: server.host,
-        server_name: server.serverName,
-        server_description: server.serverDescription,
-      };
-      // Check if there are any extra tags for this server that should be sent to InfluxDB
-      if (server.hasOwnProperty('serverTags')) {
-        // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
-        Object.entries(server.serverTags).forEach(entry => {
-          globals.logger.debug(`Found server tag: ${JSON.stringify(entry)}`);
-
-          tags = Object.assign(tags, {
-            [entry[0]]: entry[1],
-          });
-        });
-
-        globals.logger.debug(`All tags: ${JSON.stringify(tags)}`);
-      }
-      globals.logger.debug(
-        `Complete list of tags for server ${server.serverName}: ${JSON.stringify(tags)}`,
-      );
+      const tags = serverTags.getServerTags(server);
 
       getHealthStatsFromSense(server.host, tags);
     });
@@ -83,14 +64,14 @@ function getHealthStatsFromSense(host, influxTags) {
 
         // Post to MQTT (if enabled)
         if (globals.config.get('Butler-SOS.mqttConfig.enableMQTT')) {
-          globals.logger.debug('Calling MQTT posting method');
+          globals.logger.debug('Calling main metrics MQTT posting method');
           postToMQTT.postHealthToMQTT(host, influxTags.host, body);
         }
 
         // Post to Influxdb (if enabled)
         if (globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
-          globals.logger.debug('Calling Influxdb posting method');
-          postToInfluxdb.postToInfluxdb(host, body, influxTags);
+          globals.logger.debug('Calling main metrics Influxdb posting method');
+          postToInfluxdb.postMainMetricsToInfluxdb(host, body, influxTags);
         }
       }
     },

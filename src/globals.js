@@ -5,6 +5,7 @@ const winston = require('winston');
 require('winston-daily-rotate-file');
 var config = require('config');
 const path = require('path');
+const verifyConfig = require('./lib/verifyConfig');
 
 const Influx = require('influx');
 const { Pool } = require('pg');
@@ -58,8 +59,8 @@ getLoggingLevel = () => {
 // Get info on what servers to monitor
 const serverList = config.get('Butler-SOS.serversToMonitor.servers');
 
-// Get info on what virtual proxies to get session data for
-const userSessionsServers = config.get('Butler-SOS.userSessions.servers');
+// // Get info on what virtual proxies to get session data for
+// const userSessionsServers = config.get('Butler-SOS.userSessions.servers');
 
 // Set up connection pool for accessing Qlik Sense log db
 const pgPool = new Pool({
@@ -206,9 +207,56 @@ if (config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
       return;
     })
     .catch(err => {
-      logger.error(`Error creating or connecting to Influx database:`);
+      logger.error(`Error creating/connecting to/verifying Influx database:`);
       logger.error(err);
     });
+
+  // Verify existance of retention policies
+  influx.showRetentionPolicies().then(retentionPolicies => {
+    // Make sure InfluxDB retention policy for main health metrics exists (if specified)
+    if (config.has('Butler-SOS.serversToMonitor.influxDbRetentionPolicy')) {
+      if (
+        !retentionPolicies.includes(
+          config.get('Butler-SOS.serversToMonitor.influxDbRetentionPolicy'),
+        )
+
+          !
+
+      ) {
+        logger.error(
+          `Retention policy ${config.get(
+            'Butler-SOS.serversToMonitor.influxDbRetentionPolicy',
+          )} does not exist in InfluxDB. Exiting.`,
+        );
+        process.exit(1);
+      }
+    }
+
+    // Make sure InfluxDB retention policy for user sessions exists
+    if (config.get('Butler-SOS.userSessions.enableSessionExtract')) {
+      if (config.has('Butler-SOS.userSessions.influxDbRetentionPolicy')) {
+        if (
+          !retentionPolicies.includes(config.get('Butler-SOS.userSessions.influxDbRetentionPolicy'))
+        ) {
+          logger.error(
+            `Retention policy ${config.get(
+              'Butler-SOS.userSessions.influxDbRetentionPolicy',
+            )} does not exist in InfluxDB. Exiting.`,
+          );
+          process.exit(1);
+        }
+      }
+    }
+    // })
+
+    // .catch(err => {
+    //   logger.error(
+    //     `Error getting list of existing retention policies in InfluxDB. Exiting.`,
+    //   );
+    //   logger.error(JSON.stringify(err, null, 2));
+    //   process.exit(1);
+    // });
+  });
 }
 
 // ------------------------------------
@@ -235,5 +283,4 @@ module.exports = {
   pgPool,
   appVersion,
   serverList,
-  userSessionsServers,
 };

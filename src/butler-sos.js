@@ -8,7 +8,6 @@ const logDb = require('./lib/logdb');
 const sessionMetrics = require('./lib/sessionmetrics');
 
 // Load certificates to use when connecting to healthcheck API
-// var fs = require("fs"):
 var path = require('path'),
   certFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert')),
   keyFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey')),
@@ -24,7 +23,7 @@ var restServer = restify.createServer({
 // Enable parsing of http parameters
 restServer.use(restify.plugins.queryParser());
 
-// Set up endpoint for REST server
+// Set up endpoint for Docker healthcheck REST server
 restServer.get(
   {
     path: '/',
@@ -52,7 +51,9 @@ globals.logger.debug(`Client cert: ${certFile}`);
 globals.logger.debug(`Client cert key: ${keyFile}`);
 globals.logger.debug(`CA cert: ${caFile}`);
 
+
 // ---------------------------------------------------
+
 // Start Docker healthcheck REST server on port 12398
 restServer.listen(12398, function() {
   globals.logger.info('Docker healthcheck server now listening');
@@ -65,7 +66,7 @@ if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
 
 // Set up extraction of sessions data
 if (globals.config.get("Butler-SOS.userSessions.enableSessionExtract") == true) {
-  sessionMetrics.setupSessionsTimer();
+  sessionMetrics.setupUserSessionsTimer();
 }
 
 // Set up extraction on main metrics data (i.e. the Sense healthcheck API)

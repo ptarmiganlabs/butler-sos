@@ -1,6 +1,6 @@
 const globals = require('../globals');
 
-function postToInfluxdb(host, body, influxTags) {
+function postMainMetricsToInfluxdb(host, body, influxTags) {
   // Calculate server uptime
 
   var dateTime = Date.now();
@@ -38,7 +38,7 @@ function postToInfluxdb(host, body, influxTags) {
     days + ' days, ' + hours + 'h ' + minutes.substr(-2) + 'm ' + seconds.substr(-2) + 's';
 
   // Build tags structure that will be passed to InfluxDB
-  globals.logger.debug(`Tags sent to InfluxDB: ${JSON.stringify(influxTags)}`);
+  globals.logger.debug(`Health data: Tags sent to InfluxDB: ${JSON.stringify(influxTags)}`);
 
   // Write the whole reading to Influxdb
   globals.influx
@@ -128,10 +128,72 @@ function postToInfluxdb(host, body, influxTags) {
     })
 
     .catch(err => {
-      console.error(`Error saving health data to InfluxDB! ${err.stack}`);
+      globals.logger.error(`Error saving health data to InfluxDB! ${err.stack}`);
     });
 }
 
+function postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags) {
+  // Build tags structure that will be passed to InfluxDB
+  globals.logger.debug(`User session: Tags sent to InfluxDB: ${JSON.stringify(influxTags)}`);
+
+  // Add user specific tags
+  influxTags.user_session_virtual_proxy = virtualProxy;
+  influxTags.user_session_host = host;
+
+  // Write # of user sessions to InfluxDB
+  globals.influx
+    .writePoints([
+      {
+        measurement: 'user_session_count',
+        tags: influxTags,
+        fields: {
+          session_count: body.length,
+        },
+      },
+    ])
+    .then(() => {
+      globals.logger.verbose(
+        `Sent user session count to InfluxDB for server ${influxTags.server_name}`,
+      );
+    })
+    .catch(err => {
+      globals.logger.error(`Error saving user session count to InfluxDB! ${err.stack}`);
+    });
+
+  // Write each session to InfluxDB
+  body.forEach(measurement => {
+    // Add user directory as tag
+    influxTags.user_session_user_directory = measurement.UserDirectory;
+
+    var tmpElement = [
+      {
+        measurement: 'user_session',
+        tags: influxTags,
+        fields: {
+          // attributes: measurement.Attributes,
+          session_id: measurement.SessionId,
+          // user_directory: measurement.UserDirectory,
+          user_id: measurement.UserId,
+        },
+      },
+    ];
+
+    globals.influx
+      .writePoints(tmpElement)
+      .then(() => {
+        globals.logger.silly(
+          `Sent user session data to InfluxDB for server ${influxTags.server_name}: ${JSON.stringify(tmpElement, null, 2)}`,
+        );
+      })
+      .catch(err => {
+        globals.logger.error(`Error saving user session data to InfluxDB! ${err.stack}`);
+      });
+  });
+
+  globals.logger.verbose(`Sent user session data to InfluxDB for server ${influxTags.server_name}`);
+}
+
 module.exports = {
-  postToInfluxdb,
+  postMainMetricsToInfluxdb,
+  postUserSessionsToInfluxdb,
 };

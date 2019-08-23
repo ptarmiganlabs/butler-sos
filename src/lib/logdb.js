@@ -108,7 +108,7 @@ function setupLogDbTimer() {
                     });
                   });
 
-                  globals.logger.debug(
+                  globals.logger.silly(
                     `Tags passed to Influxdb as part of logdb record: ${JSON.stringify(
                       tagsForDbEntry,
                     )}`,
@@ -131,8 +131,8 @@ function setupLogDbTimer() {
                     globals.logger.silly('Sent log db event to Influxdb');
                   })
                   .catch(err => {
-                    console.error(`Error saving log event to InfluxDB! ${err.stack}`);
-                    console.error(`  Full error: ${JSON.stringify(err)}`);
+                    globals.logger.error(`Error saving log event to InfluxDB! ${err.stack}`);
+                    globals.logger.error(`  Full error: ${JSON.stringify(err)}`);
                   });
               }
 

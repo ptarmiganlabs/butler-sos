@@ -3,6 +3,7 @@ const urljoin = require('url-join');
 const globals = require('../globals');
 const postToInfluxdb = require('./post-to-influxdb');
 const postToMQTT = require('./post-to-mqtt');
+const serverTags = require('./servertags');
 
 
 var fs = require('fs');
@@ -11,37 +12,47 @@ var path = require('path'),
   keyFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey')),
   caFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
 
-
-
 // Get info on what sessions currently exist
-function setupSessionsTimer() {
+function setupUserSessionsTimer() {
   globals.logger.debug(
     `Monitor user sessions for these servers/virtual proxies: ${JSON.stringify(
-      globals.userSessionsServers,
+      globals.serverList,
       null,
       2,
     )}`,
   );
 
-  // Configure timer for getting log data from Postgres
+  // Configure timer for getting user session data from Sense proxy API
   setInterval(function() {
     globals.logger.verbose('Event started: Poll user sessions');
 
-    globals.userSessionsServers.forEach(function(server) {
-      globals.logger.debug(`Getting user sessions for ${JSON.stringify(server, null, 2)}`);
+    globals.serverList.forEach(function(server) {
+      if (server.userSessions.enable) {
+        const tags = serverTags.getServerTags(server);
+        server.userSessions.virtualProxies.forEach(function(virtualProxy) {
+          globals.logger.debug(
+            `Getting user sessions for host=${server.userSessions.host}, virtual proxy=${virtualProxy}`,
+          );
 
-      getSessionStatsFromSense(server);
+          getSessionStatsFromSense(server.userSessions.host, virtualProxy.virtualProxy, tags);
+        });
+      }
     });
   }, globals.config.get('Butler-SOS.userSessions.pollingInterval'));
 }
 
-
-function getSessionStatsFromSense(server) {
-  // Current user sessions are retrived using this API: 
+function getSessionStatsFromSense(host, virtualProxy, influxTags) {
+  // Current user sessions are retrived using this API:
   // http://help.qlik.com/en-US/sense-developer/June2019/Subsystems/ProxyServiceAPI/Content/Sense_ProxyServiceAPI/ProxyServiceAPI-Session-Module-API.htm
 
-  const fullUrl = urljoin('https://', server.host, 'qps', server.virtualProxy == '/' ? '' : server.virtualProxy, 'session', '?Xrfkey=abcdefghij987654');
-  // globals.logger.debug(`Querying user sessions from https://${server.host}/qps${server.virtualProxy}/session`);
+  const fullUrl = urljoin(
+    'https://',
+    host,
+    'qps',
+    virtualProxy == '/' ? '' : virtualProxy,
+    'session',
+    '?Xrfkey=abcdefghij987654',
+  );
   globals.logger.debug(`Querying user sessions from ${fullUrl}`);
 
   request(
@@ -53,7 +64,7 @@ function getSessionStatsFromSense(server) {
         'Cache-Control': 'no-cache',
         'Content-Type': 'application/json',
         'X-Qlik-Xrfkey': 'abcdefghij987654',
-        'XVirtualProxy': server.virtualProxy,
+        XVirtualProxy: virtualProxy,
       },
       json: true,
       cert: fs.readFileSync(certFile),
@@ -76,26 +87,30 @@ function getSessionStatsFromSense(server) {
 
       if (!error && response.statusCode === 200) {
         // globals.logger.verbose('Received ok response from ' + influxTags.host);
-        globals.logger.debug(`Body from ${response.request.href}: ${JSON.stringify(body, null, 2)}`);
+        globals.logger.debug(
+          `Body from ${response.request.href}: ${JSON.stringify(body, null, 2)}`,
+        );
 
         // Post to MQTT (if enabled)
         if (globals.config.get('Butler-SOS.mqttConfig.enableMQTT')) {
-          globals.logger.debug('Calling MQTT posting method');
-          postToMQTT.postUserSessionsToMQTT(response.request.uri.hostname, response.request.headers.XVirtualProxy, JSON.stringify(body, null, 2));
+          globals.logger.debug('Calling user sessions MQTT posting method');
+          postToMQTT.postUserSessionsToMQTT(
+            response.request.uri.hostname,
+            response.request.headers.XVirtualProxy,
+            JSON.stringify(body, null, 2),
+          );
         }
 
         // Post to Influxdb (if enabled)
         if (globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
-          globals.logger.debug('Calling Influxdb posting method');
-          postToInfluxdb.postToInfluxdb(host, body, influxTags);
+          globals.logger.debug('Calling user sessions Influxdb posting method');
+          postToInfluxdb.postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags);
         }
       }
     },
   );
 }
 
-
-
 module.exports = {
-  setupSessionsTimer,
+  setupUserSessionsTimer,
 };
