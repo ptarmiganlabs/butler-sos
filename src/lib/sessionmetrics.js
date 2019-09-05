@@ -23,15 +23,15 @@ function setupUserSessionsTimer() {
   );
 
   // Configure timer for getting user session data from Sense proxy API
-  setInterval(function() {
+  setInterval(function () {
     globals.logger.verbose('Event started: Poll user sessions');
 
-    globals.serverList.forEach(function(server) {
+    globals.serverList.forEach(function (server) {
       if (server.userSessions.enable) {
         const tags = serverTags.getServerTags(server);
-        server.userSessions.virtualProxies.forEach(function(virtualProxy) {
+        server.userSessions.virtualProxies.forEach(function (virtualProxy) {
           globals.logger.debug(
-            `Getting user sessions for host=${server.userSessions.host}, virtual proxy=${virtualProxy}`,
+            `Getting user sessions for host=${server.userSessions.host}, virtual proxy=${JSON.stringify( virtualProxy, null, 2)}`,
           );
 
           getSessionStatsFromSense(server.userSessions.host, virtualProxy.virtualProxy, tags);
@@ -55,8 +55,7 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
   );
   globals.logger.debug(`Querying user sessions from ${fullUrl}`);
 
-  request(
-    {
+  request({
       followRedirect: true,
       url: fullUrl,
       method: 'GET',
@@ -74,7 +73,7 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
       requestCert: true,
       agent: false,
     },
-    function(error, response, body) {
+    function (error, response, body) {
       // Check for error
       globals.logger.debug(`User session response from: ${response.request.href}`);
 

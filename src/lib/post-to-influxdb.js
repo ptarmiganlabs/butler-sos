@@ -140,16 +140,30 @@ function postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags) {
   influxTags.user_session_virtual_proxy = virtualProxy;
   influxTags.user_session_host = host;
 
-  // Write # of user sessions to InfluxDB
+  
+  
+  // Build comma separated list of all user IDs connected via the current virtual proxy
+  var userList = Array.prototype.map.call(body, s => s.UserDirectory + '\\' + s.UserId).toString();
+
+  
+  // Write a) # of user sessions and b) list of user IDs to InfluxDB
   globals.influx
     .writePoints([
       {
-        measurement: 'user_session_count',
+        measurement: 'user_session_summary',
         tags: influxTags,
         fields: {
           session_count: body.length,
         },
       },
+      // {
+      //   measurement: 'user_session_list',
+      //   tags: influxTags,
+      //   fields: {
+      //     session_user_id_list: body.length,
+      //   },
+      // },
+
     ])
     .then(() => {
       globals.logger.verbose(
@@ -160,19 +174,22 @@ function postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags) {
       globals.logger.error(`Error saving user session count to InfluxDB! ${err.stack}`);
     });
 
+
+
   // Write each session to InfluxDB
   body.forEach(measurement => {
-    // Add user directory as tag
+    // Add extra tags for this measurement
     influxTags.user_session_user_directory = measurement.UserDirectory;
+    influxTags.user_session_user_id = measurement.UserId;
 
     var tmpElement = [
       {
-        measurement: 'user_session',
+        measurement: 'user_session_details',
         tags: influxTags,
         fields: {
           // attributes: measurement.Attributes,
           session_id: measurement.SessionId,
-          // user_directory: measurement.UserDirectory,
+          user_directory: measurement.UserDirectory,
           user_id: measurement.UserId,
         },
       },
@@ -182,7 +199,7 @@ function postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags) {
       .writePoints(tmpElement)
       .then(() => {
         globals.logger.silly(
-          `Sent user session data to InfluxDB for server ${influxTags.server_name}: ${JSON.stringify(tmpElement, null, 2)}`,
+          `User session details for server ${influxTags.server_name}: ${JSON.stringify(tmpElement, null, 2)}`,
         );
       })
       .catch(err => {
