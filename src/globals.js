@@ -8,7 +8,9 @@ const path = require('path');
 const verifyConfig = require('./lib/verifyConfig');
 
 const Influx = require('influx');
-const { Pool } = require('pg');
+const {
+  Pool
+} = require('pg');
 
 // Get app version from package.json file
 var appVersion = require('./package.json').version;
@@ -116,8 +118,7 @@ const influx = new Influx.InfluxDB({
       ? config.get('Butler-SOS.influxdbConfig.auth.password')
       : ''
   }`,
-  schema: [
-    {
+  schema: [{
       measurement: 'sense_server',
       fields: {
         version: Influx.FieldType.STRING,
@@ -212,51 +213,51 @@ if (config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
     });
 
   // Verify existance of retention policies
-  influx.showRetentionPolicies().then(retentionPolicies => {
-    // Make sure InfluxDB retention policy for main health metrics exists (if specified)
-    if (config.has('Butler-SOS.serversToMonitor.influxDbRetentionPolicy')) {
-      if (
-        !retentionPolicies.includes(
-          config.get('Butler-SOS.serversToMonitor.influxDbRetentionPolicy'),
-        )
+  influx
+    .showRetentionPolicies()
+    .then(retentionPolicies => {
+      // Make sure InfluxDB retention policy for main health metrics exists (if specified)
+      var retentionPolicyMatch = retentionPolicies.filter(retentionPolicy => (retentionPolicy.name === config.get('Butler-SOS.serversToMonitor.influxDbRetentionPolicy')));
 
-          !
-
-      ) {
-        logger.error(
-          `Retention policy ${config.get(
-            'Butler-SOS.serversToMonitor.influxDbRetentionPolicy',
-          )} does not exist in InfluxDB. Exiting.`,
-        );
-        process.exit(1);
-      }
-    }
-
-    // Make sure InfluxDB retention policy for user sessions exists
-    if (config.get('Butler-SOS.userSessions.enableSessionExtract')) {
-      if (config.has('Butler-SOS.userSessions.influxDbRetentionPolicy')) {
+      if (config.has('Butler-SOS.serversToMonitor.influxDbRetentionPolicy')) {
         if (
-          !retentionPolicies.includes(config.get('Butler-SOS.userSessions.influxDbRetentionPolicy'))
+          retentionPolicyMatch.length == 0
         ) {
           logger.error(
             `Retention policy ${config.get(
-              'Butler-SOS.userSessions.influxDbRetentionPolicy',
-            )} does not exist in InfluxDB. Exiting.`,
+            'Butler-SOS.serversToMonitor.influxDbRetentionPolicy',
+          )} does not exist in InfluxDB. Exiting.`,
           );
           process.exit(1);
         }
       }
-    }
-    // })
 
-    // .catch(err => {
-    //   logger.error(
-    //     `Error getting list of existing retention policies in InfluxDB. Exiting.`,
-    //   );
-    //   logger.error(JSON.stringify(err, null, 2));
-    //   process.exit(1);
-    // });
-  });
+      // Make sure InfluxDB retention policy for user sessions exists
+      retentionPolicyMatch = retentionPolicies.filter(retentionPolicy => (retentionPolicy.name === config.get('Butler-SOS.userSessions.influxDbRetentionPolicy')));
+
+      if (config.get('Butler-SOS.userSessions.enableSessionExtract')) {
+        if (config.has('Butler-SOS.userSessions.influxDbRetentionPolicy')) {
+          if (
+            retentionPolicyMatch.length == 0
+          ) {
+            logger.error(
+              `Retention policy ${config.get(
+              'Butler-SOS.userSessions.influxDbRetentionPolicy',
+            )} does not exist in InfluxDB. Exiting.`,
+            );
+            process.exit(1);
+          }
+        }
+      }
+    })
+
+    .catch(err => {
+      logger.error(
+        `Error getting list of existing retention policies in InfluxDB. Exiting.`,
+      );
+      logger.error(JSON.stringify(err, null, 2));
+      process.exit(1);
+    });
 }
 
 // ------------------------------------
@@ -267,12 +268,12 @@ var mqttClient = mqtt.connect({
 });
 
 /*
-Following might be needed for conecting to older Mosquitto versions
-var mqttClient  = mqtt.connect('mqtt://<IP of MQTT server>', {
-  protocolId: 'MQIsdp',
-  protocolVersion: 3
-});
-*/
+  Following might be needed for conecting to older Mosquitto versions
+  var mqttClient  = mqtt.connect('mqtt://<IP of MQTT server>', {
+    protocolId: 'MQIsdp',
+    protocolVersion: 3
+  });
+  */
 
 module.exports = {
   config,
