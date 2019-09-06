@@ -5,7 +5,7 @@ const winston = require('winston');
 require('winston-daily-rotate-file');
 var config = require('config');
 const path = require('path');
-const verifyConfig = require('./lib/verifyConfig');
+// const verifyConfig = require('./lib/verifyConfig');
 
 const Influx = require('influx');
 const { Pool } = require('pg');
@@ -60,7 +60,6 @@ getLoggingLevel = () => {
 const serverList = config.get('Butler-SOS.serversToMonitor.servers');
 
 // Get info on what virtual proxies to get session data for
-// TODO remove? const userSessionsServers = config.get('Butler-SOS.userSessions.servers');
 
 // Set up connection pool for accessing Qlik Sense log db
 const pgPool = new Pool({
@@ -74,7 +73,7 @@ const pgPool = new Pool({
 // the pool with emit an error on behalf of any idle clients
 // it contains if a backend error or network partition happens
 pgPool.on('error', (err, client) => {
-  logger.error(`Unexpected error on idle client: ${err}`);
+  logger.error(`CONFIG: Unexpected error on idle client: ${err}`);
   process.exit(-1);
 });
 
@@ -86,7 +85,7 @@ let tagValues = ['host', 'server_name', 'server_description'];
 if (config.has('Butler-SOS.serversToMonitor.serverTagsDefinition')) {
   // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
   config.get('Butler-SOS.serversToMonitor.serverTagsDefinition').forEach(entry => {
-    logger.debug(`Setting up new Influx database: Found server tag : ${entry}`);
+    logger.debug(`CONFIG: Setting up new Influx database: Found server tag : ${entry}`);
 
     tagValues.push(entry);
   });
@@ -198,18 +197,18 @@ if (config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
     .getDatabaseNames()
     .then(names => {
       if (!names.includes(config.get('Butler-SOS.influxdbConfig.dbName'))) {
-        logger.info(`Creating Influx database.`);
+        logger.info(`CONFIG: Creating Influx database.`);
         return influx.createDatabase(config.get('Butler-SOS.influxdbConfig.dbName'));
       }
     })
     .then(() => {
-      logger.info(`Connected to Influx database.`);
+      logger.info(`CONFIG: Connected to Influx database.`);
       return;
     })
 
     // Verify existance of retention policies
     .then(() => {
-      logger.info(`Making sure Influxdb retention policies exist...`);
+      logger.info(`CONFIG: Making sure Influxdb retention policies exist...`);
 
       influx
         .showRetentionPolicies()
@@ -225,7 +224,7 @@ if (config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
           if (config.has('Butler-SOS.serversToMonitor.influxDbRetentionPolicy')) {
             if (retentionPolicyMatch.length == 0) {
               logger.error(
-                `Retention policy ${config.get(
+                `CONFIG: Retention policy ${config.get(
                   'Butler-SOS.serversToMonitor.influxDbRetentionPolicy',
                 )} does not exist in InfluxDB. Exiting.`,
               );
@@ -245,7 +244,7 @@ if (config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
             if (config.has('Butler-SOS.userSessions.influxDbRetentionPolicy')) {
               if (retentionPolicyMatch.length == 0) {
                 logger.error(
-                  `Retention policy ${config.get(
+                  `CONFIG: Retention policy ${config.get(
                     'Butler-SOS.userSessions.influxDbRetentionPolicy',
                   )} does not exist in InfluxDB. Exiting.`,
                 );
@@ -257,16 +256,16 @@ if (config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
 
         .catch(err => {
           logger.error(
-            `Error getting list of existing retention policies in InfluxDB. Make sure the retention policies used in YAML config really exist in Influxdb. Exiting.`,
+            `CONFIG: Error getting list of existing retention policies in InfluxDB. Make sure the retention policies used in YAML config really exist in Influxdb. Exiting.`,
           );
-          logger.error(JSON.stringify(err, null, 2));
+          logger.error(`CONFIG: ${JSON.stringify(err, null, 2)}`);
           process.exit(1);
         });
     })
 
     .catch(err => {
-      logger.error(`Error creating/connecting to/verifying Influx database:`);
-      logger.error(err);
+      logger.error(`CONFIG: Error creating/connecting to/verifying Influx database:`);
+      logger.error(`CONFIG: ${err}`);
     });
 }
 

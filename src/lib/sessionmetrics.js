@@ -14,7 +14,7 @@ var path = require('path'),
 // Get info on what sessions currently exist
 function setupUserSessionsTimer() {
   globals.logger.debug(
-    `Monitor user sessions for these servers/virtual proxies: ${JSON.stringify(
+    `USER SESSIONS: Monitor user sessions for these servers/virtual proxies: ${JSON.stringify(
       globals.serverList,
       null,
       2,
@@ -23,14 +23,14 @@ function setupUserSessionsTimer() {
 
   // Configure timer for getting user session data from Sense proxy API
   setInterval(function() {
-    globals.logger.verbose('Event started: Poll user sessions');
+    globals.logger.verbose('USER SESSIONS: Event started: Poll user sessions');
 
     globals.serverList.forEach(function(server) {
       if (server.userSessions.enable) {
         const tags = serverTags.getServerTags(server);
         server.userSessions.virtualProxies.forEach(function(virtualProxy) {
           globals.logger.debug(
-            `Getting user sessions for host=${
+            `USER SESSIONS: Getting user sessions for host=${
               server.userSessions.host
             }, virtual proxy=${JSON.stringify(virtualProxy, null, 2)}`,
           );
@@ -54,7 +54,7 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
     'session',
     '?Xrfkey=abcdefghij987654',
   );
-  globals.logger.debug(`Querying user sessions from ${fullUrl}`);
+  globals.logger.debug(`USER SESSIONS: Querying user sessions from ${fullUrl}`);
 
   request(
     {
@@ -77,24 +77,25 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
     },
     function(error, response, body) {
       // Check for error
-      globals.logger.debug(`User session response from: ${response.request.href}`);
+      globals.logger.debug(`USER SESSIONS: User session response from: ${response.request.href}`);
 
       if (error) {
-        globals.logger.error(`Error when calling proxy session API: ${error}`);
-        globals.logger.error(`Response: ${response}`);
-        globals.logger.error(`Body: ${body}`);
+        globals.logger.error(`USER SESSIONS: Error when calling proxy session API: ${error}`);
+        globals.logger.error(`USER SESSIONS: Response: ${response}`);
+        globals.logger.error(`USER SESSIONS: Body: ${body}`);
         return;
       }
 
       if (!error && response.statusCode === 200) {
         // globals.logger.verbose('Received ok response from ' + influxTags.host);
         globals.logger.debug(
-          `Body from ${response.request.href}: ${JSON.stringify(body, null, 2)}`,
+          `USER SESSIONS: Body from ${response.request.href}: ${JSON.stringify(body, null, 2)}`,
         );
 
         // Post to MQTT (if enabled)
         if (globals.config.get('Butler-SOS.mqttConfig.enableMQTT')) {
-          globals.logger.debug('Calling user sessions MQTT posting method');
+          globals.logger.debug('USER SESSIONS: Calling user sessions MQTT posting method');
+
           postToMQTT.postUserSessionsToMQTT(
             response.request.uri.hostname,
             response.request.headers.XVirtualProxy,
@@ -104,7 +105,8 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
 
         // Post to Influxdb (if enabled)
         if (globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
-          globals.logger.debug('Calling user sessions Influxdb posting method');
+          globals.logger.debug('USER SESSIONS: Calling user sessions Influxdb posting method');
+
           postToInfluxdb.postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags);
         }
       }

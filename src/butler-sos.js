@@ -3,7 +3,7 @@ var restify = require('restify');
 
 // Load code from sub modules
 const globals = require('./globals');
-const mainMetrics = require('./lib/mainmetrics');
+const healthMetrics = require('./lib/healthmetrics');
 const logDb = require('./lib/logdb');
 const sessionMetrics = require('./lib/sessionmetrics');
 
@@ -30,7 +30,7 @@ restServer.get(
     flags: 'i',
   },
   (req, res, next) => {
-    globals.logger.verbose(`Docker healthcheck API endpoint called.`);
+    globals.logger.verbose(`MAIN: Docker healthcheck API endpoint called.`);
 
     res.send(0);
     next();
@@ -55,7 +55,7 @@ globals.logger.debug(`CA cert: ${caFile}`);
 
 // Start Docker healthcheck REST server on port 12398
 restServer.listen(12398, function() {
-  globals.logger.info('Docker healthcheck server now listening');
+  globals.logger.info('MAIN: Docker healthcheck server now listening');
 });
 
 // Set up extraction of data from log db
@@ -69,4 +69,4 @@ if (globals.config.get('Butler-SOS.userSessions.enableSessionExtract') == true) 
 }
 
 // Set up extraction on main metrics data (i.e. the Sense healthcheck API)
-mainMetrics.setupMainMetricsTimer();
+healthMetrics.setupHealthMetricsTimer();

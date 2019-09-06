@@ -10,7 +10,7 @@ function setupLogDbTimer() {
 
   // Configure timer for getting log data from Postgres
   setInterval(function() {
-    globals.logger.verbose('Event started: Query log db');
+    globals.logger.verbose('LOGDB: Event started: Query log db');
 
     // Create list of logging levels to include in query
     // extractErrors: true
@@ -52,15 +52,15 @@ function setupLogDbTimer() {
           )
           .then(res => {
             pgClient.release();
-            globals.logger.debug('Log db query got a response.');
+            globals.logger.debug('LOGDB: Got query response.');
 
             var rows = res.rows;
             rows.forEach(function(row) {
-              globals.logger.silly(`Log db row: ${JSON.stringify(row)}`);
+              globals.logger.silly(`LOGDB: Row: ${JSON.stringify(row)}`);
 
               // Post to Influxdb (if enabled)
               if (globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
-                globals.logger.silly('Posting log db data to Influxdb...');
+                globals.logger.silly(`LOGDB: Posting log db data to Influxdb...`);
 
                 // Make sure that the payload message exists - storing it to Influx would otherwise throw an error
                 if (!row.payload.hasOwnProperty('Message')) {
@@ -73,7 +73,7 @@ function setupLogDbTimer() {
                 // Once we have that match we can add all the tags for that server.
                 serverItem = globals.serverList.find(item => {
                   globals.logger.silly(
-                    `Matching logdb host "${row.process_host}" against config file logDbHost "${item.logDbHost}"`,
+                    `LOGDB: Matching logdb host "${row.process_host}" against config file logDbHost "${item.logDbHost}"`,
                   );
                   return item.logDbHost == row.process_host;
                 });
@@ -109,14 +109,13 @@ function setupLogDbTimer() {
                   });
 
                   globals.logger.silly(
-                    `Tags passed to Influxdb as part of logdb record: ${JSON.stringify(
+                    `LOGDB: Tags passed to Influxdb as part of logdb record: ${JSON.stringify(
                       tagsForDbEntry,
                     )}`,
                   );
                 }
 
                 // Write the whole reading to Influxdb
-                // TODO: Use retention policy when writing to Influxdb
                 globals.influx
                   .writePoints(
                     [
@@ -136,17 +135,17 @@ function setupLogDbTimer() {
                     },
                   )
                   .then(err => {
-                    globals.logger.silly('Sent log db event to Influxdb');
+                    globals.logger.silly('LOGDB: Sent log db event to Influxdb');
                   })
                   .catch(err => {
-                    globals.logger.error(`Error saving log event to InfluxDB! ${err.stack}`);
-                    globals.logger.error(`  Full error: ${JSON.stringify(err)}`);
+                    globals.logger.error(`LOGDB: Error saving log event to InfluxDB! ${err.stack}`);
+                    globals.logger.error(`LOGDB:   Full error: ${JSON.stringify(err)}`);
                   });
               }
 
               // Post to MQTT (if enabled)
               if (globals.config.get('Butler-SOS.mqttConfig.enableMQTT')) {
-                globals.logger.silly('Posting log db data to MQTT...');
+                globals.logger.silly('LOGDB: Posting log db data to MQTT...');
                 postToMQTT.postLogDbToMQTT(
                   row.process_host,
                   row.process_name,
@@ -158,15 +157,15 @@ function setupLogDbTimer() {
             });
           })
           .then(res => {
-            globals.logger.verbose('Sent log event to Influxdb');
+            globals.logger.verbose('LOGDB: Sent log event to Influxdb');
           })
           .catch(err => {
-            globals.logger.error(`Log db query error: ${err.stack}`);
+            globals.logger.error(`LOGDB: Log db query error: ${err.stack}`);
             // pgClient.release();
           });
       })
       .catch(err => {
-        globals.logger.error(`ERROR: Could not connect to Postgres log db: ${err.stack}`);
+        globals.logger.error(`LOGDB: ERROR: Could not connect to Postgres log db: ${err.stack}`);
       });
   }, globals.config.get('Butler-SOS.logdb.pollingInterval'));
 }
