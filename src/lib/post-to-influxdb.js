@@ -122,7 +122,12 @@ function postMainMetricsToInfluxdb(host, body, influxTags) {
           saturated: body.saturated,
         },
       },
-    ])
+    ],
+    {
+      retentionPolicy: globals.config.get('Butler-SOS.serversToMonitor.influxDbRetentionPolicy'),
+    },
+  )
+
     .then(() => {
       globals.logger.verbose(`Sent health data to Influxdb for server ${influxTags.server_name}`);
     })
@@ -133,81 +138,110 @@ function postMainMetricsToInfluxdb(host, body, influxTags) {
 }
 
 function postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags) {
+  globals.logger.debug(`User sessions body received (VP=${virtualProxy}): ${JSON.stringify(body)}`);
+  globals.logger.debug(`User session: Shared tags sent to InfluxDB (VP=${virtualProxy}): ${JSON.stringify(influxTags)}`);
+
+  // TODO: Make sure the correct user_session_user_directory and user_session_user_id are written for user_session_details measurement
+  // TODO: Create entire Influxdb structure before writing it to Influx, i.e. only call writePoints once
+
   // Build tags structure that will be passed to InfluxDB
-  globals.logger.debug(`User session: Tags sent to InfluxDB: ${JSON.stringify(influxTags)}`);
+  // Get local copy of tags, then add user session specific tags
+  let tmpTags = influxTags;
+  tmpTags.user_session_virtual_proxy = virtualProxy;
+  tmpTags.user_session_host = host;
 
-  // Add user specific tags
-  influxTags.user_session_virtual_proxy = virtualProxy;
-  influxTags.user_session_host = host;
-
-  
-  
   // Build comma separated list of all user IDs connected via the current virtual proxy
-  var userList = Array.prototype.map.call(body, s => s.UserDirectory + '\\' + s.UserId).toString();
+  let userArray = Array.prototype.map.call(body, s => s.UserDirectory + '\\' + s.UserId);
+  let uniqueUserList = Array.from(new Set(userArray)).toString();
 
-  
   // Write a) # of user sessions and b) list of user IDs to InfluxDB
   globals.influx
-    .writePoints([
-      {
-        measurement: 'user_session_summary',
-        tags: influxTags,
-        fields: {
-          session_count: body.length,
+    .writePoints(
+      [
+        {
+          measurement: 'user_session_summary',
+          tags: tmpTags,
+          fields: {
+            session_count: body.length,
+          },
         },
+        {
+          measurement: 'user_session_list',
+          tags: tmpTags,
+          fields: {
+            session_user_id_list: uniqueUserList,
+          },
+        },
+      ],
+      {
+        retentionPolicy: globals.config.get('Butler-SOS.userSessions.influxDbRetentionPolicy'),
       },
-      // {
-      //   measurement: 'user_session_list',
-      //   tags: influxTags,
-      //   fields: {
-      //     session_user_id_list: body.length,
-      //   },
-      // },
+    )
 
-    ])
     .then(() => {
       globals.logger.verbose(
-        `Sent user session count to InfluxDB for server ${influxTags.server_name}`,
+        `User session summary: Sent user session count to InfluxDB for server ${tmpTags.server_name}, virtual proxy ${tmpTags.user_session_virtual_proxy}: ${body.length}`,
+      );
+      globals.logger.verbose(
+        `User session summary: List of users connected to server ${tmpTags.server_name}, virtual proxy ${tmpTags.user_session_virtual_proxy}: ${uniqueUserList}`,
+      );
+      globals.logger.verbose(
+        `User session summary: AA ${influxTags.server_name}, virtual proxy ${influxTags.user_session_virtual_proxy}: ${uniqueUserList}`,
       );
     })
+
+    .then(() => {
+      // Write details about each session to InfluxDB
+      body.forEach(bodyItem => {
+
+        globals.logger.debug(`User session: Body item: ${JSON.stringify(bodyItem)}`);
+
+        // Start over with fresh copy of shared tags
+        tmpTags = influxTags;
+        tmpTags.user_session_virtual_proxy = virtualProxy;
+        tmpTags.user_session_host = host;
+
+        // Add extra tags for this body item
+        tmpTags.user_session_user_directory = bodyItem.UserDirectory;
+        tmpTags.user_session_user_id = bodyItem.UserId;
+
+        let tmpDatapoint = [
+          {
+            measurement: 'user_session_details',
+            tags: tmpTags,
+            fields: {
+              // attributes: bodyItem.Attributes,
+              session_id: bodyItem.SessionId,
+              user_directory: bodyItem.UserDirectory,
+              user_id: bodyItem.UserId,
+            },
+          },
+        ];
+
+        globals.influx
+          .writePoints(tmpDatapoint, {
+            retentionPolicy: globals.config.get('Butler-SOS.userSessions.influxDbRetentionPolicy'),
+          })
+          .then(() => {
+            globals.logger.silly(
+              `User session details for server ${tmpTags.server_name}: ${JSON.stringify(
+                tmpDatapoint,
+                null,
+                2,
+              )}`,
+            );
+          })
+          .catch(err => {
+            globals.logger.error(`Error saving user session data to InfluxDB! ${err.stack}`);
+          });
+      });
+    })
+
     .catch(err => {
       globals.logger.error(`Error saving user session count to InfluxDB! ${err.stack}`);
     });
 
-
-
-  // Write each session to InfluxDB
-  body.forEach(measurement => {
-    // Add extra tags for this measurement
-    influxTags.user_session_user_directory = measurement.UserDirectory;
-    influxTags.user_session_user_id = measurement.UserId;
-
-    var tmpElement = [
-      {
-        measurement: 'user_session_details',
-        tags: influxTags,
-        fields: {
-          // attributes: measurement.Attributes,
-          session_id: measurement.SessionId,
-          user_directory: measurement.UserDirectory,
-          user_id: measurement.UserId,
-        },
-      },
-    ];
-
-    globals.influx
-      .writePoints(tmpElement)
-      .then(() => {
-        globals.logger.silly(
-          `User session details for server ${influxTags.server_name}: ${JSON.stringify(tmpElement, null, 2)}`,
-        );
-      })
-      .catch(err => {
-        globals.logger.error(`Error saving user session data to InfluxDB! ${err.stack}`);
-      });
-  });
-
-  globals.logger.verbose(`Sent user session data to InfluxDB for server ${influxTags.server_name}`);
+  // globals.logger.verbose(`Sent user session data to InfluxDB for server ${tmpTags.server_name}`);
 }
 
 module.exports = {

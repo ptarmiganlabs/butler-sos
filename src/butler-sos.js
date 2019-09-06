@@ -51,7 +51,6 @@ globals.logger.debug(`Client cert: ${certFile}`);
 globals.logger.debug(`Client cert key: ${keyFile}`);
 globals.logger.debug(`CA cert: ${caFile}`);
 
-
 // ---------------------------------------------------
 
 // Start Docker healthcheck REST server on port 12398
@@ -60,12 +59,12 @@ restServer.listen(12398, function() {
 });
 
 // Set up extraction of data from log db
-if (globals.config.get("Butler-SOS.logdb.enableLogDb") == true) {
+if (globals.config.get('Butler-SOS.logdb.enableLogDb') == true) {
   logDb.setupLogDbTimer();
 }
 
 // Set up extraction of sessions data
-if (globals.config.get("Butler-SOS.userSessions.enableSessionExtract") == true) {
+if (globals.config.get('Butler-SOS.userSessions.enableSessionExtract') == true) {
   sessionMetrics.setupUserSessionsTimer();
 }
 

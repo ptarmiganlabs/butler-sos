@@ -2,11 +2,12 @@ const globals = require('../globals');
 
 function getServerTags(server) {
   var tags = {
-    host: (server.host.split(':'))[0],
+    host: server.host.split(':')[0],
     server_name: server.serverName,
     server_description: server.serverDescription,
   };
-  // Check if there are any extra tags for this server that should be sent to InfluxDB
+
+  // Check if there are any extra tags for this server that should be added
   if (server.hasOwnProperty('serverTags')) {
     // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
     Object.entries(server.serverTags).forEach(entry => {

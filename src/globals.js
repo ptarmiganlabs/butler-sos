@@ -8,9 +8,7 @@ const path = require('path');
 const verifyConfig = require('./lib/verifyConfig');
 
 const Influx = require('influx');
-const {
-  Pool
-} = require('pg');
+const { Pool } = require('pg');
 
 // Get app version from package.json file
 var appVersion = require('./package.json').version;
@@ -61,8 +59,8 @@ getLoggingLevel = () => {
 // Get info on what servers to monitor
 const serverList = config.get('Butler-SOS.serversToMonitor.servers');
 
-// // Get info on what virtual proxies to get session data for
-// const userSessionsServers = config.get('Butler-SOS.userSessions.servers');
+// Get info on what virtual proxies to get session data for
+// TODO remove? const userSessionsServers = config.get('Butler-SOS.userSessions.servers');
 
 // Set up connection pool for accessing Qlik Sense log db
 const pgPool = new Pool({
@@ -118,7 +116,8 @@ const influx = new Influx.InfluxDB({
       ? config.get('Butler-SOS.influxdbConfig.auth.password')
       : ''
   }`,
-  schema: [{
+  schema: [
+    {
       measurement: 'sense_server',
       fields: {
         version: Influx.FieldType.STRING,
@@ -207,56 +206,67 @@ if (config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
       logger.info(`Connected to Influx database.`);
       return;
     })
-    .catch(err => {
-      logger.error(`Error creating/connecting to/verifying Influx database:`);
-      logger.error(err);
-    });
 
-  // Verify existance of retention policies
-  influx
-    .showRetentionPolicies()
-    .then(retentionPolicies => {
-      // Make sure InfluxDB retention policy for main health metrics exists (if specified)
-      var retentionPolicyMatch = retentionPolicies.filter(retentionPolicy => (retentionPolicy.name === config.get('Butler-SOS.serversToMonitor.influxDbRetentionPolicy')));
+    // Verify existance of retention policies
+    .then(() => {
+      logger.info(`Making sure Influxdb retention policies exist...`);
 
-      if (config.has('Butler-SOS.serversToMonitor.influxDbRetentionPolicy')) {
-        if (
-          retentionPolicyMatch.length == 0
-        ) {
-          logger.error(
-            `Retention policy ${config.get(
-            'Butler-SOS.serversToMonitor.influxDbRetentionPolicy',
-          )} does not exist in InfluxDB. Exiting.`,
+      influx
+        .showRetentionPolicies()
+        .then(retentionPolicies => {
+          // Make sure InfluxDB retention policy for main health metrics exists (if specified)
+          // If it needs to be created, something like 'create retention policy "14days" on "SenseOps" duration 14d replication 1' can be used from within Influxdb command line client.
+          var retentionPolicyMatch = retentionPolicies.filter(
+            retentionPolicy =>
+              retentionPolicy.name ===
+              config.get('Butler-SOS.serversToMonitor.influxDbRetentionPolicy'),
           );
-          process.exit(1);
-        }
-      }
 
-      // Make sure InfluxDB retention policy for user sessions exists
-      retentionPolicyMatch = retentionPolicies.filter(retentionPolicy => (retentionPolicy.name === config.get('Butler-SOS.userSessions.influxDbRetentionPolicy')));
-
-      if (config.get('Butler-SOS.userSessions.enableSessionExtract')) {
-        if (config.has('Butler-SOS.userSessions.influxDbRetentionPolicy')) {
-          if (
-            retentionPolicyMatch.length == 0
-          ) {
-            logger.error(
-              `Retention policy ${config.get(
-              'Butler-SOS.userSessions.influxDbRetentionPolicy',
-            )} does not exist in InfluxDB. Exiting.`,
-            );
-            process.exit(1);
+          if (config.has('Butler-SOS.serversToMonitor.influxDbRetentionPolicy')) {
+            if (retentionPolicyMatch.length == 0) {
+              logger.error(
+                `Retention policy ${config.get(
+                  'Butler-SOS.serversToMonitor.influxDbRetentionPolicy',
+                )} does not exist in InfluxDB. Exiting.`,
+              );
+              process.exit(1);
+            }
           }
-        }
-      }
+
+          // Make sure InfluxDB retention policy for user sessions exists
+          // If it needs to be created, something like 'create retention policy "7days" on "SenseOps" duration 7d replication 1' can be used from within Influxdb command line client.
+          retentionPolicyMatch = retentionPolicies.filter(
+            retentionPolicy =>
+              retentionPolicy.name ===
+              config.get('Butler-SOS.userSessions.influxDbRetentionPolicy'),
+          );
+
+          if (config.get('Butler-SOS.userSessions.enableSessionExtract')) {
+            if (config.has('Butler-SOS.userSessions.influxDbRetentionPolicy')) {
+              if (retentionPolicyMatch.length == 0) {
+                logger.error(
+                  `Retention policy ${config.get(
+                    'Butler-SOS.userSessions.influxDbRetentionPolicy',
+                  )} does not exist in InfluxDB. Exiting.`,
+                );
+                process.exit(1);
+              }
+            }
+          }
+        })
+
+        .catch(err => {
+          logger.error(
+            `Error getting list of existing retention policies in InfluxDB. Make sure the retention policies used in YAML config really exist in Influxdb. Exiting.`,
+          );
+          logger.error(JSON.stringify(err, null, 2));
+          process.exit(1);
+        });
     })
 
     .catch(err => {
-      logger.error(
-        `Error getting list of existing retention policies in InfluxDB. Exiting.`,
-      );
-      logger.error(JSON.stringify(err, null, 2));
-      process.exit(1);
+      logger.error(`Error creating/connecting to/verifying Influx database:`);
+      logger.error(err);
     });
 }
 

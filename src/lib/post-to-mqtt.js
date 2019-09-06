@@ -87,7 +87,6 @@ function postHealthToMQTT(host, serverName, body) {
   globals.mqttClient.publish(baseTopic + serverName + '/saturated', body.saturated.toString());
 }
 
-
 function postUserSessionsToMQTT(host, virtualProxy, body) {
   // Get base MQTT topic
   const baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');

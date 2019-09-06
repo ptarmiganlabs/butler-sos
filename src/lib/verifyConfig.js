@@ -12,7 +12,7 @@ function verifyInfluxDBSettings() {
         if (globals.config.get('Butler-SOS.serversToMonitor.enableSessionExtract')) {
           if (
             !retentionPolicies.includes(
-                globals.config.get('Butler-SOS.serversToMonitor.influxDbRetentionPolicy'),
+              globals.config.get('Butler-SOS.serversToMonitor.influxDbRetentionPolicy'),
             )
           ) {
             globals.logger.error(
@@ -26,7 +26,7 @@ function verifyInfluxDBSettings() {
         if (globals.config.get('Butler-SOS.userSessions.enableSessionExtract')) {
           if (
             !retentionPolicies.includes(
-                globals.config.get('Butler-SOS.userSessions.influxDbRetentionPolicy'),
+              globals.config.get('Butler-SOS.userSessions.influxDbRetentionPolicy'),
             )
           ) {
             globals.logger.error(
@@ -38,7 +38,9 @@ function verifyInfluxDBSettings() {
       })
 
       .catch(err => {
-        globals.logger.error(`Error getting list of existing retention policies in InfluxDB. Exiting.`);
+        globals.logger.error(
+          `Error getting list of existing retention policies in InfluxDB. Make sure the retention policies used in YAML config really exist in Influxdb. Exiting.`,
+        );
         globals.logger.error(JSON.stringify(err, null, 2));
         process.exit(1);
       });
@@ -46,5 +48,5 @@ function verifyInfluxDBSettings() {
 }
 
 module.exports = {
-    verifyInfluxDBSettings,
+  verifyInfluxDBSettings,
 };

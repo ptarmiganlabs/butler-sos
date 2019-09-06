@@ -82,11 +82,11 @@ function setupLogDbTimer() {
                 // Simple solution: only store data into Influxdb for servers defined in YAML config file.
 
                 if (serverItem == undefined) {
-                  group = '<no group>';
+                  // group = '<no group>';
                   srvName = '<no server>';
                   srvDesc = '<no description>';
                 } else {
-                  group = serverItem.serverTags.serverGroup;
+                  // group = serverItem.serverTags.serverGroup;
                   srvName = serverItem.serverName;
                   srvDesc = serverItem.serverDescription;
                 }
@@ -116,17 +116,25 @@ function setupLogDbTimer() {
                 }
 
                 // Write the whole reading to Influxdb
+                // TODO: Use retention policy when writing to Influxdb
                 globals.influx
-                  .writePoints([
-                    {
-                      measurement: 'log_event',
-                      tags: tagsForDbEntry,
-                      fields: {
-                        message: row.payload.Message,
+                  .writePoints(
+                    [
+                      {
+                        measurement: 'log_event',
+                        tags: tagsForDbEntry,
+                        fields: {
+                          message: row.payload.Message,
+                        },
+                        timestamp: row.timestamp,
                       },
-                      timestamp: row.timestamp,
+                    ],
+                    {
+                      retentionPolicy: globals.config.get(
+                        'Butler-SOS.logdb.influxDbRetentionPolicy',
+                      ),
                     },
-                  ])
+                  )
                   .then(err => {
                     globals.logger.silly('Sent log db event to Influxdb');
                   })
