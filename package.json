@@ -34,7 +34,7 @@
     "request": "^2.88.0",
     "restify": "^7.6.0",
     "winston": "^3.2.0",
-    "winston-daily-rotate-file": "^3.8.0"
+    "winston-daily-rotate-file": "^4.0.0"
   },
   "devDependencies": {}
 }
