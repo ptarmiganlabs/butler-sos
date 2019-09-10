@@ -38,7 +38,7 @@
     "restify": "^8.4.0",
     "url-join": "^4.0.1",
     "winston": "^3.2.1",
-    "winston-daily-rotate-file": "^3.10.0"
+    "winston-daily-rotate-file": "^4.0.0"
   },
   "devDependencies": {
     "prettier": "1.18.2"
