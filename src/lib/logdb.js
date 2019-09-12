@@ -13,10 +13,6 @@ function setupLogDbTimer() {
     globals.logger.verbose('LOGDB: Event started: Query log db');
 
     // Create list of logging levels to include in query
-    // extractErrors: true
-    // extractWarnings: true
-    // extractInfo: false
-
     let arrayincludeLogLevels = [];
     if (globals.config.get('Butler-SOS.logdb.extractErrors')) {
       arrayincludeLogLevels.push("'ERROR'");
@@ -117,23 +113,16 @@ function setupLogDbTimer() {
 
                 // Write the whole reading to Influxdb
                 globals.influx
-                  .writePoints(
-                    [
-                      {
-                        measurement: 'log_event',
-                        tags: tagsForDbEntry,
-                        fields: {
-                          message: row.payload.Message,
-                        },
-                        timestamp: row.timestamp,
-                      },
-                    ],
+                  .writePoints([
                     {
-                      retentionPolicy: globals.config.get(
-                        'Butler-SOS.logdb.influxDbRetentionPolicy',
-                      ),
+                      measurement: 'log_event',
+                      tags: tagsForDbEntry,
+                      fields: {
+                        message: row.payload.Message,
+                      },
+                      timestamp: row.timestamp,
                     },
-                  )
+                  ])
                   .then(err => {
                     globals.logger.silly('LOGDB: Sent log db event to Influxdb');
                   })

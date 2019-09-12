@@ -56,62 +56,67 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
   );
   globals.logger.debug(`USER SESSIONS: Querying user sessions from ${fullUrl}`);
 
-  request(
-    {
-      followRedirect: true,
-      url: fullUrl,
-      method: 'GET',
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Content-Type': 'application/json',
-        'X-Qlik-Xrfkey': 'abcdefghij987654',
-        XVirtualProxy: virtualProxy,
+  try {
+    request(
+      {
+        followRedirect: true,
+        url: fullUrl,
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'application/json',
+          'X-Qlik-Xrfkey': 'abcdefghij987654',
+          XVirtualProxy: virtualProxy,
+        },
+        json: true,
+        cert: fs.readFileSync(certFile),
+        key: fs.readFileSync(keyFile),
+        ca: fs.readFileSync(caFile),
+        rejectUnauthorized: false,
+        requestCert: true,
+        agent: false,
       },
-      json: true,
-      cert: fs.readFileSync(certFile),
-      key: fs.readFileSync(keyFile),
-      ca: fs.readFileSync(caFile),
-      rejectUnauthorized: false,
-      requestCert: true,
-      agent: false,
-    },
-    function(error, response, body) {
-      // Check for error
-      globals.logger.debug(`USER SESSIONS: User session response from: ${response.request.href}`);
+      function(error, response, body) {
+        // Check for error
+        if (error) {
+          globals.logger.error(`USER SESSIONS: Error when calling proxy session API: ${error}`);
+          globals.logger.error(`USER SESSIONS: Response: ${response}`);
+          globals.logger.error(`USER SESSIONS: Body: ${body}`);
+          return;
+        }
+        globals.logger.debug(`USER SESSIONS: User session response from: ${response.request.href}`);
 
-      if (error) {
-        globals.logger.error(`USER SESSIONS: Error when calling proxy session API: ${error}`);
-        globals.logger.error(`USER SESSIONS: Response: ${response}`);
-        globals.logger.error(`USER SESSIONS: Body: ${body}`);
-        return;
-      }
-
-      if (!error && response.statusCode === 200) {
-        // globals.logger.verbose('Received ok response from ' + influxTags.host);
-        globals.logger.debug(
-          `USER SESSIONS: Body from ${response.request.href}: ${JSON.stringify(body, null, 2)}`,
-        );
-
-        // Post to MQTT (if enabled)
-        if (globals.config.get('Butler-SOS.mqttConfig.enableMQTT')) {
-          globals.logger.debug('USER SESSIONS: Calling user sessions MQTT posting method');
-
-          postToMQTT.postUserSessionsToMQTT(
-            response.request.uri.hostname,
-            response.request.headers.XVirtualProxy,
-            JSON.stringify(body, null, 2),
+        if (!error && response.statusCode === 200) {
+          // globals.logger.verbose('Received ok response from ' + influxTags.host);
+          globals.logger.debug(
+            `USER SESSIONS: Body from ${response.request.href}: ${JSON.stringify(body, null, 2)}`,
           );
-        }
 
-        // Post to Influxdb (if enabled)
-        if (globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
-          globals.logger.debug('USER SESSIONS: Calling user sessions Influxdb posting method');
+          // Post to MQTT (if enabled)
+          if (globals.config.get('Butler-SOS.mqttConfig.enableMQTT')) {
+            globals.logger.debug('USER SESSIONS: Calling user sessions MQTT posting method');
 
-          postToInfluxdb.postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags);
+            postToMQTT.postUserSessionsToMQTT(
+              response.request.uri.hostname,
+              response.request.headers.XVirtualProxy,
+              JSON.stringify(body, null, 2),
+            );
+          }
+
+          // Post to Influxdb (if enabled)
+          if (globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
+            globals.logger.debug('USER SESSIONS: Calling user sessions Influxdb posting method');
+
+            postToInfluxdb.postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags);
+          }
         }
-      }
-    },
-  );
+      },
+    );
+  } catch (err) {
+    globals.logger.error(
+      `USER SESSIONS: Error reading user sessions from host:${host}, virtual proxy:${virtualProxy}: ${err}`,
+    );
+  }
 }
 
 module.exports = {

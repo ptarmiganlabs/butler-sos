@@ -1,4 +1,5 @@
 const globals = require('../globals');
+var _ = require('lodash');
 
 function postHealthMetricsToInfluxdb(host, body, influxTags) {
   // Calculate server uptime
@@ -38,101 +39,98 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
     days + ' days, ' + hours + 'h ' + minutes.substr(-2) + 'm ' + seconds.substr(-2) + 's';
 
   // Build tags structure that will be passed to InfluxDB
-  globals.logger.debug(`HEALTH METRICS: Health data: Tags sent to InfluxDB: ${JSON.stringify(influxTags)}`);
+  globals.logger.debug(
+    `HEALTH METRICS: Health data: Tags sent to InfluxDB: ${JSON.stringify(influxTags)}`,
+  );
 
   // Write the whole reading to Influxdb
   globals.influx
-    .writePoints(
-      [
-        {
-          measurement: 'sense_server',
-          tags: influxTags,
-          fields: {
-            version: body.version,
-            started: body.started,
-            uptime: formattedTime,
-          },
-        },
-        {
-          measurement: 'mem',
-          tags: influxTags,
-          fields: {
-            comitted: body.mem.comitted,
-            allocated: body.mem.allocated,
-            free: body.mem.free,
-          },
-        },
-        {
-          measurement: 'apps',
-          tags: influxTags,
-          fields: {
-            active_docs_count: body.apps.active_docs.length,
-            loaded_docs_count: body.apps.loaded_docs.length,
-            in_memory_docs_count: body.apps.in_memory_docs.length,
-            active_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
-              ? body.apps.active_docs
-              : '',
-            loaded_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
-              ? body.apps.loaded_docs
-              : '',
-            in_memory_docs: globals.config.get(
-              'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs',
-            )
-              ? body.apps.in_memory_docs
-              : '',
-            calls: body.apps.calls,
-            selections: body.apps.selections,
-          },
-        },
-        {
-          measurement: 'cpu',
-          tags: influxTags,
-          fields: {
-            total: body.cpu.total,
-          },
-        },
-        {
-          measurement: 'session',
-          tags: influxTags,
-          fields: {
-            active: body.session.active,
-            total: body.session.total,
-          },
-        },
-        {
-          measurement: 'users',
-          tags: influxTags,
-          fields: {
-            active: body.users.active,
-            total: body.users.total,
-          },
-        },
-        {
-          measurement: 'cache',
-          tags: influxTags,
-          fields: {
-            hits: body.cache.hits,
-            lookups: body.cache.lookups,
-            added: body.cache.added,
-            replaced: body.cache.replaced,
-            bytes_added: body.cache.bytes_added,
-          },
-        },
-        {
-          measurement: 'saturated',
-          tags: influxTags,
-          fields: {
-            saturated: body.saturated,
-          },
-        },
-      ],
+    .writePoints([
       {
-        retentionPolicy: globals.config.get('Butler-SOS.serversToMonitor.influxDbRetentionPolicy'),
+        measurement: 'sense_server',
+        tags: influxTags,
+        fields: {
+          version: body.version,
+          started: body.started,
+          uptime: formattedTime,
+        },
       },
-    )
+      {
+        measurement: 'mem',
+        tags: influxTags,
+        fields: {
+          comitted: body.mem.comitted,
+          allocated: body.mem.allocated,
+          free: body.mem.free,
+        },
+      },
+      {
+        measurement: 'apps',
+        tags: influxTags,
+        fields: {
+          active_docs_count: body.apps.active_docs.length,
+          loaded_docs_count: body.apps.loaded_docs.length,
+          in_memory_docs_count: body.apps.in_memory_docs.length,
+          active_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
+            ? body.apps.active_docs
+            : '',
+          loaded_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
+            ? body.apps.loaded_docs
+            : '',
+          in_memory_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs')
+            ? body.apps.in_memory_docs
+            : '',
+          calls: body.apps.calls,
+          selections: body.apps.selections,
+        },
+      },
+      {
+        measurement: 'cpu',
+        tags: influxTags,
+        fields: {
+          total: body.cpu.total,
+        },
+      },
+      {
+        measurement: 'session',
+        tags: influxTags,
+        fields: {
+          active: body.session.active,
+          total: body.session.total,
+        },
+      },
+      {
+        measurement: 'users',
+        tags: influxTags,
+        fields: {
+          active: body.users.active,
+          total: body.users.total,
+        },
+      },
+      {
+        measurement: 'cache',
+        tags: influxTags,
+        fields: {
+          hits: body.cache.hits,
+          lookups: body.cache.lookups,
+          added: body.cache.added,
+          replaced: body.cache.replaced,
+          bytes_added: body.cache.bytes_added,
+        },
+      },
+      {
+        measurement: 'saturated',
+        tags: influxTags,
+        fields: {
+          saturated: body.saturated,
+        },
+      },
+    ])
 
     .then(() => {
-      globals.logger.verbose(`HEALTH METRICS: Sent health data to Influxdb for server ${influxTags.server_name}`);
+      globals.logger.verbose(
+        `HEALTH METRICS: Sent health data to Influxdb for server ${influxTags.server_name}`,
+      );
     })
 
     .catch(err => {
@@ -141,7 +139,9 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
 }
 
 function postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags) {
-  globals.logger.debug(`USER SESSIONS: User sessions body received (VP=${virtualProxy}): ${JSON.stringify(body)}`);
+  globals.logger.debug(
+    `USER SESSIONS: User sessions body received (VP=${virtualProxy}): ${JSON.stringify(body)}`,
+  );
   globals.logger.debug(
     `USER SESSIONS: User session: Shared tags sent to InfluxDB (VP=${virtualProxy}): ${JSON.stringify(
       influxTags,
@@ -150,7 +150,7 @@ function postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags) {
 
   // Build tags structure that will be passed to InfluxDB
   // Get local copy of tags, then add user session specific tags
-  let tmpTags = influxTags;
+  let tmpTags = _.cloneDeep(influxTags);
   tmpTags.user_session_virtual_proxy = virtualProxy;
   tmpTags.user_session_host = host;
 
@@ -180,11 +180,12 @@ function postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags) {
     globals.logger.debug(`USER SESSIONS: User session: Body item: ${JSON.stringify(bodyItem)}`);
 
     // Start over with fresh copy of shared tags
-    tmpTags = influxTags;
+    tmpTags = _.cloneDeep(influxTags);
     tmpTags.user_session_virtual_proxy = virtualProxy;
     tmpTags.user_session_host = host;
 
     // Add extra tags for this body item
+    tmpTags.user_session_id = bodyItem.SessionId;
     tmpTags.user_session_user_directory = bodyItem.UserDirectory;
     tmpTags.user_session_user_id = bodyItem.UserId;
 
@@ -200,33 +201,35 @@ function postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags) {
     };
 
     datapoint.push(sessionDatapoint);
-
   });
 
   globals.influx
-  .writePoints(datapoint, {
-    retentionPolicy: globals.config.get('Butler-SOS.userSessions.influxDbRetentionPolicy'),
-  })
-  .then(() => {
-    globals.logger.silly(
-      `USER SESSIONS: Influxdb measurements for server "${host}", virtual proxy "${virtualProxy}"": ${JSON.stringify(
-        datapoint,
-        null,
-        2,
-      )}`,
-    );
+    .writePoints(datapoint)
+    .then(() => {
+      globals.logger.silly(
+        `USER SESSIONS: Influxdb datapoint for server "${host}", virtual proxy "${virtualProxy}"": ${JSON.stringify(
+          datapoint,
+          null,
+          2,
+        )}`,
+      );
 
-    globals.logger.debug(`USER SESSIONS: Session count for server "${host}", virtual proxy "${virtualProxy}"": ${body.length}`);
-    globals.logger.debug(`USER SESSIONS: User list for server "${host}", virtual proxy "${virtualProxy}"": ${uniqueUserList}`);
+      globals.logger.debug(
+        `USER SESSIONS: Session count for server "${host}", virtual proxy "${virtualProxy}"": ${body.length}`,
+      );
+      globals.logger.debug(
+        `USER SESSIONS: User list for server "${host}", virtual proxy "${virtualProxy}"": ${uniqueUserList}`,
+      );
 
-    globals.logger.verbose(`USER SESSIONS: Sent user session data to InfluxDB for server "${host}", virtual proxy "${virtualProxy}"`);    
-  })
-  .catch(err => {
-    globals.logger.error(`USER SESSIONS: Error saving user session data to InfluxDB! ${err.stack}`);
-  });
-
-
-
+      globals.logger.verbose(
+        `USER SESSIONS: Sent user session data to InfluxDB for server "${host}", virtual proxy "${virtualProxy}"`,
+      );
+    })
+    .catch(err => {
+      globals.logger.error(
+        `USER SESSIONS: Error saving user session data to InfluxDB! ${err.stack}`,
+      );
+    });
 }
 
 module.exports = {
