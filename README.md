@@ -10,7 +10,7 @@
 **While mainly feature complete, documentation for v5.0 is still missing. Docs below are for previous versions of Butler SOS.**
 **The final 5.0 version will introduce a separate doc site, with better structure etc. Stay tuned!**
 
-
+Previous versions of Butler SOS are of course available on the [Release page](https://github.com/ptarmiganlabs/butler-sos/releases).
 
 
 --------------------
