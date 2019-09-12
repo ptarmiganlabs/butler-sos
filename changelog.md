@@ -1,5 +1,24 @@
 # Change log
 
+## v5.0
+
+This release focuses on features requested by various people over the past couple of years.
+They thus have their origins in real-life scenarios at various organisations around the world - hopefully they will also find wider use.
+
+* **FEATURE:** Extract data on what users have open sessions, broken down by virtual proxies.  
+This information is quite useful, it for example makes it easier to understand what users are affected by ongoing issues with a particular server, or for notifying all users connected to a particular virtual proxy about a pending server reboot etc. Another use case is to quickly identify when users have unreasonably many open sessions - which may be indicative of a Sense proxy that needs a restart.
+The session information is stored in InfluxDB and/or sent as MQTT messages.
+
+* **FEATURE**: More flexible use of InfluxDB, including authenticated (using InfluxDB's standard username/password authentication) access, and configurable port InfluxDB listens on.
+
+* **FEATURE**: When starting Butler SOS for the first time, it will create a new database in InfluxDB. A new, default retention policy will also be created, based on info in Butler SOS' config file.
+
+* **IMPROVEMENT**: When running in a Docker container, there is now a configurable limit to how many and large log files Docker will keep for the Butler SOS container.
+
+* **BUG**: Fixed a couple of minor bugs around how tags are associated with Sense servers. The tagging feature is now pretty robust, and makes it possible to categorise Sense servers in a very flexible way. Those tags can then be used when creatign Grafana dashboards, making it easy to create and/or filter dashboards for all finance servers, all servers in Asia, all development servers etc. Very useful if you have many Sense servers!
+
+* **MISC**: General cleanup of the source code to make it easier to add new features in the future. Docker image is now based on Node 12 (vs Node 8 previously).
+
 ## v4.0
 
 **Breaking change!!**

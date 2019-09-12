@@ -1,0 +1,115 @@
+Butler-SOS:
+  # All configuration items are mandatory, unless otherwise noted.
+
+  # Logging configuration
+  logLevel: info          # Log level. Possible log levels are silly, debug, verbose, info, warn, error
+  fileLogging: true       # true/false to enable/disable logging to disk file
+  logDirectory: logs      # Subdirectory where log files are stored
+
+  # Qlik Sense logging db config parameters
+  logdb:
+    enableLogDb: true
+    # Items below are mandatory if enableLogDb=true
+    pollingInterval: 60000    # How often (milliseconds) should Postgres log db be queried for warnings and errors?
+    queryPeriod: 5 minutes    # How far back should Butler SOS query for log entries? Default is 5 min
+    host: <IP or FQDN of Qlik Sense logging db>
+    port: 4432
+    qlogsReaderUser: qlogs_reader
+    qlogsReaderPwd: <pwd>
+    extractErrors: true       # Should error level entries be extracted from log db into Influxdb?
+    extractWarnings: true     # Should warn level entries be extracted from log db into Influxdb?
+    extractInfo: true         # Should info level entries be extracted from log db into Influxdb? Warning! Seting this to true will result in LOTS of log messages being retrrieved by Butler SOS!
+
+  # Certificates to use when querying Sense for healthcheck data. Get these from the Certificate Export in QMC.
+  cert:
+    clientCert: <path/to/cert/client.pem>
+    clientCertKey: <path/to/cert/client_key.pem>
+    clientCertCA: <path/to/cert/root.pem>
+    # If running Butler SOS in a Docker container, the cert paths MUST be the following
+    # clientCert: /nodeapp/config/certificate/client.pem
+    # clientCertKey: /nodeapp/config/certificate/client_key.pem
+    # clientCertCA: /nodeapp/config/certificate/root.pem
+
+  # MQTT config parameters
+  mqttConfig:
+    enableMQTT: false
+    # Items below are mandatory if enableMQTT=true
+    brokerHost: <IP of MQTT server>
+    brokerPort: 1883
+    baseTopic: butler-sos/          # Topic should end with /
+
+  # Influx db config parameters
+  influxdbConfig:
+    enableInfluxdb: true
+    # Items below are mandatory if enableInfluxdb=true
+    hostIP: <IP or FQDN of Influxdb server>
+    hostPort: <Port where Influxdb is listening>    # Optional. Default value=8086
+    auth:
+      enable: false                 # Does influxdb instance require authentication (true/false)?
+      username: <username>          # Username for Influxdb authentication. Mandatory if auth.enable=true
+      password: <password>          # Password for Influxdb authentication. Mandatory if auth.enable=true
+    dbName: SenseOps
+    # Default retention policy that should be created in InfluxDB when Butler SOS creates a new database there. 
+    # Any data older than retention policy threshold will be purged from InfluxDB.
+    retentionPolicy:
+      name: 4weeks
+      duration: 4w
+    # Control whether certain fields are stored in InfluxDB or not
+    # Use with caution! Enabling activeDocs, loadedDocs or inMemoryDocs may result in lots of data sent to InfluxDB.
+    includeFields:
+      activeDocs: false              # Should data on what docs are active be stored in Influxdb (true/false)? 
+      loadedDocs: false              # Should data on what docs are loaded be stored in Influxdb (true/false)?
+      inMemoryDocs: false            # Should data on what docs are in memory be stored in Influxdb (true/false)?
+
+  # Sessions per virtual proxy
+  userSessions:
+    enableSessionExtract: true    # Query unique user IDs of what users have sessions open (true/false)?
+    # Items below are mandatory if enableSessionExtract=true    
+    pollingInterval: 15000        # How often (milliseconds) should detailed session data be polled?
+
+  serversToMonitor:
+    pollingInterval: 30000        # How often (milliseconds) should the healthcheck API be polled?
+
+    # List of extra tags for each server. Useful for creating more advanced Grafana dashboards.
+    # Each server below MUST include these tags in its serverTags property.
+    # The tags below are just examples - define your own as needed
+    serverTagsDefinition: 
+      - server_group
+      - serverLocation
+      - server-type
+      - serverBrand
+
+    # Sense Servers that should be queried for healthcheck data 
+    servers:
+      - host: <server1.my.domain>
+        serverName: <server1>
+        serverDescription: <description>
+        logDbHost: <host name as used in QLogs db>
+        userSessions:
+          enable: true
+          # Items below are mandatory if userSessions.enable=true
+          host: <server1.my.domain>:4243
+          virtualProxies:
+            - virtualProxy: /                 # Default virtual proxy
+            - virtualProxy: /hdr              # "hdr" virtual proxy
+        serverTags:
+          server_group: DEV
+          serverLocation: Asia
+          server-type: virtual
+          serverBrand: Dell
+      - host: <server2.my.domain>
+        serverName: <server2>
+        serverDescription: <description>
+        logDbHost: <host name as used in QLogs db>
+        userSessions:
+          enable: true
+          # Items below are mandatory if userSessions.enable=true
+          host: <server2.my.domain>:4243
+          virtualProxies:
+            - virtualProxy: /finance          # "finance" virtual proxy
+        serverTags:
+          server_group: PROD
+          serverLocation: Europe
+          server-type: physical
+          serverBrand: HP
+  
