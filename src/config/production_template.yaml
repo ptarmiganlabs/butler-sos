@@ -53,6 +53,13 @@ Butler-SOS:
       username: <username>          # Username for Influxdb authentication. Mandatory if auth.enable=true
       password: <password>          # Password for Influxdb authentication. Mandatory if auth.enable=true
     dbName: SenseOps
+
+    # Default retention policy that should be created in InfluxDB when Butler SOS creates a new database there. 
+    # Any data older than retention policy threshold will be purged from InfluxDB.
+    retentionPolicy:
+      name: 2_weeks
+      duration: 2w
+
     # Control whether certain fields are stored in InfluxDB or not
     # Use with caution! Enabling activeDocs, loadedDocs or inMemoryDocs may result in lots of data sent to InfluxDB.
     includeFields:
@@ -65,13 +72,9 @@ Butler-SOS:
     enableSessionExtract: true      # Query unique user IDs of what users have sessions open (true/false)?
     # Items below are mandatory if enableSessionExtract=true    
     pollingInterval: 15000          # How often (milliseconds) should detailed session data be polled?
-    influxDbRetentionPolicy: 7days  # Name of Influxdb policy used to determine how long 
-                                    #   user sessions data should be kept in Influxdb
 
   serversToMonitor:
     pollingInterval: 30000          # How often (milliseconds) should the healthcheck API be polled?
-    influxDbRetentionPolicy: 14days # Name of Influxdb retention policy used to determine how long 
-                                    # server metrics should be kept in Influxdb
 
     # List of extra tags for each server. Useful for creating more advanced Grafana dashboards.
     # Each server below MUST include these tags in its serverTags property.
