@@ -94,6 +94,12 @@ let tagValuesLogEvent = tagValues.slice();
 tagValuesLogEvent.push('source_process');
 tagValuesLogEvent.push('log_level');
 
+
+logger.info(`CONFIG: Influxdb enabled: ${config.get('Butler-SOS.influxdbConfig.enableInfluxdb')}`);
+logger.info(`CONFIG: Influxdb host IP: ${config.get('Butler-SOS.influxdbConfig.hostIP')}`);
+logger.info(`CONFIG: Influxdb host port: ${config.get('Butler-SOS.influxdbConfig.hostPort')}`);
+logger.info(`CONFIG: Influxdb db name: ${config.get('Butler-SOS.influxdbConfig.dbName')}`);
+
 // Set up Influxdb client
 const influx = new Influx.InfluxDB({
   host: config.get('Butler-SOS.influxdbConfig.hostIP'),
