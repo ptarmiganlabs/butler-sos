@@ -74,74 +74,77 @@ function setupLogDbTimer() {
                   return item.logDbHost == row.process_host;
                 });
 
-                // If data row returned from log db is about a server which is not defined in the YAML config file, we need to be careful:
-                // Simple solution: only store data into Influxdb for servers defined in YAML config file.
+                // NOTE: If no match is found above, i.e. serverItem == undefined, this means that a Sense host name was returned,
+                // but no server in the YAML config file had a matching logDbHost setting.
+                // This is an error and should be sent to the log.
+                // Also, only store data into Influxdb for servers defined in YAML config file.
 
                 if (serverItem == undefined) {
-                  // group = '<no group>';
-                  srvName = '<no server>';
-                  srvDesc = '<no description>';
+                  globals.logger.error(`LOGDB: No logDbHost config file entries matching host name received from Sense: ${row.process_host}`);
+                  globals.logger.error(`LOGDB:    Hint: Consider adding "${row.process_host}" as a logDbHost entry in the config file...`);
                 } else {
                   // group = serverItem.serverTags.serverGroup;
                   srvName = serverItem.serverName;
                   srvDesc = serverItem.serverDescription;
+
+                  let tagsForDbEntry = {
+                    host: row.process_host,
+                    server_name: srvName,
+                    server_description: srvDesc,
+                    source_process: row.process_name,
+                    log_level: row.entry_level,
+                  };
+
+                  // Add all tags defined for this server in the config file
+                  if (serverItem.hasOwnProperty('serverTags')) {
+                    // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
+                    Object.entries(serverItem.serverTags).forEach(entry => {
+                      tagsForDbEntry = Object.assign(tagsForDbEntry, {
+                        [entry[0]]: entry[1],
+                      });
+                    });
+
+                    globals.logger.silly(
+                      `LOGDB: Tags passed to Influxdb as part of logdb record: ${JSON.stringify(
+                        tagsForDbEntry,
+                      )}`,
+                    );
+                  }
+
+                  // Write the whole reading to Influxdb
+                  globals.influx
+                    .writePoints([
+                      {
+                        measurement: 'log_event',
+                        tags: tagsForDbEntry,
+                        fields: {
+                          message: row.payload.Message,
+                        },
+                        timestamp: row.timestamp,
+                      },
+                    ])
+                    .then(err => {
+                      globals.logger.silly('LOGDB: Sent log db event to Influxdb');
+                    })
+                    .catch(err => {
+                      globals.logger.error(
+                        `LOGDB: Error saving log event to InfluxDB! ${err.stack}`,
+                      );
+                      globals.logger.error(`LOGDB:   Full error: ${JSON.stringify(err)}`);
+                    });
                 }
 
-                let tagsForDbEntry = {
-                  host: row.process_host,
-                  server_name: srvName,
-                  server_description: srvDesc,
-                  source_process: row.process_name,
-                  log_level: row.entry_level,
-                };
-
-                // Add all tags defined for this server in the config file
-                if (serverItem.hasOwnProperty('serverTags')) {
-                  // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
-                  Object.entries(serverItem.serverTags).forEach(entry => {
-                    tagsForDbEntry = Object.assign(tagsForDbEntry, {
-                      [entry[0]]: entry[1],
-                    });
-                  });
-
-                  globals.logger.silly(
-                    `LOGDB: Tags passed to Influxdb as part of logdb record: ${JSON.stringify(
-                      tagsForDbEntry,
-                    )}`,
+                // Post to MQTT (if enabled)
+                if (globals.config.get('Butler-SOS.mqttConfig.enableMQTT')) {
+                  globals.logger.silly('LOGDB: Posting log db data to MQTT...');
+                  postToMQTT.postLogDbToMQTT(
+                    row.process_host,
+                    row.process_name,
+                    row.entry_level,
+                    row.payload.Message,
+                    row.timestamp,
                   );
                 }
-
-                // Write the whole reading to Influxdb
-                globals.influx
-                  .writePoints([
-                    {
-                      measurement: 'log_event',
-                      tags: tagsForDbEntry,
-                      fields: {
-                        message: row.payload.Message,
-                      },
-                      timestamp: row.timestamp,
-                    },
-                  ])
-                  .then(err => {
-                    globals.logger.silly('LOGDB: Sent log db event to Influxdb');
-                  })
-                  .catch(err => {
-                    globals.logger.error(`LOGDB: Error saving log event to InfluxDB! ${err.stack}`);
-                    globals.logger.error(`LOGDB:   Full error: ${JSON.stringify(err)}`);
-                  });
-              }
-
-              // Post to MQTT (if enabled)
-              if (globals.config.get('Butler-SOS.mqttConfig.enableMQTT')) {
-                globals.logger.silly('LOGDB: Posting log db data to MQTT...');
-                postToMQTT.postLogDbToMQTT(
-                  row.process_host,
-                  row.process_name,
-                  row.entry_level,
-                  row.payload.Message,
-                  row.timestamp,
-                );
               }
             });
           })
