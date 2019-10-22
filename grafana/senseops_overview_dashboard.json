@@ -17,7 +17,7 @@
   "gnetId": null,
   "graphTooltip": 2,
   "id": 29,
-  "iteration": 1571426749168,
+  "iteration": 1571775572393,
   "links": [
     {
       "icon": "external link",
@@ -26,7 +26,7 @@
       "title": "QMC",
       "tooltip": "Open QMC",
       "type": "link",
-      "url": "https://sense.mydomain.net/qmc"
+      "url": "https://sense.ptarmiganlabs.net/hdr/qmc"
     },
     {
       "icon": "external link",
@@ -35,7 +35,7 @@
       "title": " Hub",
       "tooltip": "Open Hub",
       "type": "link",
-      "url": "https://sense.mydomain.net/"
+      "url": "https://sense.ptarmiganlabs.net/hdr/"
     }
   ],
   "panels": [
@@ -677,7 +677,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1571426749168,
+      "repeatIteration": 1571775572393,
       "repeatPanelId": 73,
       "scopedVars": {
         "server": {
@@ -812,7 +812,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1571426749168,
+      "repeatIteration": 1571775572393,
       "repeatPanelId": 73,
       "scopedVars": {
         "server": {
@@ -947,7 +947,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1571426749168,
+      "repeatIteration": 1571775572393,
       "repeatPanelId": 73,
       "scopedVars": {
         "server": {
@@ -2418,7 +2418,7 @@
     ]
   },
   "time": {
-    "from": "now-24h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {
