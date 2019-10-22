@@ -71,10 +71,10 @@ Butler-SOS:
   userSessions:
     enableSessionExtract: true      # Query unique user IDs of what users have sessions open (true/false)?
     # Items below are mandatory if enableSessionExtract=true    
-    pollingInterval: 15000          # How often (milliseconds) should detailed session data be polled?
+    pollingInterval: 30000          # How often (milliseconds) should detailed session data be polled?
 
   serversToMonitor:
-    pollingInterval: 30000          # How often (milliseconds) should the healthcheck API be polled?
+    pollingInterval: 15000          # How often (milliseconds) should the healthcheck API be polled?
 
     # List of extra tags for each server. Useful for creating more advanced Grafana dashboards.
     # Each server below MUST include these tags in its serverTags property.
@@ -87,7 +87,7 @@ Butler-SOS:
 
     # Sense Servers that should be queried for healthcheck data 
     servers:
-      - host: <server1.my.domain>
+      - host: <server1.my.domain>:4747
         serverName: <server1>
         serverDescription: <description>
         logDbHost: <host name as used in QLogs db>
@@ -103,7 +103,7 @@ Butler-SOS:
           serverLocation: Asia
           server-type: virtual
           serverBrand: Dell
-      - host: <server2.my.domain>
+      - host: <server2.my.domain>:4747
         serverName: <server2>
         serverDescription: <description>
         logDbHost: <host name as used in QLogs db>
