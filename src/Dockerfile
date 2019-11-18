@@ -1,4 +1,3 @@
-# Use Node 8 LTS
 FROM node:12-stretch
 
 # Add metadata about the image
