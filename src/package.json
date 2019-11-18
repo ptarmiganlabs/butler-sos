@@ -42,6 +42,6 @@
     "winston-daily-rotate-file": "^4.2.1"
   },
   "devDependencies": {
-    "prettier": "1.18.2"
+    "prettier": "1.19.1"
   }
 }
