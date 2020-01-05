@@ -43,6 +43,23 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
     `HEALTH METRICS: Health data: Tags sent to InfluxDB: ${JSON.stringify(influxTags)}`,
   );
 
+  // Get app names for active/loaded/inmemory docs
+  var appNamesActive = [],
+    appNamesLoaded = [],
+    appNamesInMemory = [];
+
+  body.apps.active_docs.forEach(function(docID) {
+    appNamesActive.push(globals.appNames.find(element => element.id == docID).name);
+  });
+
+  body.apps.loaded_docs.forEach(function(docID) {
+    appNamesLoaded.push(globals.appNames.find(element => element.id == docID).name);
+  });
+
+  body.apps.in_memory_docs.forEach(function(docID) {
+    appNamesInMemory.push(globals.appNames.find(element => element.id == docID).name);
+  });
+
   // Write the whole reading to Influxdb
   globals.influx
     .writePoints([
@@ -74,11 +91,20 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
           active_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
             ? body.apps.active_docs
             : '',
+          active_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract')
+            ? appNamesActive.toString()
+            : '',
           loaded_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
             ? body.apps.loaded_docs
             : '',
+          loaded_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract')
+            ? appNamesLoaded.toString()
+            : '',
           in_memory_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs')
             ? body.apps.in_memory_docs
+            : '',
+          in_memory_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract')
+            ? appNamesInMemory.toString()
             : '',
           calls: body.apps.calls,
           selections: body.apps.selections,

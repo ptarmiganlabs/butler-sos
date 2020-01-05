@@ -13,6 +13,11 @@ const { Pool } = require('pg');
 // Get app version from package.json file
 var appVersion = require('./package.json').version;
 
+
+// Set up array for storing app ids and names
+var appNames = [];
+
+
 // Set up logger with timestamps and colors, and optional logging to disk file
 const logTransports = [];
 
@@ -145,8 +150,11 @@ const influx = new Influx.InfluxDB({
         loaded_docs_count: Influx.FieldType.INTEGER,
         in_memory_docs_count: Influx.FieldType.INTEGER,
         active_docs: Influx.FieldType.STRING,
+        active_docs_names: Influx.FieldType.STRING,
         loaded_docs: Influx.FieldType.STRING,
+        loaded_docs_names: Influx.FieldType.STRING,
         in_memory_docs: Influx.FieldType.STRING,
+        in_memory_docs_names: Influx.FieldType.STRING,
         calls: Influx.FieldType.INTEGER,
         selections: Influx.FieldType.INTEGER,
       },
@@ -269,4 +277,5 @@ module.exports = {
   appVersion,
   serverList,
   initInfluxDB,
+  appNames,
 };

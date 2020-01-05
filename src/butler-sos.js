@@ -6,6 +6,7 @@ const globals = require('./globals');
 const healthMetrics = require('./lib/healthmetrics');
 const logDb = require('./lib/logdb');
 const sessionMetrics = require('./lib/sessionmetrics');
+const appNamesExtract = require('./lib/appnamesextract');
 
 globals.initInfluxDB();
 
@@ -75,4 +76,11 @@ function mainScript() {
 
   // Set up extraction on main metrics data (i.e. the Sense healthcheck API)
   healthMetrics.setupHealthMetricsTimer();
+
+  // Set up extraction of app IDs and names
+  if (globals.config.get('Butler-SOS.appNames.enableAppNameExtract') == true) {
+    appNamesExtract.setupAppNamesExtractTimer();
+  }
+
+
 }
