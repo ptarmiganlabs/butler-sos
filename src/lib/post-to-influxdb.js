@@ -48,14 +48,17 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
     appNamesLoaded = [],
     appNamesInMemory = [];
 
+  // TODO: Write app ID to array if no app name is found
   body.apps.active_docs.forEach(function(docID) {
     appNamesActive.push(globals.appNames.find(element => element.id == docID).name);
   });
 
+  // TODO: Write app ID to array if no app name is found
   body.apps.loaded_docs.forEach(function(docID) {
     appNamesLoaded.push(globals.appNames.find(element => element.id == docID).name);
   });
 
+  // TODO: Write app ID to array if no app name is found
   body.apps.in_memory_docs.forEach(function(docID) {
     appNamesInMemory.push(globals.appNames.find(element => element.id == docID).name);
   });
