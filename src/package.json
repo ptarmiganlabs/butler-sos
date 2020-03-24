@@ -34,7 +34,7 @@
     "lodash.clonedeep": "^4.5.0",
     "mqtt": "^3.0.0",
     "pg": "^7.18.1",
-    "qrs-interact": "^4.0.1",
+    "qrs-interact": "^6.0.0",
     "request": "^2.88.2",
     "restify": "^8.5.1",
     "url-join": "^4.0.1",
