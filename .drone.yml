@@ -1,0 +1,23 @@
+kind: pipeline
+name: default
+
+steps:
+- name: docker  
+  image: plugins/docker
+  settings:
+    username:
+      from_secret: dockerhub_username
+    password:
+      from_secret: dockerhub_password
+    repo: ptarmiganlabs/butler-sos
+    dockerfile: Dockerfile
+    context: 
+    # auto_tag: true
+    tags:
+    - latest
+    - '5.1.0'
+    - '5.1'
+    - '5'
+  when:
+    event:
+    - tag
