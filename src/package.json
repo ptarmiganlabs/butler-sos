@@ -39,7 +39,6 @@
     "mqtt": "^4.0.0",
     "pg": "^8.0.3",
     "qrs-interact": "^6.0.1",
-    "request": "^2.88.2",
     "restify": "^8.5.1",
     "url-join": "^4.0.1",
     "winston": "^3.2.1",

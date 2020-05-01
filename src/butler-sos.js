@@ -60,8 +60,8 @@ if (globals.config.get('Butler-SOS.heartbeat.enabled') == true) {
   // Default is to use log level defined in config file
   globals.logger.info('--------------------------------------');
   globals.logger.info('Starting Butler SOS');
-  globals.logger.info(`Log level is: ${globals.getLoggingLevel()}`);
-  globals.logger.info(`App version is: ${globals.appVersion}`);
+  globals.logger.info(`Log level: ${globals.getLoggingLevel()}`);
+  globals.logger.info(`App version: ${globals.appVersion}`);
   globals.logger.info('--------------------------------------');
 
   // Log info about what Qlik Sense certificates are being used
