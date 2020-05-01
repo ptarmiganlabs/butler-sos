@@ -1,7 +1,7 @@
 # Butler SOS
 
 [![Build Status](https://cloud.drone.io/api/badges/ptarmiganlabs/butler-sos/status.svg)](https://cloud.drone.io/ptarmiganlabs/butler-sos)
-[![Maintainability](https://api.codeclimate.com/v1/badges/285300f789099a204af0/maintainability)](https://codeclimate.com/github/mountaindude/butler-cw/maintainability)
+[![Maintainability](https://api.codeclimate.com/v1/badges/98e766fc989b93f063ac/maintainability)](https://codeclimate.com/github/mountaindude/butler-sos/maintainability)
 
 ![Butler SOS](img/butler-sos-small.png)  
 
