@@ -1,6 +1,14 @@
 Butler-SOS:
   # All configuration items are mandatory, unless otherwise noted.
 
+  # Heartbeats can be used to send "I'm alive" messages to some other tool, e.g. an infrastructure monitoring tool
+  # The concept is simple: The remoteURL will be called at the specified frequency. The receiving tool will then know 
+  # that Butler SOS is alive.
+  heartbeat:
+    enabled: false
+    remoteURL: http://my.monitoring.server/some/path/
+    frequency: every 1 hour         # https://bunkat.github.io/later/parsers.html
+
   # Logging configuration
   logLevel: info          # Log level. Possible log levels are silly, debug, verbose, info, warn, error
   fileLogging: true       # true/false to enable/disable logging to disk file
@@ -66,6 +74,12 @@ Butler-SOS:
       activeDocs: false              # Should data on what docs are active be stored in Influxdb (true/false)? 
       loadedDocs: false              # Should data on what docs are loaded be stored in Influxdb (true/false)?
       inMemoryDocs: false            # Should data on what docs are in memory be stored in Influxdb (true/false)?
+
+  # Extract app names
+  appNames: 
+    enableAppNameExtract: true    # Extract app names in addition to app IDs (tue/false)?
+    extractInterval: 60000        # How often (milliseconds) should app names be extracted?
+    hostIP: <IP or FQDN>          # What Sense server should be queried for app names?
 
   # Sessions per virtual proxy
   userSessions:

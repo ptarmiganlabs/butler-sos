@@ -7,8 +7,13 @@ const healthMetrics = require('./lib/healthmetrics');
 const logDb = require('./lib/logdb');
 const sessionMetrics = require('./lib/sessionmetrics');
 const appNamesExtract = require('./lib/appnamesextract');
+heartbeat = require('./lib/heartbeat');
+serviceUptime = require('./lib/service_uptime');
+
 
 globals.initInfluxDB();
+
+serviceUptime.serviceUptimeStart();
 
 mainScript();
 
@@ -42,6 +47,13 @@ function mainScript() {
       next();
     },
   );
+
+
+  // Set up heartbeats, if enabled in the config file
+if (globals.config.get('Butler-SOS.heartbeat.enabled') == true) {
+  heartbeat.setupHeartbeatTimer(globals.config, globals.logger);
+}
+
 
   // Set specific log level (if/when needed to override the config file setting)
   // Possible values are { error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }

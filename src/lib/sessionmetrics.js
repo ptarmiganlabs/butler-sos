@@ -87,7 +87,6 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
         globals.logger.debug(`USER SESSIONS: User session response from: ${response.request.href}`);
 
         if (!error && response.statusCode === 200) {
-          // globals.logger.verbose('Received ok response from ' + influxTags.host);
           globals.logger.debug(
             `USER SESSIONS: Body from ${response.request.href}: ${JSON.stringify(body, null, 2)}`,
           );
