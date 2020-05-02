@@ -10,7 +10,7 @@ steps:
     password:
       from_secret: dockerhub_password
     repo: ptarmiganlabs/butler-sos
-    dockerfile: Dockerfile
+    dockerfile: src/Dockerfile
     context: 
     # auto_tag: true
     tags:
