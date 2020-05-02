@@ -7,8 +7,13 @@ const healthMetrics = require('./lib/healthmetrics');
 const logDb = require('./lib/logdb');
 const sessionMetrics = require('./lib/sessionmetrics');
 const appNamesExtract = require('./lib/appnamesextract');
+heartbeat = require('./lib/heartbeat');
+serviceUptime = require('./lib/service_uptime');
+
 
 globals.initInfluxDB();
+
+serviceUptime.serviceUptimeStart();
 
 mainScript();
 
@@ -43,13 +48,20 @@ function mainScript() {
     },
   );
 
+
+  // Set up heartbeats, if enabled in the config file
+if (globals.config.get('Butler-SOS.heartbeat.enabled') == true) {
+  heartbeat.setupHeartbeatTimer(globals.config, globals.logger);
+}
+
+
   // Set specific log level (if/when needed to override the config file setting)
   // Possible values are { error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
   // Default is to use log level defined in config file
   globals.logger.info('--------------------------------------');
   globals.logger.info('Starting Butler SOS');
-  globals.logger.info(`Log level is: ${globals.getLoggingLevel()}`);
-  globals.logger.info(`App version is: ${globals.appVersion}`);
+  globals.logger.info(`Log level: ${globals.getLoggingLevel()}`);
+  globals.logger.info(`App version: ${globals.appVersion}`);
   globals.logger.info('--------------------------------------');
 
   // Log info about what Qlik Sense certificates are being used

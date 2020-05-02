@@ -1,1 +1,27 @@
-extends: google
+parserOptions:
+  # ecmaVersion: 9
+  es2020: true
+env:
+  node: true
+extends: 'eslint:recommended'
+rules:
+  indent:
+    - error
+    - 4
+  linebreak-style:
+    - error
+    - unix
+  quotes:
+    - error
+    - single
+  semi:
+    - error
+    - always
+  no-console:
+    - warn
+    - allow: [warn, error, info]
+  no-undef:
+    - warn
+  no-unused-vars:
+    - warn
+    
