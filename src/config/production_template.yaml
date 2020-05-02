@@ -37,10 +37,12 @@ Butler-SOS:
     clientCert: <path/to/cert/client.pem>
     clientCertKey: <path/to/cert/client_key.pem>
     clientCertCA: <path/to/cert/root.pem>
+    clientCertPassphrase: 
     # If running Butler SOS in a Docker container, the cert paths MUST be the following
     # clientCert: /nodeapp/config/certificate/client.pem
     # clientCertKey: /nodeapp/config/certificate/client_key.pem
     # clientCertCA: /nodeapp/config/certificate/root.pem
+    # clientCertPassphrase:
 
   # MQTT config parameters
   mqttConfig:

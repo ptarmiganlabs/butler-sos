@@ -5,7 +5,7 @@ require('moment-precise-range-plugin');
 
 function serviceUptimeStart() {
     var uptimeLogLevel = 'verbose',
-        uptimeInterval = 'every 10 seconds';
+        uptimeInterval = 'every 600 seconds';
 
     // Formatter for numbers
     const formatter = new Intl.NumberFormat('en-US');

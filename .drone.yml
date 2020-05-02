@@ -15,8 +15,8 @@ steps:
     # auto_tag: true
     tags:
     - latest
-    - '5.1.0'
-    - '5.1'
+    - '5.2.0'
+    - '5.2'
     - '5'
   when:
     event:
