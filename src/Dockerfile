@@ -8,11 +8,11 @@ LABEL description="Real-time operational metrics for Qlik Sense."
 WORKDIR /nodeapp
 
 # Install app dependencies separately (creating a separate layer for node_modules, effectively caching them between image rebuilds)
-COPY package.json .
+COPY src/package.json .
 RUN npm install
 
 # Copy app's source files
-COPY . .
+COPY src/. .
 
 # Create and use non-root user 
 RUN groupadd -r nodejs \
