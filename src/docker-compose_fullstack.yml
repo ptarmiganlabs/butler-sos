@@ -2,7 +2,7 @@
 version: '3.3'
 services:
   butler-sos:
-    image: ptarmiganlabs/butler-sos:5.0.1
+    image: ptarmiganlabs/butler-sos:5.2.0
     container_name: butler-sos
     restart: always
     volumes:
