@@ -1,13 +1,12 @@
 const globals = require('../globals');
 var _ = require('lodash');
 
-function postHealthMetricsToInfluxdb(host, body, influxTags) {
-    // Calculate server uptime
+function getFormattedTime(serverStarted) {
 
     var dateTime = Date.now();
     var timestamp = Math.floor(dateTime);
 
-    var str = body.started;
+    var str = serverStarted;
     var year = str.substring(0, 4);
     var month = str.substring(4, 6);
     var day = str.substring(6, 8);
@@ -35,8 +34,12 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
     var seconds = '0' + date.getSeconds();
 
     // Will display time in 10:30:23 format
-    var formattedTime =
-        days + ' days, ' + hours + 'h ' + minutes.substr(-2) + 'm ' + seconds.substr(-2) + 's';
+    return days + ' days, ' + hours + 'h ' + minutes.substr(-2) + 'm ' + seconds.substr(-2) + 's';
+}
+
+function postHealthMetricsToInfluxdb(host, body, influxTags) {
+    // Calculate server uptime
+    var formattedTime=getFormattedTime(body.started);
 
     // Build tags structure that will be passed to InfluxDB
     globals.logger.debug(
