@@ -41,7 +41,6 @@ function getAppNames() {
         qrsInteractInstance
             .Get('app')
             .then(result => {
-                globals.logger.debug('APP NAMES: result from QRS call=' + result);
 
                 result.body.forEach(function (element) {
                     appList.push({

@@ -115,12 +115,12 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
         .request(requestSettings)
         .then(response => {
             globals.logger.debug(
-                `USER SESSIONS: User session response from: ${response.request.href}`,
+                `USER SESSIONS: User session response from: ${response.config.url}`,
             );
 
-            if (response.statusCode === 200) {
+            if (response.status === 200) {
                 globals.logger.debug(
-                    `USER SESSIONS: Body from ${response.request.href}: ${JSON.stringify(
+                    `USER SESSIONS: Body from ${response.config.url}: ${JSON.stringify(
                       response.data,
                         null,
                         2,
@@ -134,8 +134,9 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
                     );
 
                     postToMQTT.postUserSessionsToMQTT(
-                        response.request.uri.hostname,
-                        response.request.headers.XVirtualProxy,
+                        (host.split(':'))[0],
+                        // response.request._headers.xvirtualproxy,
+                        virtualProxy,
                         JSON.stringify(response.data, null, 2),
                     );
                 }

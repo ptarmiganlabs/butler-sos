@@ -65,6 +65,9 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
         }
     });
 
+    appNamesActive.sort();
+
+
     body.apps.loaded_docs.forEach(function(docID) {
         let app = globals.appNames.find(element => element.id == docID);
 
@@ -76,6 +79,8 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
         }
     });
 
+    appNamesLoaded.sort();
+
     body.apps.in_memory_docs.forEach(function(docID) {
         let app = globals.appNames.find(element => element.id == docID);
 
@@ -86,6 +91,8 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
             appNamesInMemory.push(docID);
         }
     });
+
+    appNamesInMemory.sort();
 
     // Write the whole reading to Influxdb
     globals.influx
