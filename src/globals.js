@@ -73,11 +73,11 @@ const pgPool = new Pool({
   port: config.get('Butler-SOS.logdb.port'),
 });
 
-// the pool with emit an error on behalf of any idle clients
+// the pool will emit an error on behalf of any idle clients
 // it contains if a backend error or network partition happens
 pgPool.on('error', (err, client) => {
   logger.error(`CONFIG: Unexpected error on idle client: ${err}`);
-  process.exit(-1);
+  // process.exit(-1);
 });
 
 // Get list of standard and user configurable tags
@@ -151,10 +151,13 @@ const influx = new Influx.InfluxDB({
         in_memory_docs_count: Influx.FieldType.INTEGER,
         active_docs: Influx.FieldType.STRING,
         active_docs_names: Influx.FieldType.STRING,
+        active_session_docs_names: Influx.FieldType.STRING,
         loaded_docs: Influx.FieldType.STRING,
         loaded_docs_names: Influx.FieldType.STRING,
+        loaded_session_docs_names: Influx.FieldType.STRING,
         in_memory_docs: Influx.FieldType.STRING,
         in_memory_docs_names: Influx.FieldType.STRING,
+        in_memory_session_docs_names: Influx.FieldType.STRING,
         calls: Influx.FieldType.INTEGER,
         selections: Influx.FieldType.INTEGER,
       },

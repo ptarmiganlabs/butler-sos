@@ -1,6 +1,8 @@
 const globals = require('../globals');
 var _ = require('lodash');
 
+const sessionAppPrefix = 'SessionApp';
+
 function getFormattedTime(serverStarted) {
 
     var dateTime = Date.now();
@@ -50,52 +52,85 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
 
     // Get app names for active/loaded/inmemory docs
     var appNamesActive = [],
+        sessionAppNamesActive = [],
         appNamesLoaded = [],
-        appNamesInMemory = [];
+        sessionAppNamesLoaded = [],
+        appNamesInMemory = [],
+        sessionAppNamesInMemory = [];
 
     globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Number of apps loaded: ${body.apps.loaded_docs.length}`);
     globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Number of apps in memory: ${body.apps.in_memory_docs.length}`);
     globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Number of apps active: ${body.apps.active_docs.length}`);
     
-    body.apps.active_docs.forEach(function(docID) {
-        let app = globals.appNames.find(element => element.id == docID);
+    // Get app names
+    // var appNames = await appNamesExtract.getAppNames();
 
-        if (app) {
-            globals.logger.debug(`HEALTH METRICS TO INFLUXDB: App is active: ${app.name}`);
-            appNamesActive.push(app.name);
+    var app;
+
+    body.apps.active_docs.forEach(function(docID) {
+
+        if ( docID.substring(0, sessionAppPrefix.length-1) == sessionAppPrefix ) {
+            // Session app
+            sessionAppNamesActive.push(docID);
         } else {
-            appNamesActive.push(docID);
+            // Not session app
+            app = globals.appNames.find(element => element.id == docID);
+
+            if (app) {
+                globals.logger.debug(`HEALTH METRICS TO INFLUXDB: App is active: ${app.name}`);
+
+                appNamesActive.push(app.name);
+            } else {
+                appNamesActive.push(docID);
+            }
         }
     });
 
     appNamesActive.sort();
+    sessionAppNamesActive.sort();
 
 
     body.apps.loaded_docs.forEach(function(docID) {
-        let app = globals.appNames.find(element => element.id == docID);
-
-        if (globals.appNames.find(element => element.id == docID)) {
-            globals.logger.debug(`HEALTH METRICS TO INFLUXDB: App is loaded: ${app.name}`);
-            appNamesLoaded.push(globals.appNames.find(element => element.id == docID).name);
+        if ( docID.substring(0, sessionAppPrefix.length) == sessionAppPrefix ) {
+            // Session app
+            sessionAppNamesLoaded.push(docID);
         } else {
-            appNamesLoaded.push(docID);
+            // Not session app
+            app = globals.appNames.find(element => element.id == docID);
+
+            if (app) {
+                globals.logger.debug(`HEALTH METRICS TO INFLUXDB: App is loaded: ${app.name}`);
+
+                appNamesLoaded.push(app.name);
+            } else {
+                appNamesLoaded.push(docID);
+            }
         }
     });
 
     appNamesLoaded.sort();
+    sessionAppNamesLoaded.sort();
 
     body.apps.in_memory_docs.forEach(function(docID) {
-        let app = globals.appNames.find(element => element.id == docID);
-
-        if (globals.appNames.find(element => element.id == docID)) {
-            globals.logger.debug(`HEALTH METRICS TO INFLUXDB: App is in memory: ${app.name}`);
-            appNamesInMemory.push(globals.appNames.find(element => element.id == docID).name);
+        if ( docID.substring(0, sessionAppPrefix.length-1) == sessionAppPrefix ) {
+            // Session app
+            sessionAppNamesInMemory.push(docID);
         } else {
-            appNamesInMemory.push(docID);
+            // Not session app
+            app = globals.appNames.find(element => element.id == docID);
+
+            if (app) {
+                globals.logger.debug(`HEALTH METRICS TO INFLUXDB: App is in memory: ${app.name}`);
+
+                appNamesInMemory.push(app.name);
+            } else {
+                appNamesInMemory.push(docID);
+            }
         }
     });
 
     appNamesInMemory.sort();
+    sessionAppNamesInMemory.sort();
 
     // Write the whole reading to Influxdb
     globals.influx
@@ -125,36 +160,15 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
                     active_docs_count: body.apps.active_docs.length,
                     loaded_docs_count: body.apps.loaded_docs.length,
                     in_memory_docs_count: body.apps.in_memory_docs.length,
-                    active_docs: globals.config.get(
-                        'Butler-SOS.influxdbConfig.includeFields.activeDocs',
-                    )
-                        ? body.apps.active_docs
-                        : '',
-                    active_docs_names: globals.config.get(
-                        'Butler-SOS.appNames.enableAppNameExtract',
-                    )
-                        ? appNamesActive.toString()
-                        : '',
-                    loaded_docs: globals.config.get(
-                        'Butler-SOS.influxdbConfig.includeFields.loadedDocs',
-                    )
-                        ? body.apps.loaded_docs
-                        : '',
-                    loaded_docs_names: globals.config.get(
-                        'Butler-SOS.appNames.enableAppNameExtract',
-                    )
-                        ? appNamesLoaded.toString()
-                        : '',
-                    in_memory_docs: globals.config.get(
-                        'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs',
-                    )
-                        ? body.apps.in_memory_docs
-                        : '',
-                    in_memory_docs_names: globals.config.get(
-                        'Butler-SOS.appNames.enableAppNameExtract',
-                    )
-                        ? appNamesInMemory.toString()
-                        : '',
+                    active_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs') ? body.apps.active_docs : '',
+                    active_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') ? appNamesActive.toString() : '',
+                    active_session_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') ? sessionAppNamesActive.toString() : '',
+                    loaded_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs') ? body.apps.loaded_docs : '',
+                    loaded_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') ? appNamesLoaded.toString() : '',
+                    loaded_session_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') ? sessionAppNamesLoaded.toString() : '',
+                    in_memory_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') ? body.apps.in_memory_docs : '',
+                    in_memory_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') ? appNamesInMemory.toString() : '',
+                    in_memory_session_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') ? sessionAppNamesInMemory.toString() : '',
                     calls: body.apps.calls,
                     selections: body.apps.selections,
                 },
