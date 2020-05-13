@@ -7,7 +7,7 @@ const globals = require('../globals');
 
 function serviceUptimeStart() {
     var uptimeLogLevel = 'verbose',
-        uptimeInterval = 'every 15 seconds';
+        uptimeInterval = 'every 120 seconds';
     // uptimeInterval = 'every 60 seconds';
 
     // Formatter for numbers
@@ -49,9 +49,6 @@ function serviceUptimeStart() {
                 formatter.format(startIterations) +
                 ', Uptime: ' +
                 moment.preciseDiff(0, uptimeMilliSec) +
-
-                // formatter.format(uptimeMilliSec / 1000) +
-                // ' seconds' +
                 `, Heap used ${heapUsed} MB of total heap ${heapTotal} MB. Memory allocated to process: ${processMemory} MB.`
         );
     }, later.parse.text(uptimeInterval));
