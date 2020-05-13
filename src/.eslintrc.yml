@@ -1,6 +1,5 @@
 parserOptions:
-  # ecmaVersion: 9
-  es2020: true
+  ecmaVersion: 2020
 env:
   node: true
 extends: 'eslint:recommended'
@@ -24,4 +23,6 @@ rules:
     - warn
   no-unused-vars:
     - warn
+    
+
     
