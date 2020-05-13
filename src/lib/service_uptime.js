@@ -1,11 +1,14 @@
+
 var later = require('later');
 var moment = require('moment');
 require('moment-precise-range-plugin');
+const globals = require('../globals');
 
 
 function serviceUptimeStart() {
     var uptimeLogLevel = 'verbose',
-        uptimeInterval = 'every 600 seconds';
+        uptimeInterval = 'every 15 seconds';
+    // uptimeInterval = 'every 60 seconds';
 
     // Formatter for numbers
     const formatter = new Intl.NumberFormat('en-US');
@@ -30,13 +33,17 @@ function serviceUptimeStart() {
     var startTime = Date.now();
     var startIterations = 0;
 
-    var uptimeCheck = later.setInterval(function() {
+    later.setInterval(function() {
         startIterations++;
         let uptimeMilliSec = Date.now() - startTime;
         moment.duration(uptimeMilliSec);
 
-        logger.log(uptimeLogLevel, '--------------------------------');
-        logger.log(
+        let heapTotal = Math.round(process.memoryUsage().heapTotal / 1024 / 1024 * 100) / 100, 
+            heapUsed = Math.round(process.memoryUsage().heapUsed / 1024 / 1024 * 100) / 100,
+            processMemory = Math.round(process.memoryUsage().rss / 1024 / 1024 * 100) / 100;
+
+        globals.logger.log(uptimeLogLevel, '--------------------------------');
+        globals.logger.log(
             uptimeLogLevel,
             'Iteration # ' +
                 formatter.format(startIterations) +
@@ -45,8 +52,7 @@ function serviceUptimeStart() {
 
                 // formatter.format(uptimeMilliSec / 1000) +
                 // ' seconds' +
-                ', Heap used: ' +
-                formatter.format(process.memoryUsage().heapUsed),
+                `, Heap used ${heapUsed} MB of total heap ${heapTotal} MB. Memory allocated to process: ${processMemory} MB.`
         );
     }, later.parse.text(uptimeInterval));
 }
