@@ -59,7 +59,7 @@ function getHealthStatsFromSense(host, influxTags) {
     var cert = getCertificates(options);
 
     if (cert.cert === undefined || cert.key === undefined || cert.ca === undefined) {
-        res.end('Client certificate or key was not found');
+        globals.logger.error('HEALTH: Client certificate or key was not found');
         return;
     }
 

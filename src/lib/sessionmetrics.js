@@ -23,13 +23,13 @@ function setupUserSessionsTimer() {
     );
 
     // Configure timer for getting user session data from Sense proxy API
-    setInterval(function() {
+    setInterval(function () {
         globals.logger.verbose('USER SESSIONS: Event started: Poll user sessions');
 
-        globals.serverList.forEach(function(server) {
+        globals.serverList.forEach(function (server) {
             if (server.userSessions.enable) {
                 const tags = serverTags.getServerTags(server);
-                server.userSessions.virtualProxies.forEach(function(virtualProxy) {
+                server.userSessions.virtualProxies.forEach(function (virtualProxy) {
                     globals.logger.debug(
                         `USER SESSIONS: Getting user sessions for host=${
                             server.userSessions.host
@@ -76,7 +76,7 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
     var cert = getCertificates(options);
 
     if (cert.cert === undefined || cert.key === undefined || cert.ca === undefined) {
-        res.end('Client certificate or key was not found');
+        globals.logger.error('HEALTH: Client certificate or key was not found');
         return;
     }
 
@@ -121,7 +121,7 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
             if (response.status === 200) {
                 globals.logger.debug(
                     `USER SESSIONS: Body from ${response.config.url}: ${JSON.stringify(
-                      response.data,
+                        response.data,
                         null,
                         2,
                     )}`,
@@ -134,7 +134,7 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
                     );
 
                     postToMQTT.postUserSessionsToMQTT(
-                        (host.split(':'))[0],
+                        host.split(':')[0],
                         // response.request._headers.xvirtualproxy,
                         virtualProxy,
                         JSON.stringify(response.data, null, 2),
@@ -147,7 +147,12 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
                         'USER SESSIONS: Calling user sessions Influxdb posting method',
                     );
 
-                    postToInfluxdb.postUserSessionsToInfluxdb(host, virtualProxy, response.data, influxTags);
+                    postToInfluxdb.postUserSessionsToInfluxdb(
+                        host,
+                        virtualProxy,
+                        response.data,
+                        influxTags,
+                    );
                 }
             }
         })
