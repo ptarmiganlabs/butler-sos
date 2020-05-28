@@ -69,9 +69,13 @@ function mainScript() {
     // ---------------------------------------------------
 
     // Start Docker healthcheck REST server on port 12398
-    restServer.listen(12398, function () {
-        globals.logger.info('MAIN: Docker healthcheck server now listening');
-    });
+    if (globals.config.get('Butler-SOS.docker.enableHealthCheck') == true) {
+        globals.logger.verbose('MAIN: Starting Docker healthcheck server...');
+
+        restServer.listen(globals.config.get('Butler-SOS.docker.healthCheckPort'), function () {
+            globals.logger.info('MAIN: Docker healthcheck server now listening');
+        });
+    };
 
     // Set up extraction of data from log db
     if (globals.config.get('Butler-SOS.logdb.enableLogDb') == true) {
