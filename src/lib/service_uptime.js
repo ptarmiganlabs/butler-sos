@@ -7,7 +7,7 @@ const globals = require('../globals');
 
 function serviceUptimeStart() {
     var uptimeLogLevel = 'verbose',
-        uptimeInterval = 'every 120 seconds';
+        uptimeInterval = 'every 2 minutes';
     // uptimeInterval = 'every 60 seconds';
 
     // Formatter for numbers
