@@ -14,9 +14,9 @@ Butler-SOS:
   fileLogging: true       # true/false to enable/disable logging to disk file
   logDirectory: logs      # Subdirectory where log files are stored
 
-  docker:
-    enableHealthCheck: true    # Control whether a REST endpoint will be set up to serve Docker health check messages
-    healthCheckPort: 12398      # Port the Docker health check service runs on (if enabled)
+  dockerHealthCheck:
+    enabled: true         # Control whether a REST endpoint will be set up to serve Docker health check messages
+    port: 12398           # Port the Docker health check service runs on (if enabled)
 
   # Qlik Sense logging db config parameters
   logdb:

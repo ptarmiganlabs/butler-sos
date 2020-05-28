@@ -6,9 +6,8 @@ const globals = require('../globals');
 
 
 function serviceUptimeStart() {
-    var uptimeLogLevel = 'verbose',
-        uptimeInterval = 'every 2 minutes';
-    // uptimeInterval = 'every 60 seconds';
+    var uptimeLogLevel = globals.config.get('Butler-SOS.uptimeMonitor.logLevel'),
+        uptimeInterval = globals.config.get('Butler-SOS.uptimeMonitor.frequency');
 
     // Formatter for numbers
     const formatter = new Intl.NumberFormat('en-US');
