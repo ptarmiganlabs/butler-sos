@@ -7,10 +7,7 @@ const postToMQTT = require('./post-to-mqtt');
 const serverTags = require('./servertags');
 
 var fs = require('fs');
-var path = require('path'),
-    certFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert')),
-    keyFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey')),
-    caFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
+var path = require('path');
 
 // Get info on what sessions currently exist
 function setupUserSessionsTimer() {
@@ -63,9 +60,11 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
 
     var options = {};
 
-    options.Certificate = globals.config.get('Butler-SOS.cert.clientCert');
-    options.CertificateKey = globals.config.get('Butler-SOS.cert.clientCertKey');
-    options.CertificateCA = globals.config.get('Butler-SOS.cert.clientCertCA');
+    options.Certificate = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert'))
+    options.CertificateKey = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey'))
+    options.CertificateCA = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
+
+
     if (globals.config.has('Butler-SOS.cert.clientCertPassphrase')) {
         options.CertificatePassphrase = globals.config.get('Butler-SOS.cert.clientCertPassphrase');
     } else {
