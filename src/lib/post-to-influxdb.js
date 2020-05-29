@@ -71,6 +71,7 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
 
         if ( docID.substring(0, sessionAppPrefix.length-1) == sessionAppPrefix ) {
             // Session app
+            globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Session app is active: ${docID}`);
             sessionAppNamesActive.push(docID);
         } else {
             // Not session app
@@ -93,6 +94,7 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
     body.apps.loaded_docs.forEach(function(docID) {
         if ( docID.substring(0, sessionAppPrefix.length) == sessionAppPrefix ) {
             // Session app
+            globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Session app is loaded: ${docID}`);
             sessionAppNamesLoaded.push(docID);
         } else {
             // Not session app
@@ -114,6 +116,7 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
     body.apps.in_memory_docs.forEach(function(docID) {
         if ( docID.substring(0, sessionAppPrefix.length-1) == sessionAppPrefix ) {
             // Session app
+            globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Session app is in memory: ${docID}`);
             sessionAppNamesInMemory.push(docID);
         } else {
             // Not session app
