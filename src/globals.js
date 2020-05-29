@@ -201,6 +201,15 @@ const influx = new Influx.InfluxDB({
             },
             tags: tagValuesLogEvent,
         },
+        {
+            measurement: 'butlersos_memory_usage',
+            fields: {
+                heap_used: Influx.FieldType.FLOAT,
+                heap_total: Influx.FieldType.FLOAT,
+                process_memory: Influx.FieldType.FLOAT,
+            },
+            tags: []
+        },
     ],
 });
 

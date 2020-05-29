@@ -14,9 +14,21 @@ Butler-SOS:
   fileLogging: true       # true/false to enable/disable logging to disk file
   logDirectory: logs      # Subdirectory where log files are stored
 
+  # Docker health checks are used when running Butler SOS as a Docker container. 
+  # The Docker engine will call the container's health check REST endpoint with a set interval to determine
+  # whether the container is alive/well or not.
+  # If you are not running Butler SOS in Docker you can safely disable this feature. 
   dockerHealthCheck:
     enabled: true         # Control whether a REST endpoint will be set up to serve Docker health check messages
     port: 12398           # Port the Docker health check service runs on (if enabled)
+
+  # Uptime monitor
+  uptimeMonitor:
+    enabled: true                   # Should uptime messages be written to the console and log files?
+    frequency: every 15 seconds     # https://bunkat.github.io/later/parsers.html
+    logLevel: verbose               # Starting at what log level should uptime messages be shown?
+    storeInInfluxdb: 
+      butlerSOSMemoryUsage: true    # Should data on Butler SOS' own memory use be stored in Infludb?
 
   # Qlik Sense logging db config parameters
   logdb:
