@@ -151,7 +151,7 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
                 measurement: 'mem',
                 tags: influxTags,
                 fields: {
-                    comitted: body.mem.comitted,
+                    comitted: body.mem.committed,
                     allocated: body.mem.allocated,
                     free: body.mem.free,
                 },
