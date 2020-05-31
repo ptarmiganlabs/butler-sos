@@ -392,6 +392,7 @@ function postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags) {
             tags: tmpTags,
             fields: {
                 session_count: body.length,
+                session_user_id_list: uniqueUserList,
             },
         },
         {
