@@ -3,7 +3,6 @@ var config = require('config');
 
 const winston = require('winston');
 require('winston-daily-rotate-file');
-var config = require('config');
 const path = require('path');
 // const verifyConfig = require('./lib/verifyConfig');
 
@@ -44,7 +43,7 @@ if (config.get('Butler-SOS.fileLogging')) {
     );
 }
 
-logger = winston.createLogger({
+var logger = winston.createLogger({
     transports: logTransports,
     format: winston.format.combine(
         winston.format.timestamp(),
@@ -53,7 +52,7 @@ logger = winston.createLogger({
 });
 
 // Function to get current logging level
-getLoggingLevel = () => {
+const getLoggingLevel = () => {
     return logTransports.find(transport => {
         return transport.name == 'console';
     }).level;
