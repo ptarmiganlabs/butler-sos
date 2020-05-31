@@ -51,10 +51,8 @@ function serviceUptimeStart() {
         );
 
         // Store to Influxdb
-        if (
-            globals.config.get('Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage') ==
-            true
-        ) {
+        if ((globals.config.get('Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage') == true)  &&
+            (globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true)) {
             postToInfluxdb.postButlerSOSMemoryUsageToInfluxdb({
                 heapUsed: heapUsed,
                 heapTotal: heapTotal,
