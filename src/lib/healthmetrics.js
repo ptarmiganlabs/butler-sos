@@ -68,7 +68,7 @@ function getHealthStatsFromSense(host, influxTags) {
         rejectUnauthorized: false,
     });
 
-    var requestSettings = {
+    let requestSettings = {
         url: 'https://' + host + '/engine/healthcheck/',
         method: 'get',
         headers: {

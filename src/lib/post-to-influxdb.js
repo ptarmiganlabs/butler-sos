@@ -1,10 +1,10 @@
 const globals = require('../globals');
 var _ = require('lodash');
+const Promise = require('promise');
 
 const sessionAppPrefix = 'SessionApp';
 
 function getFormattedTime(serverStarted) {
-
     var dateTime = Date.now();
     var timestamp = Math.floor(dateTime);
 
@@ -39,9 +39,9 @@ function getFormattedTime(serverStarted) {
     return days + ' days, ' + hours + 'h ' + minutes.substr(-2) + 'm ' + seconds.substr(-2) + 's';
 }
 
-function postHealthMetricsToInfluxdb(host, body, influxTags) {
+async function postHealthMetricsToInfluxdb(host, body, influxTags) {
     // Calculate server uptime
-    var formattedTime=getFormattedTime(body.started);
+    var formattedTime = getFormattedTime(body.started);
 
     // Build tags structure that will be passed to InfluxDB
     globals.logger.debug(
@@ -50,87 +50,185 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
         )}`,
     );
 
-    // Get app names for active/loaded/inmemory docs
-    let appNamesActive = [],
-        sessionAppNamesActive = [],
-        appNamesLoaded = [],
-        sessionAppNamesLoaded = [],
-        appNamesInMemory = [],
-        sessionAppNamesInMemory = [];
-
-    globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Number of apps loaded: ${body.apps.loaded_docs.length}`);
-    globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Number of apps in memory: ${body.apps.in_memory_docs.length}`);
-    globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Number of apps active: ${body.apps.active_docs.length}`);
-    
+    globals.logger.debug(
+        `HEALTH METRICS TO INFLUXDB: Number of apps active: ${body.apps.active_docs.length}`,
+    );
+    globals.logger.debug(
+        `HEALTH METRICS TO INFLUXDB: Number of apps loaded: ${body.apps.loaded_docs.length}`,
+    );
+    globals.logger.debug(
+        `HEALTH METRICS TO INFLUXDB: Number of apps in memory: ${body.apps.in_memory_docs.length}`,
+    );
     // Get app names
-    // var appNames = await appNamesExtract.getAppNames();
 
-    var app;
+    let app;
 
-    body.apps.active_docs.forEach(function(docID) {
+    // -------------------------------
+    // Get active app names
+    let appNamesActive = [],
+        sessionAppNamesActive = [];
 
-        if ( docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix ) {
-            // Session app
-            globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Session app is active: ${docID}`);
-            sessionAppNamesActive.push(docID);
-        } else {
-            // Not session app
-            app = globals.appNames.find(element => element.id == docID);
-
-            if (app) {
-                globals.logger.debug(`HEALTH METRICS TO INFLUXDB: App is active: ${app.name}`);
-
-                appNamesActive.push(app.name);
+    let storeActivedDoc = function (docID) {
+        return new Promise(function (resolve, reject) {
+            if (docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix) {
+                // Session app
+                globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Session app is active: ${docID}`);
+                sessionAppNamesActive.push(docID);
             } else {
-                appNamesActive.push(docID);
+                // Not session app
+                app = globals.appNames.find(element => element.id == docID);
+
+                if (app) {
+                    globals.logger.debug(`HEALTH METRICS TO INFLUXDB: App is active: ${app.name}`);
+
+                    appNamesActive.push(app.name);
+                } else {
+                    appNamesActive.push(docID);
+                }
             }
-        }
+
+            resolve();
+        });
+    };
+
+    let promisesActive = body.apps.active_docs.map(function (docID, idx) {
+        return new Promise(async function (resolve, reject) {
+            await storeActivedDoc(docID);
+
+            resolve();
+        });
     });
+
+    await Promise.all(promisesActive);
+
+    // body.apps.active_docs.forEach(function (docID) {
+    //     if (docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix) {
+    //         // Session app
+    //         globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Session app is active: ${docID}`);
+    //         sessionAppNamesActive.push(docID);
+    //     } else {
+    //         // Not session app
+    //         app = globals.appNames.find(element => element.id == docID);
+
+    //         if (app) {
+    //             globals.logger.debug(`HEALTH METRICS TO INFLUXDB: App is active: ${app.name}`);
+
+    //             appNamesActive.push(app.name);
+    //         } else {
+    //             appNamesActive.push(docID);
+    //         }
+    //     }
+    // });
 
     appNamesActive.sort();
     sessionAppNamesActive.sort();
 
+    // -------------------------------
+    // Get in active app names
+    let appNamesLoaded = [],
+        sessionAppNamesLoaded = [];
 
-    body.apps.loaded_docs.forEach(function(docID) {
-        if ( docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix ) {
-            // Session app
-            globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Session app is loaded: ${docID}`);
-            sessionAppNamesLoaded.push(docID);
-        } else {
-            // Not session app
-            app = globals.appNames.find(element => element.id == docID);
-
-            if (app) {
-                globals.logger.debug(`HEALTH METRICS TO INFLUXDB: App is loaded: ${app.name}`);
-
-                appNamesLoaded.push(app.name);
+    let storeLoadedDoc = function (docID) {
+        return new Promise(function (resolve, reject) {
+            if (docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix) {
+                // Session app
+                globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Session app is loaded: ${docID}`);
+                sessionAppNamesLoaded.push(docID);
             } else {
-                appNamesLoaded.push(docID);
+                // Not session app
+                app = globals.appNames.find(element => element.id == docID);
+
+                if (app) {
+                    globals.logger.debug(`HEALTH METRICS TO INFLUXDB: App is loaded: ${app.name}`);
+
+                    appNamesLoaded.push(app.name);
+                } else {
+                    appNamesLoaded.push(docID);
+                }
             }
-        }
+
+            resolve();
+        });
+    };
+
+    let promisesLoaded = body.apps.loaded_docs.map(function (docID, idx) {
+        return new Promise(async function (resolve, reject) {
+            await storeLoadedDoc(docID);
+
+            resolve();
+        });
     });
+
+    await Promise.all(promisesLoaded);
+
+    // body.apps.loaded_docs.forEach(function(docID) {
+    //     if ( docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix ) {
+    //         // Session app
+    //         globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Session app is loaded: ${docID}`);
+    //         sessionAppNamesLoaded.push(docID);
+    //     } else {
+    //         // Not session app
+    //         app = globals.appNames.find(element => element.id == docID);
+
+    //         if (app) {
+    //             globals.logger.debug(`HEALTH METRICS TO INFLUXDB: App is loaded: ${app.name}`);
+
+    //             appNamesLoaded.push(app.name);
+    //         } else {
+    //             appNamesLoaded.push(docID);
+    //         }
+    //     }
+    // });
 
     appNamesLoaded.sort();
     sessionAppNamesLoaded.sort();
 
-    body.apps.in_memory_docs.forEach(function(docID) {
-        if ( docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix ) {
-            // Session app
-            globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Session app is in memory: ${docID}`);
-            sessionAppNamesInMemory.push(docID);
-        } else {
-            // Not session app
-            app = globals.appNames.find(element => element.id == docID);
+    // -------------------------------
+    // Get in memory app names
+    let appNamesInMemory = [],
+        sessionAppNamesInMemory = [];
 
-            if (app) {
-                globals.logger.debug(`HEALTH METRICS TO INFLUXDB: App is in memory: ${app.name}`);
-
-                appNamesInMemory.push(app.name);
+    let storeInMemoryDoc = function (docID) {
+        return new Promise(function (resolve, reject) {
+            if (docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix) {
+                // Session app
+                globals.logger.debug(
+                    `HEALTH METRICS TO INFLUXDB: Session app is in memory: ${docID}`,
+                );
+                sessionAppNamesInMemory.push(docID);
             } else {
-                appNamesInMemory.push(docID);
+                // Not session app
+                app = globals.appNames.find(element => element.id == docID);
+
+                if (app) {
+                    globals.logger.debug(
+                        `HEALTH METRICS TO INFLUXDB: App is in memory: ${app.name}`,
+                    );
+
+                    appNamesInMemory.push(app.name);
+                } else {
+                    appNamesInMemory.push(docID);
+                }
             }
-        }
+
+            resolve();
+        });
+    };
+
+    let promisesInMemory = body.apps.in_memory_docs.map(function (docID, idx) {
+        return new Promise(async function (resolve, reject) {
+            await storeInMemoryDoc(docID);
+
+            resolve();
+        });
     });
+
+    await Promise.all(promisesInMemory);
+
+    // console.log('-------------0000000000--------------');
+    // console.log('a: ' + influxTags.server_name);
+    // console.log('b: ' + appNamesInMemory);
+    // console.log('c: ' + sessionAppNamesInMemory);
 
     appNamesInMemory.sort();
     sessionAppNamesInMemory.sort();
@@ -163,15 +261,51 @@ function postHealthMetricsToInfluxdb(host, body, influxTags) {
                     active_docs_count: body.apps.active_docs.length,
                     loaded_docs_count: body.apps.loaded_docs.length,
                     in_memory_docs_count: body.apps.in_memory_docs.length,
-                    active_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs') ? body.apps.active_docs : '',
-                    active_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') ? appNamesActive.toString() : '',
-                    active_session_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') ? sessionAppNamesActive.toString() : '',
-                    loaded_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs') ? body.apps.loaded_docs : '',
-                    loaded_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') ? appNamesLoaded.toString() : '',
-                    loaded_session_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') ? sessionAppNamesLoaded.toString() : '',
-                    in_memory_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') ? body.apps.in_memory_docs : '',
-                    in_memory_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') ? appNamesInMemory.toString() : '',
-                    in_memory_session_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') ? sessionAppNamesInMemory.toString() : '',
+                    active_docs: globals.config.get(
+                        'Butler-SOS.influxdbConfig.includeFields.activeDocs',
+                    )
+                        ? body.apps.active_docs
+                        : '',
+                    active_docs_names: globals.config.get(
+                        'Butler-SOS.appNames.enableAppNameExtract',
+                    )
+                        ? appNamesActive.toString()
+                        : '',
+                    active_session_docs_names: globals.config.get(
+                        'Butler-SOS.appNames.enableAppNameExtract',
+                    )
+                        ? sessionAppNamesActive.toString()
+                        : '',
+                    loaded_docs: globals.config.get(
+                        'Butler-SOS.influxdbConfig.includeFields.loadedDocs',
+                    )
+                        ? body.apps.loaded_docs
+                        : '',
+                    loaded_docs_names: globals.config.get(
+                        'Butler-SOS.appNames.enableAppNameExtract',
+                    )
+                        ? appNamesLoaded.toString()
+                        : '',
+                    loaded_session_docs_names: globals.config.get(
+                        'Butler-SOS.appNames.enableAppNameExtract',
+                    )
+                        ? sessionAppNamesLoaded.toString()
+                        : '',
+                    in_memory_docs: globals.config.get(
+                        'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs',
+                    )
+                        ? body.apps.in_memory_docs
+                        : '',
+                    in_memory_docs_names: globals.config.get(
+                        'Butler-SOS.appNames.enableAppNameExtract',
+                    )
+                        ? appNamesInMemory.toString()
+                        : '',
+                    in_memory_session_docs_names: globals.config.get(
+                        'Butler-SOS.appNames.enableAppNameExtract',
+                    )
+                        ? sessionAppNamesInMemory.toString()
+                        : '',
                     calls: body.apps.calls,
                     selections: body.apps.selections,
                 },
@@ -326,12 +460,8 @@ function postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags) {
         });
 }
 
-
-
 function postButlerSOSMemoryUsageToInfluxdb(memory) {
-    globals.logger.debug(
-        `MEMORY USAGE: Memory usage ${JSON.stringify(memory, null, 2)})`,
-    );
+    globals.logger.debug(`MEMORY USAGE: Memory usage ${JSON.stringify(memory, null, 2)})`);
 
     let datapoint = [
         {
@@ -339,16 +469,20 @@ function postButlerSOSMemoryUsageToInfluxdb(memory) {
             fields: {
                 heap_used: memory.heapUsed,
                 heap_total: memory.heapTotal,
-                process_memory: memory.processMemory
+                process_memory: memory.processMemory,
             },
-        }
+        },
     ];
 
     globals.influx
         .writePoints(datapoint)
         .then(() => {
             globals.logger.silly(
-                `MEMORY USAGE: Influxdb datapoint for Butler SOS memory usage: ${JSON.stringify(datapoint, null, 2)}`,
+                `MEMORY USAGE: Influxdb datapoint for Butler SOS memory usage: ${JSON.stringify(
+                    datapoint,
+                    null,
+                    2,
+                )}`,
             );
 
             globals.logger.verbose('MEMORY USAGE: Sent Butler SOS memory usage data to InfluxDB');
@@ -359,7 +493,6 @@ function postButlerSOSMemoryUsageToInfluxdb(memory) {
             );
         });
 }
-
 
 module.exports = {
     postHealthMetricsToInfluxdb,
