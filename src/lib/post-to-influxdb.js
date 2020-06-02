@@ -199,6 +199,13 @@ async function postHealthMetricsToInfluxdb(host, body, influxTags) {
             } else {
                 // Not session app
                 app = globals.appNames.find(element => element.id == docID);
+                // console.log('----------0 ' + host);
+                // console.log('----------1 ' + docID);
+                // if (app) {
+                //     console.log('----------2 ' + JSON.stringify(app, null, 2));
+                // } else {
+                //     console.log('----------2 ' + app);
+                // }
 
                 if (app) {
                     globals.logger.debug(
@@ -261,51 +268,18 @@ async function postHealthMetricsToInfluxdb(host, body, influxTags) {
                     active_docs_count: body.apps.active_docs.length,
                     loaded_docs_count: body.apps.loaded_docs.length,
                     in_memory_docs_count: body.apps.in_memory_docs.length,
-                    active_docs: globals.config.get(
-                        'Butler-SOS.influxdbConfig.includeFields.activeDocs',
-                    )
-                        ? body.apps.active_docs
-                        : '',
-                    active_docs_names: globals.config.get(
-                        'Butler-SOS.appNames.enableAppNameExtract',
-                    )
-                        ? appNamesActive.toString()
-                        : '',
-                    active_session_docs_names: globals.config.get(
-                        'Butler-SOS.appNames.enableAppNameExtract',
-                    )
-                        ? sessionAppNamesActive.toString()
-                        : '',
-                    loaded_docs: globals.config.get(
-                        'Butler-SOS.influxdbConfig.includeFields.loadedDocs',
-                    )
-                        ? body.apps.loaded_docs
-                        : '',
-                    loaded_docs_names: globals.config.get(
-                        'Butler-SOS.appNames.enableAppNameExtract',
-                    )
-                        ? appNamesLoaded.toString()
-                        : '',
-                    loaded_session_docs_names: globals.config.get(
-                        'Butler-SOS.appNames.enableAppNameExtract',
-                    )
-                        ? sessionAppNamesLoaded.toString()
-                        : '',
-                    in_memory_docs: globals.config.get(
-                        'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs',
-                    )
-                        ? body.apps.in_memory_docs
-                        : '',
-                    in_memory_docs_names: globals.config.get(
-                        'Butler-SOS.appNames.enableAppNameExtract',
-                    )
-                        ? appNamesInMemory.toString()
-                        : '',
-                    in_memory_session_docs_names: globals.config.get(
-                        'Butler-SOS.appNames.enableAppNameExtract',
-                    )
-                        ? sessionAppNamesInMemory.toString()
-                        : '',
+
+                    active_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs') ? body.apps.active_docs : '',
+                    active_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs') ? appNamesActive.toString() : '',
+                    active_session_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs') ? sessionAppNamesActive.toString() : '',
+
+                    loaded_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs') ? body.apps.loaded_docs : '',
+                    loaded_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs') ? appNamesLoaded.toString() : '',
+                    loaded_session_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs') ? sessionAppNamesLoaded.toString(): '',
+
+                    in_memory_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') ? body.apps.in_memory_docs : '',
+                    in_memory_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') ? appNamesInMemory.toString() : '',
+                    in_memory_session_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') ? sessionAppNamesInMemory.toString() : '',
                     calls: body.apps.calls,
                     selections: body.apps.selections,
                 },
