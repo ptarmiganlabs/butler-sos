@@ -45,7 +45,7 @@
     "winston-daily-rotate-file": "^4.4.2"
   },
   "devDependencies": {
-    "eslint": "6.8.0",
+    "eslint": "7.3.1",
     "jshint": "2.11.0",
     "prettier": "2.0.5"
   }
