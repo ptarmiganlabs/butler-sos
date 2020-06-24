@@ -441,6 +441,9 @@ function postButlerSOSMemoryUsageToInfluxdb(memory) {
     let datapoint = [
         {
             measurement: 'butlersos_memory_usage',
+            tags: {
+                butler_sos_instance: memory.instanceTag
+            },
             fields: {
                 heap_used: memory.heapUsed,
                 heap_total: memory.heapTotal,

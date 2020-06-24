@@ -29,6 +29,7 @@ Butler-SOS:
     logLevel: verbose               # Starting at what log level should uptime messages be shown?
     storeInInfluxdb: 
       butlerSOSMemoryUsage: true    # Should data on Butler SOS' own memory use be stored in Infludb?
+      instanceTag: DEV              # Tag that can be used to differentiate data from multiple Butler SOS instances
 
   # Qlik Sense logging db config parameters
   logdb:

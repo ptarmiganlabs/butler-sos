@@ -207,7 +207,9 @@ const influx = new Influx.InfluxDB({
                 heap_total: Influx.FieldType.FLOAT,
                 process_memory: Influx.FieldType.FLOAT,
             },
-            tags: []
+            tags: [
+                'butler_sos_instance'
+            ]
         },
     ],
 });
