@@ -1,6 +1,11 @@
 Butler-SOS:
   # All configuration items are mandatory, unless otherwise noted.
 
+  # Logging configuration
+  logLevel: info          # Log level. Possible log levels are silly, debug, verbose, info, warn, error
+  fileLogging: true       # true/false to enable/disable logging to disk file
+  logDirectory: logs      # Subdirectory where log files are stored
+
   # Heartbeats can be used to send "I'm alive" messages to some other tool, e.g. an infrastructure monitoring tool
   # The concept is simple: The remoteURL will be called at the specified frequency. The receiving tool will then know 
   # that Butler SOS is alive.
@@ -8,11 +13,6 @@ Butler-SOS:
     enabled: false
     remoteURL: http://my.monitoring.server/some/path/
     frequency: every 1 hour         # https://bunkat.github.io/later/parsers.html
-
-  # Logging configuration
-  logLevel: info          # Log level. Possible log levels are silly, debug, verbose, info, warn, error
-  fileLogging: true       # true/false to enable/disable logging to disk file
-  logDirectory: logs      # Subdirectory where log files are stored
 
   # Docker health checks are used when running Butler SOS as a Docker container. 
   # The Docker engine will call the container's health check REST endpoint with a set interval to determine
