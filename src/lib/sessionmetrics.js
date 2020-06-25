@@ -7,10 +7,7 @@ const postToMQTT = require('./post-to-mqtt');
 const serverTags = require('./servertags');
 
 var fs = require('fs');
-var path = require('path'),
-    certFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert')),
-    keyFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey')),
-    caFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
+var path = require('path');
 
 // Get info on what sessions currently exist
 function setupUserSessionsTimer() {
@@ -23,13 +20,13 @@ function setupUserSessionsTimer() {
     );
 
     // Configure timer for getting user session data from Sense proxy API
-    setInterval(function() {
+    setInterval(function () {
         globals.logger.verbose('USER SESSIONS: Event started: Poll user sessions');
 
-        globals.serverList.forEach(function(server) {
+        globals.serverList.forEach(function (server) {
             if (server.userSessions.enable) {
                 const tags = serverTags.getServerTags(server);
-                server.userSessions.virtualProxies.forEach(function(virtualProxy) {
+                server.userSessions.virtualProxies.forEach(function (virtualProxy) {
                     globals.logger.debug(
                         `USER SESSIONS: Getting user sessions for host=${
                             server.userSessions.host
@@ -63,9 +60,11 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
 
     var options = {};
 
-    options.Certificate = globals.config.get('Butler-SOS.cert.clientCert');
-    options.CertificateKey = globals.config.get('Butler-SOS.cert.clientCertKey');
-    options.CertificateCA = globals.config.get('Butler-SOS.cert.clientCertCA');
+    options.Certificate = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert'))
+    options.CertificateKey = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey'))
+    options.CertificateCA = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
+
+
     if (globals.config.has('Butler-SOS.cert.clientCertPassphrase')) {
         options.CertificatePassphrase = globals.config.get('Butler-SOS.cert.clientCertPassphrase');
     } else {
@@ -76,7 +75,7 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
     var cert = getCertificates(options);
 
     if (cert.cert === undefined || cert.key === undefined || cert.ca === undefined) {
-        res.end('Client certificate or key was not found');
+        globals.logger.error('HEALTH: Client certificate or key was not found');
         return;
     }
 
@@ -121,7 +120,7 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
             if (response.status === 200) {
                 globals.logger.debug(
                     `USER SESSIONS: Body from ${response.config.url}: ${JSON.stringify(
-                      response.data,
+                        response.data,
                         null,
                         2,
                     )}`,
@@ -134,7 +133,7 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
                     );
 
                     postToMQTT.postUserSessionsToMQTT(
-                        (host.split(':'))[0],
+                        host.split(':')[0],
                         // response.request._headers.xvirtualproxy,
                         virtualProxy,
                         JSON.stringify(response.data, null, 2),
@@ -147,7 +146,12 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
                         'USER SESSIONS: Calling user sessions Influxdb posting method',
                     );
 
-                    postToInfluxdb.postUserSessionsToInfluxdb(host, virtualProxy, response.data, influxTags);
+                    postToInfluxdb.postUserSessionsToInfluxdb(
+                        host,
+                        virtualProxy,
+                        response.data,
+                        influxTags,
+                    );
                 }
             }
         })

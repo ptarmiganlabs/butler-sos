@@ -1,3 +1,5 @@
+
+
 // Get metrics from the Sense health check API
 
 const axios = require('axios');
@@ -8,10 +10,7 @@ const postToMQTT = require('./post-to-mqtt');
 const serverTags = require('./servertags');
 
 var fs = require('fs');
-var path = require('path'),
-    certFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert')),
-    keyFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey')),
-    caFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
+var path = require('path');
 
 function setupHealthMetricsTimer() {
     // Configure timer for getting healthcheck data
@@ -44,9 +43,9 @@ function getHealthStatsFromSense(host, influxTags) {
 
     var options = {};
 
-    options.Certificate = globals.config.get('Butler-SOS.cert.clientCert');
-    options.CertificateKey = globals.config.get('Butler-SOS.cert.clientCertKey');
-    options.CertificateCA = globals.config.get('Butler-SOS.cert.clientCertCA');
+    options.Certificate = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert'));
+    options.CertificateKey = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey'));
+    options.CertificateCA = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
     if (globals.config.has('Butler-SOS.cert.clientCertPassphrase')) {
         options.CertificatePassphrase = globals.config.get('Butler-SOS.cert.clientCertPassphrase');
     } else {
@@ -57,7 +56,7 @@ function getHealthStatsFromSense(host, influxTags) {
     var cert = getCertificates(options);
 
     if (cert.cert === undefined || cert.key === undefined || cert.ca === undefined) {
-        res.end('Client certificate or key was not found');
+        globals.logger.error('HEALTH: Client certificate or key was not found');
         return;
     }
 
@@ -69,7 +68,7 @@ function getHealthStatsFromSense(host, influxTags) {
         rejectUnauthorized: false,
     });
 
-    var requestSettings = {
+    let requestSettings = {
         url: 'https://' + host + '/engine/healthcheck/',
         method: 'get',
         headers: {

@@ -1,17 +1,18 @@
 var later = require('later');
 var moment = require('moment');
 require('moment-precise-range-plugin');
-
+const globals = require('../globals');
+const postToInfluxdb = require('./post-to-influxdb');
 
 function serviceUptimeStart() {
-    var uptimeLogLevel = 'verbose',
-        uptimeInterval = 'every 600 seconds';
+    var uptimeLogLevel = globals.config.get('Butler-SOS.uptimeMonitor.logLevel'),
+        uptimeInterval = globals.config.get('Butler-SOS.uptimeMonitor.frequency');
 
     // Formatter for numbers
     const formatter = new Intl.NumberFormat('en-US');
 
     // Log uptime to console
-    Number.prototype.toTime = function(isSec) {
+    Number.prototype.toTime = function (isSec) {
         var ms = isSec ? this * 1e3 : this,
             lm = ~(4 * !!isSec),
             /* limit fraction */
@@ -30,24 +31,37 @@ function serviceUptimeStart() {
     var startTime = Date.now();
     var startIterations = 0;
 
-    var uptimeCheck = later.setInterval(function() {
+    later.setInterval(function () {
         startIterations++;
         let uptimeMilliSec = Date.now() - startTime;
         moment.duration(uptimeMilliSec);
 
-        logger.log(uptimeLogLevel, '--------------------------------');
-        logger.log(
+        let heapTotal = Math.round((process.memoryUsage().heapTotal / 1024 / 1024) * 100) / 100,
+            heapUsed = Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 100) / 100,
+            processMemory = Math.round((process.memoryUsage().rss / 1024 / 1024) * 100) / 100;
+
+        globals.logger.log(uptimeLogLevel, '--------------------------------');
+        globals.logger.log(
             uptimeLogLevel,
             'Iteration # ' +
                 formatter.format(startIterations) +
                 ', Uptime: ' +
                 moment.preciseDiff(0, uptimeMilliSec) +
-
-                // formatter.format(uptimeMilliSec / 1000) +
-                // ' seconds' +
-                ', Heap used: ' +
-                formatter.format(process.memoryUsage().heapUsed),
+                `, Heap used ${heapUsed} MB of total heap ${heapTotal} MB. Memory allocated to process: ${processMemory} MB.`,
         );
+
+        // Store to Influxdb
+        let butlerSosMemoryInfluxTag = globals.config.has('Butler-SOS.uptimeMonitor.storeInInfluxdb.instanceTag') ? globals.config.get('Butler-SOS.uptimeMonitor.storeInInfluxdb.instanceTag') : '';
+
+        if ((globals.config.get('Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage') == true)  &&
+            (globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true)) {
+            postToInfluxdb.postButlerSOSMemoryUsageToInfluxdb({
+                instanceTag: butlerSosMemoryInfluxTag,
+                heapUsed: heapUsed,
+                heapTotal: heapTotal,
+                processMemory: processMemory,
+            });
+        }
     }, later.parse.text(uptimeInterval));
 }
 
