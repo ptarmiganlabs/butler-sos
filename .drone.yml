@@ -77,7 +77,7 @@ steps:
       from_secret: dockerhub_password
     repo: mountaindude/butler-sos
     dockerfile: src/Dockerfile.arm
-    context: src
+    context: 
     auto_tag: true
     auto_tag_suffix: linux-arm
 
