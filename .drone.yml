@@ -14,7 +14,7 @@ steps:
       from_secret: dockerhub_username
     password:
       from_secret: dockerhub_password
-    repo: mountaindude/butler-sos
+    repo: ptarmiganlabs/butler-sos
     dockerfile: src/Dockerfile.amd64
     context: 
     auto_tag: true
@@ -43,7 +43,7 @@ steps:
       from_secret: dockerhub_username
     password:
       from_secret: dockerhub_password
-    repo: mountaindude/butler-sos
+    repo: ptarmiganlabs/butler-sos
     dockerfile: src/Dockerfile.arm64
     context: 
     auto_tag: true
@@ -75,7 +75,7 @@ steps:
       from_secret: dockerhub_username
     password:
       from_secret: dockerhub_password
-    repo: mountaindude/butler-sos
+    repo: ptarmiganlabs/butler-sos
     dockerfile: src/Dockerfile.arm
     context: 
     auto_tag: true
