@@ -2,6 +2,19 @@
 
 Releases are [available on Github](https://github.com/ptarmiganlabs/butler-sos/releases).
 
+## v5.5.2
+
+* Minor release to bring used libraries and dependencies up to date.
+
+## v5.5.1
+
+* Minor release to bring used libraries and dependencies up to date.
+
+## v5.5.0
+
+* Adding **Docker images for Arm**. Arm CPUs are no longer just something used in mobile gadgets, they are quickly becoming a real option also for server workloads.
+For that reason Butler SOS now builds Docker images for the Arm64 and Arm architectures, and publish these on Docker Hub.
+
 ## v5.4
 
 * **Sample dashboards** are now built using the brand new, shiny and all together awesome Grafana 7. Did we mention that Grafana 7 is awesome? Awesome.

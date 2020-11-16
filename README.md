@@ -7,8 +7,10 @@
 
 Butler SenseOps Stats ("Butler SOS") is a DevOps monitoring tool for [Qlik Sense](https://www.qlik.com/us/products/qlik-sense).
 
-<br>
-<br>
-<br>
-
+\
+\
+\
+\
 **Documentation is available at [https://butler-sos.ptarmiganlabs.com](https://butler-sos.ptarmiganlabs.com).**
+\
+Commercial getting-started services for Butler are available, more info [here](https://ptarmiganlabs.com/butler-assist/).
