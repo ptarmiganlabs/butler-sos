@@ -47,6 +47,6 @@
   "devDependencies": {
     "eslint": "7.13.0",
     "jshint": "2.12.0",
-    "prettier": "2.1.2"
+    "prettier": "2.2.1"
   }
 }
