@@ -1,3 +1,4 @@
+# Build Docker image for Amd64
 FROM node:12-stretch
 
 # Add metadata about the image
@@ -8,11 +9,11 @@ LABEL description="Real-time operational metrics for Qlik Sense."
 WORKDIR /nodeapp
 
 # Install app dependencies separately (creating a separate layer for node_modules, effectively caching them between image rebuilds)
-COPY src/package.json .
+COPY package.json .
 RUN npm install
 
 # Copy app's source files
-COPY src/. .
+COPY . .
 
 # Create and use non-root user 
 RUN groupadd -r nodejs \
