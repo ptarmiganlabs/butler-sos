@@ -2,17 +2,21 @@
 
 Releases are [available on Github](https://github.com/ptarmiganlabs/butler-sos/releases).
 
+## 5.5.3
+
+- Dependencies updated to stay sharp and secure.
+
 ## v5.5.2
 
-* Minor release to bring used libraries and dependencies up to date.
+- Minor release to bring used libraries and dependencies up to date.
 
 ## v5.5.1
 
-* Minor release to bring used libraries and dependencies up to date.
+- Minor release to bring used libraries and dependencies up to date.
 
 ## v5.5.0
 
-* Adding **Docker images for Arm**. Arm CPUs are no longer just something used in mobile gadgets, they are quickly becoming a real option also for server workloads.
+- Adding **Docker images for Arm**. Arm CPUs are no longer just something used in mobile gadgets, they are quickly becoming a real option also for server workloads.
 For that reason Butler SOS now builds Docker images for the Arm64 and Arm architectures, and publish these on Docker Hub.
 
 ## v5.4
