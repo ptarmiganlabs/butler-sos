@@ -67,8 +67,7 @@ function setupAnonUsageReportTimer(logger, hostInfo) {
     try {
         setInterval(function () {
             callRemoteURL(logger, hostInfo);
-            // }, 1000*60*60*12);          // Report anon usage every 12 hours
-        }, 1000 * 60 * 60 * 6);
+        }, 1000 * 60 * 60 * 6);         // Report anon usage every 6 hours
 
         // Do an initial report to the remote URL
         callRemoteURL(logger, hostInfo);
