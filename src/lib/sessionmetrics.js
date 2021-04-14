@@ -60,8 +60,8 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
 
     var options = {};
 
-    options.Certificate = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert'))
-    options.CertificateKey = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey'))
+    options.Certificate = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert'));
+    options.CertificateKey = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey'));
     options.CertificateCA = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
 
 

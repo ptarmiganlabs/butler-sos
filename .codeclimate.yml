@@ -39,3 +39,6 @@ checks:
   identical-code:
     config:
       threshold: # language-specific defaults. an override will affect all languages.
+
+exclude_patterns:
+  - "**/node_modules/"

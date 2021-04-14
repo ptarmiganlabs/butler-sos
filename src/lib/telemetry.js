@@ -32,7 +32,7 @@ var callRemoteURL = async function () {
                     dockerHealthCheck: globals.config.has('Butler-SOS.dockerHealthCheck.enabled') ? globals.config.get('Butler-SOS.dockerHealthCheck.enabled') : false,
                     uptimeMonitor: globals.config.has('Butler-SOS.uptimeMonitor.enabled') ? globals.config.get('Butler-SOS.uptimeMonitor.enabled') : false,
                     uptimeMonitor_storeInInfluxdb: globals.config.has('Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage') ? globals.config.get('Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage') : false,
-                    udpServer: globals.config.has('Butler-SOS.udpServerConfig.enable') ? globals.config.get('Butler-SOS.udpServerConfig.enable') : false,
+                    udpServer: globals.config.has('Butler-SOS.userEvents.enable') ? globals.config.get('Butler-SOS.userEvents.enable') : false,
                     logdb: globals.config.has('Butler-SOS.logdb.enableLogDb') ? globals.config.get('Butler-SOS.logdb.enableLogDb') : false,
                     mqtt: globals.config.has('Butler-SOS.mqttConfig.enableMQTT') ? globals.config.get('Butler-SOS.mqttConfig.enableMQTT') : false,
                     influxdb: globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') ? globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') : false,
