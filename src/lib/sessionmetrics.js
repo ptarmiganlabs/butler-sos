@@ -56,7 +56,7 @@ function getCertificates(options) {
 
 function getSessionStatsFromSense(host, virtualProxy, influxTags) {
     // Current user sessions are retrived using this API:
-    // http://help.qlik.com/en-US/sense-developer/June2019/Subsystems/ProxyServiceAPI/Content/Sense_ProxyServiceAPI/ProxyServiceAPI-Session-Module-API.htm
+    // https://help.qlik.com/en-US/sense-developer/February2021/Subsystems/ProxyServiceAPI/Content/Sense_ProxyServiceAPI/ProxyServiceAPI-Proxy-API.htm
 
     var options = {};
 

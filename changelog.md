@@ -2,6 +2,18 @@
 
 Releases are [available on Github](https://github.com/ptarmiganlabs/butler-sos/releases).
 
+## 5.6.0
+
+### New features
+
+1. . ([#150](https://github.com/ptarmiganlabs/butler/issues/150))
+
+### Fixes and patches
+
+1. Dependencies updated to stay sharp and secure.
+
+### Changed behavior and/or breaking changes
+
 ## 5.5.3
 
 - Dependencies updated to stay sharp and secure.

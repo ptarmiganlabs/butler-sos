@@ -9,6 +9,8 @@ const sessionMetrics = require('./lib/sessionmetrics');
 const appNamesExtract = require('./lib/appnamesextract');
 const heartbeat = require('./lib/heartbeat');
 const serviceUptime = require('./lib/service_uptime');
+const udp = require('./lib/udp_handlers');
+const telemetry = require('./lib/telemetry');
 
 globals.initInfluxDB();
 
@@ -18,7 +20,7 @@ if (globals.config.get('Butler-SOS.uptimeMonitor.enabled') == true) {
 
 mainScript();
 
-function mainScript() {
+async function mainScript() {
     // Load certificates to use when connecting to healthcheck API
     var path = require('path'),
         certFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert')),
@@ -54,22 +56,65 @@ function mainScript() {
         heartbeat.setupHeartbeatTimer(globals.config, globals.logger);
     }
 
-    // Set specific log level (if/when needed to override the config file setting)
-    // Possible values are { error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
-    // Default is to use log level defined in config file
-    globals.logger.info('--------------------------------------');
-    globals.logger.info('Starting Butler SOS');
-    globals.logger.info(`Log level: ${globals.getLoggingLevel()}`);
-    globals.logger.info(`App version: ${globals.appVersion}`);
-    globals.logger.info('--------------------------------------');
+    try {
+        // Get host info
+        globals.hostInfo = await globals.initHostInfo();
+        globals.logger.debug('CONFIG: Initiated host info data structures');
 
-    // Log info about what Qlik Sense certificates are being used
-    globals.logger.debug(`Client cert: ${certFile}`);
-    globals.logger.debug(`Client cert key: ${keyFile}`);
-    globals.logger.debug(`CA cert: ${caFile}`);
+        // Set specific log level (if/when needed to override the config file setting)
+        // Possible values are { error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
+        // Default is to use log level defined in config file
+        globals.logger.info('--------------------------------------');
+        globals.logger.info('Starting Butler SOS');
+        globals.logger.info(`Log level: ${globals.getLoggingLevel()}`);
+        globals.logger.info(`App version: ${globals.appVersion}`);
+        globals.logger.info('');
+        globals.logger.info(`Node version   : ${globals.hostInfo.node.nodeVersion}`);
+        globals.logger.info(`Architecture   : ${globals.hostInfo.si.os.arch}`);
+        globals.logger.info(`Platform       : ${globals.hostInfo.si.os.platform}`);
+        globals.logger.info(`Release        : ${globals.hostInfo.si.os.release}`);
+        globals.logger.info(`Distro         : ${globals.hostInfo.si.os.distro}`);
+        globals.logger.info(`Codename       : ${globals.hostInfo.si.os.codename}`);
+        globals.logger.info(`Virtual        : ${globals.hostInfo.si.system.virtual}`);
+        globals.logger.info(`Processors     : ${globals.hostInfo.si.cpu.processors}`);
+        globals.logger.info(`Physical cores : ${globals.hostInfo.si.cpu.physicalCores}`);
+        globals.logger.info(`Cores          : ${globals.hostInfo.si.cpu.cores}`);
+        globals.logger.info(`Docker arch.   : ${globals.hostInfo.si.cpu.hypervizor}`);
+        globals.logger.info(`Total memory   : ${globals.hostInfo.si.memory.total}`);
+        globals.logger.info('--------------------------------------');
+
+        // Log info about what Qlik Sense certificates are being used
+        globals.logger.info(`Client cert: ${certFile}`);
+        globals.logger.info(`Client cert key: ${keyFile}`);
+        globals.logger.info(`CA cert: ${caFile}`);
+
+        // Set up anon usage reports, if enabled
+        if (
+            globals.config.has('Butler-SOS.anonTelemetry') == false ||
+            (globals.config.has('Butler-SOS.anonTelemetry') == true && globals.config.get('Butler-SOS.anonTelemetry') == true)
+        ) {
+            telemetry.setupAnonUsageReportTimer();
+            globals.logger.verbose('MAIN: Anonymous telemetry reporting has been set up.');
+        }
+    } catch (err) {
+        globals.logger.error(`CONFIG: Error initiating host info: ${err}`);
+    }
 
     // ---------------------------------------------------
+    // Set up UDP handler
+    if (globals.config.has('Butler-SOS.udpServerConfig.enable') && globals.config.get('Butler-SOS.udpServerConfig.enable')) {
+        udp.udpInitUserActivityServer();
 
+        globals.logger.debug(`MAIN: Server for UDP server: ${globals.udpServer.host}`);
+
+        // Start UDP server for user activity events
+        globals.udpServer.userActivitySocket.bind(
+            globals.udpServer.portUserActivity,
+            globals.udpServer.host,
+        );
+    }
+
+    // ---------------------------------------------------
     // Start Docker healthcheck REST server on port set in config file
     if (globals.config.get('Butler-SOS.dockerHealthCheck.enabled') == true) {
         globals.logger.verbose('MAIN: Starting Docker healthcheck server...');
@@ -77,7 +122,7 @@ function mainScript() {
         restServer.listen(globals.config.get('Butler-SOS.dockerHealthCheck.port'), function () {
             globals.logger.info('MAIN: Docker healthcheck server now listening');
         });
-    };
+    }
 
     // Set up extraction of data from log db
     if (globals.config.get('Butler-SOS.logdb.enableLogDb') == true) {

@@ -1,6 +1,6 @@
 const globals = require('../globals');
 var _ = require('lodash');
-const Promise = require('promise');
+// const Promise = require('promise');
 
 const sessionAppPrefix = 'SessionApp';
 
