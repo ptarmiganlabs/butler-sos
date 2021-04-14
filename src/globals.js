@@ -67,8 +67,8 @@ const getLoggingLevel = () => {
 // UDP server connection parameters
 var udpServer = {};
 try {
-    udpServer.host = config.has('Butler-SOS.udpServerConfig.serverHost')
-        ? config.get('Butler-SOS.udpServerConfig.serverHost')
+    udpServer.host = config.has('Butler-SOS.userEvents.udpServerConfig.serverHost')
+        ? config.get('Butler-SOS.userEvents.udpServerConfig.serverHost')
         : '';
 
     // Prepare to listen on port X for incoming UDP connections regarding user activity events
@@ -77,8 +77,8 @@ try {
         reuseAddr: true,
     });
 
-    udpServer.portUserActivity = config.has('Butler-SOS.udpServerConfig.portUserActivityEvents')
-        ? config.get('Butler-SOS.udpServerConfig.portUserActivityEvents')
+    udpServer.portUserActivity = config.has('Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents')
+        ? config.get('Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents')
         : '';
 } catch (err) {
     logger.error(`CONFIG: Setting up UDP user activity listener: ${err}`);

@@ -69,6 +69,7 @@ async function postHealthMetricsToInfluxdb(host, body, influxTags) {
         sessionAppNamesActive = [];
 
     let storeActivedDoc = function (docID) {
+        // eslint-disable-next-line no-unused-vars
         return new Promise(function (resolve, reject) {
             if (docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix) {
                 // Session app
@@ -91,7 +92,9 @@ async function postHealthMetricsToInfluxdb(host, body, influxTags) {
         });
     };
 
+    // eslint-disable-next-line no-unused-vars
     let promisesActive = body.apps.active_docs.map(function (docID, idx) {
+        // eslint-disable-next-line no-unused-vars
         return new Promise(async function (resolve, reject) {
             await storeActivedDoc(docID);
 
@@ -129,6 +132,7 @@ async function postHealthMetricsToInfluxdb(host, body, influxTags) {
         sessionAppNamesLoaded = [];
 
     let storeLoadedDoc = function (docID) {
+        // eslint-disable-next-line no-unused-vars
         return new Promise(function (resolve, reject) {
             if (docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix) {
                 // Session app
@@ -151,7 +155,9 @@ async function postHealthMetricsToInfluxdb(host, body, influxTags) {
         });
     };
 
+    // eslint-disable-next-line no-unused-vars
     let promisesLoaded = body.apps.loaded_docs.map(function (docID, idx) {
+        // eslint-disable-next-line no-unused-vars
         return new Promise(async function (resolve, reject) {
             await storeLoadedDoc(docID);
 
@@ -189,6 +195,7 @@ async function postHealthMetricsToInfluxdb(host, body, influxTags) {
         sessionAppNamesInMemory = [];
 
     let storeInMemoryDoc = function (docID) {
+        // eslint-disable-next-line no-unused-vars
         return new Promise(function (resolve, reject) {
             if (docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix) {
                 // Session app
@@ -222,7 +229,9 @@ async function postHealthMetricsToInfluxdb(host, body, influxTags) {
         });
     };
 
+    // eslint-disable-next-line no-unused-vars
     let promisesInMemory = body.apps.in_memory_docs.map(function (docID, idx) {
+        // eslint-disable-next-line no-unused-vars
         return new Promise(async function (resolve, reject) {
             await storeInMemoryDoc(docID);
 
@@ -472,8 +481,52 @@ function postButlerSOSMemoryUsageToInfluxdb(memory) {
         });
 }
 
+function postUserEventToInfluxdb(msg) {
+    globals.logger.debug(`USER EVENT: ${msg})`);
+
+    let datapoint = [
+        {
+            measurement: 'user_events',
+            tags: {
+                host: msg[1],
+                event_action: msg[2],
+                userFull: msg[3] + '\\' + msg[4],
+                userDirectory: msg[3], 
+                userId: msg[4],
+                origin: msg[5]
+            },
+            fields: {
+                userFull: msg[3] + '\\' + msg[4],
+                userId: msg[4]
+            },
+        },
+    ];
+
+    globals.influx
+        .writePoints(datapoint)
+        .then(() => {
+            globals.logger.silly(
+                `USER EVENT: Influxdb datapoint for Butler SOS user event: ${JSON.stringify(
+                    datapoint,
+                    null,
+                    2,
+                )}`,
+            );
+
+            globals.logger.verbose('USER EVENT: Sent Butler SOS user event data to InfluxDB');
+        })
+        .catch(err => {
+            globals.logger.error(
+                `USER EVENT: Error saving user event to InfluxDB! ${err.stack}`,
+            );
+        });
+}
+
+
+
 module.exports = {
     postHealthMetricsToInfluxdb,
     postUserSessionsToInfluxdb,
     postButlerSOSMemoryUsageToInfluxdb,
+    postUserEventToInfluxdb
 };

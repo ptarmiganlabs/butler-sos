@@ -102,7 +102,7 @@ async function mainScript() {
 
     // ---------------------------------------------------
     // Set up UDP handler
-    if (globals.config.has('Butler-SOS.udpServerConfig.enable') && globals.config.get('Butler-SOS.udpServerConfig.enable')) {
+    if (globals.config.has('Butler-SOS.userEvents.enable') && globals.config.get('Butler-SOS.userEvents.enable')) {
         udp.udpInitUserActivityServer();
 
         globals.logger.debug(`MAIN: Server for UDP server: ${globals.udpServer.host}`);

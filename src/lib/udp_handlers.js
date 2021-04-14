@@ -4,7 +4,9 @@
 'use strict';
 
 // Load global variables and functions
-var globals = require('../globals');
+const globals = require('../globals');
+const postToInfluxdb = require('./post-to-influxdb');
+const postToMQTT = require('./post-to-mqtt');
 
 
 // --------------------------------------------------------
@@ -53,6 +55,61 @@ function udpInitUserActivityServer () {
             // } else  if (msg[2] == 'Close connection') {
             //     globals.mqttClient.publish(globals.config.get('Butler-SOS.mqttConfig.connectionCloseTopic'), msg[1] + ': ' + msg[3] + '/' + msg[4]);
             // }
+
+
+            /**
+             * InfluxDB format
+             * 
+             * Measurements / tags | fields
+             * - session_events
+             *   / host
+             *   / event_action: start
+             *   / event_action: stop
+             *   / userFull (dir + id)
+             *   / userDirectory
+             *   / userId
+             *   / origin
+             *   | userFull
+             *   | userId
+             * - connection_events
+             *   / host
+             *   / event_action: open
+             *   / event_action: close
+             *   / userFull (dir + id)
+             *   / userDirectory
+             *   / userId
+             *   / origin
+             *   | userFull
+             *   | userId
+             */
+
+            // Post to MQTT (if enabled)
+            if (globals.config.get('Butler-SOS.mqttConfig.enableMQTT')
+            && globals.config.get('Butler-SOS.userEvents.sendToMQTT.enable')
+            ) {
+                globals.logger.debug(
+                    'USER SESSIONS: Calling user sessions MQTT posting method',
+                );
+
+                postToMQTT.postUserEventToMQTT(
+                    msg
+                );
+            }
+
+            // Post to Influxdb (if enabled)
+            if (globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb')
+            && globals.config.get('Butler-SOS.userEvents.sendToInfluxdb.enable')
+            ) {
+                globals.logger.debug(
+                    'USER SESSIONS: Calling user sessions Influxdb posting method',
+                );
+
+                postToInfluxdb.postUserEventToInfluxdb(
+                    msg
+                );
+            }
+
+
         } catch (err) {
             globals.logger.error(`USER ACTIVITY: Error processing user activity event: ${err}`);
         }
