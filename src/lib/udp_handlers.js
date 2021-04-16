@@ -55,7 +55,6 @@ function udpInitUserActivityServer () {
                 }
             }
 
-
             /**
              * InfluxDB format
              * 

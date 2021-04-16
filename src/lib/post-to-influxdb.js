@@ -387,6 +387,17 @@ function postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags) {
 
     // Add details for each session
     body.forEach(bodyItem => {
+        // Is user in blacklist? 
+        // If so just skip this user's session
+        if (globals.config.has('Butler-SOS.userSessions.excludeUser') && globals.config.get('Butler-SOS.userSessions.excludeUser').length > 0) {
+            let excludeList = globals.config.get('Butler-SOS.userSessions.excludeUser');
+            if (excludeList.findIndex(blacklistUser => blacklistUser.directory == bodyItem.UserDirectory && blacklistUser.userId == bodyItem.UserId) >= 0) {
+                // The user associated with the session was found in the blacklist. Return with no further action.
+                globals.logger.debug(`USER SESSIONS: User ${bodyItem.UserDirectory}\\${bodyItem.UserId} in blacklist, not reporting session.`);
+                return;
+            }
+        }        
+
         globals.logger.debug(`USER SESSIONS: User session: Body item: ${JSON.stringify(bodyItem)}`);
 
         // Start over with fresh copy of shared tags
