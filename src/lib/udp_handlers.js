@@ -45,16 +45,15 @@ function udpInitUserActivityServer () {
             globals.logger.verbose(`USER ACTIVITY: ${msg[1]}: ${msg[2]} for user ${msg[3]}/${msg[4]}`);
             globals.logger.debug(`USER ACTIVITY details: ${msg}`);
 
-            // // Send MQTT messages
-            // if (msg[2] == 'Start session') {
-            //     globals.mqttClient.publish(globals.config.get('Butler-SOS.mqttConfig.sessionStartTopic'), msg[1] + ': ' + msg[3] + '/' + msg[4]);
-            // } else if (msg[2] == 'Stop session') {
-            //     globals.mqttClient.publish(globals.config.get('Butler-SOS.mqttConfig.sessionStopTopic'), msg[1] + ': ' + msg[3] + '/' + msg[4]);
-            // } else if (msg[2] == 'Open connection') {
-            //     globals.mqttClient.publish(globals.config.get('Butler-SOS.mqttConfig.connectionOpenTopic'), msg[1] + ': ' + msg[3] + '/' + msg[4]);
-            // } else  if (msg[2] == 'Close connection') {
-            //     globals.mqttClient.publish(globals.config.get('Butler-SOS.mqttConfig.connectionCloseTopic'), msg[1] + ': ' + msg[3] + '/' + msg[4]);
-            // }
+            // Is user in blacklist? 
+            // If so just skip this event
+            if (globals.config.has('Butler-SOS.userEvents.excludeUser') && globals.config.get('Butler-SOS.userEvents.excludeUser').length > 0) {
+                let excludeList = globals.config.get('Butler-SOS.userEvents.excludeUser');
+                if (excludeList.findIndex(blacklistUser => blacklistUser.directory == msg[3] && blacklistUser.userId == msg[4]) >= 0) {
+                    // The user associated with the event was found in the blacklist. Return with no further action.
+                    return;
+                }
+            }
 
 
             /**
@@ -90,6 +89,17 @@ function udpInitUserActivityServer () {
                 globals.logger.debug(
                     'USER SESSIONS: Calling user sessions MQTT posting method',
                 );
+
+                // // Send MQTT messages
+                // if (msg[2] == 'Start session') {
+                //     globals.mqttClient.publish(globals.config.get('Butler-SOS.mqttConfig.sessionStartTopic'), msg[1] + ': ' + msg[3] + '/' + msg[4]);
+                // } else if (msg[2] == 'Stop session') {
+                //     globals.mqttClient.publish(globals.config.get('Butler-SOS.mqttConfig.sessionStopTopic'), msg[1] + ': ' + msg[3] + '/' + msg[4]);
+                // } else if (msg[2] == 'Open connection') {
+                //     globals.mqttClient.publish(globals.config.get('Butler-SOS.mqttConfig.connectionOpenTopic'), msg[1] + ': ' + msg[3] + '/' + msg[4]);
+                // } else  if (msg[2] == 'Close connection') {
+                //     globals.mqttClient.publish(globals.config.get('Butler-SOS.mqttConfig.connectionCloseTopic'), msg[1] + ': ' + msg[3] + '/' + msg[4]);
+                // }
 
                 postToMQTT.postUserEventToMQTT(
                     msg
