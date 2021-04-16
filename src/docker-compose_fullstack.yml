@@ -2,7 +2,7 @@
 version: '3.3'
 services:
   butler-sos:
-    image: ptarmiganlabs/butler-sos:5.5.3
+    image: ptarmiganlabs/butler-sos:5.6.0
     container_name: butler-sos
     restart: always
     volumes:
@@ -20,7 +20,7 @@ services:
       - senseops
 
   influxdb:
-    image: influxdb:latest
+    image: influxdb:1.8.4
     container_name: influxdb
     restart: always
     volumes:
