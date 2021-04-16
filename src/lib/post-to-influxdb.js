@@ -251,89 +251,88 @@ async function postHealthMetricsToInfluxdb(host, body, influxTags) {
 
     // Write the whole reading to Influxdb
     globals.influx
-        .writePoints([
-            {
-                measurement: 'sense_server',
-                tags: influxTags,
-                fields: {
-                    version: body.version,
-                    started: body.started,
-                    uptime: formattedTime,
-                },
+        .writePoints([{
+            measurement: 'sense_server',
+            tags: influxTags,
+            fields: {
+                version: body.version,
+                started: body.started,
+                uptime: formattedTime,
             },
-            {
-                measurement: 'mem',
-                tags: influxTags,
-                fields: {
-                    comitted: body.mem.committed,
-                    allocated: body.mem.allocated,
-                    free: body.mem.free,
-                },
+        },
+        {
+            measurement: 'mem',
+            tags: influxTags,
+            fields: {
+                comitted: body.mem.committed,
+                allocated: body.mem.allocated,
+                free: body.mem.free,
             },
-            {
-                measurement: 'apps',
-                tags: influxTags,
-                fields: {
-                    active_docs_count: body.apps.active_docs.length,
-                    loaded_docs_count: body.apps.loaded_docs.length,
-                    in_memory_docs_count: body.apps.in_memory_docs.length,
+        },
+        {
+            measurement: 'apps',
+            tags: influxTags,
+            fields: {
+                active_docs_count: body.apps.active_docs.length,
+                loaded_docs_count: body.apps.loaded_docs.length,
+                in_memory_docs_count: body.apps.in_memory_docs.length,
 
-                    active_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs') ? body.apps.active_docs : '',
-                    active_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs') ? appNamesActive.toString() : '',
-                    active_session_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs') ? sessionAppNamesActive.toString() : '',
+                active_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs') ? body.apps.active_docs : '',
+                active_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs') ? appNamesActive.toString() : '',
+                active_session_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs') ? sessionAppNamesActive.toString() : '',
 
-                    loaded_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs') ? body.apps.loaded_docs : '',
-                    loaded_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs') ? appNamesLoaded.toString() : '',
-                    loaded_session_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs') ? sessionAppNamesLoaded.toString(): '',
+                loaded_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs') ? body.apps.loaded_docs : '',
+                loaded_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs') ? appNamesLoaded.toString() : '',
+                loaded_session_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs') ? sessionAppNamesLoaded.toString() : '',
 
-                    in_memory_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') ? body.apps.in_memory_docs : '',
-                    in_memory_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') ? appNamesInMemory.toString() : '',
-                    in_memory_session_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') ? sessionAppNamesInMemory.toString() : '',
-                    calls: body.apps.calls,
-                    selections: body.apps.selections,
-                },
+                in_memory_docs: globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') ? body.apps.in_memory_docs : '',
+                in_memory_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') ? appNamesInMemory.toString() : '',
+                in_memory_session_docs_names: globals.config.get('Butler-SOS.appNames.enableAppNameExtract') && globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') ? sessionAppNamesInMemory.toString() : '',
+                calls: body.apps.calls,
+                selections: body.apps.selections,
             },
-            {
-                measurement: 'cpu',
-                tags: influxTags,
-                fields: {
-                    total: body.cpu.total,
-                },
+        },
+        {
+            measurement: 'cpu',
+            tags: influxTags,
+            fields: {
+                total: body.cpu.total,
             },
-            {
-                measurement: 'session',
-                tags: influxTags,
-                fields: {
-                    active: body.session.active,
-                    total: body.session.total,
-                },
+        },
+        {
+            measurement: 'session',
+            tags: influxTags,
+            fields: {
+                active: body.session.active,
+                total: body.session.total,
             },
-            {
-                measurement: 'users',
-                tags: influxTags,
-                fields: {
-                    active: body.users.active,
-                    total: body.users.total,
-                },
+        },
+        {
+            measurement: 'users',
+            tags: influxTags,
+            fields: {
+                active: body.users.active,
+                total: body.users.total,
             },
-            {
-                measurement: 'cache',
-                tags: influxTags,
-                fields: {
-                    hits: body.cache.hits,
-                    lookups: body.cache.lookups,
-                    added: body.cache.added,
-                    replaced: body.cache.replaced,
-                    bytes_added: body.cache.bytes_added,
-                },
+        },
+        {
+            measurement: 'cache',
+            tags: influxTags,
+            fields: {
+                hits: body.cache.hits,
+                lookups: body.cache.lookups,
+                added: body.cache.added,
+                replaced: body.cache.replaced,
+                bytes_added: body.cache.bytes_added,
             },
-            {
-                measurement: 'saturated',
-                tags: influxTags,
-                fields: {
-                    saturated: body.saturated,
-                },
+        },
+        {
+            measurement: 'saturated',
+            tags: influxTags,
+            fields: {
+                saturated: body.saturated,
             },
+        },
         ])
 
         .then(() => {
@@ -369,22 +368,21 @@ function postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags) {
     let userArray = Array.prototype.map.call(body, s => s.UserDirectory + '\\' + s.UserId);
     let uniqueUserList = Array.from(new Set(userArray)).toString();
 
-    let datapoint = [
-        {
-            measurement: 'user_session_summary',
-            tags: tmpTags,
-            fields: {
-                session_count: body.length,
-                session_user_id_list: uniqueUserList,
-            },
+    let datapoint = [{
+        measurement: 'user_session_summary',
+        tags: tmpTags,
+        fields: {
+            session_count: body.length,
+            session_user_id_list: uniqueUserList,
         },
-        {
-            measurement: 'user_session_list',
-            tags: tmpTags,
-            fields: {
-                session_user_id_list: uniqueUserList,
-            },
+    },
+    {
+        measurement: 'user_session_list',
+        tags: tmpTags,
+        fields: {
+            session_user_id_list: uniqueUserList,
         },
+    },
     ];
 
     // Add details for each session
@@ -447,19 +445,17 @@ function postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags) {
 function postButlerSOSMemoryUsageToInfluxdb(memory) {
     globals.logger.debug(`MEMORY USAGE: Memory usage ${JSON.stringify(memory, null, 2)})`);
 
-    let datapoint = [
-        {
-            measurement: 'butlersos_memory_usage',
-            tags: {
-                butler_sos_instance: memory.instanceTag
-            },
-            fields: {
-                heap_used: memory.heapUsed,
-                heap_total: memory.heapTotal,
-                process_memory: memory.processMemory,
-            },
+    let datapoint = [{
+        measurement: 'butlersos_memory_usage',
+        tags: {
+            butler_sos_instance: memory.instanceTag
         },
-    ];
+        fields: {
+            heap_used: memory.heapUsed,
+            heap_total: memory.heapTotal,
+            process_memory: memory.processMemory,
+        },
+    },];
 
     globals.influx
         .writePoints(datapoint)
@@ -484,44 +480,61 @@ function postButlerSOSMemoryUsageToInfluxdb(memory) {
 function postUserEventToInfluxdb(msg) {
     globals.logger.debug(`USER EVENT: ${msg})`);
 
-    let datapoint = [
-        {
+
+    try {
+
+        // First prepare tags relating to the actual user event, then add tags defined in the config file
+        // The config file tags can for example be used to separate data from DEV/TEST/PROD environments
+        let tags = {
+            host: msg[1],
+            event_action: msg[2],
+            userFull: msg[3] + '\\' + msg[4],
+            userDirectory: msg[3],
+            userId: msg[4],
+            origin: msg[5]
+        };
+
+        if (globals.config.has('Butler-SOS.userEvents.tags') && globals.config.get('Butler-SOS.userEvents.tags').length > 0) {
+            let configTags = globals.config.get('Butler-SOS.userEvents.tags');
+            for (const item of configTags) {
+                tags[item.tag] = item.value;
+            }
+        }
+
+        let datapoint = [{
             measurement: 'user_events',
-            tags: {
-                host: msg[1],
-                event_action: msg[2],
-                userFull: msg[3] + '\\' + msg[4],
-                userDirectory: msg[3], 
-                userId: msg[4],
-                origin: msg[5]
-            },
+            tags: tags,
             fields: {
                 userFull: msg[3] + '\\' + msg[4],
                 userId: msg[4]
             },
-        },
-    ];
+        },];
 
-    globals.influx
-        .writePoints(datapoint)
-        .then(() => {
-            globals.logger.silly(
-                `USER EVENT: Influxdb datapoint for Butler SOS user event: ${JSON.stringify(
-                    datapoint,
-                    null,
-                    2,
-                )}`,
-            );
+        globals.influx
+            .writePoints(datapoint)
+            .then(() => {
+                globals.logger.silly(
+                    `USER EVENT: Influxdb datapoint for Butler SOS user event: ${JSON.stringify(
+                        datapoint,
+                        null,
+                        2,
+                    )}`,
+                );
 
-            globals.logger.verbose('USER EVENT: Sent Butler SOS user event data to InfluxDB');
-        })
-        .catch(err => {
-            globals.logger.error(
-                `USER EVENT: Error saving user event to InfluxDB! ${err.stack}`,
-            );
-        });
+                globals.logger.verbose('USER EVENT: Sent Butler SOS user event data to InfluxDB');
+            })
+            .catch(err => {
+                globals.logger.error(
+                    `USER EVENT: Error saving user event to InfluxDB! ${err}`,
+                );
+            });
+
+    } catch (err) {
+        globals.logger.error(
+            `USER EVENT: Error saving user event to InfluxDB! ${err}`,
+        );
+    }
 }
-
 
 
 module.exports = {

@@ -119,7 +119,7 @@ if (config.has('Butler-SOS.serversToMonitor.serverTagsDefinition')) {
     });
 }
 
-// Events need a couple of extra tags
+// Log events need a couple of extra tags
 let tagValuesLogEvent = tagValues.slice();
 tagValuesLogEvent.push('source_process');
 tagValuesLogEvent.push('log_level');
@@ -132,22 +132,17 @@ logger.info(`CONFIG: Influxdb db name: ${config.get('Butler-SOS.influxdbConfig.d
 // Set up Influxdb client
 const influx = new Influx.InfluxDB({
     host: config.get('Butler-SOS.influxdbConfig.hostIP'),
-    port: `${
-        config.has('Butler-SOS.influxdbConfig.hostPort')
-            ? config.get('Butler-SOS.influxdbConfig.hostPort')
-            : '8086'
-    }`,
+    port: `${config.has('Butler-SOS.influxdbConfig.hostPort')
+        ? config.get('Butler-SOS.influxdbConfig.hostPort')
+        : '8086'}`,
     database: config.get('Butler-SOS.influxdbConfig.dbName'),
-    username: `${
-        config.get('Butler-SOS.influxdbConfig.auth.enable')
-            ? config.get('Butler-SOS.influxdbConfig.auth.username')
-            : ''
+    username: `${config.get('Butler-SOS.influxdbConfig.auth.enable')
+        ? config.get('Butler-SOS.influxdbConfig.auth.username')
+        : ''
     }`,
-    password: `${
-        config.get('Butler-SOS.influxdbConfig.auth.enable')
-            ? config.get('Butler-SOS.influxdbConfig.auth.password')
-            : ''
-    }`,
+    password: `${config.get('Butler-SOS.influxdbConfig.auth.enable')
+        ? config.get('Butler-SOS.influxdbConfig.auth.password')
+        : ''}`,
     schema: [
         {
             measurement: 'sense_server',
@@ -237,6 +232,14 @@ const influx = new Influx.InfluxDB({
             },
             tags: ['butler_sos_instance'],
         },
+        // {
+        //     measurement: 'user_events',
+        //     fields: {
+        //         userFull: Influx.FieldType.STRING,
+        //         userId: Influx.FieldType.STRING
+        //     },
+        //     tags: ['host', 'event_action', 'userFull', 'userDirectory', 'userId', 'origin']
+        // },
     ],
 });
 
@@ -325,13 +328,13 @@ async function initHostInfo() {
         let networkInterface = siNetwork.filter(item => {
             return item.iface === defaultNetworkInterface;
         });
-    
+
         let idSrc = networkInterface[0].mac + networkInterface[0].ip4 + config.get('Butler-SOS.logdb.host') + siSystem.uuid;
         let salt = networkInterface[0].mac;
         let hash = crypto.createHmac('sha256', salt);
         hash.update(idSrc);
         let id = hash.digest('hex');
-    
+
 
         hostInfo = {
             id: id,

@@ -116,9 +116,18 @@ function postUserEventToMQTT(msg) {
         userId: msg[4],
         origin: msg[5],
         context: msg[6],
-        message: msg[7]
+        message: msg[7],
+        tags: {}
     };
 
+    // Add custom tags from config file to payload
+    if (globals.config.has('Butler-SOS.userEvents.tags') && globals.config.get('Butler-SOS.userEvents.tags').length > 0) {
+        let configTags = globals.config.get('Butler-SOS.userEvents.tags');
+        for (const item of configTags) {
+            payload.tags[item.tag] = item.value;
+        }
+    }
+    
     // Send to MQTT
     globals.mqttClient.publish(baseTopic + topic, JSON.stringify(payload));
 }
