@@ -55,7 +55,9 @@ function setupLogDbTimer() {
                             globals.logger.silly(`LOGDB: Row: ${JSON.stringify(row)}`);
 
                             // Post to Influxdb (if enabled)
-                            if (globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
+                            if ((globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') && globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true) || 
+                                (globals.config.has('Butler-SOS.influxdbConfig.enable') && globals.config.get('Butler-SOS.influxdbConfig.enable') == true)) {
+        
                                 globals.logger.silly(`LOGDB: Posting log db data to Influxdb...`);
 
                                 // Make sure that the payload message exists - storing it to Influx would otherwise throw an error
@@ -67,7 +69,7 @@ function setupLogDbTimer() {
                                 // Some special logic is needed to match the host value returned from Postgres with the logDbHost property from
                                 // the YAML config file.
                                 // Once we have that match we can add all the tags for that server.
-                                serverItem = globals.serverList.find(item => {
+                                let serverItem = globals.serverList.find(item => {
                                     globals.logger.silly(
                                         `LOGDB: Matching logdb host "${row.process_host}" against config file logDbHost "${item.logDbHost}"`,
                                     );
@@ -80,16 +82,16 @@ function setupLogDbTimer() {
                                 // Also, only store data into Influxdb for servers defined in YAML config file.
 
                                 if (serverItem == undefined) {
-                                    globals.logger.error(
+                                    globals.logger.verbose(
                                         `LOGDB: No logDbHost config file entries matching host name received from Sense: ${row.process_host}`,
                                     );
-                                    globals.logger.error(
+                                    globals.logger.verbose(
                                         `LOGDB:    Hint: Consider adding "${row.process_host}" as a logDbHost entry in the config file...`,
                                     );
                                 } else {
                                     // group = serverItem.serverTags.serverGroup;
-                                    srvName = serverItem.serverName;
-                                    srvDesc = serverItem.serverDescription;
+                                    let srvName = serverItem.serverName;
+                                    let srvDesc = serverItem.serverDescription;
 
                                     let tagsForDbEntry = {
                                         host: row.process_host,
@@ -143,7 +145,9 @@ function setupLogDbTimer() {
                                 }
 
                                 // Post to MQTT (if enabled)
-                                if (globals.config.get('Butler-SOS.mqttConfig.enableMQTT')) {
+                                if ((globals.config.has('Butler-SOS.mqttConfig.enableMQTT') && globals.config.get('Butler-SOS.mqttConfig.enableMQTT') == true) || 
+                                    (globals.config.has('Butler-SOS.mqttConfig.enable') && globals.config.get('Butler-SOS.mqttConfig.enable') == true)) {
+    
                                     globals.logger.silly('LOGDB: Posting log db data to MQTT...');
                                     postToMQTT.postLogDbToMQTT(
                                         row.process_host,

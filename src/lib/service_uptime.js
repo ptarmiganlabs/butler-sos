@@ -59,8 +59,14 @@ function serviceUptimeStart() {
         // Store to Influxdb
         let butlerSosMemoryInfluxTag = globals.config.has('Butler-SOS.uptimeMonitor.storeInInfluxdb.instanceTag') ? globals.config.get('Butler-SOS.uptimeMonitor.storeInInfluxdb.instanceTag') : '';
 
-        if ((globals.config.get('Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage') == true)  &&
-            (globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true)) {
+        var enableInfluxDB = false;
+
+        if ((globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') && globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true) || 
+            (globals.config.has('Butler-SOS.influxdbConfig.enable') && globals.config.get('Butler-SOS.influxdbConfig.enable') == true)) {
+            enableInfluxDB = true;
+        }
+
+        if ((globals.config.get('Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage') == true) && (enableInfluxDB == true)) {
             postToInfluxdb.postButlerSOSMemoryUsageToInfluxdb({
                 instanceTag: butlerSosMemoryInfluxTag,
                 heapUsed: heapUsed,

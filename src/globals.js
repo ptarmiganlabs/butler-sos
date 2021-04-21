@@ -124,7 +124,12 @@ let tagValuesLogEvent = tagValues.slice();
 tagValuesLogEvent.push('source_process');
 tagValuesLogEvent.push('log_level');
 
-logger.info(`CONFIG: Influxdb enabled: ${config.get('Butler-SOS.influxdbConfig.enableInfluxdb')}`);
+
+if (config.has('Butler-SOS.influxdbConfig.enableInfluxdb') && config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true) {
+    logger.info(`CONFIG: Influxdb enabled: ${config.get('Butler-SOS.influxdbConfig.enableInfluxdb')}`);
+} else if (config.has('Butler-SOS.influxdbConfig.enable') && config.get('Butler-SOS.influxdbConfig.enable') == true) {
+    logger.info(`CONFIG: Influxdb enabled: ${config.get('Butler-SOS.influxdbConfig.enable')}`);
+}
 logger.info(`CONFIG: Influxdb host IP: ${config.get('Butler-SOS.influxdbConfig.hostIP')}`);
 logger.info(`CONFIG: Influxdb host port: ${config.get('Butler-SOS.influxdbConfig.hostPort')}`);
 logger.info(`CONFIG: Influxdb db name: ${config.get('Butler-SOS.influxdbConfig.dbName')}`);
@@ -245,7 +250,12 @@ const influx = new Influx.InfluxDB({
 
 function initInfluxDB() {
     const dbName = config.get('Butler-SOS.influxdbConfig.dbName');
-    const enableInfluxdb = config.get('Butler-SOS.influxdbConfig.enableInfluxdb');
+    var enableInfluxdb = false;
+
+    if ((config.has('Butler-SOS.influxdbConfig.enableInfluxdb') && config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true) || 
+    (config.has('Butler-SOS.influxdbConfig.enable') && config.get('Butler-SOS.influxdbConfig.enable') == true)) {
+        enableInfluxdb = true;
+    }
 
     if (enableInfluxdb) {
         influx

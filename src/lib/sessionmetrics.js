@@ -127,7 +127,9 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
                 );
 
                 // Post to MQTT (if enabled)
-                if (globals.config.get('Butler-SOS.mqttConfig.enableMQTT')) {
+                if ((globals.config.has('Butler-SOS.mqttConfig.enableMQTT') && globals.config.get('Butler-SOS.mqttConfig.enableMQTT') == true) || 
+                    (globals.config.has('Butler-SOS.mqttConfig.enable') && globals.config.get('Butler-SOS.mqttConfig.enable') == true)) {
+
                     globals.logger.debug(
                         'USER SESSIONS: Calling user sessions MQTT posting method',
                     );
@@ -141,7 +143,9 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
                 }
 
                 // Post to Influxdb (if enabled)
-                if (globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
+                if ((globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') && globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true) || 
+                    (globals.config.has('Butler-SOS.influxdbConfig.enable') && globals.config.get('Butler-SOS.influxdbConfig.enable') == true)) {
+    
                     globals.logger.debug(
                         'USER SESSIONS: Calling user sessions Influxdb posting method',
                     );

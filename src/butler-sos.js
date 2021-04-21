@@ -14,7 +14,8 @@ const telemetry = require('./lib/telemetry');
 
 globals.initInfluxDB();
 
-if (globals.config.get('Butler-SOS.uptimeMonitor.enabled') == true) {
+if ((globals.config.has('Butler-SOS.uptimeMonitor.enabled') && globals.config.get('Butler-SOS.uptimeMonitor.enabled') == true) || 
+    (globals.config.has('Butler-SOS.uptimeMonitor.enable') && globals.config.get('Butler-SOS.uptimeMonitor.enable') == true)) {
     serviceUptime.serviceUptimeStart();
 }
 
@@ -52,7 +53,8 @@ async function mainScript() {
     );
 
     // Set up heartbeats, if enabled in the config file
-    if (globals.config.get('Butler-SOS.heartbeat.enabled') == true) {
+    if ((globals.config.has('Butler-SOS.heartbeat.enabled') && globals.config.get('Butler-SOS.heartbeat.enabled') == true) || 
+        (globals.config.has('Butler-SOS.heartbeat.enable') && globals.config.get('Butler-SOS.heartbeat.enable') == true)) {
         heartbeat.setupHeartbeatTimer(globals.config, globals.logger);
     }
 
@@ -116,7 +118,8 @@ async function mainScript() {
 
     // ---------------------------------------------------
     // Start Docker healthcheck REST server on port set in config file
-    if (globals.config.get('Butler-SOS.dockerHealthCheck.enabled') == true) {
+    if ((globals.config.has('Butler-SOS.dockerHealthCheck.enabled') && globals.config.get('Butler-SOS.dockerHealthCheck.enabled') == true) || 
+        (globals.config.has('Butler-SOS.dockerHealthCheck.enable') && globals.config.get('Butler-SOS.dockerHealthCheck.enable') == true)) {
         globals.logger.verbose('MAIN: Starting Docker healthcheck server...');
 
         restServer.listen(globals.config.get('Butler-SOS.dockerHealthCheck.port'), function () {
@@ -125,7 +128,8 @@ async function mainScript() {
     }
 
     // Set up extraction of data from log db
-    if (globals.config.get('Butler-SOS.logdb.enableLogDb') == true) {
+    if ((globals.config.has('Butler-SOS.logdb.enableLogDb') && globals.config.get('Butler-SOS.logdb.enableLogDb') == true) || 
+        (globals.config.has('Butler-SOS.logdb.enable') && globals.config.get('Butler-SOS.logdb.enable') == true)) {
         logDb.setupLogDbTimer();
     }
 

@@ -12,6 +12,43 @@ const telemetryUrl = '/api/butlerTelemetry';
 
 var callRemoteURL = async function () {
     try {
+        var heartbeat = false, 
+            uptimeMonitor = false,
+            dockerHealthCheck = false,
+            logdbEnable = false,
+            mqttEnable = false,
+            influxdbEnable = false;
+
+        if ((globals.config.has('Butler-SOS.heartbeat.enabled') && globals.config.get('Butler-SOS.heartbeat.enabled') == true) || 
+            (globals.config.has('Butler-SOS.heartbeat.enable') && globals.config.get('Butler-SOS.heartbeat.enable') == true)) {
+            heartbeat = true;
+        }
+
+        if ((globals.config.has('Butler-SOS.uptimeMonitor.enabled') && globals.config.get('Butler-SOS.uptimeMonitor.enabled') == true) || 
+            (globals.config.has('Butler-SOS.uptimeMonitor.enable') && globals.config.get('Butler-SOS.uptimeMonitor.enable') == true)) {
+            uptimeMonitor = true;
+        }
+
+        if ((globals.config.has('Butler-SOS.dockerHealthCheck.enabled') && globals.config.get('Butler-SOS.dockerHealthCheck.enabled') == true) || 
+            (globals.config.has('Butler-SOS.dockerHealthCheck.enable') && globals.config.get('Butler-SOS.dockerHealthCheck.enable') == true)) {
+            dockerHealthCheck = true;
+        }
+
+        if ((globals.config.has('Butler-SOS.logdb.enableLogDb') && globals.config.get('Butler-SOS.logdb.enableLogDb') == true) || 
+            (globals.config.has('Butler-SOS.logdb.enable') && globals.config.get('Butler-SOS.logdb.enable') == true)) {
+            logdbEnable = true;
+        }
+        
+        if ((globals.config.has('Butler-SOS.mqttConfig.enableMQTT') && globals.config.get('Butler-SOS.mqttConfig.enableMQTT') == true) || 
+            (globals.config.has('Butler-SOS.mqttConfig.enable') && globals.config.get('Butler-SOS.mqttConfig.enable') == true)) {
+            mqttEnable = true;
+        }
+
+        if ((globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') && globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true) || 
+            (globals.config.has('Butler-SOS.influxdbConfig.enable') && globals.config.get('Butler-SOS.influxdbConfig.enable') == true)) {
+            influxdbEnable = true;
+        }
+
         let body = {
             service: 'butler-sos',
             serviceVersion: globals.appVersion,
@@ -28,14 +65,14 @@ var callRemoteURL = async function () {
             },
             enabledFeatures: {
                 feature: {
-                    heartbeat: globals.config.has('Butler-SOS.heartbeat.enabled') ? globals.config.get('Butler-SOS.heartbeat.enabled') : false,
-                    dockerHealthCheck: globals.config.has('Butler-SOS.dockerHealthCheck.enabled') ? globals.config.get('Butler-SOS.dockerHealthCheck.enabled') : false,
-                    uptimeMonitor: globals.config.has('Butler-SOS.uptimeMonitor.enabled') ? globals.config.get('Butler-SOS.uptimeMonitor.enabled') : false,
+                    heartbeat: heartbeat,
+                    dockerHealthCheck: dockerHealthCheck,
+                    uptimeMonitor: uptimeMonitor,
                     uptimeMonitor_storeInInfluxdb: globals.config.has('Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage') ? globals.config.get('Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage') : false,
                     udpServer: globals.config.has('Butler-SOS.userEvents.enable') ? globals.config.get('Butler-SOS.userEvents.enable') : false,
-                    logdb: globals.config.has('Butler-SOS.logdb.enableLogDb') ? globals.config.get('Butler-SOS.logdb.enableLogDb') : false,
-                    mqtt: globals.config.has('Butler-SOS.mqttConfig.enableMQTT') ? globals.config.get('Butler-SOS.mqttConfig.enableMQTT') : false,
-                    influxdb: globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') ? globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') : false,
+                    logdb: logdbEnable,
+                    mqtt: mqttEnable,
+                    influxdb: influxdbEnable,
 
                     appNames: globals.config.has('Butler-SOS.appNames.enableAppNameExtract') ? globals.config.get('Butler-SOS.appNames.enableAppNameExtract') : false,
                     userSessions: globals.config.has('Butler-SOS.userSessions.enableSessionExtract') ? globals.config.get('Butler-SOS.userSessions.enableSessionExtract') : false,
