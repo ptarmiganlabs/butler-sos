@@ -1,9 +1,13 @@
 var later = require('later');
-var moment = require('moment');
-require('moment-precise-range-plugin');
+var luxon = require ('luxon');
+
 const globals = require('../globals');
 const postToInfluxdb = require('./post-to-influxdb');
 
+
+const fullUnits = ['years', 'months', 'days', 'hours', 'minutes', 'seconds'];
+luxon.Duration.prototype.toFull = function() {return this.shiftTo.apply(this, fullUnits);};
+ 
 function serviceUptimeStart() {
     var uptimeLogLevel = globals.config.get('Butler-SOS.uptimeMonitor.logLevel'),
         uptimeInterval = globals.config.get('Butler-SOS.uptimeMonitor.frequency');
@@ -34,7 +38,9 @@ function serviceUptimeStart() {
     later.setInterval(function () {
         startIterations++;
         let uptimeMilliSec = Date.now() - startTime;
-        moment.duration(uptimeMilliSec);
+ 
+        let d = luxon.Duration.fromMillis(uptimeMilliSec).toFull().toObject();
+        let dur = `${d.months} months, ${d.days} days, ${d.hours} hours, ${d.minutes} minutes, ${d.seconds} seconds`;
 
         let heapTotal = Math.round((process.memoryUsage().heapTotal / 1024 / 1024) * 100) / 100,
             heapUsed = Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 100) / 100,
@@ -46,15 +52,21 @@ function serviceUptimeStart() {
             'Iteration # ' +
                 formatter.format(startIterations) +
                 ', Uptime: ' +
-                moment.preciseDiff(0, uptimeMilliSec) +
+                dur + 
                 `, Heap used ${heapUsed} MB of total heap ${heapTotal} MB. Memory allocated to process: ${processMemory} MB.`,
         );
 
         // Store to Influxdb
         let butlerSosMemoryInfluxTag = globals.config.has('Butler-SOS.uptimeMonitor.storeInInfluxdb.instanceTag') ? globals.config.get('Butler-SOS.uptimeMonitor.storeInInfluxdb.instanceTag') : '';
 
-        if ((globals.config.get('Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage') == true)  &&
-            (globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true)) {
+        var enableInfluxDB = false;
+
+        if ((globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') && globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true) || 
+            (globals.config.has('Butler-SOS.influxdbConfig.enable') && globals.config.get('Butler-SOS.influxdbConfig.enable') == true)) {
+            enableInfluxDB = true;
+        }
+
+        if ((globals.config.get('Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage') == true) && (enableInfluxDB == true)) {
             postToInfluxdb.postButlerSOSMemoryUsageToInfluxdb({
                 instanceTag: butlerSosMemoryInfluxTag,
                 heapUsed: heapUsed,

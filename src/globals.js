@@ -4,6 +4,11 @@ var config = require('config');
 const winston = require('winston');
 require('winston-daily-rotate-file');
 const path = require('path');
+var dgram = require('dgram');
+const si = require('systeminformation');
+const os = require('os');
+let crypto = require('crypto');
+
 // const verifyConfig = require('./lib/verifyConfig');
 
 const Influx = require('influx');
@@ -58,6 +63,28 @@ const getLoggingLevel = () => {
     }).level;
 };
 
+// ------------------------------------
+// UDP server connection parameters
+var udpServer = {};
+try {
+    udpServer.host = config.has('Butler-SOS.userEvents.udpServerConfig.serverHost')
+        ? config.get('Butler-SOS.userEvents.udpServerConfig.serverHost')
+        : '';
+
+    // Prepare to listen on port X for incoming UDP connections regarding user activity events
+    udpServer.userActivitySocket = dgram.createSocket({
+        type: 'udp4',
+        reuseAddr: true,
+    });
+
+    udpServer.portUserActivity = config.has('Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents')
+        ? config.get('Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents')
+        : '';
+} catch (err) {
+    logger.error(`CONFIG: Setting up UDP user activity listener: ${err}`);
+}
+
+// ------------------------------------
 // Get info on what servers to monitor
 const serverList = config.get('Butler-SOS.serversToMonitor.servers');
 
@@ -72,6 +99,7 @@ const pgPool = new Pool({
 
 // the pool will emit an error on behalf of any idle clients
 // it contains if a backend error or network partition happens
+// eslint-disable-next-line no-unused-vars
 pgPool.on('error', (err, client) => {
     logger.error(`CONFIG: Unexpected error on idle client: ${err}`);
     // process.exit(-1);
@@ -91,12 +119,17 @@ if (config.has('Butler-SOS.serversToMonitor.serverTagsDefinition')) {
     });
 }
 
-// Events need a couple of extra tags
+// Log events need a couple of extra tags
 let tagValuesLogEvent = tagValues.slice();
 tagValuesLogEvent.push('source_process');
 tagValuesLogEvent.push('log_level');
 
-logger.info(`CONFIG: Influxdb enabled: ${config.get('Butler-SOS.influxdbConfig.enableInfluxdb')}`);
+
+if (config.has('Butler-SOS.influxdbConfig.enableInfluxdb') && config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true) {
+    logger.info(`CONFIG: Influxdb enabled: ${config.get('Butler-SOS.influxdbConfig.enableInfluxdb')}`);
+} else if (config.has('Butler-SOS.influxdbConfig.enable') && config.get('Butler-SOS.influxdbConfig.enable') == true) {
+    logger.info(`CONFIG: Influxdb enabled: ${config.get('Butler-SOS.influxdbConfig.enable')}`);
+}
 logger.info(`CONFIG: Influxdb host IP: ${config.get('Butler-SOS.influxdbConfig.hostIP')}`);
 logger.info(`CONFIG: Influxdb host port: ${config.get('Butler-SOS.influxdbConfig.hostPort')}`);
 logger.info(`CONFIG: Influxdb db name: ${config.get('Butler-SOS.influxdbConfig.dbName')}`);
@@ -104,22 +137,17 @@ logger.info(`CONFIG: Influxdb db name: ${config.get('Butler-SOS.influxdbConfig.d
 // Set up Influxdb client
 const influx = new Influx.InfluxDB({
     host: config.get('Butler-SOS.influxdbConfig.hostIP'),
-    port: `${
-        config.has('Butler-SOS.influxdbConfig.hostPort')
-            ? config.get('Butler-SOS.influxdbConfig.hostPort')
-            : '8086'
-    }`,
+    port: `${config.has('Butler-SOS.influxdbConfig.hostPort')
+        ? config.get('Butler-SOS.influxdbConfig.hostPort')
+        : '8086'}`,
     database: config.get('Butler-SOS.influxdbConfig.dbName'),
-    username: `${
-        config.get('Butler-SOS.influxdbConfig.auth.enable')
-            ? config.get('Butler-SOS.influxdbConfig.auth.username')
-            : ''
+    username: `${config.get('Butler-SOS.influxdbConfig.auth.enable')
+        ? config.get('Butler-SOS.influxdbConfig.auth.username')
+        : ''
     }`,
-    password: `${
-        config.get('Butler-SOS.influxdbConfig.auth.enable')
-            ? config.get('Butler-SOS.influxdbConfig.auth.password')
-            : ''
-    }`,
+    password: `${config.get('Butler-SOS.influxdbConfig.auth.enable')
+        ? config.get('Butler-SOS.influxdbConfig.auth.password')
+        : ''}`,
     schema: [
         {
             measurement: 'sense_server',
@@ -207,16 +235,27 @@ const influx = new Influx.InfluxDB({
                 heap_total: Influx.FieldType.FLOAT,
                 process_memory: Influx.FieldType.FLOAT,
             },
-            tags: [
-                'butler_sos_instance'
-            ]
+            tags: ['butler_sos_instance'],
         },
+        // {
+        //     measurement: 'user_events',
+        //     fields: {
+        //         userFull: Influx.FieldType.STRING,
+        //         userId: Influx.FieldType.STRING
+        //     },
+        //     tags: ['host', 'event_action', 'userFull', 'userDirectory', 'userId', 'origin']
+        // },
     ],
 });
 
 function initInfluxDB() {
     const dbName = config.get('Butler-SOS.influxdbConfig.dbName');
-    const enableInfluxdb = config.get('Butler-SOS.influxdbConfig.enableInfluxdb');
+    var enableInfluxdb = false;
+
+    if ((config.has('Butler-SOS.influxdbConfig.enableInfluxdb') && config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true) || 
+    (config.has('Butler-SOS.influxdbConfig.enable') && config.get('Butler-SOS.influxdbConfig.enable') == true)) {
+        enableInfluxdb = true;
+    }
 
     if (enableInfluxdb) {
         influx
@@ -261,7 +300,7 @@ function initInfluxDB() {
                 }
             })
             .catch(err => {
-                logger.error(`CONFIG: Error getting list of InfuxDB databases! ${err.stack}`);
+                logger.error(`CONFIG: Error getting list of InfluxDB databases! ${err.stack}`);
             });
     }
 }
@@ -279,7 +318,67 @@ var mqttClient = mqtt.connect({
     protocolId: 'MQIsdp',
     protocolVersion: 3
   });
-  */
+*/
+
+// Anon telemetry reporting
+var hostInfo;
+
+async function initHostInfo() {
+    try {
+        const siCPU = await si.cpu(),
+            siSystem = await si.system(),
+            siMem = await si.mem(),
+            siOS = await si.osInfo(),
+            siDocker = await si.dockerInfo(),
+            siNetwork = await si.networkInterfaces(),
+            siNetworkDefault = await si.networkInterfaceDefault();
+
+        let defaultNetworkInterface = siNetworkDefault;
+
+        let networkInterface = siNetwork.filter(item => {
+            return item.iface === defaultNetworkInterface;
+        });
+
+        let idSrc = networkInterface[0].mac + networkInterface[0].ip4 + config.get('Butler-SOS.logdb.host') + siSystem.uuid;
+        let salt = networkInterface[0].mac;
+        let hash = crypto.createHmac('sha256', salt);
+        hash.update(idSrc);
+        let id = hash.digest('hex');
+
+
+        hostInfo = {
+            id: id,
+            node: {
+                nodeVersion: process.version,
+                versions: process.versions
+            },
+            os: {
+                platform: os.platform(),
+                release: os.release(),
+                version: os.version(),
+                arch: os.arch(),
+                cpuCores: os.cpus().length,
+                type: os.type(),
+                totalmem: os.totalmem(),
+            },
+            si: {
+                cpu: siCPU,
+                system: siSystem,
+                memory: {
+                    total: siMem.total,
+                },
+                os: siOS,
+                network: siNetwork,
+                networkDefault: siNetworkDefault,
+                docker: siDocker,
+            },
+        };
+
+        return hostInfo;
+    } catch (err) {
+        logger.error(`CONFIG: Getting host info: ${err}`);
+    }
+}
 
 module.exports = {
     config,
@@ -292,4 +391,7 @@ module.exports = {
     serverList,
     initInfluxDB,
     appNames,
+    udpServer,
+    initHostInfo,
+    hostInfo,
 };

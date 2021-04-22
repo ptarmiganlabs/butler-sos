@@ -88,13 +88,17 @@ function getHealthStatsFromSense(host, influxTags) {
                 globals.logger.debug(`HEALTH: ${JSON.stringify(response.data)}`);
 
                 // Post to MQTT (if enabled)
-                if (globals.config.get('Butler-SOS.mqttConfig.enableMQTT')) {
+                if ((globals.config.has('Butler-SOS.mqttConfig.enableMQTT') && globals.config.get('Butler-SOS.mqttConfig.enableMQTT') == true) || 
+                    (globals.config.has('Butler-SOS.mqttConfig.enable') && globals.config.get('Butler-SOS.mqttConfig.enable') == true)) {
+
                     globals.logger.debug('HEALTH: Calling HEALTH metrics MQTT posting method');
                     postToMQTT.postHealthToMQTT(host, influxTags.host, response.data);
                 }
 
                 // Post to Influxdb (if enabled)
-                if (globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
+                if ((globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') && globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true) || 
+                    (globals.config.has('Butler-SOS.influxdbConfig.enable') && globals.config.get('Butler-SOS.influxdbConfig.enable') == true)) {
+
                     globals.logger.debug('HEALTH: Calling HEALTH metrics Influxdb posting method');
                     postToInfluxdb.postHealthMetricsToInfluxdb(host, response.data, influxTags);
                 }

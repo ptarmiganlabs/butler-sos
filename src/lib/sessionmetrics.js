@@ -56,12 +56,12 @@ function getCertificates(options) {
 
 function getSessionStatsFromSense(host, virtualProxy, influxTags) {
     // Current user sessions are retrived using this API:
-    // http://help.qlik.com/en-US/sense-developer/June2019/Subsystems/ProxyServiceAPI/Content/Sense_ProxyServiceAPI/ProxyServiceAPI-Session-Module-API.htm
+    // https://help.qlik.com/en-US/sense-developer/February2021/Subsystems/ProxyServiceAPI/Content/Sense_ProxyServiceAPI/ProxyServiceAPI-Proxy-API.htm
 
     var options = {};
 
-    options.Certificate = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert'))
-    options.CertificateKey = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey'))
+    options.Certificate = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert'));
+    options.CertificateKey = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey'));
     options.CertificateCA = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
 
 
@@ -127,7 +127,9 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
                 );
 
                 // Post to MQTT (if enabled)
-                if (globals.config.get('Butler-SOS.mqttConfig.enableMQTT')) {
+                if ((globals.config.has('Butler-SOS.mqttConfig.enableMQTT') && globals.config.get('Butler-SOS.mqttConfig.enableMQTT') == true) || 
+                    (globals.config.has('Butler-SOS.mqttConfig.enable') && globals.config.get('Butler-SOS.mqttConfig.enable') == true)) {
+
                     globals.logger.debug(
                         'USER SESSIONS: Calling user sessions MQTT posting method',
                     );
@@ -141,7 +143,9 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
                 }
 
                 // Post to Influxdb (if enabled)
-                if (globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb')) {
+                if ((globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') && globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true) || 
+                    (globals.config.has('Butler-SOS.influxdbConfig.enable') && globals.config.get('Butler-SOS.influxdbConfig.enable') == true)) {
+    
                     globals.logger.debug(
                         'USER SESSIONS: Calling user sessions Influxdb posting method',
                     );
