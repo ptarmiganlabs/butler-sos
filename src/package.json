@@ -29,7 +29,7 @@
     "axios": "^0.21.1",
     "config": "^3.3.6",
     "influx": "^5.8.0",
-    "js-yaml": "^4.0.0",
+    "js-yaml": "^4.1.0",
     "later": "^1.2.0",
     "lodash.clonedeep": "^4.5.0",
     "luxon": "^1.26.0",
