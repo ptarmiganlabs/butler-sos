@@ -6,13 +6,25 @@ Releases are [available on Github](https://github.com/ptarmiganlabs/butler-sos/r
 
 ### New features
 
-1. . ([#150](https://github.com/ptarmiganlabs/butler/issues/150))
+1. Added exclude lists for user sessions. If some user accounts (such as system accounts) should not be included in the tracking of user sessions, just add them to the exclude list in the config file. ([#62](https://github.com/ptarmiganlabs/butler/issues/62))
+2. Copy user activity tracking ("user events") concept from Butler. That feature belongs to the domain handled by Butler SOS, so it's moved here instead. Future development will happen here rather than in the Butler project. ([#147](https://github.com/ptarmiganlabs/butler/issues/147)
+3. Added user exclude list to user events config. [#151](https://github.com/ptarmiganlabs/butler/issues/151)
+4. Added the ability to specify arbitrary tags that is attached to the user event metrics when stored in InfluxDB. [#153](https://github.com/ptarmiganlabs/butler/issues/153))
+5. Anonymous telemtry added. The data included in the telemetry data is a) what kinf of computer (Windows/Linux, Node.js version etc) Butler SOS runs on, and b) which features are enabled. That's it - no identifiable data what so ever, and of course no actual metrics. ([#148](https://github.com/ptarmiganlabs/butler/issues/148))
+6. Documented the dependency on InfluxDB 1.x, rather than the most recent version 2.x. The latest version is awesome but has some breaking changes which cause it to fail when used with Butler SOS. ([#152](https://github.com/ptarmiganlabs/butler/issues/152))
 
 ### Fixes and patches
 
 1. Dependencies updated to stay sharp and secure.
+2. Fixed some typos, made some log texts more descriptive. ([#149](https://github.com/ptarmiganlabs/butler/issues/149) and more)
+3. Replaced the end-of-life Moment.js library with Luxon.js. ([#150](https://github.com/ptarmiganlabs/butler/issues/150))
+4. A bit saner logging in Butler log files when some Sense servers in a cluster were not described in Butler SOS config file. ([#155](https://github.com/ptarmiganlabs/butler/issues/155))
 
 ### Changed behavior and/or breaking changes
+
+1. The Butler SOS config file has not been very consistent when it comes to using "enable", "enabled" and variants thereof. Confusing. With this version we're cleaning up some of those variants.  
+   Going forward "enable" is used in Butler SOS (and also in more and more of the other [Butler tools](https://github.com/ptarmiganlabs). Most of the cases fixed in this release, some remain as todos.  
+   Using the [latest config file syntax](/docs/reference/config_file_format/) is **strongly** recommended, but efforts have been made to ensure that the old "enabled" variants also work for time being.). ([#154](https://github.com/ptarmiganlabs/butler/issues/154))
 
 ## 5.5.3
 
