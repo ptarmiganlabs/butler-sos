@@ -20,7 +20,7 @@ services:
       - senseops
 
   influxdb:
-    image: influxdb:1.8.5
+    image: influxdb:1.8.6
     container_name: influxdb
     restart: always
     volumes:
