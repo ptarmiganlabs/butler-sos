@@ -2,6 +2,27 @@
 
 Releases are [available on Github](https://github.com/ptarmiganlabs/butler-sos/releases).
 
+
+## 5.6.2
+
+### New features
+
+### Fixes and patches
+
+1. Updated dependencies
+
+### Changed behavior and/or breaking changes
+
+## 5.6.1
+
+### New features
+
+1. Added installation walkthrough document for Butler SOS v5.0.1
+
+### Fixes and patches
+
+### Changed behavior and/or breaking changes
+
 ## 5.6.0
 
 ### New features
