@@ -32,9 +32,9 @@ jobs:
     - name: Login to Docker Hub
       run: docker login --username "${{ secrets.DOCKER_USERNAME }}" --password "${{ secrets.DOCKER_PASSWORD }}"
     - name: Build the Docker image 
-      run: docker build . --file Dockerfile.amd64 --tag mountaindude/butler-sos --tag 5.6.2 --tag 5.6
+      run: docker build . --file Dockerfile.amd64 --tag mountaindude/butler-sos:latest --tag mountaindude/butler-sos:5.6.2 --tag mountaindude/butler-sos:5.6
     - name: Push the Docker image 
-      run: docker push mountaindude/butler-sos --all-tags
+      run: docker push mountaindude/butler-sos
       
       env:
         CI: true
