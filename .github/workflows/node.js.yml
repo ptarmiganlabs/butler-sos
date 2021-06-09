@@ -34,7 +34,7 @@ jobs:
     - name: Build the Docker image 
       run: docker build . --file Dockerfile.amd64 --tag mountaindude/butler-sos:latest --tag mountaindude/butler-sos:5.6.2 --tag mountaindude/butler-sos:5.6
     - name: Push the Docker image 
-      run: docker push mountaindude/butler-sos
+      run: docker push --all-tags mountaindude/butler-sos
       
       env:
         CI: true
