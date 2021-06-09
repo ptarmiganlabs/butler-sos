@@ -31,8 +31,9 @@ jobs:
     # - run: npm test
     - name: Login to Docker Hub
       run: docker login --username "${{ secrets.DOCKER_USERNAME }}" --password "${{ secrets.DOCKER_PASSWORD }}"
-    - name: Build the Docker Image 
+    - name: Build the Docker image 
       run: docker build . --file Dockerfile.amd64 --tag 5.6.2 --tag 5.6 --tag 5
+    - name: Push the Docker image 
       run: docker push mountaindude/butler-sos
       
       env:
