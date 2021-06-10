@@ -55,7 +55,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
-          context: .
+          context: src
           file: Dockerfile.amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -80,6 +80,6 @@ jobs:
       CI: true
       IMAGE_NAME: mountaindude/butler-sos
 
-    defaults:
-      run:
-        working-directory: src
+    # defaults:
+    #   run:
+    #     working-directory: src
