@@ -59,7 +59,8 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: ${{ env.IMAGE_NAME }}
+          # images: ${{ env.IMAGE_NAME }}
+          images: ${{ github.repository }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -89,7 +90,7 @@ jobs:
 
     env:
       CI: true
-      IMAGE_NAME: mountaindude/butler-sos
+      # IMAGE_NAME: mountaindude/butler-sos
 
     # defaults:
     #   run:
