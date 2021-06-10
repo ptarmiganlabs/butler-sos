@@ -10,7 +10,11 @@ on:
   push:
     branches: [ master ]
     # Publish semver tags as releases.
-    tags: [ 'v*.*.*' ]    
+    tags: [ 'v*.*.*' ]
+  # push:
+  #   branches: [ master ]
+  #   # Publish semver tags as releases.
+  #   tags: [ 'v*.*.*' ]    
 
 jobs:
   build:
@@ -37,9 +41,14 @@ jobs:
 
       # Login against a Docker registry except on PR
       # https://github.com/marketplace/actions/docker-login
+      # https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
       - name: Login to Docker Hub
         uses: docker/login-action@v1
-        if: github.event_name != 'pull_request'
+        if: |
+          github.event_name != 'pull_request' 
+        # if: |
+        #   github.event_name != 'pull_request'  ||
+        #   github.repository_owner == 'ptarmiganlabs'
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
@@ -63,7 +72,9 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: ./src
-          # file: Dockerfile.amd64
+          file: Dockerfile
+          platforms: |
+            linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
