@@ -67,7 +67,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
 
       - name: Show Docker tags that will be used
-        run: echo ${{ steps.meta.outputs.tags }}
+        run: echo '${{ steps.meta.outputs.tags }}'
 
       - name: Show Docker labels that will be used
         run: echo '${{ steps.meta.outputs.labels }}'
