@@ -70,7 +70,7 @@ jobs:
         run: echo ${{ steps.meta.outputs.tags }}
 
       - name: Show Docker labels that will be used
-        run: echo ${{ steps.meta.outputs.labels }}
+        run: echo '${{ steps.meta.outputs.labels }}'
 
       - name: Build and push
         id: docker_build
