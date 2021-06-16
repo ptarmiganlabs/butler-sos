@@ -37,7 +37,7 @@
     "pg": "^8.6.0",
     "qrs-interact": "^6.2.1",
     "restify": "^8.5.1",
-    "systeminformation": "^5.7.6",
+    "systeminformation": "^5.7.7",
     "url-join": "^4.0.1",
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.5"
