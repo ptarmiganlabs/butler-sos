@@ -1,15 +1,13 @@
-# Butler SOS
+<h1 align="center">
+<img src="img/butler-sos-small.png" alt="Butler SOS logo">
+</h1>
+<h3 align="center">Butler SOS is an open source DevOps monitoring tool for Qlik Sense Enterprise on Windows</h3>
+<p align="center">
+<a href="https://github.com/ptarmiganlabs/butler-sos"><img src="https://img.shields.io/badge/Source---" alt="Source"></a>
+<a href="https://github.com/ptarmiganlabs/butler-sos/actions/workflows/docker-image-build.yml"><img src="https://github.com/ptarmiganlabs/butler-sos/actions/workflows/docker-image-build.yml/badge.svg" alt="Continuous Integration"></a>
+<a href="https://codeclimate.com/github/ptarmiganlabs/butler-sos/maintainability"><img src="https://api.codeclimate.com/v1/badges/98e766fc989b93f063ac/maintainability" /></a>
+</p>
 
-[![Build Status](https://cloud.drone.io/api/badges/ptarmiganlabs/butler-sos/status.svg)](https://cloud.drone.io/ptarmiganlabs/butler-sos)
-[![Maintainability](https://api.codeclimate.com/v1/badges/98e766fc989b93f063ac/maintainability)](https://codeclimate.com/github/mountaindude/butler-sos/maintainability)
-
-![Butler SOS](img/butler-sos-small.png)  
-
-Butler SenseOps Stats ("Butler SOS") is a DevOps monitoring tool for [Qlik Sense](https://www.qlik.com/us/products/qlik-sense).
-
-\
-\
-\
 \
 **Documentation is available at [https://butler-sos.ptarmiganlabs.com](https://butler-sos.ptarmiganlabs.com).**
 \
