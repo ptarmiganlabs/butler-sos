@@ -32,7 +32,7 @@
     "js-yaml": "^4.1.0",
     "later": "^1.2.0",
     "lodash.clonedeep": "^4.5.0",
-    "luxon": "^1.27.0",
+    "luxon": "^2.0.1",
     "mqtt": "^4.2.6",
     "pg": "^8.6.0",
     "prom-client": "^13.1.0",
