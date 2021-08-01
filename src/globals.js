@@ -1,13 +1,13 @@
-var mqtt = require('mqtt');
-var config = require('config');
+const mqtt = require('mqtt');
+const config = require('config');
 
 const winston = require('winston');
 require('winston-daily-rotate-file');
 const path = require('path');
-var dgram = require('dgram');
+const dgram = require('dgram');
 const si = require('systeminformation');
 const os = require('os');
-let crypto = require('crypto');
+const crypto = require('crypto');
 
 // const verifyConfig = require('./lib/verifyConfig');
 
@@ -15,10 +15,10 @@ const Influx = require('influx');
 const { Pool } = require('pg');
 
 // Get app version from package.json file
-var appVersion = require('./package.json').version;
+const appVersion = require('./package.json').version;
 
 // Set up array for storing app ids and names
-var appNames = [];
+const appNames = [];
 
 // Set up logger with timestamps and colors, and optional logging to disk file
 const logTransports = [];
@@ -31,9 +31,9 @@ logTransports.push(
             winston.format.timestamp(),
             winston.format.colorize(),
             winston.format.simple(),
-            winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`),
+            winston.format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}`)
         ),
-    }),
+    })
 );
 
 if (config.get('Butler-SOS.fileLogging')) {
@@ -44,28 +44,24 @@ if (config.get('Butler-SOS.fileLogging')) {
             level: config.get('Butler-SOS.logLevel'),
             datePattern: 'YYYY-MM-DD',
             maxFiles: '30d',
-        }),
+        })
     );
 }
 
-var logger = winston.createLogger({
+const logger = winston.createLogger({
     transports: logTransports,
     format: winston.format.combine(
         winston.format.timestamp(),
-        winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`),
+        winston.format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}`)
     ),
 });
 
 // Function to get current logging level
-const getLoggingLevel = () => {
-    return logTransports.find(transport => {
-        return transport.name == 'console';
-    }).level;
-};
+const getLoggingLevel = () => logTransports.find((transport) => transport.name === 'console').level;
 
 // ------------------------------------
 // UDP server connection parameters
-var udpServer = {};
+const udpServer = {};
 try {
     udpServer.host = config.has('Butler-SOS.userEvents.udpServerConfig.serverHost')
         ? config.get('Butler-SOS.userEvents.udpServerConfig.serverHost')
@@ -77,7 +73,9 @@ try {
         reuseAddr: true,
     });
 
-    udpServer.portUserActivity = config.has('Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents')
+    udpServer.portUserActivity = config.has(
+        'Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents'
+    )
         ? config.get('Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents')
         : '';
 } catch (err) {
@@ -107,12 +105,12 @@ pgPool.on('error', (err, client) => {
 
 // Get list of standard and user configurable tags
 // ..begin with standard tags
-let tagValues = ['host', 'server_name', 'server_description'];
+const tagValues = ['host', 'server_name', 'server_description'];
 
 // ..check if there are any extra tags for this server that should be sent to InfluxDB
 if (config.has('Butler-SOS.serversToMonitor.serverTagsDefinition')) {
     // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
-    config.get('Butler-SOS.serversToMonitor.serverTagsDefinition').forEach(entry => {
+    config.get('Butler-SOS.serversToMonitor.serverTagsDefinition').forEach((entry) => {
         logger.debug(`CONFIG: Setting up new Influx database: Found server tag : ${entry}`);
 
         tagValues.push(entry);
@@ -120,14 +118,21 @@ if (config.has('Butler-SOS.serversToMonitor.serverTagsDefinition')) {
 }
 
 // Log events need a couple of extra tags
-let tagValuesLogEvent = tagValues.slice();
+const tagValuesLogEvent = tagValues.slice();
 tagValuesLogEvent.push('source_process');
 tagValuesLogEvent.push('log_level');
 
-
-if (config.has('Butler-SOS.influxdbConfig.enableInfluxdb') && config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true) {
-    logger.info(`CONFIG: Influxdb enabled: ${config.get('Butler-SOS.influxdbConfig.enableInfluxdb')}`);
-} else if (config.has('Butler-SOS.influxdbConfig.enable') && config.get('Butler-SOS.influxdbConfig.enable') == true) {
+if (
+    config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
+    config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true
+) {
+    logger.info(
+        `CONFIG: Influxdb enabled: ${config.get('Butler-SOS.influxdbConfig.enableInfluxdb')}`
+    );
+} else if (
+    config.has('Butler-SOS.influxdbConfig.enable') &&
+    config.get('Butler-SOS.influxdbConfig.enable') === true
+) {
     logger.info(`CONFIG: Influxdb enabled: ${config.get('Butler-SOS.influxdbConfig.enable')}`);
 }
 logger.info(`CONFIG: Influxdb host IP: ${config.get('Butler-SOS.influxdbConfig.hostIP')}`);
@@ -137,17 +142,22 @@ logger.info(`CONFIG: Influxdb db name: ${config.get('Butler-SOS.influxdbConfig.d
 // Set up Influxdb client
 const influx = new Influx.InfluxDB({
     host: config.get('Butler-SOS.influxdbConfig.hostIP'),
-    port: `${config.has('Butler-SOS.influxdbConfig.hostPort')
-        ? config.get('Butler-SOS.influxdbConfig.hostPort')
-        : '8086'}`,
-    database: config.get('Butler-SOS.influxdbConfig.dbName'),
-    username: `${config.get('Butler-SOS.influxdbConfig.auth.enable')
-        ? config.get('Butler-SOS.influxdbConfig.auth.username')
-        : ''
+    port: `${
+        config.has('Butler-SOS.influxdbConfig.hostPort')
+            ? config.get('Butler-SOS.influxdbConfig.hostPort')
+            : '8086'
     }`,
-    password: `${config.get('Butler-SOS.influxdbConfig.auth.enable')
-        ? config.get('Butler-SOS.influxdbConfig.auth.password')
-        : ''}`,
+    database: config.get('Butler-SOS.influxdbConfig.dbName'),
+    username: `${
+        config.get('Butler-SOS.influxdbConfig.auth.enable')
+            ? config.get('Butler-SOS.influxdbConfig.auth.username')
+            : ''
+    }`,
+    password: `${
+        config.get('Butler-SOS.influxdbConfig.auth.enable')
+            ? config.get('Butler-SOS.influxdbConfig.auth.password')
+            : ''
+    }`,
     schema: [
         {
             measurement: 'sense_server',
@@ -250,17 +260,21 @@ const influx = new Influx.InfluxDB({
 
 function initInfluxDB() {
     const dbName = config.get('Butler-SOS.influxdbConfig.dbName');
-    var enableInfluxdb = false;
+    let enableInfluxdb = false;
 
-    if ((config.has('Butler-SOS.influxdbConfig.enableInfluxdb') && config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true) || 
-    (config.has('Butler-SOS.influxdbConfig.enable') && config.get('Butler-SOS.influxdbConfig.enable') == true)) {
+    if (
+        (config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
+            config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
+        (config.has('Butler-SOS.influxdbConfig.enable') &&
+            config.get('Butler-SOS.influxdbConfig.enable') === true)
+    ) {
         enableInfluxdb = true;
     }
 
     if (enableInfluxdb) {
         influx
             .getDatabaseNames()
-            .then(names => {
+            .then((names) => {
                 if (!names.includes(dbName)) {
                     influx
                         .createDatabase(dbName)
@@ -268,7 +282,7 @@ function initInfluxDB() {
                             logger.info(`CONFIG: Created new InfluxDB database: ${dbName}`);
 
                             const newPolicy = config.get(
-                                'Butler-SOS.influxdbConfig.retentionPolicy',
+                                'Butler-SOS.influxdbConfig.retentionPolicy'
                             );
 
                             // Create new default retention policy
@@ -281,25 +295,25 @@ function initInfluxDB() {
                                 })
                                 .then(() => {
                                     logger.info(
-                                        `CONFIG: Created new InfluxDB retention policy: ${newPolicy.name}`,
+                                        `CONFIG: Created new InfluxDB retention policy: ${newPolicy.name}`
                                     );
                                 })
-                                .catch(err => {
+                                .catch((err) => {
                                     logger.error(
-                                        `CONFIG: Error creating new InfluxDB retention policy "${newPolicy.name}"! ${err.stack}`,
+                                        `CONFIG: Error creating new InfluxDB retention policy "${newPolicy.name}"! ${err.stack}`
                                     );
                                 });
                         })
-                        .catch(err => {
+                        .catch((err) => {
                             logger.error(
-                                `CONFIG: Error creating new InfluxDB database "${dbName}"! ${err.stack}`,
+                                `CONFIG: Error creating new InfluxDB database "${dbName}"! ${err.stack}`
                             );
                         });
                 } else {
                     logger.info(`CONFIG: Found InfluxDB database: ${dbName}`);
                 }
             })
-            .catch(err => {
+            .catch((err) => {
                 logger.error(`CONFIG: Error getting list of InfluxDB databases! ${err.stack}`);
             });
     }
@@ -307,7 +321,7 @@ function initInfluxDB() {
 
 // ------------------------------------
 // Create MQTT client object and connect to MQTT broker
-var mqttClient = mqtt.connect({
+const mqttClient = mqtt.connect({
     port: config.get('Butler-SOS.mqttConfig.brokerPort'),
     host: config.get('Butler-SOS.mqttConfig.brokerHost'),
 });
@@ -321,36 +335,37 @@ var mqttClient = mqtt.connect({
 */
 
 // Anon telemetry reporting
-var hostInfo;
+let hostInfo;
 
 async function initHostInfo() {
     try {
-        const siCPU = await si.cpu(),
-            siSystem = await si.system(),
-            siMem = await si.mem(),
-            siOS = await si.osInfo(),
-            siDocker = await si.dockerInfo(),
-            siNetwork = await si.networkInterfaces(),
-            siNetworkDefault = await si.networkInterfaceDefault();
+        const siCPU = await si.cpu();
+        const siSystem = await si.system();
+        const siMem = await si.mem();
+        const siOS = await si.osInfo();
+        const siDocker = await si.dockerInfo();
+        const siNetwork = await si.networkInterfaces();
+        const siNetworkDefault = await si.networkInterfaceDefault();
 
-        let defaultNetworkInterface = siNetworkDefault;
+        const defaultNetworkInterface = siNetworkDefault;
 
-        let networkInterface = siNetwork.filter(item => {
-            return item.iface === defaultNetworkInterface;
-        });
+        const networkInterface = siNetwork.filter((item) => item.iface === defaultNetworkInterface);
 
-        let idSrc = networkInterface[0].mac + networkInterface[0].ip4 + config.get('Butler-SOS.logdb.host') + siSystem.uuid;
-        let salt = networkInterface[0].mac;
-        let hash = crypto.createHmac('sha256', salt);
+        const idSrc =
+            networkInterface[0].mac +
+            networkInterface[0].ip4 +
+            config.get('Butler-SOS.logdb.host') +
+            siSystem.uuid;
+        const salt = networkInterface[0].mac;
+        const hash = crypto.createHmac('sha256', salt);
         hash.update(idSrc);
-        let id = hash.digest('hex');
-
+        const id = hash.digest('hex');
 
         hostInfo = {
-            id: id,
+            id,
             node: {
                 nodeVersion: process.version,
-                versions: process.versions
+                versions: process.versions,
             },
             os: {
                 platform: os.platform(),
@@ -377,6 +392,7 @@ async function initHostInfo() {
         return hostInfo;
     } catch (err) {
         logger.error(`CONFIG: Getting host info: ${err}`);
+        return null;
     }
 }
 

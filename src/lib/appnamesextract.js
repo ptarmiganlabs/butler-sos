@@ -1,22 +1,13 @@
 // Get app names from the Qlik Repository Service (QRS) API
 
-const globals = require('../globals');
 const qrsInteract = require('qrs-interact');
 const clonedeep = require('lodash.clonedeep');
-var path = require('path');
+const path = require('path');
+const globals = require('../globals');
 
-var certPath = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert')),
-    keyPath = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey'));
+const certPath = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert'));
+const keyPath = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey'));
 // caPath = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
-
-function setupAppNamesExtractTimer() {
-    // Configure timer for getting app names data
-    setInterval(function () {
-        globals.logger.verbose('APP NAMES: Event started: Get app names');
-
-        getAppNames();
-    }, globals.config.get('Butler-SOS.appNames.extractInterval'));
-}
 
 function getAppNames() {
     // Set up Sense repository service configuration
@@ -33,16 +24,16 @@ function getAppNames() {
         'X-Qlik-User': 'UserDirectory=Internal; UserId=sa_repository',
     };
 
-    var qrsInteractInstance = new qrsInteract(configQRS);
+    // eslint-disable-next-line new-cap
+    const qrsInteractInstance = new qrsInteract(configQRS);
 
-    var appList = [];
+    const appList = [];
 
     try {
         qrsInteractInstance
             .Get('app')
-            .then(result => {
-
-                result.body.forEach(function (element) {
+            .then((result) => {
+                result.body.forEach((element) => {
                     appList.push({
                         id: element.id,
                         name: element.name,
@@ -50,21 +41,30 @@ function getAppNames() {
                     });
                 }, this);
 
-                globals.logger.verbose('APP NAMES: Number of apps: ' + appList.length);
-                globals.logger.debug('APP NAMES: App list JSON: ' + JSON.stringify(appList));
+                globals.logger.verbose(`APP NAMES: Number of apps: ${appList.length}`);
+                globals.logger.debug(`APP NAMES: App list JSON: ${JSON.stringify(appList)}`);
 
                 // Only set the global app names variable once all app names have been successfully retrieved
                 globals.appNames = clonedeep(appList);
 
                 globals.logger.info('APP NAMES: Done getting app names');
             })
-            .catch(err => {
+            .catch((err) => {
                 // Return error msg
                 globals.logger.error(`APP NAMES: Error getting app names: ${err}`);
             });
     } catch (err) {
         globals.globals.logger.error(`APP NAMES: ${err}`);
     }
+}
+
+function setupAppNamesExtractTimer() {
+    // Configure timer for getting app names data
+    setInterval(() => {
+        globals.logger.verbose('APP NAMES: Event started: Get app names');
+
+        getAppNames();
+    }, globals.config.get('Butler-SOS.appNames.extractInterval'));
 }
 
 module.exports = {
