@@ -34,7 +34,7 @@
     "eslint-config-prettier": "8.3.0",
     "eslint-plugin-import": "2.23.4",
     "eslint-plugin-prettier": "3.4.0",
-    "fastify": "^3.19.2",
+    "fastify": "^3.20.1",
     "fastify-healthcheck": "^3.1.0",
     "fastify-metrics": "^7.2.3",
     "influx": "^5.9.2",
@@ -46,13 +46,13 @@
     "pg": "^8.7.1",
     "prom-client": "^13.1.0",
     "qrs-interact": "^6.3.1",
-    "systeminformation": "^5.7.14",
+    "systeminformation": "^5.8.0",
     "url-join": "^4.0.1",
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.5"
   },
   "devDependencies": {
     "prettier": "2.3.2",
-    "snyk": "^1.672.0"
+    "snyk": "^1.675.0"
   }
 }
