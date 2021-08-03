@@ -1,9 +1,6 @@
 /* eslint-disable no-unused-vars */
 
 const globals = require('../globals');
-// var _ = require('lodash');
-// const { users } = require('systeminformation');
-// const Promise = require('promise');
 
 const sessionAppPrefix = 'SessionApp';
 
@@ -108,25 +105,6 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
 
     await Promise.all(promisesActive);
 
-    // body.apps.active_docs.forEach(function (docID) {
-    //     if (docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix) {
-    //         // Session app
-    //         globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Session app is active: ${docID}`);
-    //         sessionAppNamesActive.push(docID);
-    //     } else {
-    //         // Not session app
-    //         app = globals.appNames.find(element => element.id == docID);
-
-    //         if (app) {
-    //             globals.logger.debug(`HEALTH METRICS TO INFLUXDB: App is active: ${app.name}`);
-
-    //             appNamesActive.push(app.name);
-    //         } else {
-    //             appNamesActive.push(docID);
-    //         }
-    //     }
-    // });
-
     appNamesActive.sort();
     sessionAppNamesActive.sort();
 
@@ -171,25 +149,6 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
     );
 
     await Promise.all(promisesLoaded);
-
-    // body.apps.loaded_docs.forEach(function(docID) {
-    //     if ( docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix ) {
-    //         // Session app
-    //         globals.logger.debug(`HEALTH METRICS TO INFLUXDB: Session app is loaded: ${docID}`);
-    //         sessionAppNamesLoaded.push(docID);
-    //     } else {
-    //         // Not session app
-    //         app = globals.appNames.find(element => element.id == docID);
-
-    //         if (app) {
-    //             globals.logger.debug(`HEALTH METRICS TO INFLUXDB: App is loaded: ${app.name}`);
-
-    //             appNamesLoaded.push(app.name);
-    //         } else {
-    //             appNamesLoaded.push(docID);
-    //         }
-    //     }
-    // });
 
     appNamesLoaded.sort();
     sessionAppNamesLoaded.sort();

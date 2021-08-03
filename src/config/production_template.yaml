@@ -98,8 +98,10 @@ Butler-SOS:
   # Prometheus config
   # If enabled, select Butler SOS metrics will be exposed on a Prometheus compatible URL from where they can be scraped.
   prometheus:
-    enable: true        # Default false
-    port: 4001          # Default 4001
+    enable: false                                    # Default false
+    host: <IP or FQDN where Butler SOS is running>  # On what IP/FQDN should the Prometheus metrics be exposed? Default 0.0.0.0
+    port: 9842                                      # Port for Prometheus endpoint. Default 9842
+
 
   # Influx db config parameters
   influxdbConfig:

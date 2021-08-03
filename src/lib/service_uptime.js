@@ -1,3 +1,4 @@
+/* eslint-disable no-bitwise */
 const later = require('later');
 const luxon = require('luxon');
 

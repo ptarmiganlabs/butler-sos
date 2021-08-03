@@ -1,6 +1,9 @@
 // Add dependencies
-const restify = require('restify');
 const path = require('path');
+const dockerHealthCheckServer = require('fastify')({ logger: true });
+const promServer = require('fastify')({ logger: true });
+
+promServer.server.keepAliveTimeout = 0;
 
 // Load code from sub modules
 const globals = require('./globals');
@@ -30,50 +33,6 @@ async function mainScript() {
     const certFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert'));
     const keyFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey'));
     const caFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
-
-    // ---------------------------------------------------
-    // Create Docker healthcheck object
-    const restDockerHealthCheck = restify.createServer({
-        name: 'Docker healthcheck for Butler-SOS',
-        version: globals.appVersion,
-    });
-
-    // Enable parsing of http parameters
-    restDockerHealthCheck.use(restify.plugins.queryParser());
-
-    // Set up endpoint for Docker healthcheck REST server
-    restDockerHealthCheck.get(
-        {
-            path: '/',
-            flags: 'i',
-        },
-        (req, res, next) => {
-            globals.logger.verbose('MAIN: Docker healthcheck API endpoint called.');
-
-            res.send(0);
-            next();
-        }
-    );
-
-    // ---------------------------------------------------
-    // Create Premetheus metrics endpoint
-
-    // Start Prometheus metrics REST server on port set in config file
-    if (
-        globals.config.has('Butler-SOS.prometheus.enable') &&
-        globals.config.get('Butler-SOS.prometheus.enable') === true
-    ) {
-        const restPromClient = restify.createServer({
-            name: 'Prometheus metrics for Butler-SOS',
-            version: globals.appVersion,
-        });
-
-        // Enable parsing of http parameters
-        restPromClient.use(restify.plugins.queryParser());
-
-        // Set up endpoint for Docker healthcheck REST server
-        promClient.setupPromClient(restPromClient);
-    }
 
     // Set up heartbeats, if enabled in the config file
     if (
@@ -153,14 +112,54 @@ async function mainScript() {
         (globals.config.has('Butler-SOS.dockerHealthCheck.enable') &&
             globals.config.get('Butler-SOS.dockerHealthCheck.enable') === true)
     ) {
-        globals.logger.verbose('MAIN: Starting Docker healthcheck server...');
+        try {
+            globals.logger.verbose('MAIN: Starting Docker healthcheck server...');
 
-        restDockerHealthCheck.listen(
-            globals.config.get('Butler-SOS.dockerHealthCheck.port'),
-            () => {
-                globals.logger.info('MAIN: Docker healthcheck server now listening');
-            }
-        );
+            // eslint-disable-next-line global-require
+            dockerHealthCheckServer.register(require('fastify-healthcheck'));
+            await dockerHealthCheckServer.listen(
+                globals.config.get('Butler-SOS.dockerHealthCheck.port')
+            );
+
+            globals.logger.info(
+                `MAIN: Started Docker healthcheck server on port ${globals.config.get(
+                    'Butler-SOS.dockerHealthCheck.port'
+                )}.`
+            );
+        } catch (err) {
+            globals.logger.error(
+                `MAIN: Error while starting Docker healthcheck server on port ${globals.config.get(
+                    'Butler-SOS.dockerHealthCheck.port'
+                )}.`
+            );
+            dockerHealthCheckServer.log.error(err);
+            process.exit(1);
+        }
+    }
+
+    // Start Prometheus metrics REST server on port set in config file
+    if (
+        globals.config.has('Butler-SOS.prometheus.enable') &&
+        globals.config.get('Butler-SOS.prometheus.enable') === true
+    ) {
+        const promPort = globals.config.has('Butler-SOS.prometheus.port')
+            ? globals.config.get('Butler-SOS.prometheus.port')
+            : 9842;
+
+        const promHost = globals.config.has('Butler-SOS.prometheus.host')
+            ? globals.config.get('Butler-SOS.prometheus.host')
+            : '0.0.0.0';
+
+        try {
+            globals.logger.info(`MAIN: Starting Prometheus endpoint on ${promHost}:${promPort}.`);
+            promClient.setupPromClient(promServer, promPort, promHost);
+        } catch (err) {
+            globals.logger.error(
+                `MAIN: Error while starting Prometheus endpoint on ${promHost}:${promPort}.`
+            );
+            promServer.log.error(err);
+            process.exit(1);
+        }
     }
 
     // Set up extraction of data from log db

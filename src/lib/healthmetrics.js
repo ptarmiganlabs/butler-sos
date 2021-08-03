@@ -1,4 +1,6 @@
-// Get metrics from the Sense health check API
+/**
+ * Get metrics from the Sense health check API
+ */
 
 const axios = require('axios');
 const https = require('https');

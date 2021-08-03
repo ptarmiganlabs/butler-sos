@@ -9,8 +9,6 @@ const si = require('systeminformation');
 const os = require('os');
 const crypto = require('crypto');
 
-// const verifyConfig = require('./lib/verifyConfig');
-
 const Influx = require('influx');
 const { Pool } = require('pg');
 

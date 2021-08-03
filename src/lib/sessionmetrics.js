@@ -117,6 +117,7 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
                     );
                 }
 
+                // eslint-disable-next-line no-use-before-define
                 const userSessionsData = await prepUserSessionMetrics(
                     host,
                     virtualProxy,
@@ -143,7 +144,7 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
                     globals.config.has('Butler-SOS.prometheus.enable') &&
                     globals.config.get('Butler-SOS.prometheus.enable') === true
                 ) {
-                    globals.logger.debug('HEALTH: Calling HEALTH metrics Prometheus method');
+                    globals.logger.debug('HEALTH: Calling SESSIONS metrics Prometheus method');
                     prometheus.saveUserSessionMetrics(userSessionsData);
                 }
             }
@@ -240,6 +241,9 @@ function prepUserSessionMetrics(host, virtualProxy, body, tags) {
             };
 
             // Add details for each session
+            // Discussion about forEach vs for...of: https://github.com/airbnb/javascript/issues/1271
+            // https://gist.github.com/ljharb/58faf1cfcb4e6808f74aae4ef7944cff
+            // eslint-disable-next-line no-restricted-syntax
             for (const bodyItem of body) {
                 // Is user in blacklist?
                 // If so just skip this user's session
