@@ -73,13 +73,13 @@ async function setupPromClient(promServer, promPort, promHost) {
 
         promMetricAppsInMemoryDocs = new client.Gauge({
             name: 'butlersos_apps_inmemorydocs_total',
-            help: 'Number of apps apps currently loaded into the memory, even if they do not have any open sessions or connections to it. Apps disappear from this metric when the engine has purged them from memory.',
+            help: 'Number of apps apps currently loaded into memory, even if they do not have any open sessions or connections to it. Apps disappear from this metric when the engine has purged them from memory.',
             labelNames: promLabels,
         });
 
         promMetricAppsLoadedDocs = new client.Gauge({
             name: 'butlersos_apps_loadeddocs_total',
-            help: 'Number of apps apps currently loaded into the memory and that have open sessions or connections.',
+            help: 'Number of apps apps currently loaded into memory, that also have open sessions or connections.',
             labelNames: promLabels,
         });
 
@@ -189,7 +189,7 @@ async function setupPromClient(promServer, promPort, promHost) {
         });
 
         promServer.get('/metrics', {}, async (request, reply) => {
-            globals.logger.verbose('MAIN: Prometheus metrics API endpoint called.');
+            globals.logger.verbose('MAIN: Prometheus Butler SOS metrics API endpoint called.');
             try {
                 reply
                     .code(200)
@@ -201,7 +201,9 @@ async function setupPromClient(promServer, promPort, promHost) {
         });
 
         await promServer.listen(promPort, promHost);
-        globals.logger.info(`PROM: Prometheus metrics server now listening on port ${promPort}`);
+        globals.logger.info(
+            `PROM: Prometheus Butler SOS metrics server now listening on port ${promPort}`
+        );
     } catch (err) {
         globals.logger.error(`PROM: ${err}`);
     }

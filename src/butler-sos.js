@@ -2,8 +2,11 @@
 const path = require('path');
 const dockerHealthCheckServer = require('fastify')({ logger: true });
 const promServer = require('fastify')({ logger: true });
+const promFastifyMetricsServer = require('fastify')({ logger: true });
+const metricsPlugin = require('fastify-metrics');
 
 promServer.server.keepAliveTimeout = 0;
+promFastifyMetricsServer.register(metricsPlugin, { endpoint: '/metrics' });
 
 // Load code from sub modules
 const globals = require('./globals');
@@ -142,22 +145,42 @@ async function mainScript() {
         globals.config.has('Butler-SOS.prometheus.enable') &&
         globals.config.get('Butler-SOS.prometheus.enable') === true
     ) {
-        const promPort = globals.config.has('Butler-SOS.prometheus.port')
-            ? globals.config.get('Butler-SOS.prometheus.port')
-            : 9842;
-
         const promHost = globals.config.has('Butler-SOS.prometheus.host')
             ? globals.config.get('Butler-SOS.prometheus.host')
             : '0.0.0.0';
 
+        const promPort = globals.config.has('Butler-SOS.prometheus.port')
+            ? globals.config.get('Butler-SOS.prometheus.port')
+            : 9842;
+
+        const promNodeHost = '0.0.0.0';
+        const promNodePort = 9001;
+
         try {
-            globals.logger.info(`MAIN: Starting Prometheus endpoint on ${promHost}:${promPort}.`);
+            // Set up Butler SOS metrics
+            globals.logger.info(
+                `MAIN: Starting Prometheus Butler SOS endpoint on ${promHost}:${promPort}.`
+            );
             promClient.setupPromClient(promServer, promPort, promHost);
         } catch (err) {
             globals.logger.error(
-                `MAIN: Error while starting Prometheus endpoint on ${promHost}:${promPort}.`
+                `MAIN: Error while starting Prometheus Butler SOS endpoint on ${promHost}:${promPort}.`
             );
             promServer.log.error(err);
+            process.exit(1);
+        }
+
+        try {
+            // Set up Node.js internal metrics
+            await promFastifyMetricsServer.listen(promNodePort, promNodeHost);
+            globals.logger.info(
+                `PROM: Prometheus Node.js metrics server now listening on port ${promNodeHost}:${promNodePort}`
+            );
+        } catch (err) {
+            globals.logger.error(
+                `MAIN: Error while starting Prometheus Node.js endpoint on ${promNodeHost}:${promNodePort}.`
+            );
+            promFastifyMetricsServer.log.error(err);
             process.exit(1);
         }
     }
