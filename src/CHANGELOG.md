@@ -1,5 +1,14 @@
 # Changelog
 
+## [5.7.0](https://www.github.com/mountaindude/butler-sos/compare/v5.6.0...v5.7.0) (2021-08-05)
+
+
+### Features
+
+* add metrics for Prometheus ([7cee28d](https://www.github.com/mountaindude/butler-sos/commit/7cee28df1bc5a0f799a8309911acce86a35b85cb))
+* Add Node.js metrics to Prometheus endpoint ([fb66055](https://www.github.com/mountaindude/butler-sos/commit/fb660554ae56a995602077823358578d88ce3221))
+* Added Snyk scanning ([f6791b7](https://www.github.com/mountaindude/butler-sos/commit/f6791b74a072dc475e7a8120b7f0ccbcb1c0d081))
+
 ## [5.6.0](https://www.github.com/mountaindude/butler-sos/compare/v5.5.1...v5.6.0) (2021-07-27)
 
 
