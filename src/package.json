@@ -1,12 +1,13 @@
 {
   "name": "butler-sos",
-  "version": "5.6.2",
+  "version": "5.6.0",
   "description": "Butler SenseOps Stats (\"Butler SOS\") is a Node.js service publishing operational Qlik Sense metrics to MQTT and Influxdb.",
   "main": "butler-sos.js",
   "scripts": {
-    "test": "npm run format",
+    "test": "snyk test && npm run format",
     "format": "npm run format:prettier",
-    "format:prettier": "npx prettier --config .prettierrc \"./**/*.{ts,css,less,js}\" --write"
+    "format:prettier": "npx prettier --config .prettierrc.yaml \"./**/*.{ts,css,less,js}\" --write",
+    "lint": "npx eslint . --format table"
   },
   "repository": {
     "type": "git",
@@ -28,24 +29,30 @@
   "dependencies": {
     "axios": "^0.21.1",
     "config": "^3.3.6",
+    "eslint": "^7.32.0",
+    "eslint-config-airbnb-base": "14.2.1",
+    "eslint-config-prettier": "8.3.0",
+    "eslint-plugin-import": "2.23.4",
+    "eslint-plugin-prettier": "3.4.0",
+    "fastify": "^3.20.1",
+    "fastify-healthcheck": "^3.1.0",
+    "fastify-metrics": "^7.2.3",
     "influx": "^5.9.2",
     "js-yaml": "^4.1.0",
     "later": "^1.2.0",
     "lodash.clonedeep": "^4.5.0",
-    "luxon": "^1.27.0",
+    "luxon": "^2.0.1",
     "mqtt": "^4.2.6",
-    "pg": "^8.6.0",
-    "qrs-interact": "^6.2.1",
-    "restify": "^8.5.1",
-    "systeminformation": "^5.7.6",
+    "pg": "^8.7.1",
+    "prom-client": "^13.1.0",
+    "qrs-interact": "^6.3.1",
+    "systeminformation": "^5.8.0",
     "url-join": "^4.0.1",
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.5"
   },
   "devDependencies": {
-    "eslint": "7.28.0",
-    "eslint-config-google": "0.14.0",
-    "jshint": "2.13.0",
-    "prettier": "2.3.1"
+    "prettier": "2.3.2",
+    "snyk": "1.675.0"
   }
 }

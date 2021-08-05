@@ -1,35 +1,19 @@
-
-
-// Get metrics from the Sense health check API
+/**
+ * Get metrics from the Sense health check API
+ */
 
 const axios = require('axios');
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 const globals = require('../globals');
 const postToInfluxdb = require('./post-to-influxdb');
 const postToMQTT = require('./post-to-mqtt');
 const serverTags = require('./servertags');
-
-var fs = require('fs');
-var path = require('path');
-
-function setupHealthMetricsTimer() {
-    // Configure timer for getting healthcheck data
-    setInterval(function() {
-        globals.logger.verbose('HEALTH: Event started: Statistics collection');
-
-        globals.serverList.forEach(function(server) {
-            globals.logger.verbose(`HEALTH: Getting stats for server: ${server.serverName}`);
-            globals.logger.debug(`HEALTH: Server details: ${JSON.stringify(server)}`);
-
-            const tags = serverTags.getServerTags(server);
-
-            getHealthStatsFromSense(server.host, tags);
-        });
-    }, globals.config.get('Butler-SOS.serversToMonitor.pollingInterval'));
-}
+const prometheus = require('./prom-client');
 
 function getCertificates(options) {
-    var certificate = {};
+    const certificate = {};
 
     certificate.cert = fs.readFileSync(options.Certificate);
     certificate.key = fs.readFileSync(options.CertificateKey);
@@ -41,11 +25,17 @@ function getCertificates(options) {
 function getHealthStatsFromSense(host, influxTags) {
     globals.logger.debug(`HEALTH: URL=https://${host}/engine/healthcheck/`);
 
-    var options = {};
+    const options = {};
 
     options.Certificate = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert'));
-    options.CertificateKey = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey'));
-    options.CertificateCA = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
+    options.CertificateKey = path.resolve(
+        __dirname,
+        globals.config.get('Butler-SOS.cert.clientCertKey')
+    );
+    options.CertificateCA = path.resolve(
+        __dirname,
+        globals.config.get('Butler-SOS.cert.clientCertCA')
+    );
     if (globals.config.has('Butler-SOS.cert.clientCertPassphrase')) {
         options.CertificatePassphrase = globals.config.get('Butler-SOS.cert.clientCertPassphrase');
     } else {
@@ -53,7 +43,7 @@ function getHealthStatsFromSense(host, influxTags) {
     }
 
     // Get certificates used to authenticate with Sense proxy service
-    var cert = getCertificates(options);
+    const cert = getCertificates(options);
 
     if (cert.cert === undefined || cert.key === undefined || cert.ca === undefined) {
         globals.logger.error('HEALTH: Client certificate or key was not found');
@@ -68,47 +58,76 @@ function getHealthStatsFromSense(host, influxTags) {
         rejectUnauthorized: false,
     });
 
-    let requestSettings = {
-        url: 'https://' + host + '/engine/healthcheck/',
+    const requestSettings = {
+        url: `https://${host}/engine/healthcheck/`,
         method: 'get',
         headers: {
             'Cache-Control': 'no-cache',
             'Content-Type': 'application/json',
         },
-        httpsAgent: httpsAgent,
+        httpsAgent,
         timeout: 5000,
         maxRedirects: 5,
     };
 
     axios
         .request(requestSettings)
-        .then(response => {
+        .then((response) => {
             if (response.status === 200) {
-                globals.logger.verbose('HEALTH: Received ok response from ' + influxTags.host);
+                globals.logger.verbose(`HEALTH: Received ok response from ${influxTags.host}`);
                 globals.logger.debug(`HEALTH: ${JSON.stringify(response.data)}`);
 
                 // Post to MQTT (if enabled)
-                if ((globals.config.has('Butler-SOS.mqttConfig.enableMQTT') && globals.config.get('Butler-SOS.mqttConfig.enableMQTT') == true) || 
-                    (globals.config.has('Butler-SOS.mqttConfig.enable') && globals.config.get('Butler-SOS.mqttConfig.enable') == true)) {
-
+                if (
+                    (globals.config.has('Butler-SOS.mqttConfig.enableMQTT') &&
+                        globals.config.get('Butler-SOS.mqttConfig.enableMQTT') === true) ||
+                    (globals.config.has('Butler-SOS.mqttConfig.enable') &&
+                        globals.config.get('Butler-SOS.mqttConfig.enable') === true)
+                ) {
                     globals.logger.debug('HEALTH: Calling HEALTH metrics MQTT posting method');
                     postToMQTT.postHealthToMQTT(host, influxTags.host, response.data);
                 }
 
                 // Post to Influxdb (if enabled)
-                if ((globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') && globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') == true) || 
-                    (globals.config.has('Butler-SOS.influxdbConfig.enable') && globals.config.get('Butler-SOS.influxdbConfig.enable') == true)) {
-
+                if (
+                    (globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
+                        globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
+                    (globals.config.has('Butler-SOS.influxdbConfig.enable') &&
+                        globals.config.get('Butler-SOS.influxdbConfig.enable') === true)
+                ) {
                     globals.logger.debug('HEALTH: Calling HEALTH metrics Influxdb posting method');
                     postToInfluxdb.postHealthMetricsToInfluxdb(host, response.data, influxTags);
                 }
+
+                // Save latest available data for Prometheus (if enabled)
+                if (
+                    globals.config.has('Butler-SOS.prometheus.enable') &&
+                    globals.config.get('Butler-SOS.prometheus.enable') === true
+                ) {
+                    globals.logger.debug('HEALTH: Calling HEALTH metrics Prometheus method');
+                    prometheus.saveHealthMetrics(host, response.data, influxTags);
+                }
             }
         })
-        .catch(err => {
+        .catch((err) => {
             globals.logger.error(`HEALTH: Error when calling health check API: ${err}`);
-
-            return;
         });
+}
+
+function setupHealthMetricsTimer() {
+    // Configure timer for getting healthcheck data
+    setInterval(() => {
+        globals.logger.verbose('HEALTH: Event started: Statistics collection');
+
+        globals.serverList.forEach((server) => {
+            globals.logger.verbose(`HEALTH: Getting stats for server: ${server.serverName}`);
+            globals.logger.debug(`HEALTH: Server details: ${JSON.stringify(server)}`);
+
+            const tags = serverTags.getServerTags(server);
+
+            getHealthStatsFromSense(server.host, tags);
+        });
+    }, globals.config.get('Butler-SOS.serversToMonitor.pollingInterval'));
 }
 
 module.exports = {

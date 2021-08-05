@@ -1,14 +1,16 @@
-var later = require('later');
+/* eslint-disable no-unused-vars */
+
+const later = require('later');
 const axios = require('axios');
 
-var callRemoteURL = function (remoteURL, logger) {
+const callRemoteURL = function callRemoteURL(remoteURL, logger) {
     axios
         .get(remoteURL)
-        .then(function (response) {
+        .then((response) => {
             // handle success
             logger.debug(`HEARTBEAT: Sent heartbeat to ${remoteURL}`);
         })
-        .catch(function (error) {
+        .catch((error) => {
             // handle error
             logger.error(`HEARTBEAT: Error sending heartbeat: ${error}`);
         });
@@ -17,11 +19,13 @@ var callRemoteURL = function (remoteURL, logger) {
 function setupHeartbeatTimer(config, logger) {
     try {
         logger.debug(
-            `HEARTBEAT: Setting up heartbeat to remote: ${config.get('Butler-SOS.heartbeat.remoteURL')}`,
+            `HEARTBEAT: Setting up heartbeat to remote: ${config.get(
+                'Butler-SOS.heartbeat.remoteURL'
+            )}`
         );
 
-        var sched = later.parse.text(config.get('Butler-SOS.heartbeat.frequency'));
-        var t = later.setInterval(function () {
+        const sched = later.parse.text(config.get('Butler-SOS.heartbeat.frequency'));
+        const t = later.setInterval(() => {
             callRemoteURL(config.get('Butler-SOS.heartbeat.remoteURL'), logger);
         }, sched);
 

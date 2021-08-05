@@ -1,5 +1,12 @@
 // Add dependencies
-var restify = require('restify');
+const path = require('path');
+const dockerHealthCheckServer = require('fastify')({ logger: true });
+const promServer = require('fastify')({ logger: true });
+const promFastifyMetricsServer = require('fastify')({ logger: true });
+const metricsPlugin = require('fastify-metrics');
+
+promServer.server.keepAliveTimeout = 0;
+promFastifyMetricsServer.register(metricsPlugin, { endpoint: '/metrics' });
 
 // Load code from sub modules
 const globals = require('./globals');
@@ -11,50 +18,32 @@ const heartbeat = require('./lib/heartbeat');
 const serviceUptime = require('./lib/service_uptime');
 const udp = require('./lib/udp_handlers');
 const telemetry = require('./lib/telemetry');
+const promClient = require('./lib/prom-client');
 
 globals.initInfluxDB();
 
-if ((globals.config.has('Butler-SOS.uptimeMonitor.enabled') && globals.config.get('Butler-SOS.uptimeMonitor.enabled') == true) || 
-    (globals.config.has('Butler-SOS.uptimeMonitor.enable') && globals.config.get('Butler-SOS.uptimeMonitor.enable') == true)) {
+if (
+    (globals.config.has('Butler-SOS.uptimeMonitor.enabled') &&
+        globals.config.get('Butler-SOS.uptimeMonitor.enabled') === true) ||
+    (globals.config.has('Butler-SOS.uptimeMonitor.enable') &&
+        globals.config.get('Butler-SOS.uptimeMonitor.enable') === true)
+) {
     serviceUptime.serviceUptimeStart();
 }
 
-mainScript();
-
 async function mainScript() {
     // Load certificates to use when connecting to healthcheck API
-    var path = require('path'),
-        certFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert')),
-        keyFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey')),
-        caFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
-
-    // ---------------------------------------------------
-    // Create restServer object
-    var restServer = restify.createServer({
-        name: 'Docker healthcheck for Butler-SOS',
-        version: globals.appVersion,
-    });
-
-    // Enable parsing of http parameters
-    restServer.use(restify.plugins.queryParser());
-
-    // Set up endpoint for Docker healthcheck REST server
-    restServer.get(
-        {
-            path: '/',
-            flags: 'i',
-        },
-        (req, res, next) => {
-            globals.logger.verbose('MAIN: Docker healthcheck API endpoint called.');
-
-            res.send(0);
-            next();
-        },
-    );
+    const certFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert'));
+    const keyFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey'));
+    const caFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
 
     // Set up heartbeats, if enabled in the config file
-    if ((globals.config.has('Butler-SOS.heartbeat.enabled') && globals.config.get('Butler-SOS.heartbeat.enabled') == true) || 
-        (globals.config.has('Butler-SOS.heartbeat.enable') && globals.config.get('Butler-SOS.heartbeat.enable') == true)) {
+    if (
+        (globals.config.has('Butler-SOS.heartbeat.enabled') &&
+            globals.config.get('Butler-SOS.heartbeat.enabled') === true) ||
+        (globals.config.has('Butler-SOS.heartbeat.enable') &&
+            globals.config.get('Butler-SOS.heartbeat.enable') === true)
+    ) {
         heartbeat.setupHeartbeatTimer(globals.config, globals.logger);
     }
 
@@ -92,8 +81,9 @@ async function mainScript() {
 
         // Set up anon usage reports, if enabled
         if (
-            globals.config.has('Butler-SOS.anonTelemetry') == false ||
-            (globals.config.has('Butler-SOS.anonTelemetry') == true && globals.config.get('Butler-SOS.anonTelemetry') == true)
+            globals.config.has('Butler-SOS.anonTelemetry') === false ||
+            (globals.config.has('Butler-SOS.anonTelemetry') === true &&
+                globals.config.get('Butler-SOS.anonTelemetry') === true)
         ) {
             telemetry.setupAnonUsageReportTimer();
             globals.logger.verbose('MAIN: Anonymous telemetry reporting has been set up.');
@@ -102,9 +92,11 @@ async function mainScript() {
         globals.logger.error(`CONFIG: Error initiating host info: ${err}`);
     }
 
-    // ---------------------------------------------------
     // Set up UDP handler
-    if (globals.config.has('Butler-SOS.userEvents.enable') && globals.config.get('Butler-SOS.userEvents.enable')) {
+    if (
+        globals.config.has('Butler-SOS.userEvents.enable') &&
+        globals.config.get('Butler-SOS.userEvents.enable')
+    ) {
         udp.udpInitUserActivityServer();
 
         globals.logger.debug(`MAIN: Server for UDP server: ${globals.udpServer.host}`);
@@ -112,29 +104,99 @@ async function mainScript() {
         // Start UDP server for user activity events
         globals.udpServer.userActivitySocket.bind(
             globals.udpServer.portUserActivity,
-            globals.udpServer.host,
+            globals.udpServer.host
         );
     }
 
-    // ---------------------------------------------------
     // Start Docker healthcheck REST server on port set in config file
-    if ((globals.config.has('Butler-SOS.dockerHealthCheck.enabled') && globals.config.get('Butler-SOS.dockerHealthCheck.enabled') == true) || 
-        (globals.config.has('Butler-SOS.dockerHealthCheck.enable') && globals.config.get('Butler-SOS.dockerHealthCheck.enable') == true)) {
-        globals.logger.verbose('MAIN: Starting Docker healthcheck server...');
+    if (
+        (globals.config.has('Butler-SOS.dockerHealthCheck.enabled') &&
+            globals.config.get('Butler-SOS.dockerHealthCheck.enabled') === true) ||
+        (globals.config.has('Butler-SOS.dockerHealthCheck.enable') &&
+            globals.config.get('Butler-SOS.dockerHealthCheck.enable') === true)
+    ) {
+        try {
+            globals.logger.verbose('MAIN: Starting Docker healthcheck server...');
 
-        restServer.listen(globals.config.get('Butler-SOS.dockerHealthCheck.port'), function () {
-            globals.logger.info('MAIN: Docker healthcheck server now listening');
-        });
+            // eslint-disable-next-line global-require
+            dockerHealthCheckServer.register(require('fastify-healthcheck'));
+            await dockerHealthCheckServer.listen(
+                globals.config.get('Butler-SOS.dockerHealthCheck.port')
+            );
+
+            globals.logger.info(
+                `MAIN: Started Docker healthcheck server on port ${globals.config.get(
+                    'Butler-SOS.dockerHealthCheck.port'
+                )}.`
+            );
+        } catch (err) {
+            globals.logger.error(
+                `MAIN: Error while starting Docker healthcheck server on port ${globals.config.get(
+                    'Butler-SOS.dockerHealthCheck.port'
+                )}.`
+            );
+            dockerHealthCheckServer.log.error(err);
+            process.exit(1);
+        }
+    }
+
+    // Start Prometheus metrics REST server on port set in config file
+    if (
+        globals.config.has('Butler-SOS.prometheus.enable') &&
+        globals.config.get('Butler-SOS.prometheus.enable') === true
+    ) {
+        const promHost = globals.config.has('Butler-SOS.prometheus.host')
+            ? globals.config.get('Butler-SOS.prometheus.host')
+            : '0.0.0.0';
+
+        const promPort = globals.config.has('Butler-SOS.prometheus.port')
+            ? globals.config.get('Butler-SOS.prometheus.port')
+            : 9842;
+
+        const promNodeHost = '0.0.0.0';
+        const promNodePort = 9001;
+
+        try {
+            // Set up Butler SOS metrics
+            globals.logger.info(
+                `MAIN: Starting Prometheus Butler SOS endpoint on ${promHost}:${promPort}.`
+            );
+            promClient.setupPromClient(promServer, promPort, promHost);
+        } catch (err) {
+            globals.logger.error(
+                `MAIN: Error while starting Prometheus Butler SOS endpoint on ${promHost}:${promPort}.`
+            );
+            promServer.log.error(err);
+            process.exit(1);
+        }
+
+        try {
+            // Set up Node.js internal metrics
+            await promFastifyMetricsServer.listen(promNodePort, promNodeHost);
+            globals.logger.info(
+                `PROM: Prometheus Node.js metrics server now listening on port ${promNodeHost}:${promNodePort}`
+            );
+        } catch (err) {
+            globals.logger.error(
+                `MAIN: Error while starting Prometheus Node.js endpoint on ${promNodeHost}:${promNodePort}.`
+            );
+            promFastifyMetricsServer.log.error(err);
+            process.exit(1);
+        }
     }
 
     // Set up extraction of data from log db
-    if ((globals.config.has('Butler-SOS.logdb.enableLogDb') && globals.config.get('Butler-SOS.logdb.enableLogDb') == true) || 
-        (globals.config.has('Butler-SOS.logdb.enable') && globals.config.get('Butler-SOS.logdb.enable') == true)) {
+    if (
+        (globals.config.has('Butler-SOS.logdb.enableLogDb') &&
+            globals.config.get('Butler-SOS.logdb.enableLogDb') === true) ||
+        (globals.config.has('Butler-SOS.logdb.enable') &&
+            globals.config.get('Butler-SOS.logdb.enable') === true)
+    ) {
         logDb.setupLogDbTimer();
     }
 
     // Set up extraction of sessions data
-    if (globals.config.get('Butler-SOS.userSessions.enableSessionExtract') == true) {
+    if (globals.config.get('Butler-SOS.userSessions.enableSessionExtract') === true) {
         sessionMetrics.setupUserSessionsTimer();
     }
 
@@ -142,7 +204,9 @@ async function mainScript() {
     healthMetrics.setupHealthMetricsTimer();
 
     // Set up extraction of app IDs and names
-    if (globals.config.get('Butler-SOS.appNames.enableAppNameExtract') == true) {
+    if (globals.config.get('Butler-SOS.appNames.enableAppNameExtract') === true) {
         appNamesExtract.setupAppNamesExtractTimer();
     }
 }
+
+mainScript();
