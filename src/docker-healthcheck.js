@@ -7,6 +7,7 @@ const httpHealth = require('http');
 const optionsHealth = {
     host: 'localhost',
     port: '12398',
+    path: '/health',
     timeout: 2000,
 };
 

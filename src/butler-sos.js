@@ -118,6 +118,7 @@ async function mainScript() {
         try {
             globals.logger.verbose('MAIN: Starting Docker healthcheck server...');
 
+            // Use http://localhost:12398/health as Docker healthcheck URL
             // eslint-disable-next-line global-require
             dockerHealthCheckServer.register(require('fastify-healthcheck'));
             await dockerHealthCheckServer.listen(
