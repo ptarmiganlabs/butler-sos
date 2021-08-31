@@ -75,8 +75,6 @@ Butler-SOS:
 
   # Certificates to use when connecting to Sense. Get these from the Certificate Export in QMC.
   cert:
-    rejectUnauthorized: false           # Set to false to ignore warnings/errors caused by Qlik Sense's self-signed certificates.
-                                        # Set to true if the Qlik Sense root CA is available on the computer where Butler SOS is running.
     clientCert: <path/to/cert/client.pem>
     clientCertKey: <path/to/cert/client_key.pem>
     clientCertCA: <path/to/cert/root.pem>
@@ -148,6 +146,11 @@ Butler-SOS:
 
   serversToMonitor:
     pollingInterval: 30000          # How often (milliseconds) should the healthcheck API be polled?
+
+    # If false, Butler SOS will accept TLS certificates on the server without verifying them with the CA. 
+    # If true, data will only be retrieved from the Sense server if that server's TLS cert verifies 
+    # successfuully against the list of CAs available on the computer where Butler SOS is running.
+    rejectUnauthorized: true 
 
     # List of extra tags for each server. Useful for creating more advanced Grafana dashboards.
     # Each server below MUST include these tags in its serverTags property.
