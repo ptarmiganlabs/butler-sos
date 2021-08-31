@@ -1,0 +1,195 @@
+Butler-SOS:
+  # All configuration items are mandatory, unless otherwise noted.
+
+  # Logging configuration
+  logLevel: info          # Log level. Possible log levels are silly, debug, verbose, info, warn, error
+  fileLogging: true       # true/false to enable/disable logging to disk file
+  logDirectory: log       # Subdirectory where log files are stored
+  anonTelemetry: true     # Can Butler SOS send anonymous data about what computer it is running on? 
+                          # More info on whata data is collected: https://butler-sos.ptarmiganlabs.com/docs/about/telemetry/
+                          # Please consider leaving this at true - it really helps future development of Butler SOS!
+
+  # Heartbeats can be used to send "I'm alive" messages to some other tool, e.g. an infrastructure monitoring tool
+  # The concept is simple: The remoteURL will be called at the specified frequency. The receiving tool will then know 
+  # that Butler SOS is alive.
+  heartbeat:
+    enable: false
+    remoteURL: http://my.monitoring.server/some/path/
+    frequency: every 1 hour         # https://bunkat.github.io/later/parsers.html
+
+  # Docker health checks are used when running Butler SOS as a Docker container. 
+  # The Docker engine will call the container's health check REST endpoint with a set interval to determine
+  # whether the container is alive/well or not.
+  # If you are not running Butler SOS in Docker you can safely disable this feature. 
+  dockerHealthCheck:
+    enable: true                    # Control whether a REST endpoint will be set up to serve Docker health check messages
+    port: 12398                     # Port the Docker health check service runs on (if enabled)
+
+  # Uptime monitor
+  uptimeMonitor:
+    enable: true                   # Should uptime messages be written to the console and log files?
+    frequency: every 15 minutes     # https://bunkat.github.io/later/parsers.html
+    logLevel: verbose               # Starting at what log level should uptime messages be shown?
+    storeInInfluxdb: 
+      butlerSOSMemoryUsage: true    # Should data on Butler SOS' own memory use be stored in Infludb?
+      instanceTag: DEV              # Tag that can be used to differentiate data from multiple Butler SOS instances
+
+  # Track individual users opening/closing apps and starting/stopping sessions. 
+  # Requires log appender XML file(s) to be added to Sense server(s.
+  userEvents:                       
+    enable: false
+    excludeUser:                    # Optional blacklist of users that should be disregarded when it comes to user events
+      - directory: LAB
+        userId: testuser1
+      - directory: LAB
+        userId: testuser2
+    udpServerConfig:
+      serverHost: <IP or FQDN>      # Host/IP where user event server will listen for events from Sense
+      portUserActivityEvents: 9997  # Port on which user event server will listen for events from Sense
+    tags:                           # Tags are added to the data before it's stored in InfluxDB
+      - tag: env
+        value: DEV
+      - tag: foo
+        value: bar
+    sendToMQTT: 
+      enable: false                 # Set to true if user events should be forwarded as MQTT messages
+      topic: userEvent              # MQTT topic to use for user event messages
+    sendToInfluxdb:
+      enable: true                  # Set to true if user events should be stored in InfluxDB
+
+  # Qlik Sense logging db config parameters
+  logdb:
+    enable: true
+    # Items below are mandatory if logdb.enable=true
+    pollingInterval: 60000            # How often (milliseconds) should Postgres log db be queried for warnings and errors?
+    queryPeriod: 5 minutes            # How far back should Butler SOS query for log entries? Default is 5 min
+    host: <IP or FQDN of Qlik Sense logging db>
+    port: 4432
+    qlogsReaderUser: qlogs_reader
+    qlogsReaderPwd: <pwd>
+    extractErrors: true               # Should error level entries be extracted from log db into Influxdb?
+    extractWarnings: true             # Should warn level entries be extracted from log db into Influxdb?
+    extractInfo: false                 # Should info level entries be extracted from log db into Influxdb? 
+                                      # Warning! Seting this to true will result in LOTS of log messages 
+                                      # being retrrieved by Butler SOS!
+
+  # Certificates to use when connecting to Sense. Get these from the Certificate Export in QMC.
+  cert:
+    rejectUnauthorized: false           # Set to false to ignore warnings/errors caused by Qlik Sense's self-signed certificates.
+                                        # Set to true if the Qlik Sense root CA is available on the computer where Butler SOS is running.
+    clientCert: <path/to/cert/client.pem>
+    clientCertKey: <path/to/cert/client_key.pem>
+    clientCertCA: <path/to/cert/root.pem>
+    clientCertPassphrase: <certificate key password, if one was specified when exporting certificates from Sense QMC >
+    # If running Butler SOS in a Docker container, the cert paths MUST be the following
+    # clientCert: /nodeapp/config/certificate/client.pem
+    # clientCertKey: /nodeapp/config/certificate/client_key.pem
+    # clientCertCA: /nodeapp/config/certificate/root.pem
+    # clientCertPassphrase:
+
+  # MQTT config parameters
+  mqttConfig:
+    enable: false
+    # Items below are mandatory if mqttConfig.enable=true
+    brokerHost: <IP of MQTT broker/server>
+    brokerPort: 1883
+    baseTopic: butler-sos/          # Topic should end with /
+
+  # Prometheus config
+  # If enabled, select Butler SOS metrics will be exposed on a Prometheus compatible URL from where they can be scraped.
+  prometheus:
+    enable: false                                    # Default false
+    host: <IP or FQDN where Butler SOS is running>  # On what IP/FQDN should the Prometheus metrics be exposed? Default 0.0.0.0
+    port: 9842                                      # Port for Prometheus endpoint. Default 9842
+
+
+  # Influx db config parameters
+  influxdbConfig:
+    enable: true
+    # Items below are mandatory if influxdbConfig.enable=true
+    hostIP: <IP or FQDN of Influxdb server>
+    hostPort: <Port where Influxdb is listening>    # Optional. Default value=8086
+    auth:
+      enable: false                 # Does influxdb instance require authentication (true/false)?
+      username: <username>          # Username for Influxdb authentication. Mandatory if auth.enable=true
+      password: <password>          # Password for Influxdb authentication. Mandatory if auth.enable=true
+    dbName: SenseOps
+
+    # Default retention policy that should be created in InfluxDB when Butler SOS creates a new database there. 
+    # Any data older than retention policy threshold will be purged from InfluxDB.
+    retentionPolicy:
+      name: 10d
+      duration: 10d
+
+    # Control whether certain fields are stored in InfluxDB or not
+    # Use with caution! Enabling activeDocs, loadedDocs or inMemoryDocs may result in lots of data sent to InfluxDB.
+    includeFields:
+      activeDocs: false              # Should data on what docs are active be stored in Influxdb (true/false)? 
+      loadedDocs: false              # Should data on what docs are loaded be stored in Influxdb (true/false)?
+      inMemoryDocs: false            # Should data on what docs are in memory be stored in Influxdb (true/false)?
+
+  # Extract app names
+  appNames: 
+    enableAppNameExtract: true    # Extract app names in addition to app IDs (tue/false)?
+    extractInterval: 60000        # How often (milliseconds) should app names be extracted?
+    hostIP: <IP or FQDN>          # What Sense server should be queried for app names?
+
+  # Sessions per virtual proxy
+  userSessions:
+    enableSessionExtract: true      # Query unique user IDs of what users have sessions open (true/false)?
+    # Items below are mandatory if enableSessionExtract=true    
+    pollingInterval: 30000        # How often (milliseconds) should session data be polled?
+    excludeUser:                  # Optional blacklist of users that should be disregarded when it comes to session monitoring.
+                                  # Blacklist is only applied to data in InfluxDB. All session data will be sent to MQTT.
+      - directory: LAB
+        userId: testuser1
+      - directory: LAB
+        userId: testuser2
+
+  serversToMonitor:
+    pollingInterval: 30000          # How often (milliseconds) should the healthcheck API be polled?
+
+    # List of extra tags for each server. Useful for creating more advanced Grafana dashboards.
+    # Each server below MUST include these tags in its serverTags property.
+    # The tags below are just examples - define your own as needed
+    serverTagsDefinition: 
+      - server_group
+      - serverLocation
+      - server-type
+      - serverBrand
+
+    # Sense Servers that should be queried for healthcheck data 
+    servers:
+      - host: <server1.my.domain>:4747
+        serverName: <server1>
+        serverDescription: <description>
+        logDbHost: <host name as used in QLogs db>
+        userSessions:
+          enable: true
+          # Items below are mandatory if userSessions.enable=true
+          host: <server1.my.domain>:4243
+          virtualProxies:
+            - virtualProxy: /                 # Default virtual proxy
+            - virtualProxy: /hdr              # "hdr" virtual proxy
+            - virtualProxy: /sales            # "sales" virtual proxy
+        serverTags:
+          server_group: DEV
+          serverLocation: Asia
+          server-type: virtual
+          serverBrand: Dell
+      - host: <server2.my.domain>:4747
+        serverName: <server2>
+        serverDescription: <description>
+        logDbHost: <host name as used in QLogs db>
+        userSessions:
+          enable: true
+          # Items below are mandatory if userSessions.enable=true
+          host: <server2.my.domain>:4243
+          virtualProxies:
+            - virtualProxy: /finance          # "finance" virtual proxy
+        serverTags:
+          server_group: PROD
+          serverLocation: Europe
+          server-type: physical
+          serverBrand: HP
+  

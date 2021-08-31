@@ -1,0 +1,74 @@
+# docker-compose.yml
+version: '3.3'
+services:
+  butler-sos:
+    image: ptarmiganlabs/butler-sos:latest
+    container_name: butler-sos
+    restart: always
+    volumes:
+      # Make config file accessible outside of container
+      - "./config:/nodeapp/config"
+      - "./logs:/nodeapp/logs"
+    environment:
+      - "NODE_ENV=production_prometheus"         # Means that Butler SOS will read config data from production.yaml 
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "5m"
+    networks:
+      - senseops
+
+
+  prometheus:
+    image: prom/prometheus:v2.28.1
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--log.level=debug'
+    ports:
+      - 9090:9090
+    links:
+      - cadvisor:cadvisor
+      - alertmanager:alertmanager
+    depends_on:
+      - cadvisor
+    networks:
+      - senseops
+    restart: always
+
+
+  alertmanager:
+    image: prom/alertmanager
+    ports:
+      - 9093:9093
+    volumes:
+      - ./alertmanager/:/etc/alertmanager/
+    networks:
+      - senseops
+    restart: always
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/data:/var/lib/grafana
+    networks:
+      - senseops
+
+
+networks:
+  senseops:
+    driver: bridge
