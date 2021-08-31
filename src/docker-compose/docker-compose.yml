@@ -1,0 +1,18 @@
+# docker-compose.yml
+version: '3.3'
+services:
+  butler-sos:
+    image: ptarmiganlabs/butler-sos:latest
+    container_name: butler-sos
+    restart: always
+    volumes:
+      # Make config file accessible outside of container
+      - "./config:/nodeapp/config"
+      - "./logs:/nodeapp/logs"
+    environment:
+      - "NODE_ENV=production"         # Means that Butler SOS will read config data from production.yaml 
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "5m"
