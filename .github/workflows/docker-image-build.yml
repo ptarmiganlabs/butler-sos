@@ -7,14 +7,9 @@
 name: Build Docker image CI
 
 on:
-  push:
-    branches: [ master ]
-    # Publish semver tags as releases.
-    tags: [ 'v*.*.*' ]
-  # push:
-  #   branches: [ master ]
-  #   # Publish semver tags as releases.
-  #   tags: [ 'v*.*.*' ]    
+  release:
+    types:
+      - published
 
 jobs:
   build:
@@ -81,6 +76,8 @@ jobs:
           # file: Dockerfile
           platforms: |
             linux/amd64
+            linux/arm64
+            linux/arm/v7
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -90,8 +87,4 @@ jobs:
 
     env:
       CI: true
-      # IMAGE_NAME: mountaindude/butler-sos
 
-    # defaults:
-    #   run:
-    #     working-directory: src
