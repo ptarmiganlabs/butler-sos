@@ -32,19 +32,19 @@
     "eslint": "^7.32.0",
     "eslint-config-airbnb-base": "14.2.1",
     "eslint-config-prettier": "8.3.0",
-    "eslint-plugin-import": "2.23.4",
+    "eslint-plugin-import": "2.24.1",
     "eslint-plugin-prettier": "3.4.0",
-    "fastify": "^3.20.1",
+    "fastify": "^3.20.2",
     "fastify-healthcheck": "^3.1.0",
     "fastify-metrics": "^7.2.3",
     "influx": "^5.9.2",
     "js-yaml": "^4.1.0",
     "later": "^1.2.0",
     "lodash.clonedeep": "^4.5.0",
-    "luxon": "^2.0.1",
+    "luxon": "^2.0.2",
     "mqtt": "^4.2.6",
     "pg": "^8.7.1",
-    "prom-client": "^13.1.0",
+    "prom-client": "^13.2.0",
     "qrs-interact": "^6.3.1",
     "systeminformation": "^5.8.0",
     "url-join": "^4.0.1",
@@ -53,6 +53,6 @@
   },
   "devDependencies": {
     "prettier": "2.3.2",
-    "snyk": "1.675.0"
+    "snyk": "^1.684.0"
   }
 }
