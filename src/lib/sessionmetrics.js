@@ -56,7 +56,7 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
         key: cert.key,
         ca: cert.ca,
         passphrase: options.CertificatePassphrase,
-        rejectUnauthorized: false,
+        rejectUnauthorized: globals.config.get('Butler-SOS.serversToMonitor.rejectUnauthorized'),
     });
 
     const requestSettings = {
