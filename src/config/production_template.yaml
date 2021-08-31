@@ -149,6 +149,11 @@ Butler-SOS:
   serversToMonitor:
     pollingInterval: 30000          # How often (milliseconds) should the healthcheck API be polled?
 
+    # If false, Butler SOS will accept TLS certificates on the server without verifying them with the CA. 
+    # If true, data will only be retrieved from the Sense server if that server's TLS cert verifies 
+    # successfuully against the list of CAs available on the computer where Butler SOS is running.
+    rejectUnauthorized: true 
+
     # List of extra tags for each server. Useful for creating more advanced Grafana dashboards.
     # Each server below MUST include these tags in its serverTags property.
     # The tags below are just examples - define your own as needed
