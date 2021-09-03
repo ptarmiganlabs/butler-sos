@@ -22,6 +22,7 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.29.2
+    container_name: prometheus
     volumes:
       - ./prometheus/:/etc/prometheus/
       - prometheus_data:/prometheus
@@ -45,6 +46,7 @@ services:
 
   alertmanager:
     image: prom/alertmanager
+    container_name: alertmanager
     ports:
       - 9093:9093
     volumes:
