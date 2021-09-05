@@ -1,4 +1,4 @@
-# docker-compose.yml
+# docker-compose_fullstack_prometheus.yml
 version: '3.3'
 services:
   butler-sos:
@@ -10,7 +10,7 @@ services:
       - "./config:/nodeapp/config"
       - "./logs:/nodeapp/logs"
     environment:
-      - "NODE_ENV=production_prometheus"         # Means that Butler SOS will read config data from production.yaml 
+      - "NODE_ENV=production_prometheus"         # Means that Butler SOS will read config data from production_prometheus.yaml 
     logging:
       driver: "json-file"
       options:

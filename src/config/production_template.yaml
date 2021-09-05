@@ -1,3 +1,4 @@
+---
 Butler-SOS:
   # All configuration items are mandatory, unless otherwise noted.
 
@@ -27,7 +28,7 @@ Butler-SOS:
 
   # Uptime monitor
   uptimeMonitor:
-    enable: true                   # Should uptime messages be written to the console and log files?
+    enable: true                    # Should uptime messages be written to the console and log files?
     frequency: every 15 minutes     # https://bunkat.github.io/later/parsers.html
     logLevel: verbose               # Starting at what log level should uptime messages be shown?
     storeInInfluxdb: 
@@ -101,7 +102,6 @@ Butler-SOS:
     enable: false                                    # Default false
     host: <IP or FQDN where Butler SOS is running>  # On what IP/FQDN should the Prometheus metrics be exposed? Default 0.0.0.0, i.e. all available IPs
     port: 9842                                      # Port for Prometheus endpoint. Default 9842
-
 
   # Influx db config parameters
   influxdbConfig:
@@ -197,4 +197,4 @@ Butler-SOS:
           serverLocation: Europe
           server-type: physical
           serverBrand: HP
-  
+    
