@@ -1,5 +1,13 @@
 # Changelog
 
+### [6.0.1](https://www.github.com/ptarmiganlabs/butler-sos/compare/v6.0.0...v6.0.1) (2021-09-08)
+
+
+### Bug Fixes
+
+* Consistent log directory name ([4dd53ae](https://www.github.com/ptarmiganlabs/butler-sos/commit/4dd53aeefca77238fd94b99e3be14ac655094e75))
+* Remove extra log files ([#209](https://www.github.com/ptarmiganlabs/butler-sos/issues/209)) ([f52eab8](https://www.github.com/ptarmiganlabs/butler-sos/commit/f52eab85758d9ffc57ba5ce262940e58d279b75d))
+
 ## [6.0.0](https://www.github.com/ptarmiganlabs/butler-sos/compare/v5.6.2...v6.0.0) (2021-09-03)
 
 
