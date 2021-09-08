@@ -8,7 +8,7 @@ services:
     volumes:
       # Make config file accessible outside of container
       - "./config:/nodeapp/config"
-      - "./logs:/nodeapp/logs"
+      - "./log:/nodeapp/log"
     environment:
       - "NODE_ENV=production_prometheus"         # Means that Butler SOS will read config data from production_prometheus.yaml 
     logging:
