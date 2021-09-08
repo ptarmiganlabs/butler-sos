@@ -18,6 +18,7 @@
     "senseops",
     "devops",
     "influxdb",
+    "prometheus",
     "qliksense"
   ],
   "author": "Göran Sander",
@@ -53,6 +54,6 @@
   },
   "devDependencies": {
     "prettier": "2.3.2",
-    "snyk": "^1.698.0"
+    "snyk": "1.698.0"
   }
 }
