@@ -18,6 +18,7 @@
     "senseops",
     "devops",
     "influxdb",
+    "prometheus",
     "qliksense"
   ],
   "author": "Göran Sander",
@@ -27,14 +28,14 @@
   },
   "homepage": "https://github.com/ptarmiganlabs/butler-sos#readme",
   "dependencies": {
-    "axios": "^0.21.1",
+    "axios": "^0.21.4",
     "config": "^3.3.6",
     "eslint": "^7.32.0",
     "eslint-config-airbnb-base": "14.2.1",
     "eslint-config-prettier": "8.3.0",
     "eslint-plugin-import": "^2.24.2",
     "eslint-plugin-prettier": "^4.0.0",
-    "fastify": "^3.20.2",
+    "fastify": "^3.21.0",
     "fastify-healthcheck": "^3.1.0",
     "fastify-metrics": "^7.2.3",
     "influx": "^5.9.2",
@@ -53,6 +54,6 @@
   },
   "devDependencies": {
     "prettier": "2.3.2",
-    "snyk": "1.696.0"
+    "snyk": "1.698.0"
   }
 }

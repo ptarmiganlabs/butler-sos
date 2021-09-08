@@ -13,6 +13,7 @@ const callRemoteURL = async function reportTelemetry() {
         let logdbEnable = false;
         let mqttEnable = false;
         let influxdbEnable = false;
+        let prometheusEnable = false;
 
         if (
             (globals.config.has('Butler-SOS.heartbeat.enabled') &&
@@ -68,6 +69,13 @@ const callRemoteURL = async function reportTelemetry() {
             influxdbEnable = true;
         }
 
+        if (
+            globals.config.has('Butler-SOS.prometheus.enable') &&
+            globals.config.get('Butler-SOS.prometheus.enable') === true
+        ) {
+            prometheusEnable = true;
+        }
+
         const body = {
             service: 'butler-sos',
             serviceVersion: globals.appVersion,
@@ -100,6 +108,7 @@ const callRemoteURL = async function reportTelemetry() {
                     logdb: logdbEnable,
                     mqtt: mqttEnable,
                     influxdb: influxdbEnable,
+                    prometheus: prometheusEnable,
 
                     appNames: globals.config.has('Butler-SOS.appNames.enableAppNameExtract')
                         ? globals.config.get('Butler-SOS.appNames.enableAppNameExtract')
