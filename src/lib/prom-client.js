@@ -258,7 +258,6 @@ function saveHealthMetrics(host, data, labels) {
 
 function saveUserSessionMetrics(userSessionsData) {
     try {
-        console.log(userSessionsData);
         globals.logger.silly(`PROM: Session metrics (host): ${userSessionsData.host}`);
         globals.logger.silly(
             `PROM: Session metrics (virtual proxy): ${userSessionsData.virtualProxy}`

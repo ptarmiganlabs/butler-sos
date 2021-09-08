@@ -170,13 +170,6 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
             } else {
                 // Not session app
                 app = globals.appNames.find((element) => element.id === docID);
-                // console.log('----------0 ' + host);
-                // console.log('----------1 ' + docID);
-                // if (app) {
-                //     console.log('----------2 ' + JSON.stringify(app, null, 2));
-                // } else {
-                //     console.log('----------2 ' + app);
-                // }
 
                 if (app) {
                     globals.logger.debug(
@@ -205,11 +198,6 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
     );
 
     await Promise.all(promisesInMemory);
-
-    // console.log('-------------0000000000--------------');
-    // console.log('a: ' + influxTags.server_name);
-    // console.log('b: ' + appNamesInMemory);
-    // console.log('c: ' + sessionAppNamesInMemory);
 
     appNamesInMemory.sort();
     sessionAppNamesInMemory.sort();
