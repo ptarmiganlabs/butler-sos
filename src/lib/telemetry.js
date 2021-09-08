@@ -69,8 +69,9 @@ const callRemoteURL = async function reportTelemetry() {
             influxdbEnable = true;
         }
 
-        if ((globals.config.has('Butler-SOS.prometheus.enable') &&
-            globals.config.get('Butler-SOS.prometheus.enable') === true)
+        if (
+            globals.config.has('Butler-SOS.prometheus.enable') &&
+            globals.config.get('Butler-SOS.prometheus.enable') === true
         ) {
             prometheusEnable = true;
         }
@@ -98,8 +99,8 @@ const callRemoteURL = async function reportTelemetry() {
                         'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
                     )
                         ? globals.config.get(
-                            'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
-                        )
+                              'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
+                          )
                         : false,
                     udpServer: globals.config.has('Butler-SOS.userEvents.enable')
                         ? globals.config.get('Butler-SOS.userEvents.enable')
