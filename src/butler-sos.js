@@ -1,8 +1,8 @@
 // Add dependencies
 const path = require('path');
-const dockerHealthCheckServer = require('fastify')({ logger: true });
-const promServer = require('fastify')({ logger: true });
-const promFastifyMetricsServer = require('fastify')({ logger: true });
+const dockerHealthCheckServer = require('fastify')({ logger: false });
+const promServer = require('fastify')({ logger: false });
+const promFastifyMetricsServer = require('fastify')({ logger: false });
 const metricsPlugin = require('fastify-metrics');
 
 promServer.server.keepAliveTimeout = 0;
