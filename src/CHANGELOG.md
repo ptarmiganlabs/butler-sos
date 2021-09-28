@@ -1,5 +1,12 @@
 # Changelog
 
+### [6.0.2](https://www.github.com/ptarmiganlabs/butler-sos/compare/v6.0.1...v6.0.2) (2021-09-28)
+
+
+### Bug Fixes
+
+* **deps:** update dependency fastify-metrics to v8 ([f9e001a](https://www.github.com/ptarmiganlabs/butler-sos/commit/f9e001a3bc6e90cfbb7ad747123ff733914afa75))
+
 ### [6.0.1](https://www.github.com/ptarmiganlabs/butler-sos/compare/v6.0.0...v6.0.1) (2021-09-08)
 
 
