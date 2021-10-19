@@ -45,7 +45,7 @@
     "luxon": "^2.0.2",
     "mqtt": "^4.2.6",
     "pg": "^8.7.1",
-    "prom-client": "^13.2.0",
+    "prom-client": "^14.0.0",
     "qrs-interact": "^6.3.1",
     "systeminformation": "^5.8.9",
     "url-join": "^4.0.1",
