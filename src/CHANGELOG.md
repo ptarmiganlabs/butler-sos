@@ -1,5 +1,15 @@
 # Changelog
 
+### [6.1.1](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v6.1.0...butler-sos-v6.1.1) (2021-10-19)
+
+
+### Miscellaneous
+
+* **deps:** pin dependency snyk to 1.741.0 ([92d2997](https://www.github.com/ptarmiganlabs/butler-sos/commit/92d29976f2a10312eaaaca3e145d3b0ec78c1056))
+* **deps:** update influxdb docker tag to v1.8.10 ([99f5b27](https://www.github.com/ptarmiganlabs/butler-sos/commit/99f5b27f17676c49da894f667ebeaa9112075fee))
+* **deps:** update prom/prometheus docker tag to v2.30.3 ([a35b331](https://www.github.com/ptarmiganlabs/butler-sos/commit/a35b33173d50e1dcc5c049eee2f41f369682a288))
+* **deps:** Updated dependencies ([dbd3476](https://www.github.com/ptarmiganlabs/butler-sos/commit/dbd347640fe6fcd0107ddd7ace2cd3408fa94a6a))
+
 ## 6.1.0 (2021-10-19)
 
 
