@@ -4,7 +4,7 @@
 <h3 align="center">Butler SOS is an open source DevOps monitoring tool for Qlik Sense Enterprise on Windows</h3>
 <p align="center">
 <a href="https://github.com/ptarmiganlabs/butler-sos"><img src="https://img.shields.io/badge/Source---" alt="Source"></a>
-<a href="https://github.com/ptarmiganlabs/butler-sos/actions/workflows/docker-image-build.yml"><img src="https://github.com/ptarmiganlabs/butler-sos/actions/workflows/docker-image-build.yml/badge.svg" alt="Continuous Integration"></a>
+<a href="https://github.com/ptarmiganlabs/butler-sos/actions/workflows/docker-image-build.yml"><img src="https://github.com/ptarmiganlabs/butler-sos/actions/workflows/docker-image-build.yml/badge.svg?branch=master" alt="Continuous Integration"></a>
 <a href="https://codeclimate.com/github/ptarmiganlabs/butler-sos/maintainability"><img src="https://api.codeclimate.com/v1/badges/98e766fc989b93f063ac/maintainability" /></a>
 </p>
 
