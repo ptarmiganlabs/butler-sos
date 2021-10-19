@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.1.0 (2021-10-19)
+
+
+### Features
+
+* **docker:** Build Docker images on Node 16 ([0f7c6e1](https://www.github.com/ptarmiganlabs/butler-sos/commit/0f7c6e1fe508012f843615204e02cd423fedc9ec))
+
 ### [6.0.2](https://www.github.com/ptarmiganlabs/butler-sos/compare/v6.0.1...v6.0.2) (2021-09-28)
 
 
