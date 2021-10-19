@@ -1,5 +1,5 @@
 # Build Docker image for Amd64
-FROM node:14-stretch
+FROM node:16-bullseye-slim
 
 # Add metadata about the image
 LABEL maintainer="Göran Sander mountaindude@ptarmiganlabs.com"
@@ -25,4 +25,3 @@ USER nodejs
 HEALTHCHECK --interval=12s --timeout=12s --start-period=30s CMD ["node", "docker-healthcheck.js"]
 
 CMD ["node", "butler-sos.js"]
-
