@@ -1,5 +1,18 @@
 # Changelog
 
+### [6.1.2](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v6.1.1...butler-sos-v6.1.2) (2021-11-05)
+
+
+### Bug Fixes
+
+* **deps:** update dependency axios to ^0.24.0 ([c4a972a](https://www.github.com/ptarmiganlabs/butler-sos/commit/c4a972a34bf1bcbc4b9fe0b39fc3ebc1fa17c8f4))
+
+
+### Miscellaneous
+
+* **deps:** update dependency snyk to v1.753.0 ([1ad9292](https://www.github.com/ptarmiganlabs/butler-sos/commit/1ad929259f4beedeced5eed26c76dd63f1a7a308))
+* **deps:** update prom/prometheus docker tag to v2.31.0 ([e6fbc32](https://www.github.com/ptarmiganlabs/butler-sos/commit/e6fbc320b644fd5e40e0d719b87e814cefacda50))
+
 ### [6.1.1](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v6.1.0...butler-sos-v6.1.1) (2021-10-19)
 
 
