@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/ptarmiganlabs/butler-sos#readme",
   "dependencies": {
-    "axios": "^0.23.0",
+    "axios": "^0.24.0",
     "config": "^3.3.6",
     "eslint": "^7.32.0",
     "eslint-config-airbnb-base": "14.2.1",
