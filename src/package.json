@@ -28,32 +28,32 @@
   },
   "homepage": "https://github.com/ptarmiganlabs/butler-sos#readme",
   "dependencies": {
-    "axios": "^0.23.0",
+    "axios": "^0.24.0",
     "config": "^3.3.6",
     "eslint": "^7.32.0",
     "eslint-config-airbnb-base": "14.2.1",
     "eslint-config-prettier": "8.3.0",
     "eslint-plugin-import": "^2.25.2",
     "eslint-plugin-prettier": "^4.0.0",
-    "fastify": "^3.22.1",
+    "fastify": "^3.23.1",
     "fastify-healthcheck": "^3.1.0",
     "fastify-metrics": "^8.0.0",
     "influx": "^5.9.2",
     "js-yaml": "^4.1.0",
     "later": "^1.2.0",
     "lodash.clonedeep": "^4.5.0",
-    "luxon": "^2.0.2",
+    "luxon": "^2.1.1",
     "mqtt": "^4.2.6",
     "pg": "^8.7.1",
-    "prom-client": "^14.0.0",
+    "prom-client": "^14.0.1",
     "qrs-interact": "^6.3.1",
-    "systeminformation": "^5.9.7",
+    "systeminformation": "^5.9.9",
     "url-join": "^4.0.1",
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.5"
   },
   "devDependencies": {
     "prettier": "2.4.1",
-    "snyk": "1.741.0"
+    "snyk": "^1.759.0"
   }
 }

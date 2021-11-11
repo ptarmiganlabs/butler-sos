@@ -1,3 +1,4 @@
+/* eslint-disable prefer-destructuring */
 /* eslint-disable no-unused-vars */
 
 const globals = require('../globals');
@@ -124,6 +125,7 @@ function postUserEventToMQTT(msg) {
         globals.config.get('Butler-SOS.userEvents.tags').length > 0
     ) {
         const configTags = globals.config.get('Butler-SOS.userEvents.tags');
+        // eslint-disable-next-line no-restricted-syntax
         for (const item of configTags) {
             payload.tags[item.tag] = item.value;
         }
@@ -133,9 +135,18 @@ function postUserEventToMQTT(msg) {
     globals.mqttClient.publish(baseTopic + topic, JSON.stringify(payload));
 }
 
+function postLogEventToMQTT(msg) {
+    // Get MQTT topic
+    const baseTopic = globals.config.get('Butler-SOS.logEvents.sendToMQTT.topic');
+
+    // Send to MQTT
+    globals.mqttClient.publish(baseTopic, JSON.stringify(msg));
+}
+
 module.exports = {
     postLogDbToMQTT,
     postHealthToMQTT,
     postUserSessionsToMQTT,
     postUserEventToMQTT,
+    postLogEventToMQTT,
 };

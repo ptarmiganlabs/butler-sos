@@ -10,8 +10,8 @@ const postToMQTT = require('./post-to-mqtt');
 // --------------------------------------------------------
 function udpInitUserActivityServer() {
     // Handler for UDP server startup event
-    globals.udpServer.userActivitySocket.on('listening', (_message, _remote) => {
-        const address = globals.udpServer.userActivitySocket.address();
+    globals.udpServerUserActivity.userActivitySocket.on('listening', (_message, _remote) => {
+        const address = globals.udpServerUserActivity.userActivitySocket.address();
 
         globals.logger.info(
             `USER ACTIVITY: UDP server listening on ${address.address}:${address.port}`
@@ -19,10 +19,10 @@ function udpInitUserActivityServer() {
     });
 
     // Handler for UDP messages relating to user activity events
-    globals.udpServer.userActivitySocket.on('message', async (message, _remote) => {
+    globals.udpServerUserActivity.userActivitySocket.on('message', async (message, _remote) => {
         try {
             // >> Message parts
-            // 0: Message type. Possible values are /proxy-connection/, /proxy-session/
+            // 0: Message type. Possible values are /qseow-proxy-connection/, /qseow-proxy-session/
             // 1: Host
             // 2: Command
             // 3: User directory
@@ -40,9 +40,13 @@ function udpInitUserActivityServer() {
             const msgTmp1 = message.toString().split(';');
             const msg = msgTmp1.slice(0, 7);
 
-            globals.logger.verbose(
-                `USER ACTIVITY: ${msg[1]}: ${msg[2]} for user ${msg[3]}/${msg[4]}`
-            );
+            console.log('--------------------------------------------------');
+            console.log(`USER: ${msgTmp1}`);
+            console.log(`${msgTmp1[0]} - ${msgTmp1[4]} - ${msgTmp1[6]}`);
+
+            // globals.logger.verbose(
+            //     `USER ACTIVITY: ${msg[1]}: ${msg[2]} for user ${msg[3]}/${msg[4]}`
+            // );
             globals.logger.debug(`USER ACTIVITY details: ${msg}`);
 
             // Is user in blacklist?

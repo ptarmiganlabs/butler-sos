@@ -1,3 +1,4 @@
+/* eslint-disable prefer-destructuring */
 /* eslint-disable no-unused-vars */
 
 const globals = require('../globals');
@@ -411,7 +412,7 @@ function postButlerSOSMemoryUsageToInfluxdb(memory) {
 }
 
 function postUserEventToInfluxdb(msg) {
-    globals.logger.debug(`USER EVENT: ${msg})`);
+    globals.logger.debug(`USER EVENT INFLUXDB: ${msg})`);
 
     try {
         // First prepare tags relating to the actual user event, then add tags defined in the config file
@@ -430,6 +431,7 @@ function postUserEventToInfluxdb(msg) {
             globals.config.get('Butler-SOS.userEvents.tags').length > 0
         ) {
             const configTags = globals.config.get('Butler-SOS.userEvents.tags');
+            // eslint-disable-next-line no-restricted-syntax
             for (const item of configTags) {
                 tags[item.tag] = item.value;
             }
@@ -450,20 +452,148 @@ function postUserEventToInfluxdb(msg) {
             .writePoints(datapoint)
             .then(() => {
                 globals.logger.silly(
-                    `USER EVENT: Influxdb datapoint for Butler SOS user event: ${JSON.stringify(
+                    `USER EVENT INFLUXDB: Influxdb datapoint for Butler SOS user event: ${JSON.stringify(
                         datapoint,
                         null,
                         2
                     )}`
                 );
 
-                globals.logger.verbose('USER EVENT: Sent Butler SOS user event data to InfluxDB');
+                globals.logger.verbose(
+                    'USER EVENT INFLUXDB: Sent Butler SOS user event data to InfluxDB'
+                );
             })
             .catch((err) => {
-                globals.logger.error(`USER EVENT: Error saving user event to InfluxDB! ${err}`);
+                globals.logger.error(
+                    `USER EVENT INFLUXDB: Error saving user event to InfluxDB! ${err}`
+                );
             });
     } catch (err) {
-        globals.logger.error(`USER EVENT: Error saving user event to InfluxDB! ${err}`);
+        globals.logger.error(`USER EVENT INFLUXDB: Error saving user event to InfluxDB! ${err}`);
+    }
+}
+
+function postLogEventToInfluxdb(msg) {
+    globals.logger.debug(`LOG EVENT INFLUXDB: ${msg})`);
+
+    try {
+        // First prepare tags relating to the actual log event, then add tags defined in the config file
+        // The config file tags can for example be used to separate data from DEV/TEST/PROD environments
+        let tags;
+        let fields;
+
+        if (msg.source === 'qseow-proxy') {
+            tags = {
+                host: msg.host,
+                level: msg.level,
+                source: msg.source,
+                log_row: msg.log_row,
+                subsystem: msg.subsystem,
+            };
+            // Tags that are empty in some cases. Only add if they are non-empty
+            if (msg.user_full.length > 0) tags.user_full = msg.user_full;
+            if (msg.user_directory.length > 0) tags.user_directory = msg.user_directory;
+            if (msg.user_id.length > 0) tags.user_id = msg.user_id;
+            if (msg.result_code.length > 0) tags.result_code = msg.result_code;
+
+            fields = {
+                message: msg.message,
+                exception_message: msg.exception_message,
+                command: msg.command,
+                result_code: msg.result_code,
+                origin: msg.origin,
+                context: msg.context,
+                raw_event: JSON.stringify(msg),
+            };
+        } else if (msg.source === 'qseow-scheduler') {
+            tags = {
+                host: msg.host,
+                level: msg.level,
+                source: msg.source,
+                log_row: msg.log_row,
+                subsystem: msg.subsystem,
+            };
+            // Tags that are empty in some cases. Only add if they are non-empty
+            if (msg.user_full.length > 0) tags.user_full = msg.user_full;
+            if (msg.user_directory.length > 0) tags.user_directory = msg.user_directory;
+            if (msg.user_id.length > 0) tags.user_id = msg.user_id;
+            if (msg.task_id.length > 0) tags.task_id = msg.task_id;
+            if (msg.task_name.length > 0) tags.task_name = msg.task_name;
+
+            fields = {
+                message: msg.message,
+                exception_message: msg.exception_message,
+                app_name: msg.app_name,
+                app_id: msg.app_id,
+                execution_id: msg.execution_id,
+                raw_event: JSON.stringify(msg),
+            };
+        } else if (msg.source === 'qseow-repository') {
+            tags = {
+                host: msg.host,
+                level: msg.level,
+                source: msg.source,
+                log_row: msg.log_row,
+                subsystem: msg.subsystem,
+            };
+            // Tags that are empty in some cases. Only add if they are non-empty
+            if (msg.user_full.length > 0) tags.user_full = msg.user_full;
+            if (msg.user_directory.length > 0) tags.user_directory = msg.user_directory;
+            if (msg.user_id.length > 0) tags.user_id = msg.user_id;
+            if (msg.result_code.length > 0) tags.result_code = msg.result_code;
+
+            fields = {
+                message: msg.message,
+                exception_message: msg.exception_message,
+                command: msg.command,
+                result_code: msg.result_code,
+                origin: msg.origin,
+                context: msg.context,
+                raw_event: JSON.stringify(msg),
+            };
+        }
+
+        if (
+            globals.config.has('Butler-SOS.logEvents.tags') &&
+            globals.config.get('Butler-SOS.logEvents.tags').length > 0
+        ) {
+            const configTags = globals.config.get('Butler-SOS.logEvents.tags');
+            // eslint-disable-next-line no-restricted-syntax
+            for (const item of configTags) {
+                tags[item.tag] = item.value;
+            }
+        }
+
+        const datapoint = [
+            {
+                measurement: 'log_event',
+                tags,
+                fields,
+            },
+        ];
+
+        globals.influx
+            .writePoints(datapoint)
+            .then(() => {
+                globals.logger.silly(
+                    `LOG EVENT INFLUXDB: Influxdb datapoint for Butler SOS log event: ${JSON.stringify(
+                        datapoint,
+                        null,
+                        2
+                    )}`
+                );
+
+                globals.logger.verbose(
+                    'LOG EVENT INFLUXDB: Sent Butler SOS log event data to InfluxDB'
+                );
+            })
+            .catch((err) => {
+                globals.logger.error(
+                    `LOG EVENT INFLUXDB: Error saving log event to InfluxDB! ${err}`
+                );
+            });
+    } catch (err) {
+        globals.logger.error(`LOG EVENT INFLUXDB: Error saving log event to InfluxDB! ${err}`);
     }
 }
 
@@ -472,4 +602,5 @@ module.exports = {
     postUserSessionsToInfluxdb,
     postButlerSOSMemoryUsageToInfluxdb,
     postUserEventToInfluxdb,
+    postLogEventToInfluxdb,
 };
