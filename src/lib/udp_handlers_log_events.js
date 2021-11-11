@@ -203,6 +203,7 @@ function udpInitLogEventServer() {
                 }
 
                 globals.logger.debug(`LOG EVENT (json): ${JSON.stringify(msgObj, null, 2)}`);
+
                 // Post to MQTT (if enabled)
                 if (
                     ((globals.config.has('Butler-SOS.mqttConfig.enableMQTT') &&

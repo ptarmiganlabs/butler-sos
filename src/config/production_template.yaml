@@ -58,9 +58,34 @@ Butler-SOS:
     sendToInfluxdb:
       enable: true                  # Set to true if user events should be stored in InfluxDB
 
+  logEvents:
+    udpServerConfig:
+      serverHost: <IP or FQDN>      # Host/IP where log event server will listen for events from Sense
+      portLogEvents: 9996           # Port on which log event server will listen for events from Sense
+    tags:
+      - tag: env
+        value: DEV
+      - tag: foo
+        value: bar
+    source:
+      proxy:
+        enable: true                   # Should log events from the proxy service be handled?
+      repository:
+        enable: true                   # Should log events from the repository service be handled?
+      scheduler:
+        enable: true                   # Should log events from the scheduler service be handled?
+    sendToMQTT: 
+      enable: true                     # Should log events be sent as MQTT messages?
+      baseTopic: qliksense/logevent    # What topic should log events be forwarded to? 
+      postTo:
+        baseTopic: true
+        subsystemTopics: true          # Should log events be sent to subtopics corresponding to the QSEoW subsystems where the events originated?
+    sendToInfluxdb:
+      enable: true                     # Should log events be stored in InfluxDB?
+
   # Qlik Sense logging db config parameters
   logdb:
-    enable: true
+    enable: false
     # Items below are mandatory if logdb.enable=true
     pollingInterval: 60000            # How often (milliseconds) should Postgres log db be queried for warnings and errors?
     queryPeriod: 5 minutes            # How far back should Butler SOS query for log entries? Default is 5 min

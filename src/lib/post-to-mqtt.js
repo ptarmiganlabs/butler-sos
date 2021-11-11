@@ -136,11 +136,36 @@ function postUserEventToMQTT(msg) {
 }
 
 function postLogEventToMQTT(msg) {
-    // Get MQTT topic
-    const baseTopic = globals.config.get('Butler-SOS.logEvents.sendToMQTT.topic');
+    try {
+        // Get MQTT root topic
+        let baseTopic = globals.config.get('Butler-SOS.logEvents.sendToMQTT.baseTopic');
 
-    // Send to MQTT
-    globals.mqttClient.publish(baseTopic, JSON.stringify(msg));
+        // Send to MQTT root topic
+        if (globals.config.get('Butler-SOS.logEvents.sendToMQTT.postTo.baseTopic') === true) {
+            globals.mqttClient.publish(baseTopic, JSON.stringify(msg));
+        }
+
+        // Send to MQTT sub-topics
+        if (globals.config.get('Butler-SOS.logEvents.sendToMQTT.postTo.subsystemTopics') === true) {
+            // Add / to topic path if it's not already there
+            if (baseTopic.slice(-1) !== '/') {
+                baseTopic = `${baseTopic}/`;
+            }
+
+            const topicTree = msg.subsystem.split('.');
+
+            topicTree.forEach((element) => {
+                baseTopic += `${element}/`;
+            });
+
+            // Remove / at end of topic path
+            baseTopic = baseTopic.substring(0, baseTopic.length - 1);
+
+            globals.mqttClient.publish(baseTopic, JSON.stringify(msg));
+        }
+    } catch (err) {
+        globals.logger.error(`LOG EVENT MQTT: Failed posting message to MQTT ${err}.`);
+    }
 }
 
 module.exports = {
