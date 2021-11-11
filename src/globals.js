@@ -162,6 +162,11 @@ if (config.has('Butler-SOS.logEvents.tags')) {
     });
 }
 
+// Create InfluxDB tags for data coming from log db
+const tagValuesLogEventLogDb = tagValues.slice();
+tagValuesLogEventLogDb.push('source_process');
+tagValuesLogEventLogDb.push('log_level');
+
 if (
     (config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
         config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
@@ -267,6 +272,13 @@ const influx = new Influx.InfluxDB({
                 bytes_added: Influx.FieldType.INTEGER,
             },
             tags: tagValues,
+        },
+        {
+            measurement: 'log_event_logdb',
+            fields: {
+                message: Influx.FieldType.STRING,
+            },
+            tags: tagValuesLogEventLogDb,
         },
         {
             measurement: 'log_event',

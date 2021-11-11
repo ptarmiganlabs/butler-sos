@@ -128,7 +128,7 @@ function setupLogDbTimer() {
                                     globals.influx
                                         .writePoints([
                                             {
-                                                measurement: 'log_event',
+                                                measurement: 'log_event_logdb',
                                                 tags: tagsForDbEntry,
                                                 fields: {
                                                     message: row.payload.Message,
