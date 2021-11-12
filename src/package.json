@@ -28,6 +28,7 @@
   },
   "homepage": "https://github.com/ptarmiganlabs/butler-sos#readme",
   "dependencies": {
+    "@breejs/later": "^4.1.0",
     "axios": "^0.24.0",
     "config": "^3.3.6",
     "eslint": "^7.32.0",
@@ -40,7 +41,6 @@
     "fastify-metrics": "^8.0.0",
     "influx": "^5.9.2",
     "js-yaml": "^4.1.0",
-    "later": "^1.2.0",
     "lodash.clonedeep": "^4.5.0",
     "luxon": "^2.1.1",
     "mqtt": "^4.2.6",

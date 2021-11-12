@@ -16,7 +16,7 @@ Butler-SOS:
   heartbeat:
     enable: false
     remoteURL: http://my.monitoring.server/some/path/
-    frequency: every 1 hour         # https://bunkat.github.io/later/parsers.html
+    frequency: every 1 hour         # https://bunkat.github.io/later/parsers.html#text
 
   # Docker health checks are used when running Butler SOS as a Docker container. 
   # The Docker engine will call the container's health check REST endpoint with a set interval to determine
@@ -29,7 +29,7 @@ Butler-SOS:
   # Uptime monitor
   uptimeMonitor:
     enable: true                    # Should uptime messages be written to the console and log files?
-    frequency: every 15 minutes     # https://bunkat.github.io/later/parsers.html
+    frequency: every 15 minutes     # https://bunkat.github.io/later/parsers.html#text
     logLevel: verbose               # Starting at what log level should uptime messages be shown?
     storeInInfluxdb: 
       butlerSOSMemoryUsage: true    # Should data on Butler SOS' own memory use be stored in Infludb?
