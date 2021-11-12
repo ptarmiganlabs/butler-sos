@@ -418,12 +418,12 @@ function postUserEventToInfluxdb(msg) {
         // First prepare tags relating to the actual user event, then add tags defined in the config file
         // The config file tags can for example be used to separate data from DEV/TEST/PROD environments
         const tags = {
-            host: msg[1],
-            event_action: msg[2],
-            userFull: `${msg[3]}\\${msg[4]}`,
-            userDirectory: msg[3],
-            userId: msg[4],
-            origin: msg[5],
+            host: msg.host,
+            event_action: msg.command,
+            userFull: `${msg.user_directory}\\${msg.user_id}`,
+            userDirectory: msg.user_directory,
+            userId: msg.user_id,
+            origin: msg.origin,
         };
 
         if (
@@ -442,8 +442,8 @@ function postUserEventToInfluxdb(msg) {
                 measurement: 'user_events',
                 tags,
                 fields: {
-                    userFull: `${msg[3]}\\${msg[4]}`,
-                    userId: msg[4],
+                    userFull: tags.userFull,
+                    userId: tags.userId,
                 },
             },
         ];

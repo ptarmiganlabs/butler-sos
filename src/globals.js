@@ -67,7 +67,7 @@ try {
         : '';
 
     // Prepare to listen on port X for incoming UDP connections regarding user activity events
-    udpServerUserActivity.userActivitySocket = dgram.createSocket({
+    udpServerUserActivity.socket = dgram.createSocket({
         type: 'udp4',
         reuseAddr: true,
     });
@@ -128,7 +128,7 @@ pgPool.on('error', (err, client) => {
 // ..begin with standard tags
 const tagValues = ['host', 'server_name', 'server_description'];
 
-// ..check if there are any extra tags for this server that should be sent to InfluxDB
+// ..check if there are any extra tags for this Butler SOS instance that should be sent to InfluxDB
 if (config.has('Butler-SOS.serversToMonitor.serverTagsDefinition')) {
     // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
     config.get('Butler-SOS.serversToMonitor.serverTagsDefinition').forEach((entry) => {

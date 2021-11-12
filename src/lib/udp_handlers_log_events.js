@@ -22,7 +22,7 @@ function udpInitLogEventServer() {
     // Handler for UDP messages relating to log events
     globals.udpServerLogEvents.socket.on('message', async (message, _remote) => {
         try {
-            // Message parts for log messages from proxy service
+            // >> Message parts for log messages from proxy service
             // 0:  Message type. Always /qseow-proxy/
             // 1:  Row number
             // 2:  ISO8601 formatted timestamp. Example: 20211109T153726.028+0200
@@ -31,7 +31,7 @@ function udpInitLogEventServer() {
             // 5:  Hostname where the log event occured
             // 6:  QSEoW subsystem where log event occured. Example: Service.Repository.Repository.Core.Status.ServiceStatusWorker
             // 7:  Windows username running the originating QSEoW service. Ex: COMPANYNAME\qlikservice
-            // 8:  Message. Ex: Method: 'SendRimQrsStatusRequest'. Failed to retrieve service status from 'http://pro2-win2.lab.ptarmiganlabs.net:4444/status/'. Server host 'pro2-win2.lab.ptarmiganlabs.net'. Error message: 'Unable to connect to the remote server'
+            // 8:  Message. Can contain single quotes and semicolon - handle with care. Ex: Method: 'SendRimQrsStatusRequest'. Failed to retrieve service status from 'http://pro2-win2.lab.ptarmiganlabs.net:4444/status/'. Server host 'pro2-win2.lab.ptarmiganlabs.net'. Error message: 'Unable to connect to the remote server'
             // 9:  Exception message. Empty unless an exception/fault occured in QSEoW.
             // 10: QSEoW user directory associated with the event: Ex: TODO
             // 11: QSEoW user id associated with the event: Ex: TODO
@@ -40,7 +40,7 @@ function udpInitLogEventServer() {
             // 14: Origin of log event. Ex: TODO
             // 15: Context where the log event occured. Ex: TODO
 
-            // Message parts for log messages from repository service
+            // >> Message parts for log messages from repository service
             // 0:  Message type. Always /qseow-repository/
             // 1:  Row number
             // 2:  ISO8601 formatted timestamp. Example: 20211109T153726.028+0200
@@ -49,7 +49,7 @@ function udpInitLogEventServer() {
             // 5:  Hostname where the log event occured
             // 6:  QSEoW subsystem where log event occured. Example: Service.Repository.Repository.Core.Status.ServiceStatusWorker
             // 7:  Windows username running the originating QSEoW service. Ex: COMPANYNAME\qlikservice
-            // 8:  Message. Ex: Method: 'SendRimQrsStatusRequest'. Failed to retrieve service status from 'http://pro2-win2.lab.ptarmiganlabs.net:4444/status/'. Server host 'pro2-win2.lab.ptarmiganlabs.net'. Error message: 'Unable to connect to the remote server'
+            // 8:  Message. Can contain single quotes and semicolon - handle with care. Ex: Method: 'SendRimQrsStatusRequest'. Failed to retrieve service status from 'http://pro2-win2.lab.ptarmiganlabs.net:4444/status/'. Server host 'pro2-win2.lab.ptarmiganlabs.net'. Error message: 'Unable to connect to the remote server'
             // 9:  Exception message. Empty unless an exception/fault occured in QSEoW.
             // 10: QSEoW user directory associated with the event: Ex: INTERNAL
             // 11: QSEoW user id associated with the event: Ex: System
@@ -58,7 +58,7 @@ function udpInitLogEventServer() {
             // 14: Origin of log event. Ex: Not available
             // 15: Context where the log event occured. Ex: /qps/servicestatusworker
 
-            // Message parts for log messages from scheduler service
+            // >> Message parts for log messages from scheduler service
             // 0:  Message type. Always /qseow-scheduler/
             // 1:  Row number. Ex: 14
             // 2:  ISO8601 formatted timestamp. Example: 20211109T193744.331+0100
@@ -67,7 +67,7 @@ function udpInitLogEventServer() {
             // 5:  Hostname where the log event occured
             // 6:  QSEoW subsystem where log event occured. Example: System.Scheduler.Scheduler.Slave.Tasks.ReloadTask
             // 7:  Windows username running the originating QSEoW service. Ex: COMPANYNAME\qlikservice
-            // 8:  Message. Ex: Message from ReloadProvider: Reload failed in Engine. Check engine or script logs.
+            // 8:  Message. Can contain single quotes and semicolon - handle with care. Ex: Message from ReloadProvider: Reload failed in Engine. Check engine or script logs.
             // 9:  Exception message. Empty unless an exception/fault occured in QSEoW.
             // 10: QSEoW user directory of the user associated with the event. Note: For some log events this field is empty. Field #14 is then populated instead. Ex: LAB
             // 11: QSEoW user id of the user associated with the event. Note: For some log events this field is empty. Field #14 is then populated instead. Ex: goran

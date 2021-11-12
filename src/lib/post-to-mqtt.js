@@ -108,14 +108,14 @@ function postUserEventToMQTT(msg) {
 
     // Format payload
     const payload = {
-        messageType: msg[0],
-        host: msg[1],
-        command: msg[2],
-        userDir: msg[3],
-        userId: msg[4],
-        origin: msg[5],
-        context: msg[6],
-        message: msg[7],
+        messageType: msg.messageType,
+        host: msg.host,
+        command: msg.command,
+        userDir: msg.user_directory,
+        userId: msg.user_id,
+        origin: msg.origin,
+        context: msg.context,
+        message: msg.message,
         tags: {},
     };
 

@@ -105,7 +105,7 @@ async function mainScript() {
         );
 
         // Start UDP server for user activity events
-        globals.udpServerUserActivity.userActivitySocket.bind(
+        globals.udpServerUserActivity.socket.bind(
             globals.udpServerUserActivity.portUserActivity,
             globals.udpServerUserActivity.host
         );
