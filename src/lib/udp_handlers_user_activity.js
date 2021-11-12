@@ -42,20 +42,20 @@ function udpInitUserActivityServer() {
             const msgTmp1 = message.toString().split(';');
             const msg = msgTmp1.slice(0, 7);
 
-            globals.logger.verbose(`USER ACTIVITY: ${msgTmp1[0]} - ${msgTmp1[4]} - ${msgTmp1[6]}`);
+            globals.logger.verbose(`USER ACTIVITY: ${msg[0]} - ${msg[4]} - ${msg[6]}`);
 
             console.log('--------------------------------------------------');
-            console.log(`USER: ${msgTmp1}`);
-            console.log(`${msgTmp1[0]} - ${msgTmp1[4]} - ${msgTmp1[6]}`);
+            console.log(`USER: ${msg}`);
+            console.log(`${msg[0]} - ${msg[4]} - ${msg[6]}`);
 
             // Clean up the first message field (=message source)
             // Remove leading and trailing /
-            msgTmp1[0] = msgTmp1[0].toLowerCase().replace('/', '');
-            msgTmp1[0] = msgTmp1[0].replace('/', '');
+            msg[0] = msg[0].toLowerCase().replace('/', '');
+            msg[0] = msg[0].replace('/', '');
 
             // Build object and convert to JSON
             let msgObj;
-            if (msgTmp1[0] === 'qseow-proxy-connection' || msgTmp1[0] === 'qseow-proxy-session') {
+            if (msg[0] === 'qseow-proxy-connection' || msg[0] === 'qseow-proxy-session') {
                 msgObj = {
                     messageType: msg[0],
                     host: msg[1],

@@ -102,37 +102,94 @@ function postUserSessionsToMQTT(host, virtualProxy, body) {
 }
 
 function postUserEventToMQTT(msg) {
-    // Get MQTT topic
-    const baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
-    const topic = globals.config.get('Butler-SOS.userEvents.sendToMQTT.topic');
+    try {
+        // Create payload
+        const payload = {
+            messageType: msg.messageType,
+            host: msg.host,
+            command: msg.command,
+            userDir: msg.user_directory,
+            userId: msg.user_id,
+            origin: msg.origin,
+            context: msg.context,
+            message: msg.message,
+            tags: {},
+        };
 
-    // Format payload
-    const payload = {
-        messageType: msg.messageType,
-        host: msg.host,
-        command: msg.command,
-        userDir: msg.user_directory,
-        userId: msg.user_id,
-        origin: msg.origin,
-        context: msg.context,
-        message: msg.message,
-        tags: {},
-    };
-
-    // Add custom tags from config file to payload
-    if (
-        globals.config.has('Butler-SOS.userEvents.tags') &&
-        globals.config.get('Butler-SOS.userEvents.tags').length > 0
-    ) {
-        const configTags = globals.config.get('Butler-SOS.userEvents.tags');
-        // eslint-disable-next-line no-restricted-syntax
-        for (const item of configTags) {
-            payload.tags[item.tag] = item.value;
+        // Add custom tags from config file to payload
+        if (
+            globals.config.has('Butler-SOS.userEvents.tags') &&
+            globals.config.get('Butler-SOS.userEvents.tags').length > 0
+        ) {
+            const configTags = globals.config.get('Butler-SOS.userEvents.tags');
+            // eslint-disable-next-line no-restricted-syntax
+            for (const item of configTags) {
+                payload.tags[item.tag] = item.value;
+            }
         }
-    }
 
-    // Send to MQTT
-    globals.mqttClient.publish(baseTopic + topic, JSON.stringify(payload));
+        // Send message to MQTT topics, as defined in the config file.
+        let topic;
+        if (
+            globals.config.get('Butler-SOS.userEvents.sendToMQTT.postTo.everythingTopic.enable') ===
+            true
+        ) {
+            topic = globals.config.get(
+                'Butler-SOS.userEvents.sendToMQTT.postTo.everythingTopic.topic'
+            );
+            globals.mqttClient.publish(topic, JSON.stringify(payload));
+        }
+
+        if (
+            globals.config.get(
+                'Butler-SOS.userEvents.sendToMQTT.postTo.sessionStartTopic.enable'
+            ) === true &&
+            payload.command === 'Start session'
+        ) {
+            topic = globals.config.get(
+                'Butler-SOS.userEvents.sendToMQTT.postTo.sessionStartTopic.topic'
+            );
+            globals.mqttClient.publish(topic, JSON.stringify(payload));
+        }
+
+        if (
+            globals.config.get(
+                'Butler-SOS.userEvents.sendToMQTT.postTo.sessionStopTopic.enable'
+            ) === true &&
+            payload.command === 'Stop session'
+        ) {
+            topic = globals.config.get(
+                'Butler-SOS.userEvents.sendToMQTT.postTo.sessionStopTopic.topic'
+            );
+            globals.mqttClient.publish(topic, JSON.stringify(payload));
+        }
+
+        if (
+            globals.config.get(
+                'Butler-SOS.userEvents.sendToMQTT.postTo.connectionOpenTopic.enable'
+            ) === true &&
+            payload.command === 'Open connection'
+        ) {
+            topic = globals.config.get(
+                'Butler-SOS.userEvents.sendToMQTT.postTo.connectionOpenTopic.topic'
+            );
+            globals.mqttClient.publish(topic, JSON.stringify(payload));
+        }
+
+        if (
+            globals.config.get(
+                'Butler-SOS.userEvents.sendToMQTT.postTo.connectionCloseTopic.enable'
+            ) === true &&
+            payload.command === 'Close connection'
+        ) {
+            topic = globals.config.get(
+                'Butler-SOS.userEvents.sendToMQTT.postTo.connectionCloseTopic.topic'
+            );
+            globals.mqttClient.publish(topic, JSON.stringify(payload));
+        }
+    } catch (err) {
+        globals.logger.error(`USER EVENT MQTT: Failed posting message to MQTT ${err}.`);
+    }
 }
 
 function postLogEventToMQTT(msg) {

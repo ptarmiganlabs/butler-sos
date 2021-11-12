@@ -54,7 +54,22 @@ Butler-SOS:
         value: bar
     sendToMQTT: 
       enable: false                 # Set to true if user events should be forwarded as MQTT messages
-      topic: userEvent              # MQTT topic to use for user event messages
+      postTo:                       # Control when and to which MQTT topics messages are sent 
+        everythingTopic:            # Topic to which all user events are sent
+          enable: true
+          topic: qliksense/userevent
+        sessionStartTopic:          # Topic to which "session start" events are sent
+          enable: true
+          topic: qliksense/userevent/session/start
+        sessionStopTopic:           # Topic to which "session stop" events are sent
+          enable: true
+          topic: qliksense/userevent/session/stop
+        connectionOpenTopic:        # Topic to which "connection open" events are sent
+          enable: true
+          topic: qliksense/userevent/connection/open
+        connectionCloseTopic:       # Topic to which "connection close" events are sent
+          enable: true
+          topic: qliksense/userevent/connection/close
     sendToInfluxdb:
       enable: true                  # Set to true if user events should be stored in InfluxDB
 
