@@ -44,9 +44,9 @@ function udpInitUserActivityServer() {
 
             globals.logger.verbose(`USER ACTIVITY: ${msg[0]} - ${msg[4]} - ${msg[6]}`);
 
-            console.log('--------------------------------------------------');
-            console.log(`USER: ${msg}`);
-            console.log(`${msg[0]} - ${msg[4]} - ${msg[6]}`);
+            // console.log('--------------------------------------------------');
+            // console.log(`USER: ${msg}`);
+            // console.log(`${msg[0]} - ${msg[4]} - ${msg[6]}`);
 
             // Clean up the first message field (=message source)
             // Remove leading and trailing /

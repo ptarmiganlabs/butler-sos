@@ -228,7 +228,7 @@ function postLogEventToMQTT(msg) {
             const topicTree = msg.subsystem.split('.');
 
             topicTree.forEach((element) => {
-                baseTopic += `${element}/`;
+                baseTopic += `${element.toLowerCase()}/`;
             });
 
             // Remove / at end of topic path
