@@ -137,7 +137,7 @@ Butler-SOS:
   # Prometheus config
   # If enabled, select Butler SOS metrics will be exposed on a Prometheus compatible URL from where they can be scraped.
   prometheus:
-    enable: false                                    # Default false
+    enable: false                                   # Default false
     host: <IP or FQDN where Butler SOS is running>  # On what IP/FQDN should the Prometheus metrics be exposed? Default 0.0.0.0, i.e. all available IPs
     port: 9842                                      # Port for Prometheus endpoint. Default 9842
 
