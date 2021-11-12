@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 
-const later = require('later');
+const later = require('@breejs/later');
 const axios = require('axios');
 
 const callRemoteURL = function callRemoteURL(remoteURL, logger) {
