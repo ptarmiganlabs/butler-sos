@@ -54,6 +54,6 @@
   },
   "devDependencies": {
     "prettier": "2.4.1",
-    "snyk": "^1.759.0"
+    "snyk": "1.759.0"
   }
 }
