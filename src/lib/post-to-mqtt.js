@@ -140,6 +140,22 @@ function postLogEventToMQTT(msg) {
         // Get MQTT root topic
         let baseTopic = globals.config.get('Butler-SOS.logEvents.sendToMQTT.baseTopic');
 
+        const payload = msg;
+
+        payload.tags = {};
+
+        // Add custom tags from config file to payload
+        if (
+            globals.config.has('Butler-SOS.logEvents.tags') &&
+            globals.config.get('Butler-SOS.logEvents.tags').length > 0
+        ) {
+            const configTags = globals.config.get('Butler-SOS.logEvents.tags');
+            // eslint-disable-next-line no-restricted-syntax
+            for (const item of configTags) {
+                payload.tags[item.tag] = item.value;
+            }
+        }
+
         // Send to MQTT root topic
         if (globals.config.get('Butler-SOS.logEvents.sendToMQTT.postTo.baseTopic') === true) {
             globals.mqttClient.publish(baseTopic, JSON.stringify(msg));
