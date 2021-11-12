@@ -16,7 +16,8 @@ const sessionMetrics = require('./lib/sessionmetrics');
 const appNamesExtract = require('./lib/appnamesextract');
 const heartbeat = require('./lib/heartbeat');
 const serviceUptime = require('./lib/service_uptime');
-const udp = require('./lib/udp_handlers');
+const udpUserActivity = require('./lib/udp_handlers_user_activity');
+const udpLogEvents = require('./lib/udp_handlers_log_events');
 const telemetry = require('./lib/telemetry');
 const promClient = require('./lib/prom-client');
 
@@ -92,19 +93,41 @@ async function mainScript() {
         globals.logger.error(`CONFIG: Error initiating host info: ${err}`);
     }
 
-    // Set up UDP handler
+    // Set up UDP handler for user activity/events
     if (
         globals.config.has('Butler-SOS.userEvents.enable') &&
         globals.config.get('Butler-SOS.userEvents.enable')
     ) {
-        udp.udpInitUserActivityServer();
+        udpUserActivity.udpInitUserActivityServer();
 
-        globals.logger.debug(`MAIN: Server for UDP server: ${globals.udpServer.host}`);
+        globals.logger.debug(
+            `MAIN: Server for user activity/events UDP server: ${globals.udpServerUserActivity.host}`
+        );
 
         // Start UDP server for user activity events
-        globals.udpServer.userActivitySocket.bind(
-            globals.udpServer.portUserActivity,
-            globals.udpServer.host
+        globals.udpServerUserActivity.socket.bind(
+            globals.udpServerUserActivity.portUserActivity,
+            globals.udpServerUserActivity.host
+        );
+    }
+
+    // Set up UDP handler for log events
+    if (
+        (globals.config.has('Butler-SOS.logEvents.source.repository.enable') &&
+            globals.config.get('Butler-SOS.logEvents.source.repository.enable')) ||
+        (globals.config.has('Butler-SOS.logEvents.source.scheduler.enable') &&
+            globals.config.get('Butler-SOS.logEvents.source.scheduler.enable'))
+    ) {
+        udpLogEvents.udpInitLogEventServer();
+
+        globals.logger.debug(
+            `MAIN: Server for user activity/events UDP server: ${globals.udpServerLogEvents.host}`
+        );
+
+        // Start UDP server for user activity events
+        globals.udpServerLogEvents.socket.bind(
+            globals.udpServerLogEvents.port,
+            globals.udpServerLogEvents.host
         );
     }
 

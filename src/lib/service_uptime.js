@@ -1,5 +1,5 @@
 /* eslint-disable no-bitwise */
-const later = require('later');
+const later = require('@breejs/later');
 const luxon = require('luxon');
 
 const globals = require('../globals');
@@ -18,6 +18,7 @@ function serviceUptimeStart() {
     const formatter = new Intl.NumberFormat('en-US');
 
     // Log uptime to console
+    // eslint-disable-next-line no-extend-native
     Number.prototype.toTime = function convToTime(isSec) {
         const ms = isSec ? this * 1e3 : this;
         const lm = ~(4 * !!isSec);

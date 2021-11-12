@@ -16,7 +16,7 @@ Butler-SOS:
   heartbeat:
     enable: false
     remoteURL: http://my.monitoring.server/some/path/
-    frequency: every 1 hour         # https://bunkat.github.io/later/parsers.html
+    frequency: every 1 hour         # https://bunkat.github.io/later/parsers.html#text
 
   # Docker health checks are used when running Butler SOS as a Docker container. 
   # The Docker engine will call the container's health check REST endpoint with a set interval to determine
@@ -29,7 +29,7 @@ Butler-SOS:
   # Uptime monitor
   uptimeMonitor:
     enable: true                    # Should uptime messages be written to the console and log files?
-    frequency: every 15 minutes     # https://bunkat.github.io/later/parsers.html
+    frequency: every 15 minutes     # https://bunkat.github.io/later/parsers.html#text
     logLevel: verbose               # Starting at what log level should uptime messages be shown?
     storeInInfluxdb: 
       butlerSOSMemoryUsage: true    # Should data on Butler SOS' own memory use be stored in Infludb?
@@ -54,13 +54,53 @@ Butler-SOS:
         value: bar
     sendToMQTT: 
       enable: false                 # Set to true if user events should be forwarded as MQTT messages
-      topic: userEvent              # MQTT topic to use for user event messages
+      postTo:                       # Control when and to which MQTT topics messages are sent 
+        everythingTopic:            # Topic to which all user events are sent
+          enable: true
+          topic: qliksense/userevent
+        sessionStartTopic:          # Topic to which "session start" events are sent
+          enable: true
+          topic: qliksense/userevent/session/start
+        sessionStopTopic:           # Topic to which "session stop" events are sent
+          enable: true
+          topic: qliksense/userevent/session/stop
+        connectionOpenTopic:        # Topic to which "connection open" events are sent
+          enable: true
+          topic: qliksense/userevent/connection/open
+        connectionCloseTopic:       # Topic to which "connection close" events are sent
+          enable: true
+          topic: qliksense/userevent/connection/close
     sendToInfluxdb:
       enable: true                  # Set to true if user events should be stored in InfluxDB
 
+  logEvents:
+    udpServerConfig:
+      serverHost: <IP or FQDN>      # Host/IP where log event server will listen for events from Sense
+      portLogEvents: 9996           # Port on which log event server will listen for events from Sense
+    tags:
+      - tag: env
+        value: DEV
+      - tag: foo
+        value: bar
+    source:
+      proxy:
+        enable: true                   # Should log events from the proxy service be handled?
+      repository:
+        enable: true                   # Should log events from the repository service be handled?
+      scheduler:
+        enable: true                   # Should log events from the scheduler service be handled?
+    sendToMQTT: 
+      enable: true                     # Should log events be sent as MQTT messages?
+      baseTopic: qliksense/logevent    # What topic should log events be forwarded to? 
+      postTo:
+        baseTopic: true
+        subsystemTopics: true          # Should log events be sent to subtopics corresponding to the QSEoW subsystems where the events originated?
+    sendToInfluxdb:
+      enable: true                     # Should log events be stored in InfluxDB?
+
   # Qlik Sense logging db config parameters
   logdb:
-    enable: true
+    enable: false
     # Items below are mandatory if logdb.enable=true
     pollingInterval: 60000            # How often (milliseconds) should Postgres log db be queried for warnings and errors?
     queryPeriod: 5 minutes            # How far back should Butler SOS query for log entries? Default is 5 min
@@ -76,8 +116,6 @@ Butler-SOS:
 
   # Certificates to use when connecting to Sense. Get these from the Certificate Export in QMC.
   cert:
-    rejectUnauthorized: false           # Set to false to ignore warnings/errors caused by Qlik Sense's self-signed certificates.
-                                        # Set to true if the Qlik Sense root CA is available on the computer where Butler SOS is running.
     clientCert: <path/to/cert/client.pem>
     clientCertKey: <path/to/cert/client_key.pem>
     clientCertCA: <path/to/cert/root.pem>
@@ -99,7 +137,7 @@ Butler-SOS:
   # Prometheus config
   # If enabled, select Butler SOS metrics will be exposed on a Prometheus compatible URL from where they can be scraped.
   prometheus:
-    enable: false                                    # Default false
+    enable: false                                   # Default false
     host: <IP or FQDN where Butler SOS is running>  # On what IP/FQDN should the Prometheus metrics be exposed? Default 0.0.0.0, i.e. all available IPs
     port: 9842                                      # Port for Prometheus endpoint. Default 9842
 

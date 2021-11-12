@@ -58,26 +58,49 @@ const logger = winston.createLogger({
 const getLoggingLevel = () => logTransports.find((transport) => transport.name === 'console').level;
 
 // ------------------------------------
-// UDP server connection parameters
-const udpServer = {};
+// User activity UDP server
+const udpServerUserActivity = {};
+
 try {
-    udpServer.host = config.has('Butler-SOS.userEvents.udpServerConfig.serverHost')
+    udpServerUserActivity.host = config.has('Butler-SOS.userEvents.udpServerConfig.serverHost')
         ? config.get('Butler-SOS.userEvents.udpServerConfig.serverHost')
         : '';
 
     // Prepare to listen on port X for incoming UDP connections regarding user activity events
-    udpServer.userActivitySocket = dgram.createSocket({
+    udpServerUserActivity.socket = dgram.createSocket({
         type: 'udp4',
         reuseAddr: true,
     });
 
-    udpServer.portUserActivity = config.has(
+    udpServerUserActivity.portUserActivity = config.has(
         'Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents'
     )
         ? config.get('Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents')
         : '';
 } catch (err) {
     logger.error(`CONFIG: Setting up UDP user activity listener: ${err}`);
+}
+
+// ------------------------------------
+// Log events UDP server
+const udpServerLogEvents = {};
+
+try {
+    udpServerLogEvents.host = config.has('Butler-SOS.logEvents.udpServerConfig.serverHost')
+        ? config.get('Butler-SOS.logEvents.udpServerConfig.serverHost')
+        : '';
+
+    // Prepare to listen on port X for incoming UDP connections regarding user activity events
+    udpServerLogEvents.socket = dgram.createSocket({
+        type: 'udp4',
+        reuseAddr: true,
+    });
+
+    udpServerLogEvents.port = config.has('Butler-SOS.logEvents.udpServerConfig.portLogEvents')
+        ? config.get('Butler-SOS.logEvents.udpServerConfig.portLogEvents')
+        : '';
+} catch (err) {
+    logger.error(`CONFIG: Setting up UDP log events listener: ${err}`);
 }
 
 // ------------------------------------
@@ -105,7 +128,7 @@ pgPool.on('error', (err, client) => {
 // ..begin with standard tags
 const tagValues = ['host', 'server_name', 'server_description'];
 
-// ..check if there are any extra tags for this server that should be sent to InfluxDB
+// ..check if there are any extra tags for this Butler SOS instance that should be sent to InfluxDB
 if (config.has('Butler-SOS.serversToMonitor.serverTagsDefinition')) {
     // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
     config.get('Butler-SOS.serversToMonitor.serverTagsDefinition').forEach((entry) => {
@@ -115,27 +138,48 @@ if (config.has('Butler-SOS.serversToMonitor.serverTagsDefinition')) {
     });
 }
 
-// Log events need a couple of extra tags
+// Add tags for log events
 const tagValuesLogEvent = tagValues.slice();
-tagValuesLogEvent.push('source_process');
-tagValuesLogEvent.push('log_level');
+tagValuesLogEvent.push('level');
+tagValuesLogEvent.push('source');
+tagValuesLogEvent.push('log_row');
+tagValuesLogEvent.push('subsystem');
+tagValuesLogEvent.push('user_full');
+tagValuesLogEvent.push('user_directory');
+tagValuesLogEvent.push('user_id');
+tagValuesLogEvent.push('task_id');
+tagValuesLogEvent.push('task_name');
+tagValuesLogEvent.push('result_code');
+
+// Check if there are any extra log event tags in the config file
+if (config.has('Butler-SOS.logEvents.tags')) {
+    config.get('Butler-SOS.logEvents.tags').forEach((entry) => {
+        logger.debug(
+            `CONFIG: Setting up new Influx database: Found log event tag in config file: ${entry}`
+        );
+
+        tagValuesLogEvent.push(entry.tag);
+    });
+}
+
+// Create InfluxDB tags for data coming from log db
+const tagValuesLogEventLogDb = tagValues.slice();
+tagValuesLogEventLogDb.push('source_process');
+tagValuesLogEventLogDb.push('log_level');
 
 if (
-    config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
-    config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true
+    (config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
+        config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
+    (config.has('Butler-SOS.influxdbConfig.enable') &&
+        config.get('Butler-SOS.influxdbConfig.enable') === true)
 ) {
-    logger.info(
-        `CONFIG: Influxdb enabled: ${config.get('Butler-SOS.influxdbConfig.enableInfluxdb')}`
-    );
-} else if (
-    config.has('Butler-SOS.influxdbConfig.enable') &&
-    config.get('Butler-SOS.influxdbConfig.enable') === true
-) {
-    logger.info(`CONFIG: Influxdb enabled: ${config.get('Butler-SOS.influxdbConfig.enable')}`);
+    logger.info(`CONFIG: Influxdb enabled: true`);
+    logger.info(`CONFIG: Influxdb host IP: ${config.get('Butler-SOS.influxdbConfig.hostIP')}`);
+    logger.info(`CONFIG: Influxdb host port: ${config.get('Butler-SOS.influxdbConfig.hostPort')}`);
+    logger.info(`CONFIG: Influxdb db name: ${config.get('Butler-SOS.influxdbConfig.dbName')}`);
+} else {
+    logger.info(`CONFIG: Influxdb enabled: false`);
 }
-logger.info(`CONFIG: Influxdb host IP: ${config.get('Butler-SOS.influxdbConfig.hostIP')}`);
-logger.info(`CONFIG: Influxdb host port: ${config.get('Butler-SOS.influxdbConfig.hostPort')}`);
-logger.info(`CONFIG: Influxdb db name: ${config.get('Butler-SOS.influxdbConfig.dbName')}`);
 
 // Set up Influxdb client
 const influx = new Influx.InfluxDB({
@@ -230,9 +274,25 @@ const influx = new Influx.InfluxDB({
             tags: tagValues,
         },
         {
+            measurement: 'log_event_logdb',
+            fields: {
+                message: Influx.FieldType.STRING,
+            },
+            tags: tagValuesLogEventLogDb,
+        },
+        {
             measurement: 'log_event',
             fields: {
                 message: Influx.FieldType.STRING,
+                exception_message: Influx.FieldType.STRING,
+                app_name: Influx.FieldType.STRING,
+                app_id: Influx.FieldType.STRING,
+                execution_id: Influx.FieldType.STRING,
+                command: Influx.FieldType.STRING,
+                result_code: Influx.FieldType.STRING,
+                origin: Influx.FieldType.STRING,
+                context: Influx.FieldType.STRING,
+                raw_event: Influx.FieldType.STRING,
             },
             tags: tagValuesLogEvent,
         },
@@ -405,7 +465,8 @@ module.exports = {
     serverList,
     initInfluxDB,
     appNames,
-    udpServer,
+    udpServerUserActivity,
+    udpServerLogEvents,
     initHostInfo,
     hostInfo,
 };
