@@ -60,6 +60,7 @@ async function mainScript() {
         globals.logger.info('Starting Butler SOS');
         globals.logger.info(`Log level: ${globals.getLoggingLevel()}`);
         globals.logger.info(`App version: ${globals.appVersion}`);
+        globals.logger.info(`Instance ID    : ${globals.hostInfo.id}`);
         globals.logger.info('');
         globals.logger.info(`Node version   : ${globals.hostInfo.node.nodeVersion}`);
         globals.logger.info(`Architecture   : ${globals.hostInfo.si.os.arch}`);
