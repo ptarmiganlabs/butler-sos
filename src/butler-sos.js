@@ -117,7 +117,9 @@ async function mainScript() {
         (globals.config.has('Butler-SOS.logEvents.source.repository.enable') &&
             globals.config.get('Butler-SOS.logEvents.source.repository.enable')) ||
         (globals.config.has('Butler-SOS.logEvents.source.scheduler.enable') &&
-            globals.config.get('Butler-SOS.logEvents.source.scheduler.enable'))
+            globals.config.get('Butler-SOS.logEvents.source.scheduler.enable')) ||
+        (globals.config.has('Butler-SOS.logEvents.source.proxy.enable') &&
+            globals.config.get('Butler-SOS.logEvents.source.proxy.enable'))
     ) {
         udpLogEvents.udpInitLogEventServer();
 
