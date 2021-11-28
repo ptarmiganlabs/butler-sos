@@ -5,6 +5,10 @@ services:
     image: ptarmiganlabs/butler-sos:latest
     container_name: butler-sos
     restart: always
+    ports:
+      - "9997:9997"
+      - "9996:9996"
+      - "9842:9842"
     volumes:
       # Make config file accessible outside of container
       - "./config:/nodeapp/config"

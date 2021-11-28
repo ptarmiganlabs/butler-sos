@@ -36,7 +36,7 @@ Butler-SOS:
       instanceTag: DEV              # Tag that can be used to differentiate data from multiple Butler SOS instances
 
   # Track individual users opening/closing apps and starting/stopping sessions. 
-  # Requires log appender XML file(s) to be added to Sense server(s.
+  # Requires log appender XML file(s) to be added to Sense server(s).
   userEvents:                       
     enable: false
     excludeUser:                    # Optional blacklist of users that should be disregarded when it comes to user events
@@ -73,6 +73,7 @@ Butler-SOS:
     sendToInfluxdb:
       enable: true                  # Set to true if user events should be stored in InfluxDB
 
+  # Log events are used to capture Sense warnings, errors and fatals in real time
   logEvents:
     udpServerConfig:
       serverHost: <IP or FQDN>      # Host/IP where log event server will listen for events from Sense
@@ -84,19 +85,19 @@ Butler-SOS:
         value: bar
     source:
       proxy:
-        enable: true                   # Should log events from the proxy service be handled?
+        enable: false                   # Should log events from the proxy service be handled?
       repository:
-        enable: true                   # Should log events from the repository service be handled?
+        enable: false                   # Should log events from the repository service be handled?
       scheduler:
-        enable: true                   # Should log events from the scheduler service be handled?
+        enable: false                   # Should log events from the scheduler service be handled?
     sendToMQTT: 
-      enable: true                     # Should log events be sent as MQTT messages?
+      enable: false                     # Should log events be sent as MQTT messages?
       baseTopic: qliksense/logevent    # What topic should log events be forwarded to? 
       postTo:
         baseTopic: true
         subsystemTopics: true          # Should log events be sent to subtopics corresponding to the QSEoW subsystems where the events originated?
     sendToInfluxdb:
-      enable: true                     # Should log events be stored in InfluxDB?
+      enable: false                     # Should log events be stored in InfluxDB?
 
   # Qlik Sense logging db config parameters
   logdb:
@@ -104,13 +105,13 @@ Butler-SOS:
     # Items below are mandatory if logdb.enable=true
     pollingInterval: 60000            # How often (milliseconds) should Postgres log db be queried for warnings and errors?
     queryPeriod: 5 minutes            # How far back should Butler SOS query for log entries? Default is 5 min
-    host: <IP or FQDN of Qlik Sense logging db>
-    port: 4432
+    host: <IP or FQDN of Qlik Sense logging db>   # E.g. 10.5.23.7 or sense.mycompany.com
+    port: 4432                        # 4432 if using default Sense setup
     qlogsReaderUser: qlogs_reader
     qlogsReaderPwd: <pwd>
     extractErrors: true               # Should error level entries be extracted from log db into Influxdb?
     extractWarnings: true             # Should warn level entries be extracted from log db into Influxdb?
-    extractInfo: false                 # Should info level entries be extracted from log db into Influxdb? 
+    extractInfo: false                # Should info level entries be extracted from log db into Influxdb? 
                                       # Warning! Seting this to true will result in LOTS of log messages 
                                       # being retrrieved by Butler SOS!
 
@@ -132,7 +133,7 @@ Butler-SOS:
     # Items below are mandatory if mqttConfig.enable=true
     brokerHost: <IP of MQTT broker/server>
     brokerPort: 1883
-    baseTopic: butler-sos/          # Topic should end with /
+    baseTopic: butler-sos/          # Default topic used if not not oherwise specified elsewhere. Should end with /
 
   # Prometheus config
   # If enabled, select Butler SOS metrics will be exposed on a Prometheus compatible URL from where they can be scraped.
@@ -157,9 +158,9 @@ Butler-SOS:
     # Any data older than retention policy threshold will be purged from InfluxDB.
     retentionPolicy:
       name: 10d
-      duration: 10d
+      duration: 10d                 # Possible duration units here: https://docs.influxdata.com/influxdb/v1.8/query_language/spec/#durations
 
-    # Control whether certain fields are stored in InfluxDB or not
+    # Control whether certain metrics are stored in InfluxDB or not
     # Use with caution! Enabling activeDocs, loadedDocs or inMemoryDocs may result in lots of data sent to InfluxDB.
     includeFields:
       activeDocs: false              # Should data on what docs are active be stored in Influxdb (true/false)? 
@@ -195,22 +196,25 @@ Butler-SOS:
     # List of extra tags for each server. Useful for creating more advanced Grafana dashboards.
     # Each server below MUST include these tags in its serverTags property.
     # The tags below are just examples - define your own as needed
+    # These tags will also be used to label data exposed on the Prometheus endpoint (if it is enabled)
+    # NOTE: Prometheus only allows label names consisting of ASCII letters, numbers, as well as underscores. They must match the regex [a-zA-Z_][a-zA-Z0-9_]*. 
+    # I.e. if the Prometheus endpoint is enabled, the tag names below must follow the label naming standard of Prometheus. 
     serverTagsDefinition: 
       - server_group
       - serverLocation
-      - server-type
+      - server_type
       - serverBrand
 
     # Sense Servers that should be queried for healthcheck data 
     servers:
-      - host: <server1.my.domain>:4747
+      - host: <server1.my.domain>:4747        # Example: 10.34.3.45:4747
         serverName: <server1>
         serverDescription: <description>
         logDbHost: <host name as used in QLogs db>
         userSessions:
           enable: true
           # Items below are mandatory if userSessions.enable=true
-          host: <server1.my.domain>:4243
+          host: <server1.my.domain>:4243      # Example: 10.34.3.45:4243
           virtualProxies:
             - virtualProxy: /                 # Default virtual proxy
             - virtualProxy: /hdr              # "hdr" virtual proxy
@@ -220,14 +224,14 @@ Butler-SOS:
           serverLocation: Asia
           server-type: virtual
           serverBrand: Dell
-      - host: <server2.my.domain>:4747
+      - host: <server2.my.domain>:4747        # Example: 10.34.3.46:4747
         serverName: <server2>
         serverDescription: <description>
         logDbHost: <host name as used in QLogs db>
         userSessions:
           enable: true
           # Items below are mandatory if userSessions.enable=true
-          host: <server2.my.domain>:4243
+          host: <server2.my.domain>:4243      # Example: 10.34.3.46:4243
           virtualProxies:
             - virtualProxy: /finance          # "finance" virtual proxy
         serverTags:

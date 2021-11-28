@@ -21,7 +21,7 @@ services:
 
 
   prometheus:
-    image: prom/prometheus:v2.31.1
+    image: prom/prometheus:latest
     container_name: prometheus
     volumes:
       - ./prometheus/:/etc/prometheus/
