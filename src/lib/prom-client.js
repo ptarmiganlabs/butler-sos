@@ -109,7 +109,7 @@ async function setupPromClient(promServer, promPort, promHost) {
 
         promMetricCacheReplaced = new client.Gauge({
             name: 'butlersos_cache_replaced',
-            help: 'Number of cache objects replaced.',
+            help: 'Number of cache replaced cache objects.',
             labelNames: promLabels,
         });
 
