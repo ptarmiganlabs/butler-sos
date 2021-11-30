@@ -109,7 +109,10 @@ function setupLogDbTimer() {
                                     };
 
                                     // Add all tags defined for this server in the config file
-                                    if (serverItem.hasOwnProperty('serverTags')) {
+                                    if (
+                                        serverItem.hasOwnProperty('serverTags') &&
+                                        serverItem.serverTags !== null
+                                    ) {
                                         // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
                                         Object.entries(serverItem.serverTags).forEach((entry) => {
                                             tagsForDbEntry = Object.assign(tagsForDbEntry, {
