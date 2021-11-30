@@ -129,7 +129,10 @@ pgPool.on('error', (err, client) => {
 const tagValues = ['host', 'server_name', 'server_description'];
 
 // ..check if there are any extra tags for this Butler SOS instance that should be sent to InfluxDB
-if (config.has('Butler-SOS.serversToMonitor.serverTagsDefinition')) {
+if (
+    config.has('Butler-SOS.serversToMonitor.serverTagsDefinition') &&
+    config.get('Butler-SOS.serversToMonitor.serverTagsDefinition') !== null
+) {
     // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
     config.get('Butler-SOS.serversToMonitor.serverTagsDefinition').forEach((entry) => {
         logger.debug(`CONFIG: Setting up new Influx database: Found server tag : ${entry}`);
