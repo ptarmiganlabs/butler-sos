@@ -1,5 +1,12 @@
 # Changelog
 
+### [7.0.2](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v7.0.1...butler-sos-v7.0.2) (2021-11-30)
+
+
+### Bug Fixes
+
+* Better handling of empty lists in config file ([f9b22d9](https://www.github.com/ptarmiganlabs/butler-sos/commit/f9b22d90d3114d51290ce99ce0aee01e958c41c3)), closes [#281](https://www.github.com/ptarmiganlabs/butler-sos/issues/281)
+
 ### [7.0.1](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v7.0.0...butler-sos-v7.0.1) (2021-11-30)
 
 
