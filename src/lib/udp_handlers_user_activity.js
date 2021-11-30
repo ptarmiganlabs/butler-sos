@@ -84,6 +84,7 @@ function udpInitUserActivityServer() {
             // If so skip this event
             if (
                 globals.config.has('Butler-SOS.userEvents.excludeUser') &&
+                globals.config.get('Butler-SOS.userEvents.excludeUser') !== null &&
                 globals.config.get('Butler-SOS.userEvents.excludeUser').length > 0
             ) {
                 const excludeList = globals.config.get('Butler-SOS.userEvents.excludeUser');

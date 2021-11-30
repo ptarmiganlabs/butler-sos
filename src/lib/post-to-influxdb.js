@@ -428,6 +428,7 @@ function postUserEventToInfluxdb(msg) {
 
         if (
             globals.config.has('Butler-SOS.userEvents.tags') &&
+            globals.config.get('Butler-SOS.userEvents.tags') !== null &&
             globals.config.get('Butler-SOS.userEvents.tags').length > 0
         ) {
             const configTags = globals.config.get('Butler-SOS.userEvents.tags');
@@ -555,6 +556,7 @@ function postLogEventToInfluxdb(msg) {
 
         if (
             globals.config.has('Butler-SOS.logEvents.tags') &&
+            globals.config.get('Butler-SOS.logEvents.tags') !== null &&
             globals.config.get('Butler-SOS.logEvents.tags').length > 0
         ) {
             const configTags = globals.config.get('Butler-SOS.logEvents.tags');

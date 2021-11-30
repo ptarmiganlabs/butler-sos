@@ -155,7 +155,7 @@ tagValuesLogEvent.push('task_name');
 tagValuesLogEvent.push('result_code');
 
 // Check if there are any extra log event tags in the config file
-if (config.has('Butler-SOS.logEvents.tags')) {
+if (config.has('Butler-SOS.logEvents.tags') && config.get('Butler-SOS.logEvents.tags') !== null) {
     config.get('Butler-SOS.logEvents.tags').forEach((entry) => {
         logger.debug(
             `CONFIG: Setting up new Influx database: Found log event tag in config file: ${entry}`
