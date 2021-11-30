@@ -1,5 +1,17 @@
 # Changelog
 
+### [7.0.1](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v7.0.0...butler-sos-v7.0.1) (2021-11-30)
+
+
+### Bug Fixes
+
+* Handle config file with no server tags in it ([d9e9799](https://www.github.com/ptarmiganlabs/butler-sos/commit/d9e9799d1d4826ba460421cf12f13ac5d249c433)), closes [#276](https://www.github.com/ptarmiganlabs/butler-sos/issues/276)
+
+
+### Miscellaneous
+
+* Updated dependencies ([53d63fa](https://www.github.com/ptarmiganlabs/butler-sos/commit/53d63fa27e4a431959cad0d3cc46a746fd6a1375))
+
 ## [7.0.0](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v6.1.2...butler-sos-v7.0.0) (2021-11-28)
 
 
