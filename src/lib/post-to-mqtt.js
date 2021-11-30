@@ -119,6 +119,7 @@ function postUserEventToMQTT(msg) {
         // Add custom tags from config file to payload
         if (
             globals.config.has('Butler-SOS.userEvents.tags') &&
+            globals.config.get('Butler-SOS.userEvents.tags') !== null &&
             globals.config.get('Butler-SOS.userEvents.tags').length > 0
         ) {
             const configTags = globals.config.get('Butler-SOS.userEvents.tags');
@@ -204,6 +205,7 @@ function postLogEventToMQTT(msg) {
         // Add custom tags from config file to payload
         if (
             globals.config.has('Butler-SOS.logEvents.tags') &&
+            globals.config.get('Butler-SOS.logEvents.tags') !== null &&
             globals.config.get('Butler-SOS.logEvents.tags').length > 0
         ) {
             const configTags = globals.config.get('Butler-SOS.logEvents.tags');

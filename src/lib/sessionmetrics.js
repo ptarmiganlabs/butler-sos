@@ -251,6 +251,7 @@ function prepUserSessionMetrics(host, virtualProxy, body, tags) {
                 let includeUser = true;
                 if (
                     globals.config.has('Butler-SOS.userSessions.excludeUser') &&
+                    globals.config.get('Butler-SOS.userSessions.excludeUser') !== null &&
                     globals.config.get('Butler-SOS.userSessions.excludeUser').length > 0
                 ) {
                     const excludeList = globals.config.get('Butler-SOS.userSessions.excludeUser');
