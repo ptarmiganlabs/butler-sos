@@ -1,5 +1,67 @@
 # Changelog
 
+### [7.0.2](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v7.0.1...butler-sos-v7.0.2) (2021-11-30)
+
+
+### Bug Fixes
+
+* Better handling of empty lists in config file ([f9b22d9](https://www.github.com/ptarmiganlabs/butler-sos/commit/f9b22d90d3114d51290ce99ce0aee01e958c41c3)), closes [#281](https://www.github.com/ptarmiganlabs/butler-sos/issues/281)
+
+### [7.0.1](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v7.0.0...butler-sos-v7.0.1) (2021-11-30)
+
+
+### Bug Fixes
+
+* Handle config file with no server tags in it ([d9e9799](https://www.github.com/ptarmiganlabs/butler-sos/commit/d9e9799d1d4826ba460421cf12f13ac5d249c433)), closes [#276](https://www.github.com/ptarmiganlabs/butler-sos/issues/276)
+
+
+### Miscellaneous
+
+* Updated dependencies ([53d63fa](https://www.github.com/ptarmiganlabs/butler-sos/commit/53d63fa27e4a431959cad0d3cc46a746fd6a1375))
+
+## [7.0.0](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v6.1.2...butler-sos-v7.0.0) (2021-11-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* Add more control to user event MQTT msgs
+* Starting phasing out log db support
+* Log event handling in Butler SOS
+
+### Features
+
+* Add new features to anon telemetry msg ([3dc2fcb](https://www.github.com/ptarmiganlabs/butler-sos/commit/3dc2fcb8fe728b89d5d7cc6959d069a8eb80973f))
+* Log event handling in Butler SOS ([c082dbb](https://www.github.com/ptarmiganlabs/butler-sos/commit/c082dbb837d29417164ff3cc64a5ae5013474494))
+* MQTT topics follow QSEoW subsystems ([370a4ba](https://www.github.com/ptarmiganlabs/butler-sos/commit/370a4bac13cc4635e6de8ebdf766c0d134fc0e33))
+* Starting phasing out log db support ([d51d0bd](https://www.github.com/ptarmiganlabs/butler-sos/commit/d51d0bd0cff47006d00c164be705521c69cffd77))
+* **telemetry:** Show instance ID on startup ([c7277a7](https://www.github.com/ptarmiganlabs/butler-sos/commit/c7277a7b59f12d3ffa717ac216407275b2647e83))
+
+
+### Bug Fixes
+
+* Add port mappings to docker-compose file ([18436cc](https://www.github.com/ptarmiganlabs/butler-sos/commit/18436ccf9e6a79f9b69954ffaa08ddbf9f8ff5c8))
+* All MQTT substopics now lower case ([6c4b209](https://www.github.com/ptarmiganlabs/butler-sos/commit/6c4b2090600a08a2176d5be22fad51f34c9b0966))
+* Remove unused config file entries ([93a69b3](https://www.github.com/ptarmiganlabs/butler-sos/commit/93a69b379bb4f9ebed903dc536108e90f6d07f87))
+* Replace outdated scheduling library ([8648cd3](https://www.github.com/ptarmiganlabs/butler-sos/commit/8648cd38dc3a351619fdee94d9ba483a1f154411))
+
+
+### Refactoring
+
+* Align handling of user and log events ([efe0064](https://www.github.com/ptarmiganlabs/butler-sos/commit/efe0064b23048d71760aefc5cb4a9522145e746f))
+
+
+### feature
+
+* Add more control to user event MQTT msgs ([85b7bbd](https://www.github.com/ptarmiganlabs/butler-sos/commit/85b7bbdfb69e3fafcefa303565f6b560421d3cd3))
+
+
+### Miscellaneous
+
+* **deps:** Update dependencies to latest ver. ([72b170b](https://www.github.com/ptarmiganlabs/butler-sos/commit/72b170b18a3f76c8a0ddd3577161b232d007edba))
+* **deps:** update prom/prometheus docker tag to v2.31.1 ([62ead06](https://www.github.com/ptarmiganlabs/butler-sos/commit/62ead0616acbec933fd27efbc77d6aa62ac1c0c3))
+* **deps:** Update systeminformation, snyk and eslint-plugin-import ([f9e9481](https://www.github.com/ptarmiganlabs/butler-sos/commit/f9e94817f280969228abfa4ac7a95a9bde42a222))
+* Update dependencies ([b9be7ed](https://www.github.com/ptarmiganlabs/butler-sos/commit/b9be7ed250418ec8dfc8f061976f8ae3e8177f1c))
+
 ### [6.1.2](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v6.1.1...butler-sos-v6.1.2) (2021-11-05)
 
 
