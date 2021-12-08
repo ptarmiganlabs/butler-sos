@@ -1,5 +1,14 @@
 # Changelog
 
+### [7.0.4](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v7.0.3...butler-sos-v7.0.4) (2021-12-08)
+
+
+### Miscellaneous
+
+* **deps:** Update dependencies ([edacf52](https://www.github.com/ptarmiganlabs/butler-sos/commit/edacf52d3cd47c141c264c7984441f760ea4e47c))
+* **deps:** update dependency prettier to v2.5.1 ([69d44b1](https://www.github.com/ptarmiganlabs/butler-sos/commit/69d44b19e456f81c769ebb395d01300acb2737d5))
+* **deps:** update dependency snyk to v1.786.0 ([367579b](https://www.github.com/ptarmiganlabs/butler-sos/commit/367579b45e79d6dc5bf0cf8bfa39bf140ec62a98))
+
 ### [7.0.3](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v7.0.2...butler-sos-v7.0.3) (2021-12-01)
 
 
