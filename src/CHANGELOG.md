@@ -1,5 +1,18 @@
 # Changelog
 
+### [7.0.5](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v7.0.4...butler-sos-v7.0.5) (2022-01-13)
+
+
+### Bug Fixes
+
+* Improve logs when getting app names ([20eb302](https://www.github.com/ptarmiganlabs/butler-sos/commit/20eb30211fecd8263421ca1b0783484a2f120e7c))
+
+
+### Miscellaneous
+
+* **deps:** update dependency snyk to v1.788.0 ([c4cfe15](https://www.github.com/ptarmiganlabs/butler-sos/commit/c4cfe158fcf5b27e99efd1a2a09bf7b97409af17))
+* Update dependencies ([141d288](https://www.github.com/ptarmiganlabs/butler-sos/commit/141d288364657e5af40c69c75f2d5a7268e0cae8))
+
 ### [7.0.4](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v7.0.3...butler-sos-v7.0.4) (2021-12-08)
 
 
