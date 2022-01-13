@@ -10,6 +10,8 @@ const keyPath = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clie
 // caPath = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
 
 function getAppNames() {
+    globals.logger.verbose(`APP NAMES: Start getting app names from repository db`);
+
     // Set up Sense repository service configuration
     const configQRS = {
         hostname: globals.config.get('Butler-SOS.appNames.hostIP'),
@@ -47,7 +49,7 @@ function getAppNames() {
                 // Only set the global app names variable once all app names have been successfully retrieved
                 globals.appNames = clonedeep(appList);
 
-                globals.logger.info('APP NAMES: Done getting app names');
+                globals.logger.info('APP NAMES: Done getting app names from repository db');
             })
             .catch((err) => {
                 // Return error msg
