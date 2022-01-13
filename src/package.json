@@ -30,30 +30,30 @@
   "dependencies": {
     "@breejs/later": "^4.1.0",
     "axios": "^0.24.0",
-    "config": "^3.3.6",
+    "config": "^3.3.7",
     "eslint": "^7.32.0",
-    "eslint-config-airbnb-base": "14.2.1",
+    "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "8.3.0",
-    "eslint-plugin-import": "^2.25.3",
+    "eslint-plugin-import": "^2.25.4",
     "eslint-plugin-prettier": "^4.0.0",
-    "fastify": "^3.24.1",
+    "fastify": "^3.25.3",
     "fastify-healthcheck": "^3.1.0",
     "fastify-metrics": "^8.0.0",
     "influx": "^5.9.2",
     "js-yaml": "^4.1.0",
     "lodash.clonedeep": "^4.5.0",
-    "luxon": "^2.1.1",
-    "mqtt": "^4.2.6",
+    "luxon": "^2.3.0",
+    "mqtt": "^4.3.4",
     "pg": "^8.7.1",
     "prom-client": "^14.0.1",
     "qrs-interact": "^6.3.1",
-    "systeminformation": "^5.9.17",
+    "systeminformation": "^5.10.0",
     "url-join": "^4.0.1",
-    "winston": "^3.3.3",
+    "winston": "^3.4.0",
     "winston-daily-rotate-file": "^4.5.5"
   },
   "devDependencies": {
     "prettier": "2.5.1",
-    "snyk": "1.788.0"
+    "snyk": "1.826.0"
   }
 }
