@@ -49,7 +49,7 @@ function getAppNames() {
                 // Only set the global app names variable once all app names have been successfully retrieved
                 globals.appNames = clonedeep(appList);
 
-                globals.logger.info('APP NAMES: Done getting app names from repository db');
+                globals.logger.verbose('APP NAMES: Done getting app names from repository db');
             })
             .catch((err) => {
                 // Return error msg
