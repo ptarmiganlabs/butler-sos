@@ -1,5 +1,18 @@
 # Changelog
 
+### [7.0.7](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v7.0.6...butler-sos-v7.0.7) (2022-02-15)
+
+
+### Bug Fixes
+
+* **deps:** update dependency axios to ^0.26.0 ([6a8fafc](https://github.com/ptarmiganlabs/butler-sos/commit/6a8fafc88eafd3c620a4981482cc86785fa3d62b))
+
+
+### Miscellaneous
+
+* **deps:** update dependency snyk to v1.840.0 ([7a89d65](https://github.com/ptarmiganlabs/butler-sos/commit/7a89d657c9ead49a76bf632900308e26a8abbc4c))
+* **deps:** update dependency snyk to v1.852.0 ([6bc5ba7](https://github.com/ptarmiganlabs/butler-sos/commit/6bc5ba7f9ffdb0a7e134073bcec07ef56926b2bb))
+
 ### [7.0.6](https://www.github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v7.0.5...butler-sos-v7.0.6) (2022-01-25)
 
 
