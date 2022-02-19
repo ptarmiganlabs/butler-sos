@@ -1,5 +1,12 @@
 # Changelog
 
+### [8.1.1](https://github.com/ptarmiganlabs/butler-sos/compare/v8.1.0...v8.1.1) (2022-02-19)
+
+
+### Bug Fixes
+
+* Incorrect parsing of git tags > Incorrect Docker tags ([728c16a](https://github.com/ptarmiganlabs/butler-sos/commit/728c16a5f9cbdae8d36686fc8c75a8aea97f49f7))
+
 ## [8.1.0](https://github.com/ptarmiganlabs/butler-sos/compare/v8.0.0...v8.1.0) (2022-02-19)
 
 
