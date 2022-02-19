@@ -1,5 +1,12 @@
 # Changelog
 
+### [7.1.8](https://github.com/ptarmiganlabs/butler-sos/compare/v7.1.7...v7.1.8) (2022-02-19)
+
+
+### Bug Fixes
+
+* Debug standalone executables ([298b076](https://github.com/ptarmiganlabs/butler-sos/commit/298b0767810b7ccdd80efaf99c5ef1ffec8fcb5a))
+
 ### [7.1.7](https://github.com/ptarmiganlabs/butler-sos/compare/v7.1.6...v7.1.7) (2022-02-19)
 
 
