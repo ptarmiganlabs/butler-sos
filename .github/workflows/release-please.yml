@@ -19,16 +19,19 @@ jobs:
       - name: Show github.ref
         run: echo "$GITHUB_REF"
 
-      - uses: GoogleCloudPlatform/release-please-action@v3
+      - uses: google-github-actions/release-please-action@v3
         id: release
         if: github.repository_owner == 'ptarmiganlabs'
         with:
           # command: manifest
           release-type: node
-          path: src
+          path: src/
           package-name: butler-sos
           changelog-types: '[{"type":"feat","section":"Features","hidden":false},{"type":"fix","section":"Bug Fixes","hidden":false},{"type":"chore","section":"Miscellaneous","hidden":false},{"type":"refactor","section":"Refactoring","hidden":false},{"type":"docs","section":"Documentation","hidden":false}]'
           default-branch: master
+          monorepo-tags: false
+          fork: false
+          clean: true
 
       - name: Show output from Release-Please
         if: ${{ steps.release.outputs.release_created }}
