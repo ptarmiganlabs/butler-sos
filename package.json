@@ -2,12 +2,13 @@
   "name": "butler-sos",
   "version": "7.1.10",
   "description": "Butler SenseOps Stats (\"Butler SOS\") is a Node.js service publishing operational Qlik Sense metrics to Influxdb, Prometheus and MQTT.",
-  "main": "butler-sos.js",
+  "main": "src/butler-sos.js",
   "scripts": {
+    "butler-sos": "node src/butler-sos.js",
     "test": "snyk test && npm run format",
     "format": "npm run format:prettier",
-    "format:prettier": "npx prettier --config .prettierrc.yaml \"./**/*.{ts,css,less,js}\" --write",
-    "lint": "npx eslint . --format table"
+    "format:prettier": "npx prettier --config src/.prettierrc.yaml \"./src/**/*.{ts,css,less,js}\" --write",
+    "lint": "npx eslint src/ --format table"
   },
   "repository": {
     "type": "git",
@@ -53,11 +54,9 @@
     "winston-daily-rotate-file": "^4.6.1"
   },
   "devDependencies": {
-    "prettier": "2.5.1",
-    "snyk": "1.855.0"
+    "prettier": "2.5.1"
   },
   "pkg": {
     "scripts": "node_modules/js-yaml/**/*.js"
   }
 }
-

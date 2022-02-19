@@ -13,7 +13,7 @@ const Influx = require('influx');
 const { Pool } = require('pg');
 
 // Get app version from package.json file
-const appVersion = require('./package.json').version;
+const appVersion = require('../package.json').version;
 
 // Set up array for storing app ids and names
 const appNames = [];
