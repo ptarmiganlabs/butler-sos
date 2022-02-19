@@ -1,5 +1,12 @@
 # Changelog
 
+### [7.1.9](https://github.com/ptarmiganlabs/butler-sos/compare/v7.1.8...v7.1.9) (2022-02-19)
+
+
+### Bug Fixes
+
+* App signing for macOS ([3585a70](https://github.com/ptarmiganlabs/butler-sos/commit/3585a701b8296892bee4862338179136a2526293))
+
 ### [7.1.8](https://github.com/ptarmiganlabs/butler-sos/compare/v7.1.7...v7.1.8) (2022-02-19)
 
 
