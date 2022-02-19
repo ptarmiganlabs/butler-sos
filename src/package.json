@@ -55,5 +55,8 @@
   "devDependencies": {
     "prettier": "2.5.1",
     "snyk": "1.855.0"
+  },
+  "pkg": {
+    "scripts": "node_modules/js-yaml/**/*.js"
   }
 }

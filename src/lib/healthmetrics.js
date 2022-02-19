@@ -27,13 +27,16 @@ function getHealthStatsFromSense(host, influxTags) {
 
     const options = {};
 
-    options.Certificate = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert'));
+    options.Certificate = path.resolve(
+        process.cwd(),
+        globals.config.get('Butler-SOS.cert.clientCert')
+    );
     options.CertificateKey = path.resolve(
-        __dirname,
+        process.cwd(),
         globals.config.get('Butler-SOS.cert.clientCertKey')
     );
     options.CertificateCA = path.resolve(
-        __dirname,
+        process.cwd(),
         globals.config.get('Butler-SOS.cert.clientCertCA')
     );
     if (globals.config.has('Butler-SOS.cert.clientCertPassphrase')) {

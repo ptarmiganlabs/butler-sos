@@ -37,7 +37,7 @@ logTransports.push(
 if (config.get('Butler-SOS.fileLogging')) {
     logTransports.push(
         new winston.transports.DailyRotateFile({
-            dirname: path.join(__dirname, config.get('Butler-SOS.logDirectory')),
+            dirname: path.join(process.cwd(), config.get('Butler-SOS.logDirectory')),
             filename: 'butler-sos.%DATE%.log',
             level: config.get('Butler-SOS.logLevel'),
             datePattern: 'YYYY-MM-DD',

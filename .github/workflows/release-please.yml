@@ -68,9 +68,9 @@ jobs:
           mkdir release/linux
           mkdir release/macos
           mkdir release/win
-          pkg --output release/linux/${DIST_FILE_NAME} -t node16-linux-x64 butler-sos.js
-          pkg --output release/macos/${DIST_FILE_NAME} -t node16-macos-x64 butler-sos.js
-          pkg --output release/win/${DIST_FILE_NAME}.exe -t node16-win-x64 butler-sos.js
+          pkg --config package.json --output release/linux/${DIST_FILE_NAME} -t node16-linux-x64 bundle.js
+          pkg --config package.json --output release/macos/${DIST_FILE_NAME} -t node16-macos-x64 bundle.js
+          pkg --config package.json --output release/win/${DIST_FILE_NAME}.exe -t node16-win-x64 bundle.js
 
       - name: Compress binaries
         if: ${{ steps.release.outputs.release_created }}
@@ -172,8 +172,7 @@ jobs:
           AC_APP_IDENTITY: ${{ secrets.AC_APP_IDENTITY }}
         run: |
           ls -la
-          ls -la src
-          gon ./src/release-config/gon.json
+          gon ./release-config/gon.json
 
       - name: Debug
         run: |
