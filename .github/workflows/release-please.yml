@@ -25,7 +25,6 @@ jobs:
         with:
           # command: manifest
           release-type: node
-          path: src/
           package-name: butler-sos
           changelog-types: '[{"type":"feat","section":"Features","hidden":false},{"type":"fix","section":"Bug Fixes","hidden":false},{"type":"chore","section":"Miscellaneous","hidden":false},{"type":"refactor","section":"Refactoring","hidden":false},{"type":"docs","section":"Documentation","hidden":false}]'
           default-branch: master
@@ -54,7 +53,6 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
         run: |
           ls -la
-          cd src
           npm install
 
       - name: Install tool for creating stand-alone executables
@@ -67,14 +65,13 @@ jobs:
           # pkg --output release/alpine/${DIST_FILE_NAME} -t node16-alpine-x64 index.js
         run: |
           ls -la
-          cd src
           mkdir release
           mkdir release/linux
           mkdir release/macos
           mkdir release/win
-          pkg --config package.json --output release/linux/${DIST_FILE_NAME} -t node16-linux-x64 bundle.js
-          pkg --config package.json --output release/macos/${DIST_FILE_NAME} -t node16-macos-x64 bundle.js
-          pkg --config package.json --output release/win/${DIST_FILE_NAME}.exe -t node16-win-x64 bundle.js
+          pkg --config package.json --output release/linux/${DIST_FILE_NAME} -t node16-linux-x64 src/bundle.js
+          pkg --config package.json --output release/macos/${DIST_FILE_NAME} -t node16-macos-x64 src/bundle.js
+          pkg --config package.json --output release/win/${DIST_FILE_NAME}.exe -t node16-win-x64 src/bundle.js
 
       - name: Compress binaries
         if: ${{ steps.release.outputs.release_created }}
@@ -82,7 +79,6 @@ jobs:
           # zip release-zip/${DIST_FILE_NAME}-macos.zip release/macos/${DIST_FILE_NAME}
         run: |
           ls -la
-          cd src
           mkdir release-zip
           zip --junk-paths release-zip/${DIST_FILE_NAME}-linux.zip release/linux/${DIST_FILE_NAME}
           zip --junk-paths release-zip/${DIST_FILE_NAME}-win.zip release/win/${DIST_FILE_NAME}.exe
@@ -90,8 +86,6 @@ jobs:
       - name: Debug
         if: ${{ steps.release.outputs.release_created }}
         run: |
-          ls -la
-          cd src
           ls -la
           ls -la release
           ls -la release/macos
@@ -101,7 +95,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: binaries-macos
-          path: src/release/macos/*
+          path: release/macos/*
 
       - name: Upload to existing release
         if: ${{ steps.release.outputs.release_created }}
@@ -114,7 +108,7 @@ jobs:
           artifactContentType: raw
           draft: true
           tag: ${{ steps.release.outputs.tag_name }}
-          artifacts: src/release-zip/*
+          artifacts: release-zip/*
           token: ${{ github.token }}
 
 
