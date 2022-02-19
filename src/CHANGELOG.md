@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.1.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v7.0.8...butler-sos-v7.1.0) (2022-02-19)
+
+
+### Features
+
+* Create stand-alone executables for Butler SOS ([66039b9](https://github.com/ptarmiganlabs/butler-sos/commit/66039b99f1f82049f00883a168391b8621174291))
+
 ### [7.0.8](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v7.0.7...butler-sos-v7.0.8) (2022-02-19)
 
 
