@@ -97,7 +97,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: binaries-macos
-          path: release/macos/*
+          path: src/release/macos/*
 
       - name: Upload to existing release
         if: ${{ steps.release.outputs.release_created }}
@@ -110,7 +110,7 @@ jobs:
           artifactContentType: raw
           draft: true
           tag: ${{ steps.release.outputs.tag_name }}
-          artifacts: release-zip/*
+          artifacts: src/release-zip/*
           token: ${{ github.token }}
 
 

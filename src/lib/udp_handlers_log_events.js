@@ -22,6 +22,9 @@ function udpInitLogEventServer() {
     // Handler for UDP messages relating to log events
     globals.udpServerLogEvents.socket.on('message', async (message, _remote) => {
         try {
+            // >> Message parts for log messages from engine service, for Qix engine performance
+            //
+
             // >> Message parts for log messages from proxy service
             // 0:  Message type. Always /qseow-proxy/
             // 1:  Row number
@@ -87,6 +90,8 @@ function udpInitLogEventServer() {
 
             if (
                 (globals.config.get('Butler-SOS.logEvents.source.proxy.enable') === true &&
+                    msg[0].toLowerCase() === '/qseow-qix-perf/') ||
+                (globals.config.get('Butler-SOS.logEvents.source.proxy.enable') === true &&
                     msg[0].toLowerCase() === '/qseow-proxy/') ||
                 (globals.config.get('Butler-SOS.logEvents.source.repository.enable') === true &&
                     msg[0].toLowerCase() === '/qseow-repository/') ||
@@ -100,7 +105,36 @@ function udpInitLogEventServer() {
 
                 // Build object and convert to JSON
                 let msgObj;
-                if (msg[0] === 'qseow-proxy') {
+                if (msg[0] === 'qseow-qix-perf') {
+                    msgObj = {
+                        source: msg[0],
+                        log_row: msg[1],
+                        ts_iso: msg[2],
+                        ts_local: msg[3],
+                        level: msg[4],
+                        host: msg[5],
+                        subsystem: msg[6],
+                        windows_user: msg[7],
+                        message: msg[8],
+                        exception_message: msg[9],
+                        user_directory: msg[10],
+                        user_id: msg[11],
+                        command: msg[12],
+                        result_code: msg[13],
+                        origin: msg[14],
+                        context: msg[15],
+                    };
+
+                    // Different log events deliver QSEoW user directory/user differently.
+                    // Create fields that are consistent across all log events
+                    if (msgObj.user_directory !== '' && msgObj.user_id !== '') {
+                        // User directory and user id available in separate fields.
+                        // Combine them into a single field
+                        msgObj.user_full = `${msgObj.user_directory}\\${msgObj.user_id}`;
+                    } else {
+                        msgObj.user_full = '';
+                    }
+                } else if (msg[0] === 'qseow-proxy') {
                     msgObj = {
                         source: msg[0],
                         log_row: msg[1],
