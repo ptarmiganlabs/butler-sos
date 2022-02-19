@@ -32,14 +32,6 @@ jobs:
           fork: false
           clean: true
 
-      - name: Run Snyk to check for vulnerabilities
-        if: github.repository_owner == 'ptarmiganlabs'
-        uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: monitor    
-
       - name: Show output from Release-Please
         if: ${{ steps.release.outputs.release_created }}
         run: |
@@ -54,8 +46,17 @@ jobs:
           echo "pr: ${{ steps.release.outputs.pr }}"
 
       - name: Checkout repository
-        if: ${{ steps.release.outputs.release_created }}
+        if: github.repository_owner == 'ptarmiganlabs'
         uses: actions/checkout@v2
+
+      - name: Run Snyk to check for vulnerabilities
+        if: github.repository_owner == 'ptarmiganlabs'
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: monitor    
 
       - name: Install dependencies
         if: ${{ steps.release.outputs.release_created }}
