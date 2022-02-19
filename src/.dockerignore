@@ -2,6 +2,7 @@ config/*
 config/certificate/*
 cert/*
 img/*
+release-config/*
 .dockerignore
 .gitignore
 docker-compose.yml
