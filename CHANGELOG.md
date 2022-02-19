@@ -1,5 +1,12 @@
 # Changelog
 
+### [7.1.4](https://github.com/ptarmiganlabs/butler-sos/compare/v7.1.3...v7.1.4) (2022-02-19)
+
+
+### Bug Fixes
+
+* Broken CI for macOS executable ([be80745](https://github.com/ptarmiganlabs/butler-sos/commit/be80745a8b1f0b4c4727860f573348630ffeb1ae))
+
 ### [7.1.3](https://github.com/ptarmiganlabs/butler-sos/compare/v7.1.2...v7.1.3) (2022-02-19)
 
 
