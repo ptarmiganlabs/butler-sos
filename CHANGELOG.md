@@ -1,5 +1,17 @@
 # Changelog
 
+## [8.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/v7.1.11...v8.0.0) (2022-02-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* Restructure repository to get better working CI
+
+### Bug Fixes
+
+* CI debugging ([783a59b](https://github.com/ptarmiganlabs/butler-sos/commit/783a59b38f3542fb8352eb01ceece1a4fb0e90a4))
+* Restructure repository to get better working CI ([dec58ce](https://github.com/ptarmiganlabs/butler-sos/commit/dec58ce7943f73957c8159573246a9fef5ddaf26)), closes [#357](https://github.com/ptarmiganlabs/butler-sos/issues/357)
+
 ### [7.1.9](https://github.com/ptarmiganlabs/butler-sos/compare/v7.1.8...v7.1.9) (2022-02-19)
 
 
