@@ -34,9 +34,9 @@ if (
 
 async function mainScript() {
     // Load certificates to use when connecting to healthcheck API
-    const certFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert'));
-    const keyFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey'));
-    const caFile = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
+    const certFile = path.resolve(process.cwd(), globals.config.get('Butler-SOS.cert.clientCert'));
+    const keyFile = path.resolve(process.cwd(), globals.config.get('Butler-SOS.cert.clientCertKey'));
+    const caFile = path.resolve(process.cwd(), globals.config.get('Butler-SOS.cert.clientCertCA'));
 
     // Set up heartbeats, if enabled in the config file
     if (

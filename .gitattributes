@@ -12,7 +12,7 @@ src/.jshintrc export-ignore
 src/.prettierignore export-ignore
 src/.prettierrc.yaml export-ignore
 src/.snyk export-ignore
-src/release-config export-ignore
+release-config export-ignore
 src/Dockerfile export-ignore
 .codeclimate.yml export-ignore
 .editorconfig export-ignore

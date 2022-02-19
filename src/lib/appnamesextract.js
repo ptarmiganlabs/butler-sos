@@ -5,9 +5,9 @@ const clonedeep = require('lodash.clonedeep');
 const path = require('path');
 const globals = require('../globals');
 
-const certPath = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCert'));
-const keyPath = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertKey'));
-// caPath = path.resolve(__dirname, globals.config.get('Butler-SOS.cert.clientCertCA'));
+const certPath = path.resolve(process.cwd(), globals.config.get('Butler-SOS.cert.clientCert'));
+const keyPath = path.resolve(process.cwd(), globals.config.get('Butler-SOS.cert.clientCertKey'));
+// caPath = path.resolve(process.cwd(), globals.config.get('Butler-SOS.cert.clientCertCA'));
 
 function getAppNames() {
     globals.logger.verbose(`APP NAMES: Start getting app names from repository db`);
