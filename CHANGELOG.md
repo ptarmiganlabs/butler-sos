@@ -1,5 +1,12 @@
 # Changelog
 
+### [7.1.3](https://github.com/ptarmiganlabs/butler-sos/compare/v7.1.2...v7.1.3) (2022-02-19)
+
+
+### Bug Fixes
+
+* CI tweaking ([49f2268](https://github.com/ptarmiganlabs/butler-sos/commit/49f22680171451484b5f1282c76c92f0ef6569e3))
+
 ### [7.1.2](https://github.com/ptarmiganlabs/butler-sos/compare/v7.1.1...v7.1.2) (2022-02-19)
 
 
