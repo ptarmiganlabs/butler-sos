@@ -48,7 +48,10 @@ jobs:
 
       - name: Install dependencies
         if: ${{ steps.release.outputs.release_created }}
-        run: npm install
+        run: |
+          ls -la
+          cd src
+          npm install
 
       - name: Install tool for creating stand-alone executables
         if: ${{ steps.release.outputs.release_created }}
@@ -59,6 +62,8 @@ jobs:
           # mkdir release/alpine
           # pkg --output release/alpine/${DIST_FILE_NAME} -t node16-alpine-x64 index.js
         run: |
+          ls -la
+          cd src
           mkdir release
           mkdir release/linux
           mkdir release/macos
@@ -72,6 +77,8 @@ jobs:
           # zip release-zip/${DIST_FILE_NAME}-alpine.zip release/alpine/${DIST_FILE_NAME}
           # zip release-zip/${DIST_FILE_NAME}-macos.zip release/macos/${DIST_FILE_NAME}
         run: |
+          ls -la
+          cd src
           mkdir release-zip
           zip --junk-paths release-zip/${DIST_FILE_NAME}-linux.zip release/linux/${DIST_FILE_NAME}
           zip --junk-paths release-zip/${DIST_FILE_NAME}-win.zip release/win/${DIST_FILE_NAME}.exe
@@ -79,6 +86,8 @@ jobs:
       - name: Debug
         if: ${{ steps.release.outputs.release_created }}
         run: |
+          ls -la
+          cd src
           ls -la
           ls -la release
           ls -la release/macos
