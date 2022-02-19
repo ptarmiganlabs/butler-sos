@@ -14,7 +14,7 @@
   "author": "Göran Sander",
   "license": "MIT",
   "dependencies": {
-    "commander": "^8.0.0",
+    "commander": "^9.0.0",
     "qrs-interact": "^6.3.1",
     "winston": "^3.3.3"
   }
