@@ -1,5 +1,18 @@
 # Changelog
 
+## [8.1.0](https://github.com/ptarmiganlabs/butler-sos/compare/v8.0.0...v8.1.0) (2022-02-19)
+
+
+### Features
+
+* Scan for vulnerabilities as part of each release ([9d0d18d](https://github.com/ptarmiganlabs/butler-sos/commit/9d0d18df77e7ddc989cb0b1752f7d8c5b8119cd9)), closes [#361](https://github.com/ptarmiganlabs/butler-sos/issues/361)
+
+
+### Bug Fixes
+
+* Clean up Docker images ([d818060](https://github.com/ptarmiganlabs/butler-sos/commit/d81806038e00e4eeb6837d255918ea545f979102)), closes [#363](https://github.com/ptarmiganlabs/butler-sos/issues/363)
+* Move docker-compose demo files to docs folder ([9f7a063](https://github.com/ptarmiganlabs/butler-sos/commit/9f7a0635b66412cbaa18e151ff6371cc1a64692e)), closes [#362](https://github.com/ptarmiganlabs/butler-sos/issues/362)
+
 ## [8.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/v7.1.11...v8.0.0) (2022-02-19)
 
 
