@@ -1,5 +1,12 @@
 # Changelog
 
+### [7.0.8](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v7.0.7...butler-sos-v7.0.8) (2022-02-19)
+
+
+### Miscellaneous
+
+* **deps:** Update dependencies ([c111f1c](https://github.com/ptarmiganlabs/butler-sos/commit/c111f1c31eb3f4b74b36e6a6baa9bc0b763c11c8))
+
 ### [7.0.7](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v7.0.6...butler-sos-v7.0.7) (2022-02-15)
 
 
