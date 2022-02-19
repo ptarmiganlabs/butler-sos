@@ -12,7 +12,6 @@ src/.jshintrc export-ignore
 src/.prettierignore export-ignore
 src/.prettierrc.yaml export-ignore
 src/.snyk export-ignore
-release-config export-ignore
 src/Dockerfile export-ignore
 .codeclimate.yml export-ignore
 .editorconfig export-ignore
@@ -20,6 +19,9 @@ src/Dockerfile export-ignore
 .release-please-manifest.json export-ignore
 release-please-config.json export-ignore
 renovate.json export-ignore
+release-config export-ignore
+release export-ignore
+release-macos export-ignore
 
 # general text files
 

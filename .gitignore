@@ -8,7 +8,8 @@ src/config/production.yml
 src/config/certificate/*
 cert/*.pem
 cert/*.pfx
-src/release
+release
+release-macos
 .DS_Store
 ssl/*
 *.tmp
