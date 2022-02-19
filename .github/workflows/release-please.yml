@@ -1,14 +1,20 @@
 name: release-please
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      release_tag_name: ${{ steps.release.outputs.tag_name }}
+      release_upload_url: ${{ steps.release.outputs.upload_url }}
     env:
       GITHUB_REF: ${{ github.ref }}
       GITHUB_TOKEN: ${{ secrets.PAT }}
+      DIST_FILE_NAME: butler-sos
     steps:
       - name: Show github.ref
         run: echo "$GITHUB_REF"
@@ -32,3 +38,150 @@ jobs:
           echo "patch: ${{ steps.release.outputs.patch }}"
           echo "sha: ${{ steps.release.outputs.sha }}"
           echo "pr: ${{ steps.release.outputs.pr }}"
+
+      - name: Checkout repository
+        if: |
+          ${{ steps.release.outputs.release_created }}
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        if: ${{ steps.release.outputs.release_created }}
+        run: npm install
+
+      - name: Install tool for creating stand-alone executables
+        if: ${{ steps.release.outputs.release_created }}
+        run: npm install -g pkg
+
+      - name: Package stand-alone binaries
+        if: ${{ steps.release.outputs.release_created }}
+          # mkdir release/alpine
+          # pkg --output release/alpine/${DIST_FILE_NAME} -t node16-alpine-x64 index.js
+        run: |
+          mkdir release
+          mkdir release/linux
+          mkdir release/macos
+          mkdir release/win
+          pkg --output release/linux/${DIST_FILE_NAME} -t node16-linux-x64 butler-sos.js
+          pkg --output release/macos/${DIST_FILE_NAME} -t node16-macos-x64 butler-sos.js
+          pkg --output release/win/${DIST_FILE_NAME}.exe -t node16-win-x64 butler-sos.js
+
+      - name: Compress binaries
+        if: ${{ steps.release.outputs.release_created }}
+          # zip release-zip/${DIST_FILE_NAME}-alpine.zip release/alpine/${DIST_FILE_NAME}
+          # zip release-zip/${DIST_FILE_NAME}-macos.zip release/macos/${DIST_FILE_NAME}
+        run: |
+          mkdir release-zip
+          zip --junk-paths release-zip/${DIST_FILE_NAME}-linux.zip release/linux/${DIST_FILE_NAME}
+          zip --junk-paths release-zip/${DIST_FILE_NAME}-win.zip release/win/${DIST_FILE_NAME}.exe
+
+      - name: Debug
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          ls -la
+          ls -la release
+          ls -la release/macos
+
+      - name: Upload build artifacts
+        if: ${{ steps.release.outputs.release_created }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: binaries-macos
+          path: release/macos/*
+
+      - name: Upload to existing release
+        if: ${{ steps.release.outputs.release_created }}
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
+          # artifactContentType: application/zip
+          artifactContentType: raw
+          draft: true
+          tag: ${{ steps.release.outputs.tag_name }}
+          artifacts: release-zip/*
+          token: ${{ github.token }}
+
+
+  release-macos:
+    needs: release-please
+    # runs-on: macos-latest
+    runs-on:
+      - self-hosted
+      - x64
+      - macos
+      - sp53
+    # timeout-minutes: 15
+    if: ${{ needs.release-please.outputs.release_created }} 
+    env:
+      DIST_FILE_NAME: butler-sos
+    steps:
+      - name: Release tag and upload url from previous job
+        run: |
+          echo ${{ needs.release-please.outputs.release_tag_name }} 
+          echo ${{ needs.release-please.outputs.release_upload_url }} 
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Download-Binaries
+        uses: actions/download-artifact@v2
+        with:
+          name: binaries-macos
+          path: release-macos/
+
+      - name: Make binary executable
+        run: |
+          chmod +x release-macos/${DIST_FILE_NAME}
+
+      # Needed for GitHub hosted runner
+      # For self-hosted runner the cert must either be installed manually, or the code below run once and then disabled.
+      # - name: Import Code-Signing Certificates
+      #   uses: Apple-Actions/import-codesign-certs@v1
+      #   with:
+      #     # The certificates in a PKCS12 file encoded as a base64 string
+      #     p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
+      #     # The password used to import the PKCS12 file.
+      #     p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
+
+      - name: Install gon via HomeBrew for code signing and app notarization
+        run: |
+          brew tap mitchellh/gon
+          brew install mitchellh/gon/gon
+
+      - name: Debug
+        run: |
+          ls -la
+          ls -la ./release-macos
+
+      - name: Sign the mac binaries with Gon
+        env:
+          AC_USERNAME: ${{ secrets.AC_USERNAME }}
+          AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
+          AC_APP_IDENTITY: ${{ secrets.AC_APP_IDENTITY }}
+        run: |
+          gon ./release-config/gon.json
+
+      - name: Debug
+        run: |
+          ls -la
+          ls -la ./release-macos
+
+      - name: Upload to existing release
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
+          artifactContentType: raw
+          # artifactContentType: application/zip
+          draft: true
+          tag: ${{ needs.release-please.outputs.release_tag_name }}
+          artifacts: release-macos/${{ env.DIST_FILE_NAME }}-macos.zip
+          token: ${{ github.token }}
+
+      # - name: Upload build artifacts
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: binaries-macos
+      #     path: release-macos/*
