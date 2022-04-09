@@ -1,5 +1,22 @@
 # Changelog
 
+### [8.1.2](https://github.com/ptarmiganlabs/butler-sos/compare/v8.1.1...v8.1.2) (2022-04-09)
+
+
+### Bug Fixes
+
+* **deps:** update dependency eslint-config-prettier to v8.5.0 ([3331840](https://github.com/ptarmiganlabs/butler-sos/commit/3331840476da16287b891c0f142d38e65b0aebaf))
+* **deps:** update dependency url-join to v5 ([ecc997f](https://github.com/ptarmiganlabs/butler-sos/commit/ecc997f3fb082bb7f8209d97a71ed6d47363a739))
+
+
+### Miscellaneous
+
+* **deps:** bump moment from 2.29.1 to 2.29.2 ([120888d](https://github.com/ptarmiganlabs/butler-sos/commit/120888dc58812647f6d94d90945c2bb6599e58f1))
+* **deps:** update actions/checkout action to v3 ([4acf81c](https://github.com/ptarmiganlabs/butler-sos/commit/4acf81ce8ec8209992a75806857dec902dc8eae8))
+* **deps:** update actions/download-artifact action to v3 ([c8ea704](https://github.com/ptarmiganlabs/butler-sos/commit/c8ea7042c20be155695b03c321ef3ffa9a776b11))
+* **deps:** update actions/upload-artifact action to v3 ([776c4e9](https://github.com/ptarmiganlabs/butler-sos/commit/776c4e987aad46a579d10a1930859e4565ad3473))
+* **deps:** update dependency prettier to v2.6.2 ([04456f7](https://github.com/ptarmiganlabs/butler-sos/commit/04456f752f11709ca67a755b99a00e60ad43b248))
+
 ### [8.1.1](https://github.com/ptarmiganlabs/butler-sos/compare/v8.1.0...v8.1.1) (2022-02-19)
 
 
