@@ -78,9 +78,9 @@ jobs:
           mkdir release/linux
           mkdir release/macos
           mkdir release/win
-          pkg --config package.json --output release/linux/${DIST_FILE_NAME} -t node16-linux-x64 src/bundle.js
-          pkg --config package.json --output release/macos/${DIST_FILE_NAME} -t node16-macos-x64 src/bundle.js
-          pkg --config package.json --output release/win/${DIST_FILE_NAME}.exe -t node16-win-x64 src/bundle.js
+          pkg --config package.json --output release/linux/${DIST_FILE_NAME} -t node16-linux-x64 src/bundle.js --compress GZip
+          pkg --config package.json --output release/macos/${DIST_FILE_NAME} -t node16-macos-x64 src/bundle.js --compress GZip
+          pkg --config package.json --output release/win/${DIST_FILE_NAME}.exe -t node16-win-x64 src/bundle.js --compress GZip
 
       - name: Compress binaries
         if: ${{ steps.release.outputs.release_created }}
