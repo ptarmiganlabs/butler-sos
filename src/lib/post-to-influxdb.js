@@ -339,15 +339,15 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
         });
 }
 
-// function postUserSessionsToInfluxdb(host, virtualProxy, body, influxTags) {
-function postUserSessionsToInfluxdb(userSessions) {
-    globals.logger.debug(`USER SESSIONS: User sessions: ${JSON.stringify(userSessions)}`);
+// function postProxySessionsToInfluxdb(host, virtualProxy, body, influxTags) {
+function postProxySessionsToInfluxdb(userSessions) {
+    globals.logger.debug(`PROXY SESSIONS: User sessions: ${JSON.stringify(userSessions)}`);
 
     globals.influx
         .writePoints(userSessions.datapointInfluxdb)
         .then(() => {
             globals.logger.silly(
-                `USER SESSIONS: Influxdb datapoint for server "${
+                `PROXY SESSIONS: Influxdb datapoint for server "${
                     userSessions.host
                 }", virtual proxy "${userSessions.virtualProxy}"": ${JSON.stringify(
                     userSessions.datapointInfluxdb,
@@ -357,19 +357,19 @@ function postUserSessionsToInfluxdb(userSessions) {
             );
 
             globals.logger.debug(
-                `USER SESSIONS: Session count for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"": ${userSessions.sessionCount}`
+                `PROXY SESSIONS: Session count for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"": ${userSessions.sessionCount}`
             );
             globals.logger.debug(
-                `USER SESSIONS: User list for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"": ${userSessions.uniqueUserList}`
+                `PROXY SESSIONS: User list for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"": ${userSessions.uniqueUserList}`
             );
 
             globals.logger.verbose(
-                `USER SESSIONS: Sent user session data to InfluxDB for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"`
+                `PROXY SESSIONS: Sent user session data to InfluxDB for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"`
             );
         })
         .catch((err) => {
             globals.logger.error(
-                `USER SESSIONS: Error saving user session data to InfluxDB! ${err.stack}`
+                `PROXY SESSIONS: Error saving user session data to InfluxDB! ${err.stack}`
             );
         });
 }
@@ -396,18 +396,20 @@ function postButlerSOSMemoryUsageToInfluxdb(memory) {
         .writePoints(datapoint)
         .then(() => {
             globals.logger.silly(
-                `MEMORY USAGE: Influxdb datapoint for Butler SOS memory usage: ${JSON.stringify(
+                `MEMORY USAGE INFLUXDB: Influxdb datapoint for Butler SOS memory usage: ${JSON.stringify(
                     datapoint,
                     null,
                     2
                 )}`
             );
 
-            globals.logger.verbose('MEMORY USAGE: Sent Butler SOS memory usage data to InfluxDB');
+            globals.logger.verbose(
+                'MEMORY USAGE INFLUXDB: Sent Butler SOS memory usage data to InfluxDB'
+            );
         })
         .catch((err) => {
             globals.logger.error(
-                `MEMORY USAGE: Error saving user session data to InfluxDB! ${err.stack}`
+                `MEMORY USAGE INFLUXDB: Error saving user session data to InfluxDB! ${err.stack}`
             );
         });
 }
@@ -602,7 +604,7 @@ function postLogEventToInfluxdb(msg) {
 
 module.exports = {
     postHealthMetricsToInfluxdb,
-    postUserSessionsToInfluxdb,
+    postProxySessionsToInfluxdb,
     postButlerSOSMemoryUsageToInfluxdb,
     postUserEventToInfluxdb,
     postLogEventToInfluxdb,
