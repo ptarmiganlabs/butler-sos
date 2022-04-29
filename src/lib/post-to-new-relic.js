@@ -531,7 +531,6 @@ async function postProxySessionsToNewRelic(userSessions) {
             );
         }
 
-
         globals.logger.debug(
             `PROXY SESSIONS NEW RELIC: Proxy session count for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"": ${userSessions.sessionCount}`
         );
@@ -630,7 +629,7 @@ async function postButlerSOSUptimeToNewRelic(fields) {
             ) === true
         ) {
             metrics.push({
-                name: 'uptimeMillisec',
+                name: 'qs_butlerSosUptimeMillisec',
                 type: 'gauge',
                 value: fields.uptimeMilliSec,
             });
@@ -645,7 +644,7 @@ async function postButlerSOSUptimeToNewRelic(fields) {
         globals.logger.debug(`UPTIME NEW RELIC: Payload: ${JSON.stringify(payload, null, 2)}`);
 
         // Preapare call to remote host
-        const remoteUrl = globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.url');
+        const remoteUrl = globals.config.get('Butler-SOS.newRelic.metric.url');
 
         // Add headers
         const headers = {
@@ -656,7 +655,7 @@ async function postButlerSOSUptimeToNewRelic(fields) {
         };
 
         // eslint-disable-next-line no-restricted-syntax
-        for (const header of globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.header')) {
+        for (const header of globals.config.get('Butler-SOS.newRelic.metric.header')) {
             headers[header.name] = header.value;
         }
 
@@ -676,60 +675,81 @@ async function postButlerSOSUptimeToNewRelic(fields) {
     }
 }
 
-function postUserEventToNewRelic(msg) {
+async function postUserEventToNewRelic(msg) {
     globals.logger.debug(`USER EVENT NEW RELIC: ${msg})`);
 
     try {
         // First prepare tags relating to the actual user event, then add tags defined in the config file
         // The config file tags can for example be used to separate data from DEV/TEST/PROD environments
-        // const tags = {
-        //     host: msg.host,
-        //     event_action: msg.command,
-        //     userFull: `${msg.user_directory}\\${msg.user_id}`,
-        //     userDirectory: msg.user_directory,
-        //     userId: msg.user_id,
-        //     origin: msg.origin,
-        // };
-        // if (
-        //     globals.config.has('Butler-SOS.userEvents.tags') &&
-        //     globals.config.get('Butler-SOS.userEvents.tags') !== null &&
-        //     globals.config.get('Butler-SOS.userEvents.tags').length > 0
-        // ) {
-        //     const configTags = globals.config.get('Butler-SOS.userEvents.tags');
-        //     // eslint-disable-next-line no-restricted-syntax
-        //     for (const item of configTags) {
-        //         tags[item.tag] = item.value;
-        //     }
-        // }
-        // const datapoint = [
-        //     {
-        //         measurement: 'user_events',
-        //         tags,
-        //         fields: {
-        //             userFull: tags.userFull,
-        //             userId: tags.userId,
-        //         },
-        //     },
-        // ];
-        // globals.influx
-        //     .writePoints(datapoint)
-        //     .then(() => {
-        //         globals.logger.silly(
-        //             `USER EVENT INFLUXDB: Influxdb datapoint for Butler SOS user event: ${JSON.stringify(
-        //                 datapoint,
-        //                 null,
-        //                 2
-        //             )}`
-        //         );
-        //         globals.logger.verbose(
-        //             'USER EVENT INFLUXDB: Sent Butler SOS user event data to InfluxDB'
-        //         );
-        //     })
-        //     .catch((err) => {
-        //         globals.logger.error(
-        //             `USER EVENT INFLUXDB: Error saving user event to InfluxDB! ${err}`
-        //         );
-        //     });
+        const ts = new Date().getTime(); // Timestamp in millisec
+        const attributes = {
+            timestamp: ts,
+            qs_host: msg.host,
+            qs_event_action: msg.command,
+            qs_userFull: `${msg.user_directory}\\${msg.user_id}`,
+            qs_userDirectory: msg.user_directory,
+            qs_userId: msg.user_id,
+            qs_origin: msg.origin,
+        };
+
+        if (
+            globals.config.has('Butler-SOS.userEvents.tags') &&
+            globals.config.get('Butler-SOS.userEvents.tags') !== null &&
+            globals.config.get('Butler-SOS.userEvents.tags').length > 0
+        ) {
+            const configTags = globals.config.get('Butler-SOS.userEvents.tags');
+            // eslint-disable-next-line no-restricted-syntax
+            for (const item of configTags) {
+                attributes[item.tag] = item.value;
+            }
+        }
+
+        // Build final payload
+        const payload = { ...attributes };
+        payload.eventType = 'qs_userEvent';
+
+        globals.logger.debug(`USER EVENT NEW RELIC: Payload: ${JSON.stringify(payload, null, 2)}`);
+
+        // Preapare call to remote host
+        const tmpUrl =
+            globals.config.get('Butler-SOS.newRelic.event.url').slice(-1) === '/'
+                ? globals.config.get('Butler-SOS.newRelic.event.url')
+                : `${globals.config.get('Butler-SOS.newRelic.event.url')}/`;
+
+        // Build final URL
+        const eventUrl = `${tmpUrl}v1/accounts/${globals.config.get(
+            'Butler-SOS.thirdPartyToolsCredentials.newRelic.accountId'
+        )}/events`;
+
+        globals.logger.debug(`USER EVENT NEW RELIC: Event API url=${eventUrl}`);
+
+        // Add headers
+        const headers = {
+            'Content-Type': 'application/json',
+            'Api-Key': globals.config.get(
+                'Butler-SOS.thirdPartyToolsCredentials.newRelic.insertApiKey'
+            ),
+        };
+
+        // eslint-disable-next-line no-restricted-syntax
+        for (const header of globals.config.get('Butler-SOS.newRelic.event.header')) {
+            headers[header.name] = header.value;
+        }
+
+        const axiosRequest = {
+            url: eventUrl,
+            method: 'post',
+            timeout: 10000,
+            data: payload,
+            headers,
+        };
+
+        const res = await axios.request(axiosRequest);
+
+        globals.logger.debug(
+            `USER EVENT NEW RELIC: Result code from posting to New Relic: ${res.status}, ${res.statusText}`
+        );
+        globals.logger.verbose(`USER EVENT NEW RELIC: Sent user event to New Relic`);
     } catch (err) {
         globals.logger.error(`USER EVENT NEW RELIC: Error saving user event to New Relic! ${err}`);
     }

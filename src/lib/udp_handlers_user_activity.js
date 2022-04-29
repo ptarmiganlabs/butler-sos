@@ -15,7 +15,7 @@ function udpInitUserActivityServer() {
         const address = globals.udpServerUserActivity.socket.address();
 
         globals.logger.info(
-            `USER ACTIVITY: UDP server listening on ${address.address}:${address.port}`
+            `USER EVENT: UDP server listening on ${address.address}:${address.port}`
         );
     });
 
@@ -38,12 +38,12 @@ function udpInitUserActivityServer() {
             // Open connection
             // Close connection
 
-            globals.logger.debug(`USER ACTIVITY (raw): ${message.toString()}`);
+            globals.logger.debug(`USER EVENT (raw): ${message.toString()}`);
 
             const msgTmp1 = message.toString().split(';');
             const msg = msgTmp1.slice(0, 7);
 
-            globals.logger.verbose(`USER ACTIVITY: ${msg[0]} - ${msg[4]} - ${msg[6]}`);
+            globals.logger.verbose(`USER EVENT: ${msg[0]} - ${msg[4]} - ${msg[6]}`);
 
             // console.log('--------------------------------------------------');
             // console.log(`USER: ${msg}`);
@@ -79,7 +79,7 @@ function udpInitUserActivityServer() {
                 }
             }
 
-            globals.logger.debug(`LOG EVENT (json): ${JSON.stringify(msgObj, null, 2)}`);
+            globals.logger.debug(`USER EVENT (json): ${JSON.stringify(msgObj, null, 2)}`);
 
             // Is user in blacklist?
             // If so skip this event
@@ -101,7 +101,7 @@ function udpInitUserActivityServer() {
                 }
             }
 
-            // Post to MQTT (if enabled)
+            // Post to MQTT
             if (
                 ((globals.config.has('Butler-SOS.mqttConfig.enableMQTT') &&
                     globals.config.get('Butler-SOS.mqttConfig.enableMQTT') === true) ||
@@ -109,11 +109,11 @@ function udpInitUserActivityServer() {
                         globals.config.get('Butler-SOS.mqttConfig.enable') === true)) &&
                 globals.config.get('Butler-SOS.userEvents.sendToMQTT.enable')
             ) {
-                globals.logger.debug('USER SESSIONS: Calling user sessions MQTT posting method');
+                globals.logger.debug('USER EVENT: Calling user sessions MQTT posting method');
                 postToMQTT.postUserEventToMQTT(msgObj);
             }
 
-            // Post to Influxdb (if enabled)
+            // Post to Influxdb
             if (
                 ((globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
                     globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
@@ -121,25 +121,21 @@ function udpInitUserActivityServer() {
                         globals.config.get('Butler-SOS.influxdbConfig.enable') === true)) &&
                 globals.config.get('Butler-SOS.userEvents.sendToInfluxdb.enable')
             ) {
-                globals.logger.debug(
-                    'USER SESSIONS: Calling user sessions Influxdb posting method'
-                );
+                globals.logger.debug('USER EVENT: Calling user sessions Influxdb posting method');
                 postToInfluxdb.postUserEventToInfluxdb(msgObj);
             }
 
-            // Post to New Relic (if enabled)
+            // Post to New Relic
             if (
                 globals.config.has('Butler-SOS.newRelic.enable') &&
                 globals.config.get('Butler-SOS.newRelic.enable') === true &&
                 globals.config.get('Butler-SOS.userEvents.sendToNewRelic.enable')
             ) {
-                globals.logger.debug(
-                    'USER SESSIONS: Calling user sessions New Relic posting method'
-                );
+                globals.logger.debug('USER EVENT: Calling user event New Relic posting method');
                 postToNewRelic.postUserEventToNewRelic(msgObj);
             }
         } catch (err) {
-            globals.logger.error(`USER ACTIVITY: Error processing user activity event: ${err}`);
+            globals.logger.error(`USER EVENT: Error processing user activity event: ${err}`);
         }
     });
 }
