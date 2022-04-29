@@ -655,7 +655,7 @@ async function postButlerSOSUptimeToNewRelic(fields) {
         };
 
         // eslint-disable-next-line no-restricted-syntax
-        for (const header of globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.header')) {
+        for (const header of globals.config.get('Butler-SOS.newRelic.metric.header')) {
             headers[header.name] = header.value;
         }
 
