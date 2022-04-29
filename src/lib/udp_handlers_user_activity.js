@@ -3,6 +3,7 @@
 // Load global variables and functions
 const globals = require('../globals');
 const postToInfluxdb = require('./post-to-influxdb');
+const postToNewRelic = require('./post-to-new-relic');
 const postToMQTT = require('./post-to-mqtt');
 
 // --------------------------------------------------------
@@ -124,6 +125,18 @@ function udpInitUserActivityServer() {
                     'USER SESSIONS: Calling user sessions Influxdb posting method'
                 );
                 postToInfluxdb.postUserEventToInfluxdb(msgObj);
+            }
+
+            // Post to New Relic (if enabled)
+            if (
+                globals.config.has('Butler-SOS.newRelic.enable') &&
+                globals.config.get('Butler-SOS.newRelic.enable') === true &&
+                globals.config.get('Butler-SOS.userEvents.sendToNewRelic.enable')
+            ) {
+                globals.logger.debug(
+                    'USER SESSIONS: Calling user sessions New Relic posting method'
+                );
+                postToNewRelic.postUserEventToNewRelic(msgObj);
             }
         } catch (err) {
             globals.logger.error(`USER ACTIVITY: Error processing user activity event: ${err}`);

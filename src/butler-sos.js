@@ -12,7 +12,7 @@ promFastifyMetricsServer.register(metricsPlugin, { endpoint: '/metrics' });
 const globals = require('./globals');
 const healthMetrics = require('./lib/healthmetrics');
 const logDb = require('./lib/logdb');
-const sessionMetrics = require('./lib/sessionmetrics');
+const proxySessionMetrics = require('./lib/proxysessionmetrics');
 const appNamesExtract = require('./lib/appnamesextract');
 const heartbeat = require('./lib/heartbeat');
 const serviceUptime = require('./lib/service_uptime');
@@ -227,7 +227,7 @@ async function mainScript() {
 
     // Set up extraction of sessions data
     if (globals.config.get('Butler-SOS.userSessions.enableSessionExtract') === true) {
-        sessionMetrics.setupUserSessionsTimer();
+        proxySessionMetrics.setupUserSessionsTimer();
     }
 
     // Set up extraction on main metrics data (i.e. the Sense healthcheck API)

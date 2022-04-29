@@ -20,6 +20,7 @@ const callRemoteURL = async function reportTelemetry() {
         let logEventsInfluxDBEnable = false;
         let logdbEnable = false;
         let mqttEnable = false;
+        let newRelicEnable = false;
         let prometheusEnable = false;
         let influxdbEnable = false;
         let appNamesExtractEnable = false;
@@ -128,6 +129,15 @@ const callRemoteURL = async function reportTelemetry() {
         }
 
         if (
+            (globals.config.has('Butler-SOS.newRelic.enableMQTT') &&
+                globals.config.get('Butler-SOS.newRelic.enableMQTT') === true) ||
+            (globals.config.has('Butler-SOS.newRelic.enable') &&
+                globals.config.get('Butler-SOS.newRelic.enable') === true)
+        ) {
+            newRelicEnable = true;
+        }
+
+        if (
             globals.config.has('Butler-SOS.prometheus.enable') &&
             globals.config.get('Butler-SOS.prometheus.enable') === true
         ) {
@@ -196,6 +206,7 @@ const callRemoteURL = async function reportTelemetry() {
                     logEventsInfluxdb: logEventsInfluxDBEnable,
                     logdb: logdbEnable,
                     mqtt: mqttEnable,
+                    newRelic: newRelicEnable,
                     prometheus: prometheusEnable,
                     influxdb: influxdbEnable,
                     appNames: appNamesExtractEnable,

@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const globals = require('../globals');
 const postToInfluxdb = require('./post-to-influxdb');
+const postToNewRelic = require('./post-to-new-relic');
 const postToMQTT = require('./post-to-mqtt');
 const serverTags = require('./servertags');
 const prometheus = require('./prom-client');
@@ -22,7 +23,7 @@ function getCertificates(options) {
     return certificate;
 }
 
-function getHealthStatsFromSense(host, influxTags) {
+function getHealthStatsFromSense(host, tags) {
     globals.logger.debug(`HEALTH: URL=https://${host}/engine/healthcheck/`);
 
     const options = {};
@@ -77,10 +78,10 @@ function getHealthStatsFromSense(host, influxTags) {
         .request(requestSettings)
         .then((response) => {
             if (response.status === 200) {
-                globals.logger.verbose(`HEALTH: Received ok response from ${influxTags.host}`);
+                globals.logger.verbose(`HEALTH: Received ok response from ${tags.host}`);
                 globals.logger.debug(`HEALTH: ${JSON.stringify(response.data)}`);
 
-                // Post to MQTT (if enabled)
+                // Post to MQTT
                 if (
                     (globals.config.has('Butler-SOS.mqttConfig.enableMQTT') &&
                         globals.config.get('Butler-SOS.mqttConfig.enableMQTT') === true) ||
@@ -88,10 +89,10 @@ function getHealthStatsFromSense(host, influxTags) {
                         globals.config.get('Butler-SOS.mqttConfig.enable') === true)
                 ) {
                     globals.logger.debug('HEALTH: Calling HEALTH metrics MQTT posting method');
-                    postToMQTT.postHealthToMQTT(host, influxTags.host, response.data);
+                    postToMQTT.postHealthToMQTT(host, tags.host, response.data);
                 }
 
-                // Post to Influxdb (if enabled)
+                // Post to Influxdb
                 if (
                     (globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
                         globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
@@ -99,16 +100,25 @@ function getHealthStatsFromSense(host, influxTags) {
                         globals.config.get('Butler-SOS.influxdbConfig.enable') === true)
                 ) {
                     globals.logger.debug('HEALTH: Calling HEALTH metrics Influxdb posting method');
-                    postToInfluxdb.postHealthMetricsToInfluxdb(host, response.data, influxTags);
+                    postToInfluxdb.postHealthMetricsToInfluxdb(host, response.data, tags);
                 }
 
-                // Save latest available data for Prometheus (if enabled)
+                // Post to New Relic
+                if (
+                    globals.config.has('Butler-SOS.newRelic.enable') &&
+                    globals.config.get('Butler-SOS.newRelic.enable') === true
+                ) {
+                    globals.logger.debug('HEALTH: Calling HEALTH metrics New Relic posting method');
+                    postToNewRelic.postHealthMetricsToNewRelic(host, response.data, tags);
+                }
+
+                // Save latest available data for Prometheus
                 if (
                     globals.config.has('Butler-SOS.prometheus.enable') &&
                     globals.config.get('Butler-SOS.prometheus.enable') === true
                 ) {
                     globals.logger.debug('HEALTH: Calling HEALTH metrics Prometheus method');
-                    prometheus.saveHealthMetrics(host, response.data, influxTags);
+                    prometheus.saveHealthMetrics(host, response.data, tags);
                 }
             }
         })

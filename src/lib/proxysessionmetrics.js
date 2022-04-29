@@ -1,12 +1,14 @@
-/** @format */
+/**
+ * Get metrics from Sense repository service
+ */
 
 const axios = require('axios');
 const https = require('https');
-const urljoin = require('url-join');
 const fs = require('fs');
 const path = require('path');
 const globals = require('../globals');
 const postToInfluxdb = require('./post-to-influxdb');
+const postToNewRelic = require('./post-to-new-relic');
 const postToMQTT = require('./post-to-mqtt');
 const serverTags = require('./servertags');
 const prometheus = require('./prom-client');
@@ -21,7 +23,7 @@ function getCertificates(options) {
     return certificate;
 }
 
-function getSessionStatsFromSense(host, virtualProxy, influxTags) {
+function getProxySessionStatsFromSense(host, virtualProxy, influxTags) {
     // Current user sessions are retrived using this API:
     // https://help.qlik.com/en-US/sense-developer/February2021/Subsystems/ProxyServiceAPI/Content/Sense_ProxyServiceAPI/ProxyServiceAPI-Proxy-API.htm
 
@@ -62,15 +64,9 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
         rejectUnauthorized: globals.config.get('Butler-SOS.serversToMonitor.rejectUnauthorized'),
     });
 
+    const vP = virtualProxy === '/' ? '' : `${virtualProxy}`;
     const requestSettings = {
-        url: urljoin(
-            'https://',
-            host,
-            'qps',
-            virtualProxy === '/' ? '' : virtualProxy,
-            'session',
-            '?Xrfkey=abcdefghij987654'
-        ),
+        url: `https://${host}/qps${vP}/session?Xrfkey=abcdefghij987654`,
         method: 'get',
         headers: {
             'Cache-Control': 'no-cache',
@@ -83,25 +79,25 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
         maxRedirects: 5,
     };
 
-    globals.logger.debug(`USER SESSIONS: Querying user sessions from ${requestSettings.url}`);
+    globals.logger.debug(`PROXY SESSIONS: Querying user sessions from ${requestSettings.url}`);
 
     axios
         .request(requestSettings)
         .then(async (response) => {
             globals.logger.debug(
-                `USER SESSIONS: User session response from: ${response.config.url}`
+                `PROXY SESSIONS: User session response from: ${response.config.url}`
             );
 
             if (response.status === 200) {
                 globals.logger.debug(
-                    `USER SESSIONS: Body from ${response.config.url}: ${JSON.stringify(
+                    `PROXY SESSIONS: Body from ${response.config.url}: ${JSON.stringify(
                         response.data,
                         null,
                         2
                     )}`
                 );
 
-                // Post to MQTT (if enabled)
+                // Post to MQTT
                 if (
                     (globals.config.has('Butler-SOS.mqttConfig.enableMQTT') &&
                         globals.config.get('Butler-SOS.mqttConfig.enableMQTT') === true) ||
@@ -109,7 +105,7 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
                         globals.config.get('Butler-SOS.mqttConfig.enable') === true)
                 ) {
                     globals.logger.debug(
-                        'USER SESSIONS: Calling user sessions MQTT posting method'
+                        'PROXY SESSIONS: Calling user sessions MQTT posting method'
                     );
 
                     postToMQTT.postUserSessionsToMQTT(
@@ -121,14 +117,14 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
                 }
 
                 // eslint-disable-next-line no-use-before-define
-                const userSessionsData = await prepUserSessionMetrics(
+                const userProxySessionsData = await prepUserSessionMetrics(
                     host,
                     virtualProxy,
                     response.data,
                     influxTags
                 );
 
-                // Post to Influxdb (if enabled)
+                // Post to Influxdb
                 if (
                     (globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
                         globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
@@ -136,31 +132,49 @@ function getSessionStatsFromSense(host, virtualProxy, influxTags) {
                         globals.config.get('Butler-SOS.influxdbConfig.enable') === true)
                 ) {
                     globals.logger.debug(
-                        'USER SESSIONS: Calling user sessions Influxdb posting method'
+                        'PROXY SESSIONS: Calling user sessions Influxdb posting method'
                     );
 
-                    postToInfluxdb.postUserSessionsToInfluxdb(userSessionsData);
+                    postToInfluxdb.postProxySessionsToInfluxdb(userProxySessionsData);
                 }
 
-                // Save latest available data for Prometheus (if enabled)
+                // Post to New Relic
+                if (
+                    globals.config.has('Butler-SOS.newRelic.enable') &&
+                    globals.config.get('Butler-SOS.newRelic.enable') === true &&
+                    globals.config.has(
+                        'Butler-SOS.newRelic.metric.dynamic.proxy.sessions.enable'
+                    ) &&
+                    globals.config.get(
+                        'Butler-SOS.newRelic.metric.dynamic.proxy.sessions.enable'
+                    ) === true
+                ) {
+                    globals.logger.debug(
+                        'PROXY SESSIONS: Calling user sessions New Relic posting method'
+                    );
+
+                    postToNewRelic.postProxySessionsToNewRelic(userProxySessionsData);
+                }
+
+                // Save latest available data for Prometheus
                 if (
                     globals.config.has('Butler-SOS.prometheus.enable') &&
                     globals.config.get('Butler-SOS.prometheus.enable') === true
                 ) {
                     globals.logger.debug('HEALTH: Calling SESSIONS metrics Prometheus method');
-                    prometheus.saveUserSessionMetrics(userSessionsData);
+                    prometheus.saveUserSessionMetrics(userProxySessionsData);
                 }
             }
         })
         .catch((err) => {
-            globals.logger.error(`USER SESSIONS: Error when calling proxy session API: ${err}`);
+            globals.logger.error(`PROXY SESSIONS: Error when calling proxy session API: ${err}`);
         });
 }
 
 // Get info on what sessions currently exist
 function setupUserSessionsTimer() {
     globals.logger.debug(
-        `USER SESSIONS: Monitor user sessions for these servers/virtual proxies: ${JSON.stringify(
+        `PROXY SESSIONS: Monitor user sessions for these servers/virtual proxies: ${JSON.stringify(
             globals.serverList,
             null,
             2
@@ -169,19 +183,19 @@ function setupUserSessionsTimer() {
 
     // Configure timer for getting user session data from Sense proxy API
     setInterval(() => {
-        globals.logger.verbose('USER SESSIONS: Event started: Poll user sessions');
+        globals.logger.verbose('PROXY SESSIONS: Event started: Poll user sessions');
 
         globals.serverList.forEach((server) => {
             if (server.userSessions.enable) {
                 const tags = serverTags.getServerTags(server);
                 server.userSessions.virtualProxies.forEach((virtualProxy) => {
                     globals.logger.debug(
-                        `USER SESSIONS: Getting user sessions for host=${
+                        `PROXY SESSIONS: Getting user sessions for host=${
                             server.userSessions.host
                         }, virtual proxy=${JSON.stringify(virtualProxy, null, 2)}`
                     );
 
-                    getSessionStatsFromSense(
+                    getProxySessionStatsFromSense(
                         server.userSessions.host,
                         virtualProxy.virtualProxy,
                         tags
@@ -195,52 +209,59 @@ function setupUserSessionsTimer() {
 function prepUserSessionMetrics(host, virtualProxy, body, tags) {
     return new Promise((resolve, reject) => {
         try {
-            globals.logger.debug('USER SESSIONS: Prepping user sessions data structure');
+            globals.logger.debug('PROXY SESSIONS: Prepping user sessions data structure');
 
-            const userSessionsData = {};
+            const userProxySessionsData = {};
 
-            userSessionsData.host = host;
-            userSessionsData.virtualProxy = virtualProxy;
+            userProxySessionsData.host = host;
+            userProxySessionsData.virtualProxy = virtualProxy;
 
             // Build tags structure, adding tags for virtual proxy and host the session is associated with
             // Start with common/shared set of tags, then add user session specific tags
-            userSessionsData.tags = { ...tags };
-            userSessionsData.tags.user_session_virtual_proxy = virtualProxy;
-            userSessionsData.tags.user_session_host = host;
+            userProxySessionsData.tags = { ...tags };
+            userProxySessionsData.tags.user_session_virtual_proxy = virtualProxy;
+            userProxySessionsData.tags.user_session_host = host;
 
             // Build comma separated list of all user IDs connected via the current virtual proxy
             const userArray = Array.prototype.map.call(
                 body,
                 (s) => `${s.UserDirectory}\\${s.UserId}`
             );
-            userSessionsData.uniqueUserList = Array.from(new Set(userArray)).toString();
+            userProxySessionsData.uniqueUserList = Array.from(new Set(userArray)).toString();
 
-            userSessionsData.sessionCount = body.length;
+            userProxySessionsData.sessionCount = body.length;
 
             // InfluxDB specific.
-            userSessionsData.datapointInfluxdb = [
+            userProxySessionsData.datapointInfluxdb = [
                 {
                     measurement: 'user_session_summary',
-                    tags: userSessionsData.tags,
+                    tags: userProxySessionsData.tags,
                     fields: {
-                        session_count: userSessionsData.sessionCount,
-                        session_user_id_list: userSessionsData.uniqueUserList,
+                        session_count: userProxySessionsData.sessionCount,
+                        session_user_id_list: userProxySessionsData.uniqueUserList,
                     },
                 },
                 {
                     measurement: 'user_session_list',
-                    tags: userSessionsData.tags,
+                    tags: userProxySessionsData.tags,
                     fields: {
-                        session_user_id_list: userSessionsData.uniqueUserList,
+                        session_user_id_list: userProxySessionsData.uniqueUserList,
                     },
                 },
             ];
 
             // Prometheus specific.
-            userSessionsData.datapointPrometheus = {};
-            userSessionsData.datapointPrometheus.butlersos_user_session_summary_total = {
-                value: userSessionsData.sessionCount,
-                labels: userSessionsData.tags,
+            userProxySessionsData.datapointPrometheus = {};
+            userProxySessionsData.datapointPrometheus.butlersos_user_session_summary_total = {
+                value: userProxySessionsData.sessionCount,
+                labels: userProxySessionsData.tags,
+            };
+
+            // New Relic specific
+            userProxySessionsData.datapointNewRelic = {};
+            userProxySessionsData.datapointNewRelic.butlersos_user_session_summary_total = {
+                value: userProxySessionsData.sessionCount,
+                attributes: userProxySessionsData.tags,
             };
 
             // Add details for each session
@@ -267,7 +288,7 @@ function prepUserSessionMetrics(host, virtualProxy, body, tags) {
                     ) {
                         // The user associated with the session was found in the blacklist. Return with no further action.
                         globals.logger.debug(
-                            `USER SESSIONS: User ${bodyItem.UserDirectory}\\${bodyItem.UserId} in blacklist, not reporting session.`
+                            `PROXY SESSIONS: User ${bodyItem.UserDirectory}\\${bodyItem.UserId} in blacklist, not reporting session.`
                         );
 
                         includeUser = false;
@@ -276,12 +297,12 @@ function prepUserSessionMetrics(host, virtualProxy, body, tags) {
 
                 if (includeUser === true) {
                     globals.logger.debug(
-                        `USER SESSIONS: User session: Body item: ${JSON.stringify(bodyItem)}`
+                        `PROXY SESSIONS: User session: Body item: ${JSON.stringify(bodyItem)}`
                     );
 
                     // InfluxDB specific.
                     // Add InfluxDB datapoints
-                    const influxTags = { ...userSessionsData.tags };
+                    const influxTags = { ...userProxySessionsData.tags };
                     // Add extra tags for this body item
                     influxTags.user_session_id = bodyItem.SessionId;
                     influxTags.user_session_user_directory = bodyItem.UserDirectory;
@@ -297,15 +318,13 @@ function prepUserSessionMetrics(host, virtualProxy, body, tags) {
                             user_id: bodyItem.UserId,
                         },
                     };
-                    userSessionsData.datapointInfluxdb.push(sessionDatapoint);
-
-                    // Prometehus specific
+                    userProxySessionsData.datapointInfluxdb.push(sessionDatapoint);
                 }
             }
 
-            resolve(userSessionsData);
+            resolve(userProxySessionsData);
         } catch (err) {
-            globals.logger.error(`USER SESSIONS: ${err}`);
+            globals.logger.error(`PROXY SESSIONS: ${err}`);
             reject();
         }
     });

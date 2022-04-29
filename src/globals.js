@@ -1,6 +1,5 @@
 const mqtt = require('mqtt');
-const config = require('config');
-
+const fs = require('fs-extra');
 const winston = require('winston');
 require('winston-daily-rotate-file');
 const path = require('path');
@@ -9,11 +8,103 @@ const si = require('systeminformation');
 const os = require('os');
 const crypto = require('crypto');
 
+const { Command, Option } = require('commander');
+
 const Influx = require('influx');
 const { Pool } = require('pg');
 
+function checkFileExistsSync(filepath) {
+    let flag = true;
+    try {
+        fs.accessSync(filepath, fs.constants.F_OK);
+    } catch (e) {
+        flag = false;
+    }
+    return flag;
+}
+
 // Get app version from package.json file
 const appVersion = require('../package.json').version;
+
+// Command line parameters
+const program = new Command();
+program
+    .version(appVersion)
+    .name('butler-sos')
+    .description(
+        'Butler SenseOps Stats ("Butler-SOS") is a microservice publishing operational Qlik Sense metrics to InfluxDB, Prometheus and New Relic.\nUser events and log events can be forwarded from Sense to Butler SOS and then acted upon there. Events can be stored in InfluxDB and sent to New Relic.\nAdd Grafana for great looking dashboards and you get real-time monitoring of what happens inside a Qlik Sense environment.'
+    )
+    .option('-c, --configfile <file>', 'path to config file')
+    .addOption(
+        new Option('-l, --loglevel <level>', 'log level').choices([
+            'error',
+            'warn',
+            'info',
+            'verbose',
+            'debug',
+            'silly',
+        ])
+    )
+    .option('--new-relic-api-key <key>', 'insert API key to use with New Relic')
+    .option('--new-relic-account-id <id>', 'New Relic account ID');
+
+// Parse command line params
+program.parse(process.argv);
+const options = program.opts();
+
+// Is there a config file specified on the command line?
+let configFileOption;
+let configFileExpanded;
+let configFilePath;
+let configFileBasename;
+let configFileExtension;
+if (options.configfile && options.configfile.length > 0) {
+    configFileOption = options.configfile;
+    configFileExpanded = path.resolve(options.configfile);
+    configFilePath = path.dirname(configFileExpanded);
+    configFileExtension = path.extname(configFileExpanded);
+    configFileBasename = path.basename(configFileExpanded, configFileExtension);
+
+    if (configFileExtension.toLowerCase() !== '.yaml') {
+        // eslint-disable-next-line no-console
+        console.log('Error: Config file extension must be yaml');
+        process.exit(1);
+    }
+
+    if (checkFileExistsSync(options.configfile)) {
+        process.env.NODE_CONFIG_DIR = configFilePath;
+        process.env.NODE_ENV = configFileBasename;
+    } else {
+        // eslint-disable-next-line no-console
+        console.log('Error: Specified config file does not exist');
+        process.exit(1);
+    }
+}
+
+// Are we running as standalone app or not?
+const isPkg = typeof process.pkg !== 'undefined';
+if (isPkg && configFileOption === undefined) {
+    // Show help if running as standalone app and mandatory options (e.g. config file) are not specified
+    program.help({ error: true });
+}
+
+// eslint-disable-next-line import/order
+const config = require('config');
+
+// Is there a log level file specified on the command line?
+if (options.loglevel && options.loglevel.length > 0) {
+    config['Butler-SOS'].logLevel = options.loglevel;
+}
+
+// Is there a New Relic API key specified on the command line?
+if (options.newRelicApiKey && options.newRelicApiKey.length > 0) {
+    config['Butler-SOS'].thirdPartyToolsCredentials.newRelic.insertApiKey = options.newRelicApiKey;
+}
+
+// Is there a New Relic account ID specified on the command line?
+if (options.newRelicAccountId && options.newRelicAccountId.length > 0) {
+    config['Butler-SOS'].thirdPartyToolsCredentials.newRelic.accountId = options.newRelicAccountId;
+}
 
 // Set up array for storing app ids and names
 const appNames = [];
@@ -304,6 +395,7 @@ const influx = new Influx.InfluxDB({
             fields: {
                 heap_used: Influx.FieldType.FLOAT,
                 heap_total: Influx.FieldType.FLOAT,
+                external: Influx.FieldType.FLOAT,
                 process_memory: Influx.FieldType.FLOAT,
             },
             tags: ['butler_sos_instance'],
@@ -472,4 +564,6 @@ module.exports = {
     udpServerLogEvents,
     initHostInfo,
     hostInfo,
+    isPkg,
+    checkFileExistsSync,
 };

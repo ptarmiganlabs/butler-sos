@@ -4,6 +4,7 @@
 // Load global variables and functions
 const globals = require('../globals');
 const postToInfluxdb = require('./post-to-influxdb');
+const postToNewRelic = require('./post-to-new-relic');
 const postToMQTT = require('./post-to-mqtt');
 
 // --------------------------------------------------------
@@ -260,6 +261,16 @@ function udpInitLogEventServer() {
                 ) {
                     globals.logger.debug('LOG EVENT: Calling log event Influxdb posting method');
                     postToInfluxdb.postLogEventToInfluxdb(msgObj);
+                }
+
+                // Post to New Relic (if enabled)
+                if (
+                    globals.config.has('Butler-SOS.newRelic.enable') &&
+                    globals.config.get('Butler-SOS.newRelic.enable') === true &&
+                    globals.config.get('Butler-SOS.logEvents.sendToNewRelic.enable')
+                ) {
+                    globals.logger.debug('LOG EVENT: Calling log event New Relic posting method');
+                    postToNewRelic.postLogEventToNewRelic(msgObj);
                 }
             }
         } catch (err) {
