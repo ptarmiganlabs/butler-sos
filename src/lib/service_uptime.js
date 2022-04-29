@@ -108,7 +108,7 @@ function serviceUptimeStart() {
             globals.config.has('Butler-SOS.uptimeMonitor.storeNewRelic.enable') &&
             globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.enable') === true
         ) {
-            postToNewRelic.postButlerUptimeToNewRelic({
+            postToNewRelic.postButlerSOSUptimeToNewRelic({
                 intervalMillisec,
                 heapUsed,
                 heapTotal,
