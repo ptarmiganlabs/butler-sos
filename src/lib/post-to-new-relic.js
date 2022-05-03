@@ -3,6 +3,7 @@
 
 const { users } = require('systeminformation');
 const axios = require('axios');
+const crypto = require('crypto');
 
 const globals = require('../globals');
 
@@ -676,21 +677,47 @@ async function postButlerSOSUptimeToNewRelic(fields) {
 }
 
 async function postUserEventToNewRelic(msg) {
-    globals.logger.debug(`USER EVENT NEW RELIC: ${msg})`);
+    globals.logger.debug(`USER EVENT NEW RELIC 1: ${JSON.stringify(msg, null, 2)})`);
 
     try {
         // First prepare tags relating to the actual user event, then add tags defined in the config file
         // The config file tags can for example be used to separate data from DEV/TEST/PROD environments
         const ts = new Date().getTime(); // Timestamp in millisec
-        const attributes = {
-            timestamp: ts,
-            qs_host: msg.host,
-            qs_event_action: msg.command,
-            qs_userFull: `${msg.user_directory}\\${msg.user_id}`,
-            qs_userDirectory: msg.user_directory,
-            qs_userId: msg.user_id,
-            qs_origin: msg.origin,
-        };
+        let attributes;
+        // Scramble the data if needed before sending to New Relic
+        if (
+            globals.config.has('Butler-SOS.userEvents.sendToNewRelic.scramble') &&
+            globals.config.get('Butler-SOS.userEvents.sendToNewRelic.scramble')
+        ) {
+            attributes = {
+                timestamp: ts,
+                qs_host: msg.host,
+                qs_event_action: msg.command,
+                qs_userFull: crypto
+                    .createHash('shake256', { outputLength: 8 })
+                    .update(`${msg.user_directory}\\${msg.user_id}`)
+                    .digest('hex'),
+                qs_userDirectory: crypto
+                    .createHash('shake256', { outputLength: 8 })
+                    .update(msg.user_directory)
+                    .digest('hex'),
+                qs_userId: crypto
+                    .createHash('shake256', { outputLength: 8 })
+                    .update(msg.user_id)
+                    .digest('hex'),
+                qs_origin: msg.origin,
+            };
+        } else {
+            attributes = {
+                timestamp: ts,
+                qs_host: msg.host,
+                qs_event_action: msg.command,
+                qs_userFull: `${msg.user_directory}\\${msg.user_id}`,
+                qs_userDirectory: msg.user_directory,
+                qs_userId: msg.user_id,
+                qs_origin: msg.origin,
+            };
+        }
 
         if (
             globals.config.has('Butler-SOS.userEvents.tags') &&
