@@ -1,5 +1,12 @@
 # Changelog
 
+### [9.0.1](https://github.com/ptarmiganlabs/butler-sos/compare/v9.0.0...v9.0.1) (2022-05-16)
+
+
+### Bug Fixes
+
+* **docs:** Add missing New Relic entries to sample config file ([9a70111](https://github.com/ptarmiganlabs/butler-sos/commit/9a701111ab5086e271cd3e735b19c94613669eb7)), closes [#407](https://github.com/ptarmiganlabs/butler-sos/issues/407)
+
 ## [9.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/v8.1.2...v9.0.0) (2022-05-16)
 
 
