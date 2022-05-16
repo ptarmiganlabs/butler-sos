@@ -1,12 +1,12 @@
 # Project specific
-src/config
-config/default.json
-config/production.json
-config/default.yaml
-config/default.yml
-config/production.yaml
-config/production.yml
-config/certificate/*
+src/config/default.json
+src/config/production.json
+src/config/production.yaml
+src/config/default.yaml
+src/config/default.yml
+src/config/production.yaml
+src/config/production.yml
+src/config/certificate/*
 cert/*.pem
 cert/*.pfx
 release

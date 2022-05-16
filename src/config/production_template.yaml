@@ -23,7 +23,7 @@ Butler-SOS:
   # whether the container is alive/well or not.
   # If you are not running Butler SOS in Docker you can safely disable this feature. 
   dockerHealthCheck:
-    enable: true                    # Control whether a REST endpoint will be set up to serve Docker health check messages
+    enable: false                    # Control whether a REST endpoint will be set up to serve Docker health check messages
     port: 12398                     # Port the Docker health check service runs on (if enabled)
 
   # Uptime monitor
@@ -34,6 +34,34 @@ Butler-SOS:
     storeInInfluxdb: 
       butlerSOSMemoryUsage: true    # Should data on Butler SOS' own memory use be stored in Infludb?
       instanceTag: DEV              # Tag that can be used to differentiate data from multiple Butler SOS instances
+    storeNewRelic:
+      enable: false
+      metric:
+        dynamic:
+          butlerMemoryUsage:
+            enable: true            # Should Butler SOS' memory/RAM usage be sent to New Relic?
+          butlerUptime:
+            enable: true            # Should Butler SOS' uptime (how long since it was started) be sent to New Relic?
+      attribute: 
+        static:                     # Static attributes/dimensions to attach to the data sent to New Relic.
+          - name: metricType
+            value: butler-sos-uptime
+          - name: qs_service
+            value: butler-sos
+          - name: qs_environment
+            value: prod
+        dynamic:
+          butlerVersion: 
+            enable: true            # Should the Butler SOS version be included in the data sent to New Relic?
+
+
+  # Credentials for third party systems that Butler integrate with.
+  # These can also be specified via command line parameters when starting Butler. 
+  # Command line options takes precedence over settings in this config file.
+  thirdPartyToolsCredentials:
+    newRelic: 
+      insertApiKey: <API key>
+      accountId: <account id>
 
   # Track individual users opening/closing apps and starting/stopping sessions. 
   # Requires log appender XML file(s) to be added to Sense server(s).
@@ -72,6 +100,9 @@ Butler-SOS:
           topic: qliksense/userevent/connection/close
     sendToInfluxdb:
       enable: true                  # Set to true if user events should be stored in InfluxDB
+    sendToNewRelic:
+      enable: false                  # Should log events be sent to New Relic?
+      scramble: true                # Should user info (user directory and user ID) be scrambled before sent to NR?
 
   # Log events are used to capture Sense warnings, errors and fatals in real time
   logEvents:
@@ -97,7 +128,9 @@ Butler-SOS:
         baseTopic: true
         subsystemTopics: true          # Should log events be sent to subtopics corresponding to the QSEoW subsystems where the events originated?
     sendToInfluxdb:
-      enable: false                     # Should log events be stored in InfluxDB?
+      enable: false                    # Should log events be stored in InfluxDB?
+    sendToNewRelic:
+      enable: false                    # Should log events be sent to New Relic?
 
   # Qlik Sense logging db config parameters
   logdb:
@@ -134,6 +167,68 @@ Butler-SOS:
     brokerHost: <IP of MQTT broker/server>
     brokerPort: 1883
     baseTopic: butler-sos/          # Default topic used if not not oherwise specified elsewhere. Should end with /
+
+  # New Relic config
+  # If enabled, select Butler SOS metrics will be sent to New Relic.
+  newRelic:
+    enable: false
+    event:
+      # There are different URLs depending on whther you have an EU or US region New Relic account.
+      # The available URLs are listed here: https://docs.newrelic.com/docs/accounts/accounts-billing/account-setup/choose-your-data-center/
+      #
+      # Note that the URL path should *not* be included in the url setting below!
+      # As of this writing the valid options are
+      # https://insights-collector.eu01.nr-data.net
+      # https://insights-collector.newrelic.com 
+      url: https://insights-collector.eu01.nr-data.net
+      header:                       # Custom http headers
+        - name: X-My-Header
+          value: Header value
+    metric:
+      enable: false
+      # There are different URLs depending on whther you have an EU or US region New Relic account.
+      # The available URLs are listed here: https://docs.newrelic.com/docs/accounts/accounts-billing/account-setup/choose-your-data-center/
+      # As of this writing the options for the New Relic metrics API are
+      # https://insights-collector.eu01.nr-data.net/metric/v1
+      # https://metric-api.newrelic.com/metric/v1 
+      url: https://insights-collector.eu01.nr-data.net/metric/v1   # Where should uptime data be sent?
+      header:                       # Custom http headers
+        - name: X-My-Header
+          value: Header value
+      dynamic:
+        engine:
+          memory:               # Engine RAM (free/committed/allocated).
+            enable: true
+          cpu:                  # Engine CPU.
+            enable: true        
+          calls:                # Total number of requests made to the engine.
+            enable: true        
+          selections:           # Total number of selections made to the engine.
+            enable: true        
+          sessions:             # Engine session metrics (active and total number of engine sessions).
+            enable: true        
+          users:                # Engine user metrics (active and total number of users in engine.
+            enable: true        
+          saturated:            # Engine saturation status (tracks whether engine has high or low load).
+            enable: true
+        apps:
+          docCount:
+            enable: true
+        cache:
+          cache:                # Cache metrics.
+            enable: true
+        proxy:
+          sessions:             # Session metrics as reported by the Sense proxy service
+            enable: true
+      attribute: 
+        static:                 # Static attributes/dimensions to attach to the data sent to New Relic.
+          - name: service
+            value: butler-sos
+          - name: environment
+            value: prod
+        dynamic:
+          butlerSosVersion: 
+            enable: true       # Should the Butler SOS version be included in the data sent to New Relic?
 
   # Prometheus config
   # If enabled, select Butler SOS metrics will be exposed on a Prometheus compatible URL from where they can be scraped.
