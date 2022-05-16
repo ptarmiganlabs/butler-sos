@@ -1,5 +1,45 @@
 # Changelog
 
+## [9.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/v8.1.2...v9.0.0) (2022-05-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* Add external memory to uptime data in InfluxDB
+
+### Features
+
+* Add command line options to Butler SOS ([e1d6577](https://github.com/ptarmiganlabs/butler-sos/commit/e1d65778878b2d16db3b099e5a83f53659201f01)), closes [#387](https://github.com/ptarmiganlabs/butler-sos/issues/387)
+* Add external memory to uptime data in InfluxDB ([45447aa](https://github.com/ptarmiganlabs/butler-sos/commit/45447aae8b2b173d7725583191e9fd018f5c4767))
+* Add New Relic as destination for SenseOps metrics ([394945a](https://github.com/ptarmiganlabs/butler-sos/commit/394945af429fc80bec0ae40071a45b0f59647963))
+* Add optional scrambling of user id for user events sent to New Relic ([33364f5](https://github.com/ptarmiganlabs/butler-sos/commit/33364f591ec5674ed85c90cb46407d183a1ab0fc)), closes [#398](https://github.com/ptarmiganlabs/butler-sos/issues/398)
+* Send engine, proxy and session metrics to New Relic. ([0b52eb5](https://github.com/ptarmiganlabs/butler-sos/commit/0b52eb5cb222f03f7a4b18eeafdb9f700758b7ee))
+
+
+### Bug Fixes
+
+* Compress stand-alone binaries ([028c9ab](https://github.com/ptarmiganlabs/butler-sos/commit/028c9ab23695e22f4f44f09ee4a1e89b10c52efa))
+* **deps:** update dependency axios to ^0.27.0 ([efce7c8](https://github.com/ptarmiganlabs/butler-sos/commit/efce7c82896c8d27d68fb3fe75b5f66ad86b3e5a))
+* Include New Relic status in telemtry data ([23c292c](https://github.com/ptarmiganlabs/butler-sos/commit/23c292cae4fd0dd18fec100641952a21c425ad3f))
+
+
+### Refactoring
+
+* Make proxy related log entries easier to understand ([fafe419](https://github.com/ptarmiganlabs/butler-sos/commit/fafe41980a806dbd8bffcde3d82db1436e3322b9)), closes [#392](https://github.com/ptarmiganlabs/butler-sos/issues/392)
+* Make user event log messages easier to understand ([3740a2c](https://github.com/ptarmiganlabs/butler-sos/commit/3740a2ceaf8afb7aa8ce1ffcc73d5952725dbfd7)), closes [#396](https://github.com/ptarmiganlabs/butler-sos/issues/396)
+* More relvant log prefixes for proxy session logging ([76ab969](https://github.com/ptarmiganlabs/butler-sos/commit/76ab969d1f8b0c1dd2a1e435f61296121ec8e7ef)), closes [#392](https://github.com/ptarmiganlabs/butler-sos/issues/392)
+
+
+### Miscellaneous
+
+* **deps:** update docker/build-push-action action to v3 ([c04b422](https://github.com/ptarmiganlabs/butler-sos/commit/c04b4226e9ce0c8dde904ceb986bccf66c6a4aac))
+* **deps:** update docker/login-action action to v2 ([907c6bf](https://github.com/ptarmiganlabs/butler-sos/commit/907c6bf485b3daa4b6191880f623c958a567c7e8))
+* **deps:** update docker/metadata-action action to v4 ([99f1fbf](https://github.com/ptarmiganlabs/butler-sos/commit/99f1fbffc9fdad3129ab3096c1dd9f3a3ac38b8f))
+* **deps:** update docker/setup-buildx-action action to v2 ([c488648](https://github.com/ptarmiganlabs/butler-sos/commit/c488648b7e929849a7bb0f64cee144efd8dce8d6))
+* **deps:** update docker/setup-qemu-action action to v2 ([b1352a2](https://github.com/ptarmiganlabs/butler-sos/commit/b1352a274ea334acb4ca73293ccb2c40bc209dac))
+* **deps:** update github/codeql-action action to v2 ([f01bfad](https://github.com/ptarmiganlabs/butler-sos/commit/f01bfadd210f90ba0f7c062d41f6f41e7fff4508))
+* **deps:** update node.js to v18 ([9276b68](https://github.com/ptarmiganlabs/butler-sos/commit/9276b68a8a756661c98d872bc5432d202ac091c9))
+
 ### [8.1.2](https://github.com/ptarmiganlabs/butler-sos/compare/v8.1.1...v8.1.2) (2022-04-09)
 
 
