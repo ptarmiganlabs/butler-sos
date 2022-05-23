@@ -1,5 +1,12 @@
 # Changelog
 
+### [9.0.2](https://github.com/ptarmiganlabs/butler-sos/compare/v9.0.1...v9.0.2) (2022-05-23)
+
+
+### Bug Fixes
+
+* Properly show warnings when trying to send log events to New Relic ([8739c48](https://github.com/ptarmiganlabs/butler-sos/commit/8739c48eefb987de7d4e58d72bb9c50b6d6cfb57)), closes [#411](https://github.com/ptarmiganlabs/butler-sos/issues/411)
+
 ### [9.0.1](https://github.com/ptarmiganlabs/butler-sos/compare/v9.0.0...v9.0.1) (2022-05-16)
 
 
