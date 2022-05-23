@@ -645,7 +645,7 @@ async function postUserEventToNewRelic(msg) {
 
 function postLogEventToNewRelic(msg) {
     // globals.logger.debug(`LOG EVENT NEW RELIC: ${msg})`);
-    globals.logger.warning(
+    globals.logger.warn(
         `LOG EVENT NEW RELIC: Posting log events to New Relic is not implemented yet.)`
     );
 }
