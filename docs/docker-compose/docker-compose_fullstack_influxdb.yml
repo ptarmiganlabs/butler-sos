@@ -1,52 +1,52 @@
 # docker-compose.yml
-version: '3.3'
+version: "3.3"
 services:
-  butler-sos:
-    image: ptarmiganlabs/butler-sos:latest
-    container_name: butler-sos
-    restart: always
-    volumes:
-      # Make config file accessible outside of container
-      - "./config:/nodeapp/config"
-      - "./log:/nodeapp/log"
-    environment:
-      - "NODE_ENV=production_influxdb"         # Means that Butler SOS will read config data from production.yaml 
-    logging:
-      driver: "json-file"
-      options:
-        max-file: "5"
-        max-size: "5m"
-    networks:
-      - senseops
+    butler-sos:
+        image: ptarmiganlabs/butler-sos:latest
+        container_name: butler-sos
+        restart: always
+        volumes:
+            # Make config file accessible outside of container
+            - "./config:/nodeapp/config"
+            - "./log:/nodeapp/log"
+        environment:
+            - "NODE_ENV=production_influxdb" # Means that Butler SOS will read config data from production.yaml
+        logging:
+            driver: "json-file"
+            options:
+                max-file: "5"
+                max-size: "5m"
+        networks:
+            - senseops
 
-  influxdb:
-    image: influxdb:1.8.10
-    container_name: influxdb
-    restart: always
-    volumes:
-      - ./influxdb/data:/var/lib/influxdb   # Mount for influxdb data directory
-      - ./influxdb/config/:/etc/influxdb/   # Mount for influxdb configuration
-    ports:
-      # The API for InfluxDB is served on port 8086
-      - "8086:8086"
-      - "8082:8082"
-    environment:
-      # Disable usage reporting
-      - "INFLUXDB_REPORTING_DISABLED=true"
-    networks:
-      - senseops
+    influxdb:
+        image: influxdb:1.8.10
+        container_name: influxdb
+        restart: always
+        volumes:
+            - ./influxdb/data:/var/lib/influxdb # Mount for influxdb data directory
+            - ./influxdb/config/:/etc/influxdb/ # Mount for influxdb configuration
+        ports:
+            # The API for InfluxDB is served on port 8086
+            - "8086:8086"
+            - "8082:8082"
+        environment:
+            # Disable usage reporting
+            - "INFLUXDB_REPORTING_DISABLED=true"
+        networks:
+            - senseops
 
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    restart: always
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./grafana/data:/var/lib/grafana
-    networks:
-      - senseops
+    grafana:
+        image: grafana/grafana:latest
+        container_name: grafana
+        restart: always
+        ports:
+            - "3000:3000"
+        volumes:
+            - ./grafana/data:/var/lib/grafana
+        networks:
+            - senseops
 
 networks:
-  senseops:
-    driver: bridge
+    senseops:
+        driver: bridge

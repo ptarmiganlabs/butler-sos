@@ -13,10 +13,7 @@
                 "NODE_CONFIG_DIR": "${workspaceFolder}/src/config",
                 "NODE_ENV": "production"
             },
-            "args": [
-                "--loglevel",
-                "debug",
-            ]      
+            "args": ["--loglevel", "debug"]
         }
     ]
 }

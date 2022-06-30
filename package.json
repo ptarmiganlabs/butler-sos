@@ -1,63 +1,63 @@
 {
-  "name": "butler-sos",
-  "version": "9.0.2",
-  "description": "Butler SenseOps Stats (\"Butler SOS\") is a tool that publishes operational Qlik Sense metrics to Influxdb, Prometheus, New Relic and MQTT.",
-  "main": "src/butler-sos.js",
-  "scripts": {
-    "butler-sos": "node src/butler-sos.js",
-    "test": "snyk test && npm run format",
-    "format": "npm run format:prettier",
-    "format:prettier": "npx prettier --config src/.prettierrc.yaml \"./src/**/*.{ts,css,less,js}\" --write",
-    "lint": "npx eslint src/ --format table"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ptarmiganlabs/butler-sos.git"
-  },
-  "keywords": [
-    "butler-sos",
-    "senseops",
-    "devops",
-    "influxdb",
-    "prometheus",
-    "qliksense"
-  ],
-  "author": "Göran Sander",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/ptarmiganlabs/butler-sos/issues"
-  },
-  "homepage": "https://github.com/ptarmiganlabs/butler-sos#readme",
-  "dependencies": {
-    "@breejs/later": "^4.1.0",
-    "axios": "^0.27.2",
-    "commander": "^9.2.0",
-    "config": "^3.3.7",
-    "eslint": "^7.32.0",
-    "eslint-config-airbnb-base": "^15.0.0",
-    "eslint-config-prettier": "8.5.0",
-    "eslint-plugin-import": "^2.26.0",
-    "eslint-plugin-prettier": "^4.0.0",
-    "fastify": "^3.29.0",
-    "fastify-healthcheck": "^3.1.0",
-    "fastify-metrics": "^8.0.0",
-    "fs-extra": "^10.1.0",
-    "influx": "^5.9.3",
-    "js-yaml": "^4.1.0",
-    "lodash.clonedeep": "^4.5.0",
-    "luxon": "^2.4.0",
-    "mqtt": "^4.3.7",
-    "pg": "^8.7.3",
-    "prom-client": "^14.0.1",
-    "qrs-interact": "^6.3.1",
-    "systeminformation": "^5.11.15",
-    "winston": "^3.7.2",
-    "winston-daily-rotate-file": "^4.6.1"
-  },
-  "devDependencies": {
-    "prettier": "2.6.2"
-  },
-  "pkg": {
-    "scripts": "node_modules/js-yaml/**/*.js"
-  }
+    "name": "butler-sos",
+    "version": "9.0.2",
+    "description": "Butler SenseOps Stats (\"Butler SOS\") is a tool that publishes operational Qlik Sense metrics to Influxdb, Prometheus, New Relic and MQTT.",
+    "main": "src/butler-sos.js",
+    "scripts": {
+        "butler-sos": "node src/butler-sos.js",
+        "test": "snyk test && npm run format",
+        "format": "npm run format:prettier",
+        "format:prettier": "npx prettier --config src/.prettierrc.yaml \"./src/**/*.{ts,css,less,js}\" --write",
+        "lint": "npx eslint src/ --format table"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ptarmiganlabs/butler-sos.git"
+    },
+    "keywords": [
+        "butler-sos",
+        "senseops",
+        "devops",
+        "influxdb",
+        "prometheus",
+        "qliksense"
+    ],
+    "author": "Göran Sander",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/ptarmiganlabs/butler-sos/issues"
+    },
+    "homepage": "https://github.com/ptarmiganlabs/butler-sos#readme",
+    "dependencies": {
+        "@breejs/later": "^4.1.0",
+        "axios": "^0.27.2",
+        "commander": "^9.2.0",
+        "config": "^3.3.7",
+        "eslint": "^7.32.0",
+        "eslint-config-airbnb-base": "^15.0.0",
+        "eslint-config-prettier": "8.5.0",
+        "eslint-plugin-import": "^2.26.0",
+        "eslint-plugin-prettier": "^4.0.0",
+        "fastify": "^3.29.0",
+        "fastify-healthcheck": "^3.1.0",
+        "fastify-metrics": "^8.0.0",
+        "fs-extra": "^10.1.0",
+        "influx": "^5.9.3",
+        "js-yaml": "^4.1.0",
+        "lodash.clonedeep": "^4.5.0",
+        "luxon": "^2.4.0",
+        "mqtt": "^4.3.7",
+        "pg": "^8.7.3",
+        "prom-client": "^14.0.1",
+        "qrs-interact": "^6.3.1",
+        "systeminformation": "^5.11.15",
+        "winston": "^3.7.2",
+        "winston-daily-rotate-file": "^4.6.1"
+    },
+    "devDependencies": {
+        "prettier": "2.6.2"
+    },
+    "pkg": {
+        "scripts": "node_modules/js-yaml/**/*.js"
+    }
 }
