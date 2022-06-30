@@ -643,11 +643,252 @@ async function postUserEventToNewRelic(msg) {
     }
 }
 
-function postLogEventToNewRelic(msg) {
-    // globals.logger.debug(`LOG EVENT NEW RELIC: ${msg})`);
-    globals.logger.warn(
-        `LOG EVENT NEW RELIC: Posting log events to New Relic is not implemented yet.)`
-    );
+/**
+ *
+ * @param {*} sourceService
+ * @param {*} sourcelogLevel
+ */
+function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
+    // Engine log event
+    if (
+        sourceService.toLowerCase() === 'engine' &&
+        globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.engine.enable') &&
+        globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.engine.enable') === true
+    ) {
+        if (
+            (globals.config.has(
+                'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error'
+            ) &&
+                globals.config.get(
+                    'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error'
+                ) === true &&
+                sourceLogLevel.toLowerCase() === 'error') ||
+            (globals.config.has(
+                'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.warn'
+            ) &&
+                globals.config.get(
+                    'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.warn'
+                ) === true &&
+                sourceLogLevel.toLowerCase() === 'warn')
+        ) {
+            return true;
+        }
+    }
+
+    // Proxy log event
+    if (
+        sourceService.toLowerCase() === 'proxy' &&
+        globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.proxy.enable') &&
+        globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.proxy.enable') === true
+    ) {
+        if (
+            (globals.config.has(
+                'Butler-SOS.logEvents.sendToNewRelic.source.proxy.logLevel.error'
+            ) &&
+                globals.config.get(
+                    'Butler-SOS.logEvents.sendToNewRelic.source.proxy.logLevel.error'
+                ) === true &&
+                sourceLogLevel.toLowerCase() === 'error') ||
+            (globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.proxy.logLevel.warn') &&
+                globals.config.get(
+                    'Butler-SOS.logEvents.sendToNewRelic.source.proxy.logLevel.warn'
+                ) === true &&
+                sourceLogLevel.toLowerCase() === 'warn')
+        ) {
+            return true;
+        }
+    }
+
+    // Repository log event
+    if (
+        sourceService.toLowerCase() === 'repository' &&
+        globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.repository.enable') &&
+        globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.repository.enable') === true
+    ) {
+        if (
+            (globals.config.has(
+                'Butler-SOS.logEvents.sendToNewRelic.source.repository.logLevel.error'
+            ) &&
+                globals.config.get(
+                    'Butler-SOS.logEvents.sendToNewRelic.source.repository.logLevel.error'
+                ) === true &&
+                sourceLogLevel.toLowerCase() === 'error') ||
+            (globals.config.has(
+                'Butler-SOS.logEvents.sendToNewRelic.source.repository.logLevel.warn'
+            ) &&
+                globals.config.get(
+                    'Butler-SOS.logEvents.sendToNewRelic.source.repository.logLevel.warn'
+                ) === true &&
+                sourceLogLevel.toLowerCase() === 'warn')
+        ) {
+            return true;
+        }
+    }
+
+    // Scheduler log event
+    if (
+        sourceService.toLowerCase() === 'scheduler' &&
+        globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.scheduler.enable') &&
+        globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.scheduler.enable') === true
+    ) {
+        if (
+            (globals.config.has(
+                'Butler-SOS.logEvents.sendToNewRelic.source.scheduler.logLevel.error'
+            ) &&
+                globals.config.get(
+                    'Butler-SOS.logEvents.sendToNewRelic.source.scheduler.logLevel.error'
+                ) === true &&
+                sourceLogLevel.toLowerCase() === 'error') ||
+            (globals.config.has(
+                'Butler-SOS.logEvents.sendToNewRelic.source.scheduler.logLevel.warn'
+            ) &&
+                globals.config.get(
+                    'Butler-SOS.logEvents.sendToNewRelic.source.scheduler.logLevel.warn'
+                ) === true &&
+                sourceLogLevel.toLowerCase() === 'warn')
+        ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ *
+ * @param {*} msg
+ */
+async function postLogEventToNewRelic(msg) {
+    globals.logger.debug(`LOG EVENT NEW RELIC: ${msg})`);
+
+    try {
+        // Only send log events that are enabled in the confif file
+        if (sendNRLogEventYesNo(msg.source, msg.level) === true) {
+            // First prepare attributes relating to the actual log event, then add attributes defined in the config file
+            // The config file attributes can for example be used to separate data from DEV/TEST/PROD environments
+            const ts = new Date().getTime(); // Timestamp in millisec
+            const attributes = {
+                timestamp: ts,
+                qs_ts_iso: msg.ts_iso,
+                qs_ts_local: msg.ts_local,
+                qs_log_source: msg.source,
+                qs_log_level: msg.level,
+                qs_host: msg.host,
+                qs_subsystem: msg.subsystem,
+                qs_windows_user: msg.windows_user,
+                qs_message: msg.message,
+                qs_exception_message: msg.exception_message,
+                qs_user_full: `${msg.user_directory}\\${msg.user_id}`,
+                qs_user_directory: msg.user_directory,
+                qs_user_id: msg.user_id,
+                qs_command: msg.command,
+                qs_result_code: msg.result_code,
+                qs_origin: msg.origin,
+                qs_context: msg.context,
+                qs_task_name: msg.task_name,
+                qs_app_name: msg.app_name,
+                qs_task_id: msg.task_id,
+                qs_app_id: msg.app_id,
+                qs_execution_id: msg.execution_id,
+            };
+
+            // Att log event tags as attributes
+            if (
+                globals.config.has('Butler-SOS.logEvents.tags') &&
+                globals.config.get('Butler-SOS.logEvents.tags') !== null &&
+                globals.config.get('Butler-SOS.logEvents.tags').length > 0
+            ) {
+                const configTags = globals.config.get('Butler-SOS.logEvents.tags');
+                // eslint-disable-next-line no-restricted-syntax
+                for (const item of configTags) {
+                    attributes[item.tag] = item.value;
+                }
+            }
+
+            // Add New Relic specific attributes
+            if (
+                globals.config.has('Butler-SOS.newRelic.event.attribute.static') &&
+                globals.config.get('Butler-SOS.newRelic.event.attribute.static') !== null &&
+                globals.config.get('Butler-SOS.newRelic.event.attribute.static').length > 0
+            ) {
+                const configTags = globals.config.get('Butler-SOS.newRelic.event.attribute.static');
+                // eslint-disable-next-line no-restricted-syntax
+                for (const item of configTags) {
+                    attributes[item.name] = item.value;
+                }
+            }
+
+            // Add dynamic, New Relic specifc attributes
+            if (
+                globals.config.has(
+                    'Butler-SOS.newRelic.event.attribute.dynamic.butlerSosVersion.enable'
+                ) &&
+                globals.config.get(
+                    'Butler-SOS.newRelic.event.attribute.dynamic.butlerSosVersion.enable'
+                ) === true
+            ) {
+                attributes.butlerSosVersion = globals.appVersion;
+            }
+
+            // Build final payload
+            const payload = { ...attributes };
+            payload.eventType = 'qs_logEvent';
+
+            globals.logger.debug(
+                `LOG EVENT NEW RELIC: Payload: ${JSON.stringify(payload, null, 2)}`
+            );
+
+            // Preapare call to remote host
+            const tmpUrl =
+                globals.config.get('Butler-SOS.newRelic.event.url').slice(-1) === '/'
+                    ? globals.config.get('Butler-SOS.newRelic.event.url')
+                    : `${globals.config.get('Butler-SOS.newRelic.event.url')}/`;
+
+            // Build final URL
+            const eventUrl = `${tmpUrl}v1/accounts/${globals.config.get(
+                'Butler-SOS.thirdPartyToolsCredentials.newRelic.accountId'
+            )}/events`;
+
+            globals.logger.debug(`LOG EVENT NEW RELIC: Event API url=${eventUrl}`);
+
+            // Add headers
+            const headers = {
+                'Content-Type': 'application/json',
+                'Api-Key': globals.config.get(
+                    'Butler-SOS.thirdPartyToolsCredentials.newRelic.insertApiKey'
+                ),
+            };
+
+            if (
+                globals.config.has('Butler-SOS.newRelic.event.header') &&
+                globals.config.get('Butler-SOS.newRelic.event.header') !== null &&
+                globals.config.get('Butler-SOS.newRelic.event.header').length > 0
+            ) {
+                const configHeaders = globals.config.get('Butler-SOS.newRelic.event.header');
+                // eslint-disable-next-line no-restricted-syntax
+                for (const header of configHeaders) {
+                    headers[header.name] = header.value;
+                }
+            }
+
+            const axiosRequest = {
+                url: eventUrl,
+                method: 'post',
+                timeout: 10000,
+                data: payload,
+                headers,
+            };
+
+            const res = await axios.request(axiosRequest);
+
+            globals.logger.debug(
+                `LOG EVENT NEW RELIC: Result code from posting to New Relic: ${res.status}, ${res.statusText}`
+            );
+            globals.logger.verbose(`LOG EVENT NEW RELIC: Sent event to New Relic`);
+        }
+    } catch (err) {
+        globals.logger.error(`LOG EVENT NEW RELIC: Error saving event to New Relic! ${err}`);
+    }
 }
 
 module.exports = {
