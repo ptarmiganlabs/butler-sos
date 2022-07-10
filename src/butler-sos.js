@@ -1,9 +1,13 @@
 // Add dependencies
 const path = require('path');
-const dockerHealthCheckServer = require('fastify')({ logger: false });
+const Fastify = require('fastify');
+const FastifyHealthcheck = require('fastify-healthcheck');
+
 const promServer = require('fastify')({ logger: false });
 const promFastifyMetricsServer = require('fastify')({ logger: false });
 const metricsPlugin = require('fastify-metrics');
+
+const dockerHealthCheckServer = Fastify({ logger: false });
 
 promServer.server.keepAliveTimeout = 0;
 promFastifyMetricsServer.register(metricsPlugin, { endpoint: '/metrics' });
@@ -147,12 +151,11 @@ async function mainScript() {
         try {
             globals.logger.verbose('MAIN: Starting Docker healthcheck server...');
 
-            // Use http://localhost:12398/health as Docker healthcheck URL
-            // eslint-disable-next-line global-require
-            dockerHealthCheckServer.register(require('fastify-healthcheck'));
-            await dockerHealthCheckServer.listen(
-                globals.config.get('Butler-SOS.dockerHealthCheck.port')
-            );
+            await dockerHealthCheckServer.register(FastifyHealthcheck);
+
+            await dockerHealthCheckServer.listen({
+                port: globals.config.get('Butler-SOS.dockerHealthCheck.port'),
+            });
 
             globals.logger.info(
                 `MAIN: Started Docker healthcheck server on port ${globals.config.get(
