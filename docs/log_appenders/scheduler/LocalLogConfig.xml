@@ -3,7 +3,7 @@
     <!-- Generic appender for detecting warnings and errors -->
     <appender name="LogEvent" type="log4net.Appender.UdpAppender">
         <param name="threshold" value="warn" />
-        <param name="remoteAddress" value="<FQDN or IP of server where Butler is running>" />
+        <param name="remoteAddress" value="FQDN or IP of server where Butler is running" />
         <param name="remotePort" value="9996" />
         <param name="encoding" value="utf-8" />
         <layout type="log4net.Layout.PatternLayout">
