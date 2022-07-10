@@ -23,6 +23,7 @@ repos:
                     src/config/.*|
                     CHANGELOG.md|
                     changelog.md|
+                    docs/windows install walkthrough/*.pdf|
                     docs/api_doc/butler-api.html
                 )$
 
