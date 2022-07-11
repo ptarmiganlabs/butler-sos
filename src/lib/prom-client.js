@@ -200,7 +200,7 @@ async function setupPromClient(promServer, promPort, promHost) {
             }
         });
 
-        await promServer.listen(promPort, promHost);
+        await promServer.listen({ port: promPort, host: promHost });
         globals.logger.info(
             `PROM: Prometheus Butler SOS metrics server now listening on port ${promPort}`
         );

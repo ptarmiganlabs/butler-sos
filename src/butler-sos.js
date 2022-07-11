@@ -1,13 +1,13 @@
 // Add dependencies
 const path = require('path');
-const Fastify = require('fastify');
 const FastifyHealthcheck = require('fastify-healthcheck');
+const Fastify = require('fastify');
 
-const promServer = require('fastify')({ logger: false });
-const promFastifyMetricsServer = require('fastify')({ logger: false });
-const metricsPlugin = require('fastify-metrics');
-
+const promServer = Fastify({ logger: false });
+const promFastifyMetricsServer = Fastify({ logger: false });
 const dockerHealthCheckServer = Fastify({ logger: false });
+
+const metricsPlugin = require('fastify-metrics');
 
 promServer.server.keepAliveTimeout = 0;
 promFastifyMetricsServer.register(metricsPlugin, { endpoint: '/metrics' });
@@ -205,7 +205,7 @@ async function mainScript() {
 
         try {
             // Set up Node.js internal metrics
-            await promFastifyMetricsServer.listen(promNodePort, promNodeHost);
+            await promFastifyMetricsServer.listen({ port: promNodePort, host: promNodeHost });
             globals.logger.info(
                 `PROM: Prometheus Node.js metrics server now listening on port ${promNodeHost}:${promNodePort}`
             );
