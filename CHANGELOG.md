@@ -1,5 +1,30 @@
 # Changelog
 
+## [9.1.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.0.2...v9.1.0) (2022-07-27)
+
+
+### Features
+
+* Better logging when warnings and errors occur ([f8abc64](https://github.com/ptarmiganlabs/butler-sos/commit/f8abc6427c09c99882c02b259ee1b8a831cfe332)), closes [#404](https://github.com/ptarmiganlabs/butler-sos/issues/404)
+
+
+### Bug Fixes
+
+* Send correct tags to Prometheus endpoint ([04f735e](https://github.com/ptarmiganlabs/butler-sos/commit/04f735e65aca1dd02b5aa176e78052f7f38df9e9)), closes [#422](https://github.com/ptarmiganlabs/butler-sos/issues/422)
+
+
+### Refactoring
+
+* Apply consistent formatting to all source and doc files ([2f1634e](https://github.com/ptarmiganlabs/butler-sos/commit/2f1634ebc5bd9e3aec509a680f2a033726062e75)), closes [#419](https://github.com/ptarmiganlabs/butler-sos/issues/419)
+* Upgrade Prometheus metrics lib to latest version ([61d363a](https://github.com/ptarmiganlabs/butler-sos/commit/61d363a80e23dd68c984a3a4eef4a82fb9a110e6))
+
+
+### Miscellaneous
+
+* Update dependencies ([caa2f5c](https://github.com/ptarmiganlabs/butler-sos/commit/caa2f5c95af30d83dc918faf72fbfba3c36a04bb))
+* update minor dependencies ([b89d155](https://github.com/ptarmiganlabs/butler-sos/commit/b89d155abf7bac4ddca06278317a3df6a97dc86f))
+* upgrade to Fastify 4.x ([496f4ec](https://github.com/ptarmiganlabs/butler-sos/commit/496f4ec88c986d42eff344f5be9e2b65f5f6fe4a))
+
 ### [9.0.2](https://github.com/ptarmiganlabs/butler-sos/compare/v9.0.1...v9.0.2) (2022-05-23)
 
 
