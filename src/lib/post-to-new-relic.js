@@ -9,6 +9,11 @@ const globals = require('../globals');
 
 const sessionAppPrefix = 'SessionApp';
 
+/**
+ *
+ * @param {*} serverStarted
+ * @returns
+ */
 function getFormattedTime(serverStarted) {
     const dateTime = Date.now();
     const timestamp = Math.floor(dateTime);
@@ -44,6 +49,12 @@ function getFormattedTime(serverStarted) {
     return `${days} days, ${hours}h ${minutes.substr(-2)}m ${seconds.substr(-2)}s`;
 }
 
+/**
+ *
+ * @param {*} _host
+ * @param {*} body
+ * @param {*} tags
+ */
 async function postHealthMetricsToNewRelic(_host, body, tags) {
     // Calculate server uptime
     const formattedTime = getFormattedTime(body.started);
@@ -314,9 +325,14 @@ async function postProxySessionsToNewRelic(userSessions) {
     try {
         const payload = [];
         const metrics = [];
-        const attributes =
-            userSessions.datapointNewRelic.butlersos_user_session_summary_total.attributes;
+        let attributes = {};
+        // const attributes =            userSessions.datapointNewRelic.butlersos_user_session_summary_total.attributes;
         const ts = new Date().getTime(); // Timestamp in millisec
+
+        // Add attributes from session object
+        attributes = {
+            ...userSessions.datapointNewRelic.butlersos_user_session_summary_total.attributes,
+        };
 
         // Add static fields to attributes
         if (globals.config.has('Butler-SOS.newRelic.metric.attribute.static')) {
