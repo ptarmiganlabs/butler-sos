@@ -1,44 +1,44 @@
-version: "2"         # required to adjust maintainability checks
+version: "2" # required to adjust maintainability checks
 plugins:
-  eslint:
-    enabled: true
-  fixme:
-    enabled: true
-  markdownlint:
-    enabled: true
-  nodesecurity:
-    enabled: true
+    eslint:
+        enabled: true
+    fixme:
+        enabled: true
+    markdownlint:
+        enabled: true
+    nodesecurity:
+        enabled: true
 
 checks:
-  argument-count:
-    config:
-      threshold: 6
-  complex-logic:
-    config:
-      threshold: 4
-  file-lines:
-    config:
-      threshold: 250
-  method-complexity:
-    config:
-      threshold: 10
-  method-count:
-    config:
-      threshold: 20
-  method-lines:
-    config:
-      threshold: 75
-  nested-control-flow:
-    config:
-      threshold: 4
-  return-statements:
-    config:
-      threshold: 4
-  similar-code:
-    enabled: false
-  identical-code:
-    config:
-      threshold: # language-specific defaults. an override will affect all languages.
+    argument-count:
+        config:
+            threshold: 6
+    complex-logic:
+        config:
+            threshold: 4
+    file-lines:
+        config:
+            threshold: 250
+    method-complexity:
+        config:
+            threshold: 10
+    method-count:
+        config:
+            threshold: 20
+    method-lines:
+        config:
+            threshold: 75
+    nested-control-flow:
+        config:
+            threshold: 4
+    return-statements:
+        config:
+            threshold: 4
+    similar-code:
+        enabled: false
+    identical-code:
+        config:
+            threshold: # language-specific defaults. an override will affect all languages.
 
 exclude_patterns:
-  - "**/node_modules/"
+    - "**/node_modules/"

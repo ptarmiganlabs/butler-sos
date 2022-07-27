@@ -1,7 +1,4 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
@@ -9,14 +6,18 @@
             "request": "launch",
             "name": "Launch Program",
             "program": "${workspaceFolder}/src/butler-sos.js",
+            "runtimeVersion": "18",
+            "cwd": "${workspaceFolder}/src",
             "env": {
                 "NODE_CONFIG_DIR": "${workspaceFolder}/src/config",
                 "NODE_ENV": "production"
             },
             "args": [
-                "--loglevel",
-                "debug",
-            ]      
+                "--loglevel", 
+                "info", 
+                "--configfile", 
+                "./config/production.yaml"
+            ]
         }
     ]
 }

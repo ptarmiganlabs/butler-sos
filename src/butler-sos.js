@@ -1,8 +1,12 @@
 // Add dependencies
 const path = require('path');
-const dockerHealthCheckServer = require('fastify')({ logger: false });
-const promServer = require('fastify')({ logger: false });
-const promFastifyMetricsServer = require('fastify')({ logger: false });
+const FastifyHealthcheck = require('fastify-healthcheck');
+const Fastify = require('fastify');
+
+const promServer = Fastify({ logger: false });
+const promFastifyMetricsServer = Fastify({ logger: false });
+const dockerHealthCheckServer = Fastify({ logger: false });
+
 const metricsPlugin = require('fastify-metrics');
 
 promServer.server.keepAliveTimeout = 0;
@@ -147,12 +151,11 @@ async function mainScript() {
         try {
             globals.logger.verbose('MAIN: Starting Docker healthcheck server...');
 
-            // Use http://localhost:12398/health as Docker healthcheck URL
-            // eslint-disable-next-line global-require
-            dockerHealthCheckServer.register(require('fastify-healthcheck'));
-            await dockerHealthCheckServer.listen(
-                globals.config.get('Butler-SOS.dockerHealthCheck.port')
-            );
+            await dockerHealthCheckServer.register(FastifyHealthcheck);
+
+            await dockerHealthCheckServer.listen({
+                port: globals.config.get('Butler-SOS.dockerHealthCheck.port'),
+            });
 
             globals.logger.info(
                 `MAIN: Started Docker healthcheck server on port ${globals.config.get(
@@ -202,7 +205,7 @@ async function mainScript() {
 
         try {
             // Set up Node.js internal metrics
-            await promFastifyMetricsServer.listen(promNodePort, promNodeHost);
+            await promFastifyMetricsServer.listen({ port: promNodePort, host: promNodeHost });
             globals.logger.info(
                 `PROM: Prometheus Node.js metrics server now listening on port ${promNodeHost}:${promNodePort}`
             );

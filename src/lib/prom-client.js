@@ -181,6 +181,7 @@ async function setupPromClient(promServer, promPort, promHost) {
         const promUserSessionLabels = [...promLabels];
         promUserSessionLabels.push('user_session_virtual_proxy');
         promUserSessionLabels.push('user_session_host');
+        promUserSessionLabels.push('service');
 
         promMetricUserSessionsTotal = new client.Gauge({
             name: 'butlersos_user_session_total',
@@ -200,7 +201,7 @@ async function setupPromClient(promServer, promPort, promHost) {
             }
         });
 
-        await promServer.listen(promPort, promHost);
+        await promServer.listen({ port: promPort, host: promHost });
         globals.logger.info(
             `PROM: Prometheus Butler SOS metrics server now listening on port ${promPort}`
         );

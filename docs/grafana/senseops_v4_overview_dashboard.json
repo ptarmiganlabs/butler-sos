@@ -1,2453 +1,2348 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": "-- Grafana --",
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
-  },
-  "description": "High level metrics for Qlik Sense",
-  "editable": true,
-  "gnetId": null,
-  "graphTooltip": 2,
-  "id": 29,
-  "iteration": 1571775572393,
-  "links": [
-    {
-      "icon": "external link",
-      "tags": [],
-      "targetBlank": true,
-      "title": "QMC",
-      "tooltip": "Open QMC",
-      "type": "link",
-      "url": "https://sense.ptarmiganlabs.net/hdr/qmc"
+    "annotations": {
+        "list": [
+            {
+                "builtIn": 1,
+                "datasource": "-- Grafana --",
+                "enable": true,
+                "hide": true,
+                "iconColor": "rgba(0, 211, 255, 1)",
+                "name": "Annotations & Alerts",
+                "type": "dashboard"
+            }
+        ]
     },
-    {
-      "icon": "external link",
-      "tags": [],
-      "targetBlank": true,
-      "title": " Hub",
-      "tooltip": "Open Hub",
-      "type": "link",
-      "url": "https://sense.ptarmiganlabs.net/hdr/"
-    }
-  ],
-  "panels": [
-    {
-      "collapsed": true,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "id": 143,
-      "panels": [
+    "description": "High level metrics for Qlik Sense",
+    "editable": true,
+    "gnetId": null,
+    "graphTooltip": 2,
+    "id": 29,
+    "iteration": 1571775572393,
+    "links": [
         {
-          "datasource": "SenseOps",
-          "description": "",
-          "gridPos": {
-            "h": 6,
-            "w": 7,
-            "x": 0,
-            "y": 1
-          },
-          "id": 148,
-          "interval": "",
-          "options": {
-            "displayMode": "basic",
-            "fieldOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "defaults": {
-                "decimals": 0,
-                "mappings": [],
-                "max": 25,
-                "min": 0,
-                "thresholds": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 12
-                  }
-                ],
-                "title": "$__field_name"
-              },
-              "override": {},
-              "values": false
-            },
-            "orientation": "horizontal"
-          },
-          "pluginVersion": "6.3.5",
-          "targets": [
-            {
-              "alias": "$tag_user_session_virtual_proxy",
-              "groupBy": [
-                {
-                  "params": [
-                    "user_session_virtual_proxy"
-                  ],
-                  "type": "tag"
-                }
-              ],
-              "measurement": "user_session_summary",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "session_count"
-                    ],
-                    "type": "field"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "server_description",
-                  "operator": "=~",
-                  "value": "/^$server$/"
-                }
-              ],
-              "tz": ""
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "Current sessions per virtual proxy",
-          "transparent": true,
-          "type": "bargauge"
+            "icon": "external link",
+            "tags": [],
+            "targetBlank": true,
+            "title": "QMC",
+            "tooltip": "Open QMC",
+            "type": "link",
+            "url": "https://sense.ptarmiganlabs.net/hdr/qmc"
         },
         {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "SenseOps",
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 7,
-            "w": 8,
-            "x": 7,
-            "y": 1
-          },
-          "id": 141,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "dataLinks": []
-          },
-          "percentage": false,
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "groupBy": [
-                {
-                  "params": [
-                    "user_session_virtual_proxy"
-                  ],
-                  "type": "tag"
-                }
-              ],
-              "measurement": "user_session_summary",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "session_count"
-                    ],
-                    "type": "field"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "server_description",
-                  "operator": "=~",
-                  "value": "/^$server$/"
-                }
-              ]
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "User sessions per virtual proxy",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "datasource": "SenseOps",
-          "gridPos": {
-            "h": 7,
-            "w": 9,
-            "x": 15,
-            "y": 1
-          },
-          "id": 152,
-          "interval": "",
-          "options": {
-            "displayMode": "lcd",
-            "fieldOptions": {
-              "calcs": [
-                "last"
-              ],
-              "defaults": {
-                "mappings": [],
-                "max": 50,
-                "min": 0,
-                "thresholds": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ],
-                "title": ""
-              },
-              "override": {},
-              "values": false
-            },
-            "orientation": "horizontal"
-          },
-          "pluginVersion": "6.3.5",
-          "targets": [
-            {
-              "aggregation": "Last",
-              "alias": "($tag_user_session_virtual_proxy) $tag_user_session_user_id",
-              "decimals": 2,
-              "displayAliasType": "Warning / Critical",
-              "displayType": "Regular",
-              "displayValueWithAlias": "Never",
-              "groupBy": [
-                {
-                  "params": [
-                    "user_session_user_id"
-                  ],
-                  "type": "tag"
-                },
-                {
-                  "params": [
-                    "user_session_virtual_proxy"
-                  ],
-                  "type": "tag"
-                }
-              ],
-              "measurement": "user_session_details",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "query": "SELECT count(distinct(\"session_id\")) FROM \"user_session_details\" WHERE (time > now()-5m) GROUP BY \"user_session_user_id\", \"user_session_virtual_proxy\"",
-              "rawQuery": true,
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "session_id"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "distinct"
-                  },
-                  {
-                    "params": [],
-                    "type": "count"
-                  }
-                ]
-              ],
-              "tags": [],
-              "tz": "",
-              "units": "none",
-              "valueHandler": "Number Threshold"
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "Unique sessions by user (past 5 min)",
-          "type": "bargauge"
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "SenseOps",
-          "decimals": 0,
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 8,
-            "w": 24,
-            "x": 0,
-            "y": 8
-          },
-          "id": 149,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "options": {
-            "dataLinks": []
-          },
-          "percentage": false,
-          "pluginVersion": "6.3.5",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "aggregation": "Last",
-              "alias": "$tag_user_session_user_id",
-              "decimals": 2,
-              "displayAliasType": "Warning / Critical",
-              "displayType": "Regular",
-              "displayValueWithAlias": "Never",
-              "groupBy": [
-                {
-                  "params": [
-                    "15m"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "user_session_user_id"
-                  ],
-                  "type": "tag"
-                }
-              ],
-              "measurement": "user_session_details",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "query": "SELECT count(distinct(\"user_id\")) FROM \"user_session_details\" WHERE (\"user_session_virtual_proxy\" = '/hdr') AND $timeFilter GROUP BY \"user_session_user_id\"",
-              "rawQuery": false,
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "session_id"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "distinct"
-                  },
-                  {
-                    "params": [],
-                    "type": "count"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "user_session_virtual_proxy",
-                  "operator": "=",
-                  "value": "/hdr"
-                }
-              ],
-              "tz": "",
-              "units": "none",
-              "valueHandler": "Number Threshold"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Unique sessions by user, per 15 min (/hdr endpoint)",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 0,
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
+            "icon": "external link",
+            "tags": [],
+            "targetBlank": true,
+            "title": " Hub",
+            "tooltip": "Open Hub",
+            "type": "link",
+            "url": "https://sense.ptarmiganlabs.net/hdr/"
         }
-      ],
-      "title": "User sessions",
-      "type": "row"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 1
-      },
-      "id": 77,
-      "panels": [],
-      "title": "RAM usage",
-      "type": "row"
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "SenseOps",
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 0,
-        "y": 2
-      },
-      "id": 73,
-      "interval": "",
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [
-        {
-          "targetBlank": true,
-          "title": "Server details",
-          "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
-        }
-      ],
-      "maxPerRow": 4,
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "repeat": "server",
-      "repeatDirection": "h",
-      "scopedVars": {
-        "server": {
-          "selected": true,
-          "text": "ACCESS1",
-          "value": "ACCESS1"
-        }
-      },
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "alias": "[[tag_server_description]]",
-          "groupBy": [
-            {
-              "params": [
-                "server_description"
-              ],
-              "type": "tag"
-            }
-          ],
-          "measurement": "mem",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "free"
-                ],
-                "type": "field"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "server_description",
-              "operator": "=~",
-              "value": "/^$server$/"
-            }
-          ]
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "[[server]]",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "decimals": null,
-          "format": "decmbytes",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "SenseOps",
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 6,
-        "y": 2
-      },
-      "id": 177,
-      "interval": "",
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [
-        {
-          "targetBlank": true,
-          "title": "Server details",
-          "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
-        }
-      ],
-      "maxPerRow": 4,
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "repeat": null,
-      "repeatDirection": "h",
-      "repeatIteration": 1571775572393,
-      "repeatPanelId": 73,
-      "scopedVars": {
-        "server": {
-          "selected": true,
-          "text": "Central",
-          "value": "Central"
-        }
-      },
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "alias": "[[tag_server_description]]",
-          "groupBy": [
-            {
-              "params": [
-                "server_description"
-              ],
-              "type": "tag"
-            }
-          ],
-          "measurement": "mem",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "free"
-                ],
-                "type": "field"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "server_description",
-              "operator": "=~",
-              "value": "/^$server$/"
-            }
-          ]
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "[[server]]",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "decimals": null,
-          "format": "decmbytes",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "SenseOps",
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 12,
-        "y": 2
-      },
-      "id": 178,
-      "interval": "",
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [
-        {
-          "targetBlank": true,
-          "title": "Server details",
-          "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
-        }
-      ],
-      "maxPerRow": 4,
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "repeat": null,
-      "repeatDirection": "h",
-      "repeatIteration": 1571775572393,
-      "repeatPanelId": 73,
-      "scopedVars": {
-        "server": {
-          "selected": true,
-          "text": "DEV",
-          "value": "DEV"
-        }
-      },
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "alias": "[[tag_server_description]]",
-          "groupBy": [
-            {
-              "params": [
-                "server_description"
-              ],
-              "type": "tag"
-            }
-          ],
-          "measurement": "mem",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "free"
-                ],
-                "type": "field"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "server_description",
-              "operator": "=~",
-              "value": "/^$server$/"
-            }
-          ]
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "[[server]]",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "decimals": null,
-          "format": "decmbytes",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "SenseOps",
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 18,
-        "y": 2
-      },
-      "id": 179,
-      "interval": "",
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [
-        {
-          "targetBlank": true,
-          "title": "Server details",
-          "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
-        }
-      ],
-      "maxPerRow": 4,
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "repeat": null,
-      "repeatDirection": "h",
-      "repeatIteration": 1571775572393,
-      "repeatPanelId": 73,
-      "scopedVars": {
-        "server": {
-          "selected": true,
-          "text": "RELOAD",
-          "value": "RELOAD"
-        }
-      },
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "alias": "[[tag_server_description]]",
-          "groupBy": [
-            {
-              "params": [
-                "server_description"
-              ],
-              "type": "tag"
-            }
-          ],
-          "measurement": "mem",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "free"
-                ],
-                "type": "field"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "server_description",
-              "operator": "=~",
-              "value": "/^$server$/"
-            }
-          ]
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "[[server]]",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "decimals": null,
-          "format": "decmbytes",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "collapsed": true,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 8
-      },
-      "id": 99,
-      "panels": [
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "SenseOps",
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 7,
-            "w": 24,
-            "x": 0,
-            "y": 3
-          },
-          "id": 139,
-          "interval": "",
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "dataLinks": []
-          },
-          "percentage": false,
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "alias": "",
-              "groupBy": [
-                {
-                  "params": [
-                    "host"
-                  ],
-                  "type": "tag"
-                }
-              ],
-              "measurement": "users",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "total"
-                    ],
-                    "type": "field"
-                  }
-                ],
-                [
-                  {
-                    "params": [
-                      "active"
-                    ],
-                    "type": "field"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "server_description",
-                  "operator": "=~",
-                  "value": "/^$server$/"
-                }
-              ]
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Users",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 0,
-              "format": "short",
-              "label": "",
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "SenseOps",
-          "decimals": 0,
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 7,
-            "w": 24,
-            "x": 0,
-            "y": 10
-          },
-          "id": 134,
-          "legend": {
-            "alignAsTable": false,
-            "avg": true,
-            "current": true,
-            "max": true,
-            "min": true,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": true
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [
-            {
-              "targetBlank": true,
-              "title": "Server details",
-              "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
-            }
-          ],
-          "maxPerRow": 4,
-          "nullPointMode": "null",
-          "options": {
-            "dataLinks": []
-          },
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeatDirection": "h",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "alias": "[[tag_server_description]]",
-              "groupBy": [
-                {
-                  "params": [
-                    "server_description"
-                  ],
-                  "type": "tag"
-                }
-              ],
-              "measurement": "session",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "total"
-                    ],
-                    "type": "field"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "server_description",
-                  "operator": "=~",
-                  "value": "/^$server$/"
-                }
-              ]
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Sessions by host",
-          "tooltip": {
-            "shared": true,
-            "sort": 2,
-            "value_type": "individual"
-          },
-          "transparent": true,
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 0,
-              "format": "none",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "SenseOps",
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 5,
-            "w": 6,
-            "x": 0,
-            "y": 17
-          },
-          "id": 111,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [
-            {
-              "targetBlank": true,
-              "title": "Server details",
-              "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
-            }
-          ],
-          "maxPerRow": 4,
-          "nullPointMode": "null",
-          "options": {
-            "dataLinks": []
-          },
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": "server",
-          "repeatDirection": "h",
-          "scopedVars": {
-            "server": {
-              "selected": true,
-              "text": "ACCESS1",
-              "value": "ACCESS1"
-            }
-          },
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "alias": "Sessions",
-              "groupBy": [],
-              "measurement": "session",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "total"
-                    ],
-                    "type": "field"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "server_description",
-                  "operator": "=~",
-                  "value": "/^$server$/"
-                }
-              ]
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "[[server]]",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 0,
-              "format": "none",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "SenseOps",
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 5,
-            "w": 6,
-            "x": 6,
-            "y": 17
-          },
-          "id": 174,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [
-            {
-              "targetBlank": true,
-              "title": "Server details",
-              "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
-            }
-          ],
-          "maxPerRow": 4,
-          "nullPointMode": "null",
-          "options": {
-            "dataLinks": []
-          },
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1571426749168,
-          "repeatPanelId": 111,
-          "scopedVars": {
-            "server": {
-              "selected": true,
-              "text": "Central",
-              "value": "Central"
-            }
-          },
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "alias": "Sessions",
-              "groupBy": [],
-              "measurement": "session",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "total"
-                    ],
-                    "type": "field"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "server_description",
-                  "operator": "=~",
-                  "value": "/^$server$/"
-                }
-              ]
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "[[server]]",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 0,
-              "format": "none",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "SenseOps",
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 5,
-            "w": 6,
-            "x": 12,
-            "y": 17
-          },
-          "id": 175,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [
-            {
-              "targetBlank": true,
-              "title": "Server details",
-              "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
-            }
-          ],
-          "maxPerRow": 4,
-          "nullPointMode": "null",
-          "options": {
-            "dataLinks": []
-          },
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1571426749168,
-          "repeatPanelId": 111,
-          "scopedVars": {
-            "server": {
-              "selected": true,
-              "text": "DEV",
-              "value": "DEV"
-            }
-          },
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "alias": "Sessions",
-              "groupBy": [],
-              "measurement": "session",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "total"
-                    ],
-                    "type": "field"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "server_description",
-                  "operator": "=~",
-                  "value": "/^$server$/"
-                }
-              ]
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "[[server]]",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 0,
-              "format": "none",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "SenseOps",
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 5,
-            "w": 6,
-            "x": 18,
-            "y": 17
-          },
-          "id": 176,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [
-            {
-              "targetBlank": true,
-              "title": "Server details",
-              "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
-            }
-          ],
-          "maxPerRow": 4,
-          "nullPointMode": "null",
-          "options": {
-            "dataLinks": []
-          },
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1571426749168,
-          "repeatPanelId": 111,
-          "scopedVars": {
-            "server": {
-              "selected": true,
-              "text": "RELOAD",
-              "value": "RELOAD"
-            }
-          },
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "alias": "Sessions",
-              "groupBy": [],
-              "measurement": "session",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "total"
-                    ],
-                    "type": "field"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "server_description",
-                  "operator": "=~",
-                  "value": "/^$server$/"
-                }
-              ]
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "[[server]]",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 0,
-              "format": "none",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        }
-      ],
-      "title": "Sessions",
-      "type": "row"
-    },
-    {
-      "collapsed": true,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 9
-      },
-      "id": 45,
-      "panels": [
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "SenseOps",
-          "fill": 4,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 6,
-            "w": 24,
-            "x": 0,
-            "y": 4
-          },
-          "id": 47,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "options": {
-            "dataLinks": []
-          },
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": true,
-          "targets": [
-            {
-              "alias": "[[tag_server_description]]",
-              "groupBy": [
-                {
-                  "params": [
-                    "15s"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "host"
-                  ],
-                  "type": "tag"
-                },
-                {
-                  "params": [
-                    "server_description"
-                  ],
-                  "type": "tag"
-                }
-              ],
-              "measurement": "log_event",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "message"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "count"
-                  },
-                  {
-                    "params": [
-                      "info"
-                    ],
-                    "type": "alias"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "log_level",
-                  "operator": "=",
-                  "value": "INFO"
-                },
-                {
-                  "condition": "AND",
-                  "key": "server_description",
-                  "operator": "=~",
-                  "value": "/^$server$/"
-                }
-              ]
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Info",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 0,
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "SenseOps",
-          "fill": 4,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 6,
-            "w": 24,
-            "x": 0,
-            "y": 10
-          },
-          "id": 137,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "options": {
-            "dataLinks": []
-          },
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": true,
-          "targets": [
-            {
-              "alias": "[[tag_server_description]]",
-              "groupBy": [
-                {
-                  "params": [
-                    "15s"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "host"
-                  ],
-                  "type": "tag"
-                },
-                {
-                  "params": [
-                    "server_description"
-                  ],
-                  "type": "tag"
-                }
-              ],
-              "measurement": "log_event",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "message"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "count"
-                  },
-                  {
-                    "params": [
-                      "warnings"
-                    ],
-                    "type": "alias"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "log_level",
-                  "operator": "=",
-                  "value": "WARN"
-                },
-                {
-                  "condition": "AND",
-                  "key": "server_description",
-                  "operator": "=~",
-                  "value": "/^$server$/"
-                }
-              ]
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Warnings",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 0,
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "SenseOps",
-          "fill": 4,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 6,
-            "w": 24,
-            "x": 0,
-            "y": 16
-          },
-          "id": 48,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "options": {
-            "dataLinks": []
-          },
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": true,
-          "targets": [
-            {
-              "alias": "[[tag_server_description]]",
-              "groupBy": [
-                {
-                  "params": [
-                    "15s"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "host"
-                  ],
-                  "type": "tag"
-                },
-                {
-                  "params": [
-                    "server_description"
-                  ],
-                  "type": "tag"
-                }
-              ],
-              "measurement": "log_event",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "message"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "count"
-                  },
-                  {
-                    "params": [
-                      "errors"
-                    ],
-                    "type": "alias"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "log_level",
-                  "operator": "=",
-                  "value": "ERROR"
-                },
-                {
-                  "condition": "AND",
-                  "key": "server_description",
-                  "operator": "=~",
-                  "value": "/^$server$/"
-                }
-              ]
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Errors",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 0,
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        }
-      ],
-      "title": "Warnings & Errors (charts)",
-      "type": "row"
-    },
-    {
-      "collapsed": true,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 10
-      },
-      "id": 84,
-      "panels": [
-        {
-          "columns": [],
-          "datasource": "SenseOps",
-          "fontSize": "100%",
-          "gridPos": {
-            "h": 16,
-            "w": 24,
-            "x": 0,
-            "y": 5
-          },
-          "id": 86,
-          "links": [],
-          "options": {},
-          "pageSize": null,
-          "scroll": true,
-          "showHeader": true,
-          "sort": {
-            "col": 0,
-            "desc": true
-          },
-          "styles": [
-            {
-              "alias": "Time",
-              "dateFormat": "YYYY-MM-DD HH:mm:ss",
-              "pattern": "Time",
-              "type": "date"
-            },
-            {
-              "alias": "",
-              "colorMode": null,
-              "colors": [
-                "rgba(245, 54, 54, 0.9)",
-                "rgba(237, 129, 40, 0.89)",
-                "rgba(50, 172, 45, 0.97)"
-              ],
-              "decimals": 2,
-              "pattern": "/.*/",
-              "thresholds": [],
-              "type": "number",
-              "unit": "short"
-            }
-          ],
-          "targets": [
-            {
-              "groupBy": [
-                {
-                  "params": [
-                    "host"
-                  ],
-                  "type": "tag"
-                },
-                {
-                  "params": [
-                    "server_description"
-                  ],
-                  "type": "tag"
-                },
-                {
-                  "params": [
-                    "log_level"
-                  ],
-                  "type": "tag"
-                },
-                {
-                  "params": [
-                    "source_process"
-                  ],
-                  "type": "tag"
-                }
-              ],
-              "measurement": "log_event",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "refId": "A",
-              "resultFormat": "table",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "message"
-                    ],
-                    "type": "field"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "server_description",
-                  "operator": "=~",
-                  "value": "/^$server$/"
-                }
-              ]
-            }
-          ],
-          "title": "Warnings & Errors",
-          "transform": "table",
-          "type": "table"
-        }
-      ],
-      "title": "Warnings & Errors (table)",
-      "type": "row"
-    }
-  ],
-  "refresh": "5s",
-  "schemaVersion": 19,
-  "style": "dark",
-  "tags": [
-    "senseops"
-  ],
-  "templating": {
-    "list": [
-      {
-        "allValue": null,
-        "current": {
-          "text": "ACCESS1 + Central + DEV + RELOAD",
-          "value": [
-            "ACCESS1",
-            "Central",
-            "DEV",
-            "RELOAD"
-          ]
-        },
-        "datasource": "SenseOps",
-        "definition": "show tag values from \"apps\" with key IN (\"server_description\")",
-        "hide": 0,
-        "includeAll": false,
-        "label": null,
-        "multi": true,
-        "name": "server",
-        "options": [],
-        "query": "show tag values from \"apps\" with key IN (\"server_description\")",
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "tagValuesQuery": "show tag values from \"apps\" with key=\"server_description\" where serverGroup='$tag'",
-        "tags": [],
-        "tagsQuery": "show tag values from \"apps\" with key=\"serverGroup\"",
-        "type": "query",
-        "useTags": true
-      },
-      {
-        "datasource": "SenseOps",
-        "filters": [],
-        "hide": 0,
-        "label": null,
-        "name": "adhoc",
-        "skipUrlSync": false,
-        "type": "adhoc"
-      }
-    ]
-  },
-  "time": {
-    "from": "now-1h",
-    "to": "now"
-  },
-  "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "10s",
-      "30s",
-      "1m",
-      "5m",
-      "15m",
-      "30m",
-      "1h",
-      "2h",
-      "1d"
     ],
-    "time_options": [
-      "5m",
-      "15m",
-      "1h",
-      "6h",
-      "12h",
-      "24h",
-      "2d",
-      "7d",
-      "30d"
-    ]
-  },
-  "timezone": "browser",
-  "title": "SenseOps Overview",
-  "uid": "_U7Rjk_mk",
-  "version": 47
+    "panels": [
+        {
+            "collapsed": true,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+            },
+            "id": 143,
+            "panels": [
+                {
+                    "datasource": "SenseOps",
+                    "description": "",
+                    "gridPos": {
+                        "h": 6,
+                        "w": 7,
+                        "x": 0,
+                        "y": 1
+                    },
+                    "id": 148,
+                    "interval": "",
+                    "options": {
+                        "displayMode": "basic",
+                        "fieldOptions": {
+                            "calcs": ["lastNotNull"],
+                            "defaults": {
+                                "decimals": 0,
+                                "mappings": [],
+                                "max": 25,
+                                "min": 0,
+                                "thresholds": [
+                                    {
+                                        "color": "green",
+                                        "value": null
+                                    },
+                                    {
+                                        "color": "red",
+                                        "value": 12
+                                    }
+                                ],
+                                "title": "$__field_name"
+                            },
+                            "override": {},
+                            "values": false
+                        },
+                        "orientation": "horizontal"
+                    },
+                    "pluginVersion": "6.3.5",
+                    "targets": [
+                        {
+                            "alias": "$tag_user_session_virtual_proxy",
+                            "groupBy": [
+                                {
+                                    "params": ["user_session_virtual_proxy"],
+                                    "type": "tag"
+                                }
+                            ],
+                            "measurement": "user_session_summary",
+                            "orderByTime": "ASC",
+                            "policy": "default",
+                            "refId": "A",
+                            "resultFormat": "time_series",
+                            "select": [
+                                [
+                                    {
+                                        "params": ["session_count"],
+                                        "type": "field"
+                                    }
+                                ]
+                            ],
+                            "tags": [
+                                {
+                                    "key": "server_description",
+                                    "operator": "=~",
+                                    "value": "/^$server$/"
+                                }
+                            ],
+                            "tz": ""
+                        }
+                    ],
+                    "timeFrom": null,
+                    "timeShift": null,
+                    "title": "Current sessions per virtual proxy",
+                    "transparent": true,
+                    "type": "bargauge"
+                },
+                {
+                    "aliasColors": {},
+                    "bars": false,
+                    "dashLength": 10,
+                    "dashes": false,
+                    "datasource": "SenseOps",
+                    "fill": 1,
+                    "fillGradient": 0,
+                    "gridPos": {
+                        "h": 7,
+                        "w": 8,
+                        "x": 7,
+                        "y": 1
+                    },
+                    "id": 141,
+                    "legend": {
+                        "avg": false,
+                        "current": false,
+                        "max": false,
+                        "min": false,
+                        "show": true,
+                        "total": false,
+                        "values": false
+                    },
+                    "lines": true,
+                    "linewidth": 1,
+                    "nullPointMode": "null",
+                    "options": {
+                        "dataLinks": []
+                    },
+                    "percentage": false,
+                    "pointradius": 2,
+                    "points": false,
+                    "renderer": "flot",
+                    "seriesOverrides": [],
+                    "spaceLength": 10,
+                    "stack": false,
+                    "steppedLine": false,
+                    "targets": [
+                        {
+                            "groupBy": [
+                                {
+                                    "params": ["user_session_virtual_proxy"],
+                                    "type": "tag"
+                                }
+                            ],
+                            "measurement": "user_session_summary",
+                            "orderByTime": "ASC",
+                            "policy": "default",
+                            "refId": "A",
+                            "resultFormat": "time_series",
+                            "select": [
+                                [
+                                    {
+                                        "params": ["session_count"],
+                                        "type": "field"
+                                    }
+                                ]
+                            ],
+                            "tags": [
+                                {
+                                    "key": "server_description",
+                                    "operator": "=~",
+                                    "value": "/^$server$/"
+                                }
+                            ]
+                        }
+                    ],
+                    "thresholds": [],
+                    "timeFrom": null,
+                    "timeRegions": [],
+                    "timeShift": null,
+                    "title": "User sessions per virtual proxy",
+                    "tooltip": {
+                        "shared": true,
+                        "sort": 0,
+                        "value_type": "individual"
+                    },
+                    "type": "graph",
+                    "xaxis": {
+                        "buckets": null,
+                        "mode": "time",
+                        "name": null,
+                        "show": true,
+                        "values": []
+                    },
+                    "yaxes": [
+                        {
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        },
+                        {
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        }
+                    ],
+                    "yaxis": {
+                        "align": false,
+                        "alignLevel": null
+                    }
+                },
+                {
+                    "datasource": "SenseOps",
+                    "gridPos": {
+                        "h": 7,
+                        "w": 9,
+                        "x": 15,
+                        "y": 1
+                    },
+                    "id": 152,
+                    "interval": "",
+                    "options": {
+                        "displayMode": "lcd",
+                        "fieldOptions": {
+                            "calcs": ["last"],
+                            "defaults": {
+                                "mappings": [],
+                                "max": 50,
+                                "min": 0,
+                                "thresholds": [
+                                    {
+                                        "color": "green",
+                                        "value": null
+                                    },
+                                    {
+                                        "color": "red",
+                                        "value": 80
+                                    }
+                                ],
+                                "title": ""
+                            },
+                            "override": {},
+                            "values": false
+                        },
+                        "orientation": "horizontal"
+                    },
+                    "pluginVersion": "6.3.5",
+                    "targets": [
+                        {
+                            "aggregation": "Last",
+                            "alias": "($tag_user_session_virtual_proxy) $tag_user_session_user_id",
+                            "decimals": 2,
+                            "displayAliasType": "Warning / Critical",
+                            "displayType": "Regular",
+                            "displayValueWithAlias": "Never",
+                            "groupBy": [
+                                {
+                                    "params": ["user_session_user_id"],
+                                    "type": "tag"
+                                },
+                                {
+                                    "params": ["user_session_virtual_proxy"],
+                                    "type": "tag"
+                                }
+                            ],
+                            "measurement": "user_session_details",
+                            "orderByTime": "ASC",
+                            "policy": "default",
+                            "query": "SELECT count(distinct(\"session_id\")) FROM \"user_session_details\" WHERE (time > now()-5m) GROUP BY \"user_session_user_id\", \"user_session_virtual_proxy\"",
+                            "rawQuery": true,
+                            "refId": "A",
+                            "resultFormat": "time_series",
+                            "select": [
+                                [
+                                    {
+                                        "params": ["session_id"],
+                                        "type": "field"
+                                    },
+                                    {
+                                        "params": [],
+                                        "type": "distinct"
+                                    },
+                                    {
+                                        "params": [],
+                                        "type": "count"
+                                    }
+                                ]
+                            ],
+                            "tags": [],
+                            "tz": "",
+                            "units": "none",
+                            "valueHandler": "Number Threshold"
+                        }
+                    ],
+                    "timeFrom": null,
+                    "timeShift": null,
+                    "title": "Unique sessions by user (past 5 min)",
+                    "type": "bargauge"
+                },
+                {
+                    "aliasColors": {},
+                    "bars": false,
+                    "dashLength": 10,
+                    "dashes": false,
+                    "datasource": "SenseOps",
+                    "decimals": 0,
+                    "fill": 1,
+                    "fillGradient": 0,
+                    "gridPos": {
+                        "h": 8,
+                        "w": 24,
+                        "x": 0,
+                        "y": 8
+                    },
+                    "id": 149,
+                    "legend": {
+                        "avg": false,
+                        "current": false,
+                        "max": false,
+                        "min": false,
+                        "show": true,
+                        "total": false,
+                        "values": false
+                    },
+                    "lines": true,
+                    "linewidth": 2,
+                    "links": [],
+                    "nullPointMode": "null",
+                    "options": {
+                        "dataLinks": []
+                    },
+                    "percentage": false,
+                    "pluginVersion": "6.3.5",
+                    "pointradius": 2,
+                    "points": false,
+                    "renderer": "flot",
+                    "seriesOverrides": [],
+                    "spaceLength": 10,
+                    "stack": true,
+                    "steppedLine": false,
+                    "targets": [
+                        {
+                            "aggregation": "Last",
+                            "alias": "$tag_user_session_user_id",
+                            "decimals": 2,
+                            "displayAliasType": "Warning / Critical",
+                            "displayType": "Regular",
+                            "displayValueWithAlias": "Never",
+                            "groupBy": [
+                                {
+                                    "params": ["15m"],
+                                    "type": "time"
+                                },
+                                {
+                                    "params": ["user_session_user_id"],
+                                    "type": "tag"
+                                }
+                            ],
+                            "measurement": "user_session_details",
+                            "orderByTime": "ASC",
+                            "policy": "default",
+                            "query": "SELECT count(distinct(\"user_id\")) FROM \"user_session_details\" WHERE (\"user_session_virtual_proxy\" = '/hdr') AND $timeFilter GROUP BY \"user_session_user_id\"",
+                            "rawQuery": false,
+                            "refId": "A",
+                            "resultFormat": "time_series",
+                            "select": [
+                                [
+                                    {
+                                        "params": ["session_id"],
+                                        "type": "field"
+                                    },
+                                    {
+                                        "params": [],
+                                        "type": "distinct"
+                                    },
+                                    {
+                                        "params": [],
+                                        "type": "count"
+                                    }
+                                ]
+                            ],
+                            "tags": [
+                                {
+                                    "key": "user_session_virtual_proxy",
+                                    "operator": "=",
+                                    "value": "/hdr"
+                                }
+                            ],
+                            "tz": "",
+                            "units": "none",
+                            "valueHandler": "Number Threshold"
+                        }
+                    ],
+                    "thresholds": [],
+                    "timeFrom": null,
+                    "timeRegions": [],
+                    "timeShift": null,
+                    "title": "Unique sessions by user, per 15 min (/hdr endpoint)",
+                    "tooltip": {
+                        "shared": true,
+                        "sort": 0,
+                        "value_type": "individual"
+                    },
+                    "type": "graph",
+                    "xaxis": {
+                        "buckets": null,
+                        "mode": "time",
+                        "name": null,
+                        "show": true,
+                        "values": []
+                    },
+                    "yaxes": [
+                        {
+                            "decimals": 0,
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        },
+                        {
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": false
+                        }
+                    ],
+                    "yaxis": {
+                        "align": false,
+                        "alignLevel": null
+                    }
+                }
+            ],
+            "title": "User sessions",
+            "type": "row"
+        },
+        {
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 1
+            },
+            "id": 77,
+            "panels": [],
+            "title": "RAM usage",
+            "type": "row"
+        },
+        {
+            "aliasColors": {},
+            "bars": false,
+            "dashLength": 10,
+            "dashes": false,
+            "datasource": "SenseOps",
+            "fill": 1,
+            "fillGradient": 0,
+            "gridPos": {
+                "h": 6,
+                "w": 6,
+                "x": 0,
+                "y": 2
+            },
+            "id": 73,
+            "interval": "",
+            "legend": {
+                "avg": false,
+                "current": false,
+                "max": false,
+                "min": false,
+                "show": true,
+                "total": false,
+                "values": false
+            },
+            "lines": true,
+            "linewidth": 1,
+            "links": [
+                {
+                    "targetBlank": true,
+                    "title": "Server details",
+                    "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
+                }
+            ],
+            "maxPerRow": 4,
+            "nullPointMode": "null",
+            "options": {
+                "dataLinks": []
+            },
+            "percentage": false,
+            "pointradius": 5,
+            "points": false,
+            "renderer": "flot",
+            "repeat": "server",
+            "repeatDirection": "h",
+            "scopedVars": {
+                "server": {
+                    "selected": true,
+                    "text": "ACCESS1",
+                    "value": "ACCESS1"
+                }
+            },
+            "seriesOverrides": [],
+            "spaceLength": 10,
+            "stack": false,
+            "steppedLine": false,
+            "targets": [
+                {
+                    "alias": "[[tag_server_description]]",
+                    "groupBy": [
+                        {
+                            "params": ["server_description"],
+                            "type": "tag"
+                        }
+                    ],
+                    "measurement": "mem",
+                    "orderByTime": "ASC",
+                    "policy": "default",
+                    "refId": "A",
+                    "resultFormat": "time_series",
+                    "select": [
+                        [
+                            {
+                                "params": ["free"],
+                                "type": "field"
+                            }
+                        ]
+                    ],
+                    "tags": [
+                        {
+                            "key": "server_description",
+                            "operator": "=~",
+                            "value": "/^$server$/"
+                        }
+                    ]
+                }
+            ],
+            "thresholds": [],
+            "timeFrom": null,
+            "timeRegions": [],
+            "timeShift": null,
+            "title": "[[server]]",
+            "tooltip": {
+                "shared": true,
+                "sort": 0,
+                "value_type": "individual"
+            },
+            "type": "graph",
+            "xaxis": {
+                "buckets": null,
+                "mode": "time",
+                "name": null,
+                "show": true,
+                "values": []
+            },
+            "yaxes": [
+                {
+                    "decimals": null,
+                    "format": "decmbytes",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": "0",
+                    "show": true
+                },
+                {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                }
+            ],
+            "yaxis": {
+                "align": false,
+                "alignLevel": null
+            }
+        },
+        {
+            "aliasColors": {},
+            "bars": false,
+            "dashLength": 10,
+            "dashes": false,
+            "datasource": "SenseOps",
+            "fill": 1,
+            "fillGradient": 0,
+            "gridPos": {
+                "h": 6,
+                "w": 6,
+                "x": 6,
+                "y": 2
+            },
+            "id": 177,
+            "interval": "",
+            "legend": {
+                "avg": false,
+                "current": false,
+                "max": false,
+                "min": false,
+                "show": true,
+                "total": false,
+                "values": false
+            },
+            "lines": true,
+            "linewidth": 1,
+            "links": [
+                {
+                    "targetBlank": true,
+                    "title": "Server details",
+                    "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
+                }
+            ],
+            "maxPerRow": 4,
+            "nullPointMode": "null",
+            "options": {
+                "dataLinks": []
+            },
+            "percentage": false,
+            "pointradius": 5,
+            "points": false,
+            "renderer": "flot",
+            "repeat": null,
+            "repeatDirection": "h",
+            "repeatIteration": 1571775572393,
+            "repeatPanelId": 73,
+            "scopedVars": {
+                "server": {
+                    "selected": true,
+                    "text": "Central",
+                    "value": "Central"
+                }
+            },
+            "seriesOverrides": [],
+            "spaceLength": 10,
+            "stack": false,
+            "steppedLine": false,
+            "targets": [
+                {
+                    "alias": "[[tag_server_description]]",
+                    "groupBy": [
+                        {
+                            "params": ["server_description"],
+                            "type": "tag"
+                        }
+                    ],
+                    "measurement": "mem",
+                    "orderByTime": "ASC",
+                    "policy": "default",
+                    "refId": "A",
+                    "resultFormat": "time_series",
+                    "select": [
+                        [
+                            {
+                                "params": ["free"],
+                                "type": "field"
+                            }
+                        ]
+                    ],
+                    "tags": [
+                        {
+                            "key": "server_description",
+                            "operator": "=~",
+                            "value": "/^$server$/"
+                        }
+                    ]
+                }
+            ],
+            "thresholds": [],
+            "timeFrom": null,
+            "timeRegions": [],
+            "timeShift": null,
+            "title": "[[server]]",
+            "tooltip": {
+                "shared": true,
+                "sort": 0,
+                "value_type": "individual"
+            },
+            "type": "graph",
+            "xaxis": {
+                "buckets": null,
+                "mode": "time",
+                "name": null,
+                "show": true,
+                "values": []
+            },
+            "yaxes": [
+                {
+                    "decimals": null,
+                    "format": "decmbytes",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": "0",
+                    "show": true
+                },
+                {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                }
+            ],
+            "yaxis": {
+                "align": false,
+                "alignLevel": null
+            }
+        },
+        {
+            "aliasColors": {},
+            "bars": false,
+            "dashLength": 10,
+            "dashes": false,
+            "datasource": "SenseOps",
+            "fill": 1,
+            "fillGradient": 0,
+            "gridPos": {
+                "h": 6,
+                "w": 6,
+                "x": 12,
+                "y": 2
+            },
+            "id": 178,
+            "interval": "",
+            "legend": {
+                "avg": false,
+                "current": false,
+                "max": false,
+                "min": false,
+                "show": true,
+                "total": false,
+                "values": false
+            },
+            "lines": true,
+            "linewidth": 1,
+            "links": [
+                {
+                    "targetBlank": true,
+                    "title": "Server details",
+                    "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
+                }
+            ],
+            "maxPerRow": 4,
+            "nullPointMode": "null",
+            "options": {
+                "dataLinks": []
+            },
+            "percentage": false,
+            "pointradius": 5,
+            "points": false,
+            "renderer": "flot",
+            "repeat": null,
+            "repeatDirection": "h",
+            "repeatIteration": 1571775572393,
+            "repeatPanelId": 73,
+            "scopedVars": {
+                "server": {
+                    "selected": true,
+                    "text": "DEV",
+                    "value": "DEV"
+                }
+            },
+            "seriesOverrides": [],
+            "spaceLength": 10,
+            "stack": false,
+            "steppedLine": false,
+            "targets": [
+                {
+                    "alias": "[[tag_server_description]]",
+                    "groupBy": [
+                        {
+                            "params": ["server_description"],
+                            "type": "tag"
+                        }
+                    ],
+                    "measurement": "mem",
+                    "orderByTime": "ASC",
+                    "policy": "default",
+                    "refId": "A",
+                    "resultFormat": "time_series",
+                    "select": [
+                        [
+                            {
+                                "params": ["free"],
+                                "type": "field"
+                            }
+                        ]
+                    ],
+                    "tags": [
+                        {
+                            "key": "server_description",
+                            "operator": "=~",
+                            "value": "/^$server$/"
+                        }
+                    ]
+                }
+            ],
+            "thresholds": [],
+            "timeFrom": null,
+            "timeRegions": [],
+            "timeShift": null,
+            "title": "[[server]]",
+            "tooltip": {
+                "shared": true,
+                "sort": 0,
+                "value_type": "individual"
+            },
+            "type": "graph",
+            "xaxis": {
+                "buckets": null,
+                "mode": "time",
+                "name": null,
+                "show": true,
+                "values": []
+            },
+            "yaxes": [
+                {
+                    "decimals": null,
+                    "format": "decmbytes",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": "0",
+                    "show": true
+                },
+                {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                }
+            ],
+            "yaxis": {
+                "align": false,
+                "alignLevel": null
+            }
+        },
+        {
+            "aliasColors": {},
+            "bars": false,
+            "dashLength": 10,
+            "dashes": false,
+            "datasource": "SenseOps",
+            "fill": 1,
+            "fillGradient": 0,
+            "gridPos": {
+                "h": 6,
+                "w": 6,
+                "x": 18,
+                "y": 2
+            },
+            "id": 179,
+            "interval": "",
+            "legend": {
+                "avg": false,
+                "current": false,
+                "max": false,
+                "min": false,
+                "show": true,
+                "total": false,
+                "values": false
+            },
+            "lines": true,
+            "linewidth": 1,
+            "links": [
+                {
+                    "targetBlank": true,
+                    "title": "Server details",
+                    "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
+                }
+            ],
+            "maxPerRow": 4,
+            "nullPointMode": "null",
+            "options": {
+                "dataLinks": []
+            },
+            "percentage": false,
+            "pointradius": 5,
+            "points": false,
+            "renderer": "flot",
+            "repeat": null,
+            "repeatDirection": "h",
+            "repeatIteration": 1571775572393,
+            "repeatPanelId": 73,
+            "scopedVars": {
+                "server": {
+                    "selected": true,
+                    "text": "RELOAD",
+                    "value": "RELOAD"
+                }
+            },
+            "seriesOverrides": [],
+            "spaceLength": 10,
+            "stack": false,
+            "steppedLine": false,
+            "targets": [
+                {
+                    "alias": "[[tag_server_description]]",
+                    "groupBy": [
+                        {
+                            "params": ["server_description"],
+                            "type": "tag"
+                        }
+                    ],
+                    "measurement": "mem",
+                    "orderByTime": "ASC",
+                    "policy": "default",
+                    "refId": "A",
+                    "resultFormat": "time_series",
+                    "select": [
+                        [
+                            {
+                                "params": ["free"],
+                                "type": "field"
+                            }
+                        ]
+                    ],
+                    "tags": [
+                        {
+                            "key": "server_description",
+                            "operator": "=~",
+                            "value": "/^$server$/"
+                        }
+                    ]
+                }
+            ],
+            "thresholds": [],
+            "timeFrom": null,
+            "timeRegions": [],
+            "timeShift": null,
+            "title": "[[server]]",
+            "tooltip": {
+                "shared": true,
+                "sort": 0,
+                "value_type": "individual"
+            },
+            "type": "graph",
+            "xaxis": {
+                "buckets": null,
+                "mode": "time",
+                "name": null,
+                "show": true,
+                "values": []
+            },
+            "yaxes": [
+                {
+                    "decimals": null,
+                    "format": "decmbytes",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": "0",
+                    "show": true
+                },
+                {
+                    "format": "short",
+                    "label": null,
+                    "logBase": 1,
+                    "max": null,
+                    "min": null,
+                    "show": true
+                }
+            ],
+            "yaxis": {
+                "align": false,
+                "alignLevel": null
+            }
+        },
+        {
+            "collapsed": true,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 8
+            },
+            "id": 99,
+            "panels": [
+                {
+                    "aliasColors": {},
+                    "bars": false,
+                    "dashLength": 10,
+                    "dashes": false,
+                    "datasource": "SenseOps",
+                    "fill": 1,
+                    "fillGradient": 0,
+                    "gridPos": {
+                        "h": 7,
+                        "w": 24,
+                        "x": 0,
+                        "y": 3
+                    },
+                    "id": 139,
+                    "interval": "",
+                    "legend": {
+                        "avg": false,
+                        "current": false,
+                        "max": false,
+                        "min": false,
+                        "show": true,
+                        "total": false,
+                        "values": false
+                    },
+                    "lines": true,
+                    "linewidth": 1,
+                    "nullPointMode": "null",
+                    "options": {
+                        "dataLinks": []
+                    },
+                    "percentage": false,
+                    "pointradius": 2,
+                    "points": false,
+                    "renderer": "flot",
+                    "seriesOverrides": [],
+                    "spaceLength": 10,
+                    "stack": false,
+                    "steppedLine": false,
+                    "targets": [
+                        {
+                            "alias": "",
+                            "groupBy": [
+                                {
+                                    "params": ["host"],
+                                    "type": "tag"
+                                }
+                            ],
+                            "measurement": "users",
+                            "orderByTime": "ASC",
+                            "policy": "default",
+                            "refId": "A",
+                            "resultFormat": "time_series",
+                            "select": [
+                                [
+                                    {
+                                        "params": ["total"],
+                                        "type": "field"
+                                    }
+                                ],
+                                [
+                                    {
+                                        "params": ["active"],
+                                        "type": "field"
+                                    }
+                                ]
+                            ],
+                            "tags": [
+                                {
+                                    "key": "server_description",
+                                    "operator": "=~",
+                                    "value": "/^$server$/"
+                                }
+                            ]
+                        }
+                    ],
+                    "thresholds": [],
+                    "timeFrom": null,
+                    "timeRegions": [],
+                    "timeShift": null,
+                    "title": "Users",
+                    "tooltip": {
+                        "shared": true,
+                        "sort": 0,
+                        "value_type": "individual"
+                    },
+                    "type": "graph",
+                    "xaxis": {
+                        "buckets": null,
+                        "mode": "time",
+                        "name": null,
+                        "show": true,
+                        "values": []
+                    },
+                    "yaxes": [
+                        {
+                            "decimals": 0,
+                            "format": "short",
+                            "label": "",
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        },
+                        {
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        }
+                    ],
+                    "yaxis": {
+                        "align": false,
+                        "alignLevel": null
+                    }
+                },
+                {
+                    "aliasColors": {},
+                    "bars": false,
+                    "dashLength": 10,
+                    "dashes": false,
+                    "datasource": "SenseOps",
+                    "decimals": 0,
+                    "fill": 1,
+                    "fillGradient": 0,
+                    "gridPos": {
+                        "h": 7,
+                        "w": 24,
+                        "x": 0,
+                        "y": 10
+                    },
+                    "id": 134,
+                    "legend": {
+                        "alignAsTable": false,
+                        "avg": true,
+                        "current": true,
+                        "max": true,
+                        "min": true,
+                        "rightSide": false,
+                        "show": true,
+                        "total": false,
+                        "values": true
+                    },
+                    "lines": true,
+                    "linewidth": 1,
+                    "links": [
+                        {
+                            "targetBlank": true,
+                            "title": "Server details",
+                            "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
+                        }
+                    ],
+                    "maxPerRow": 4,
+                    "nullPointMode": "null",
+                    "options": {
+                        "dataLinks": []
+                    },
+                    "percentage": false,
+                    "pointradius": 5,
+                    "points": false,
+                    "renderer": "flot",
+                    "repeatDirection": "h",
+                    "seriesOverrides": [],
+                    "spaceLength": 10,
+                    "stack": false,
+                    "steppedLine": false,
+                    "targets": [
+                        {
+                            "alias": "[[tag_server_description]]",
+                            "groupBy": [
+                                {
+                                    "params": ["server_description"],
+                                    "type": "tag"
+                                }
+                            ],
+                            "measurement": "session",
+                            "orderByTime": "ASC",
+                            "policy": "default",
+                            "refId": "A",
+                            "resultFormat": "time_series",
+                            "select": [
+                                [
+                                    {
+                                        "params": ["total"],
+                                        "type": "field"
+                                    }
+                                ]
+                            ],
+                            "tags": [
+                                {
+                                    "key": "server_description",
+                                    "operator": "=~",
+                                    "value": "/^$server$/"
+                                }
+                            ]
+                        }
+                    ],
+                    "thresholds": [],
+                    "timeFrom": null,
+                    "timeRegions": [],
+                    "timeShift": null,
+                    "title": "Sessions by host",
+                    "tooltip": {
+                        "shared": true,
+                        "sort": 2,
+                        "value_type": "individual"
+                    },
+                    "transparent": true,
+                    "type": "graph",
+                    "xaxis": {
+                        "buckets": null,
+                        "mode": "time",
+                        "name": null,
+                        "show": true,
+                        "values": []
+                    },
+                    "yaxes": [
+                        {
+                            "decimals": 0,
+                            "format": "none",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": "0",
+                            "show": true
+                        },
+                        {
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        }
+                    ],
+                    "yaxis": {
+                        "align": false,
+                        "alignLevel": null
+                    }
+                },
+                {
+                    "aliasColors": {},
+                    "bars": false,
+                    "dashLength": 10,
+                    "dashes": false,
+                    "datasource": "SenseOps",
+                    "fill": 1,
+                    "fillGradient": 0,
+                    "gridPos": {
+                        "h": 5,
+                        "w": 6,
+                        "x": 0,
+                        "y": 17
+                    },
+                    "id": 111,
+                    "legend": {
+                        "avg": false,
+                        "current": false,
+                        "max": false,
+                        "min": false,
+                        "show": true,
+                        "total": false,
+                        "values": false
+                    },
+                    "lines": true,
+                    "linewidth": 1,
+                    "links": [
+                        {
+                            "targetBlank": true,
+                            "title": "Server details",
+                            "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
+                        }
+                    ],
+                    "maxPerRow": 4,
+                    "nullPointMode": "null",
+                    "options": {
+                        "dataLinks": []
+                    },
+                    "percentage": false,
+                    "pointradius": 5,
+                    "points": false,
+                    "renderer": "flot",
+                    "repeat": "server",
+                    "repeatDirection": "h",
+                    "scopedVars": {
+                        "server": {
+                            "selected": true,
+                            "text": "ACCESS1",
+                            "value": "ACCESS1"
+                        }
+                    },
+                    "seriesOverrides": [],
+                    "spaceLength": 10,
+                    "stack": false,
+                    "steppedLine": false,
+                    "targets": [
+                        {
+                            "alias": "Sessions",
+                            "groupBy": [],
+                            "measurement": "session",
+                            "orderByTime": "ASC",
+                            "policy": "default",
+                            "refId": "A",
+                            "resultFormat": "time_series",
+                            "select": [
+                                [
+                                    {
+                                        "params": ["total"],
+                                        "type": "field"
+                                    }
+                                ]
+                            ],
+                            "tags": [
+                                {
+                                    "key": "server_description",
+                                    "operator": "=~",
+                                    "value": "/^$server$/"
+                                }
+                            ]
+                        }
+                    ],
+                    "thresholds": [],
+                    "timeFrom": null,
+                    "timeRegions": [],
+                    "timeShift": null,
+                    "title": "[[server]]",
+                    "tooltip": {
+                        "shared": true,
+                        "sort": 0,
+                        "value_type": "individual"
+                    },
+                    "type": "graph",
+                    "xaxis": {
+                        "buckets": null,
+                        "mode": "time",
+                        "name": null,
+                        "show": true,
+                        "values": []
+                    },
+                    "yaxes": [
+                        {
+                            "decimals": 0,
+                            "format": "none",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": "0",
+                            "show": true
+                        },
+                        {
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        }
+                    ],
+                    "yaxis": {
+                        "align": false,
+                        "alignLevel": null
+                    }
+                },
+                {
+                    "aliasColors": {},
+                    "bars": false,
+                    "dashLength": 10,
+                    "dashes": false,
+                    "datasource": "SenseOps",
+                    "fill": 1,
+                    "fillGradient": 0,
+                    "gridPos": {
+                        "h": 5,
+                        "w": 6,
+                        "x": 6,
+                        "y": 17
+                    },
+                    "id": 174,
+                    "legend": {
+                        "avg": false,
+                        "current": false,
+                        "max": false,
+                        "min": false,
+                        "show": true,
+                        "total": false,
+                        "values": false
+                    },
+                    "lines": true,
+                    "linewidth": 1,
+                    "links": [
+                        {
+                            "targetBlank": true,
+                            "title": "Server details",
+                            "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
+                        }
+                    ],
+                    "maxPerRow": 4,
+                    "nullPointMode": "null",
+                    "options": {
+                        "dataLinks": []
+                    },
+                    "percentage": false,
+                    "pointradius": 5,
+                    "points": false,
+                    "renderer": "flot",
+                    "repeat": null,
+                    "repeatDirection": "h",
+                    "repeatIteration": 1571426749168,
+                    "repeatPanelId": 111,
+                    "scopedVars": {
+                        "server": {
+                            "selected": true,
+                            "text": "Central",
+                            "value": "Central"
+                        }
+                    },
+                    "seriesOverrides": [],
+                    "spaceLength": 10,
+                    "stack": false,
+                    "steppedLine": false,
+                    "targets": [
+                        {
+                            "alias": "Sessions",
+                            "groupBy": [],
+                            "measurement": "session",
+                            "orderByTime": "ASC",
+                            "policy": "default",
+                            "refId": "A",
+                            "resultFormat": "time_series",
+                            "select": [
+                                [
+                                    {
+                                        "params": ["total"],
+                                        "type": "field"
+                                    }
+                                ]
+                            ],
+                            "tags": [
+                                {
+                                    "key": "server_description",
+                                    "operator": "=~",
+                                    "value": "/^$server$/"
+                                }
+                            ]
+                        }
+                    ],
+                    "thresholds": [],
+                    "timeFrom": null,
+                    "timeRegions": [],
+                    "timeShift": null,
+                    "title": "[[server]]",
+                    "tooltip": {
+                        "shared": true,
+                        "sort": 0,
+                        "value_type": "individual"
+                    },
+                    "type": "graph",
+                    "xaxis": {
+                        "buckets": null,
+                        "mode": "time",
+                        "name": null,
+                        "show": true,
+                        "values": []
+                    },
+                    "yaxes": [
+                        {
+                            "decimals": 0,
+                            "format": "none",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": "0",
+                            "show": true
+                        },
+                        {
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        }
+                    ],
+                    "yaxis": {
+                        "align": false,
+                        "alignLevel": null
+                    }
+                },
+                {
+                    "aliasColors": {},
+                    "bars": false,
+                    "dashLength": 10,
+                    "dashes": false,
+                    "datasource": "SenseOps",
+                    "fill": 1,
+                    "fillGradient": 0,
+                    "gridPos": {
+                        "h": 5,
+                        "w": 6,
+                        "x": 12,
+                        "y": 17
+                    },
+                    "id": 175,
+                    "legend": {
+                        "avg": false,
+                        "current": false,
+                        "max": false,
+                        "min": false,
+                        "show": true,
+                        "total": false,
+                        "values": false
+                    },
+                    "lines": true,
+                    "linewidth": 1,
+                    "links": [
+                        {
+                            "targetBlank": true,
+                            "title": "Server details",
+                            "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
+                        }
+                    ],
+                    "maxPerRow": 4,
+                    "nullPointMode": "null",
+                    "options": {
+                        "dataLinks": []
+                    },
+                    "percentage": false,
+                    "pointradius": 5,
+                    "points": false,
+                    "renderer": "flot",
+                    "repeat": null,
+                    "repeatDirection": "h",
+                    "repeatIteration": 1571426749168,
+                    "repeatPanelId": 111,
+                    "scopedVars": {
+                        "server": {
+                            "selected": true,
+                            "text": "DEV",
+                            "value": "DEV"
+                        }
+                    },
+                    "seriesOverrides": [],
+                    "spaceLength": 10,
+                    "stack": false,
+                    "steppedLine": false,
+                    "targets": [
+                        {
+                            "alias": "Sessions",
+                            "groupBy": [],
+                            "measurement": "session",
+                            "orderByTime": "ASC",
+                            "policy": "default",
+                            "refId": "A",
+                            "resultFormat": "time_series",
+                            "select": [
+                                [
+                                    {
+                                        "params": ["total"],
+                                        "type": "field"
+                                    }
+                                ]
+                            ],
+                            "tags": [
+                                {
+                                    "key": "server_description",
+                                    "operator": "=~",
+                                    "value": "/^$server$/"
+                                }
+                            ]
+                        }
+                    ],
+                    "thresholds": [],
+                    "timeFrom": null,
+                    "timeRegions": [],
+                    "timeShift": null,
+                    "title": "[[server]]",
+                    "tooltip": {
+                        "shared": true,
+                        "sort": 0,
+                        "value_type": "individual"
+                    },
+                    "type": "graph",
+                    "xaxis": {
+                        "buckets": null,
+                        "mode": "time",
+                        "name": null,
+                        "show": true,
+                        "values": []
+                    },
+                    "yaxes": [
+                        {
+                            "decimals": 0,
+                            "format": "none",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": "0",
+                            "show": true
+                        },
+                        {
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        }
+                    ],
+                    "yaxis": {
+                        "align": false,
+                        "alignLevel": null
+                    }
+                },
+                {
+                    "aliasColors": {},
+                    "bars": false,
+                    "dashLength": 10,
+                    "dashes": false,
+                    "datasource": "SenseOps",
+                    "fill": 1,
+                    "fillGradient": 0,
+                    "gridPos": {
+                        "h": 5,
+                        "w": 6,
+                        "x": 18,
+                        "y": 17
+                    },
+                    "id": 176,
+                    "legend": {
+                        "avg": false,
+                        "current": false,
+                        "max": false,
+                        "min": false,
+                        "show": true,
+                        "total": false,
+                        "values": false
+                    },
+                    "lines": true,
+                    "linewidth": 1,
+                    "links": [
+                        {
+                            "targetBlank": true,
+                            "title": "Server details",
+                            "url": "/d/-eEIAZym1/senseops-server-details?$__url_time_range&$__all_variables"
+                        }
+                    ],
+                    "maxPerRow": 4,
+                    "nullPointMode": "null",
+                    "options": {
+                        "dataLinks": []
+                    },
+                    "percentage": false,
+                    "pointradius": 5,
+                    "points": false,
+                    "renderer": "flot",
+                    "repeat": null,
+                    "repeatDirection": "h",
+                    "repeatIteration": 1571426749168,
+                    "repeatPanelId": 111,
+                    "scopedVars": {
+                        "server": {
+                            "selected": true,
+                            "text": "RELOAD",
+                            "value": "RELOAD"
+                        }
+                    },
+                    "seriesOverrides": [],
+                    "spaceLength": 10,
+                    "stack": false,
+                    "steppedLine": false,
+                    "targets": [
+                        {
+                            "alias": "Sessions",
+                            "groupBy": [],
+                            "measurement": "session",
+                            "orderByTime": "ASC",
+                            "policy": "default",
+                            "refId": "A",
+                            "resultFormat": "time_series",
+                            "select": [
+                                [
+                                    {
+                                        "params": ["total"],
+                                        "type": "field"
+                                    }
+                                ]
+                            ],
+                            "tags": [
+                                {
+                                    "key": "server_description",
+                                    "operator": "=~",
+                                    "value": "/^$server$/"
+                                }
+                            ]
+                        }
+                    ],
+                    "thresholds": [],
+                    "timeFrom": null,
+                    "timeRegions": [],
+                    "timeShift": null,
+                    "title": "[[server]]",
+                    "tooltip": {
+                        "shared": true,
+                        "sort": 0,
+                        "value_type": "individual"
+                    },
+                    "type": "graph",
+                    "xaxis": {
+                        "buckets": null,
+                        "mode": "time",
+                        "name": null,
+                        "show": true,
+                        "values": []
+                    },
+                    "yaxes": [
+                        {
+                            "decimals": 0,
+                            "format": "none",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": "0",
+                            "show": true
+                        },
+                        {
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        }
+                    ],
+                    "yaxis": {
+                        "align": false,
+                        "alignLevel": null
+                    }
+                }
+            ],
+            "title": "Sessions",
+            "type": "row"
+        },
+        {
+            "collapsed": true,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 9
+            },
+            "id": 45,
+            "panels": [
+                {
+                    "aliasColors": {},
+                    "bars": false,
+                    "dashLength": 10,
+                    "dashes": false,
+                    "datasource": "SenseOps",
+                    "fill": 4,
+                    "fillGradient": 0,
+                    "gridPos": {
+                        "h": 6,
+                        "w": 24,
+                        "x": 0,
+                        "y": 4
+                    },
+                    "id": 47,
+                    "legend": {
+                        "avg": false,
+                        "current": false,
+                        "max": false,
+                        "min": false,
+                        "show": true,
+                        "total": false,
+                        "values": false
+                    },
+                    "lines": true,
+                    "linewidth": 1,
+                    "links": [],
+                    "nullPointMode": "null",
+                    "options": {
+                        "dataLinks": []
+                    },
+                    "percentage": false,
+                    "pointradius": 5,
+                    "points": false,
+                    "renderer": "flot",
+                    "seriesOverrides": [],
+                    "spaceLength": 10,
+                    "stack": true,
+                    "steppedLine": true,
+                    "targets": [
+                        {
+                            "alias": "[[tag_server_description]]",
+                            "groupBy": [
+                                {
+                                    "params": ["15s"],
+                                    "type": "time"
+                                },
+                                {
+                                    "params": ["host"],
+                                    "type": "tag"
+                                },
+                                {
+                                    "params": ["server_description"],
+                                    "type": "tag"
+                                }
+                            ],
+                            "measurement": "log_event",
+                            "orderByTime": "ASC",
+                            "policy": "default",
+                            "refId": "A",
+                            "resultFormat": "time_series",
+                            "select": [
+                                [
+                                    {
+                                        "params": ["message"],
+                                        "type": "field"
+                                    },
+                                    {
+                                        "params": [],
+                                        "type": "count"
+                                    },
+                                    {
+                                        "params": ["info"],
+                                        "type": "alias"
+                                    }
+                                ]
+                            ],
+                            "tags": [
+                                {
+                                    "key": "log_level",
+                                    "operator": "=",
+                                    "value": "INFO"
+                                },
+                                {
+                                    "condition": "AND",
+                                    "key": "server_description",
+                                    "operator": "=~",
+                                    "value": "/^$server$/"
+                                }
+                            ]
+                        }
+                    ],
+                    "thresholds": [],
+                    "timeFrom": null,
+                    "timeRegions": [],
+                    "timeShift": null,
+                    "title": "Info",
+                    "tooltip": {
+                        "shared": true,
+                        "sort": 0,
+                        "value_type": "individual"
+                    },
+                    "type": "graph",
+                    "xaxis": {
+                        "buckets": null,
+                        "mode": "time",
+                        "name": null,
+                        "show": true,
+                        "values": []
+                    },
+                    "yaxes": [
+                        {
+                            "decimals": 0,
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        },
+                        {
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        }
+                    ],
+                    "yaxis": {
+                        "align": false,
+                        "alignLevel": null
+                    }
+                },
+                {
+                    "aliasColors": {},
+                    "bars": false,
+                    "dashLength": 10,
+                    "dashes": false,
+                    "datasource": "SenseOps",
+                    "fill": 4,
+                    "fillGradient": 0,
+                    "gridPos": {
+                        "h": 6,
+                        "w": 24,
+                        "x": 0,
+                        "y": 10
+                    },
+                    "id": 137,
+                    "legend": {
+                        "avg": false,
+                        "current": false,
+                        "max": false,
+                        "min": false,
+                        "show": true,
+                        "total": false,
+                        "values": false
+                    },
+                    "lines": true,
+                    "linewidth": 1,
+                    "links": [],
+                    "nullPointMode": "null",
+                    "options": {
+                        "dataLinks": []
+                    },
+                    "percentage": false,
+                    "pointradius": 5,
+                    "points": false,
+                    "renderer": "flot",
+                    "seriesOverrides": [],
+                    "spaceLength": 10,
+                    "stack": true,
+                    "steppedLine": true,
+                    "targets": [
+                        {
+                            "alias": "[[tag_server_description]]",
+                            "groupBy": [
+                                {
+                                    "params": ["15s"],
+                                    "type": "time"
+                                },
+                                {
+                                    "params": ["host"],
+                                    "type": "tag"
+                                },
+                                {
+                                    "params": ["server_description"],
+                                    "type": "tag"
+                                }
+                            ],
+                            "measurement": "log_event",
+                            "orderByTime": "ASC",
+                            "policy": "default",
+                            "refId": "A",
+                            "resultFormat": "time_series",
+                            "select": [
+                                [
+                                    {
+                                        "params": ["message"],
+                                        "type": "field"
+                                    },
+                                    {
+                                        "params": [],
+                                        "type": "count"
+                                    },
+                                    {
+                                        "params": ["warnings"],
+                                        "type": "alias"
+                                    }
+                                ]
+                            ],
+                            "tags": [
+                                {
+                                    "key": "log_level",
+                                    "operator": "=",
+                                    "value": "WARN"
+                                },
+                                {
+                                    "condition": "AND",
+                                    "key": "server_description",
+                                    "operator": "=~",
+                                    "value": "/^$server$/"
+                                }
+                            ]
+                        }
+                    ],
+                    "thresholds": [],
+                    "timeFrom": null,
+                    "timeRegions": [],
+                    "timeShift": null,
+                    "title": "Warnings",
+                    "tooltip": {
+                        "shared": true,
+                        "sort": 0,
+                        "value_type": "individual"
+                    },
+                    "type": "graph",
+                    "xaxis": {
+                        "buckets": null,
+                        "mode": "time",
+                        "name": null,
+                        "show": true,
+                        "values": []
+                    },
+                    "yaxes": [
+                        {
+                            "decimals": 0,
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        },
+                        {
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        }
+                    ],
+                    "yaxis": {
+                        "align": false,
+                        "alignLevel": null
+                    }
+                },
+                {
+                    "aliasColors": {},
+                    "bars": false,
+                    "dashLength": 10,
+                    "dashes": false,
+                    "datasource": "SenseOps",
+                    "fill": 4,
+                    "fillGradient": 0,
+                    "gridPos": {
+                        "h": 6,
+                        "w": 24,
+                        "x": 0,
+                        "y": 16
+                    },
+                    "id": 48,
+                    "legend": {
+                        "avg": false,
+                        "current": false,
+                        "max": false,
+                        "min": false,
+                        "show": true,
+                        "total": false,
+                        "values": false
+                    },
+                    "lines": true,
+                    "linewidth": 1,
+                    "links": [],
+                    "nullPointMode": "null",
+                    "options": {
+                        "dataLinks": []
+                    },
+                    "percentage": false,
+                    "pointradius": 5,
+                    "points": false,
+                    "renderer": "flot",
+                    "seriesOverrides": [],
+                    "spaceLength": 10,
+                    "stack": true,
+                    "steppedLine": true,
+                    "targets": [
+                        {
+                            "alias": "[[tag_server_description]]",
+                            "groupBy": [
+                                {
+                                    "params": ["15s"],
+                                    "type": "time"
+                                },
+                                {
+                                    "params": ["host"],
+                                    "type": "tag"
+                                },
+                                {
+                                    "params": ["server_description"],
+                                    "type": "tag"
+                                }
+                            ],
+                            "measurement": "log_event",
+                            "orderByTime": "ASC",
+                            "policy": "default",
+                            "refId": "A",
+                            "resultFormat": "time_series",
+                            "select": [
+                                [
+                                    {
+                                        "params": ["message"],
+                                        "type": "field"
+                                    },
+                                    {
+                                        "params": [],
+                                        "type": "count"
+                                    },
+                                    {
+                                        "params": ["errors"],
+                                        "type": "alias"
+                                    }
+                                ]
+                            ],
+                            "tags": [
+                                {
+                                    "key": "log_level",
+                                    "operator": "=",
+                                    "value": "ERROR"
+                                },
+                                {
+                                    "condition": "AND",
+                                    "key": "server_description",
+                                    "operator": "=~",
+                                    "value": "/^$server$/"
+                                }
+                            ]
+                        }
+                    ],
+                    "thresholds": [],
+                    "timeFrom": null,
+                    "timeRegions": [],
+                    "timeShift": null,
+                    "title": "Errors",
+                    "tooltip": {
+                        "shared": true,
+                        "sort": 0,
+                        "value_type": "individual"
+                    },
+                    "type": "graph",
+                    "xaxis": {
+                        "buckets": null,
+                        "mode": "time",
+                        "name": null,
+                        "show": true,
+                        "values": []
+                    },
+                    "yaxes": [
+                        {
+                            "decimals": 0,
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        },
+                        {
+                            "format": "short",
+                            "label": null,
+                            "logBase": 1,
+                            "max": null,
+                            "min": null,
+                            "show": true
+                        }
+                    ],
+                    "yaxis": {
+                        "align": false,
+                        "alignLevel": null
+                    }
+                }
+            ],
+            "title": "Warnings & Errors (charts)",
+            "type": "row"
+        },
+        {
+            "collapsed": true,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 10
+            },
+            "id": 84,
+            "panels": [
+                {
+                    "columns": [],
+                    "datasource": "SenseOps",
+                    "fontSize": "100%",
+                    "gridPos": {
+                        "h": 16,
+                        "w": 24,
+                        "x": 0,
+                        "y": 5
+                    },
+                    "id": 86,
+                    "links": [],
+                    "options": {},
+                    "pageSize": null,
+                    "scroll": true,
+                    "showHeader": true,
+                    "sort": {
+                        "col": 0,
+                        "desc": true
+                    },
+                    "styles": [
+                        {
+                            "alias": "Time",
+                            "dateFormat": "YYYY-MM-DD HH:mm:ss",
+                            "pattern": "Time",
+                            "type": "date"
+                        },
+                        {
+                            "alias": "",
+                            "colorMode": null,
+                            "colors": [
+                                "rgba(245, 54, 54, 0.9)",
+                                "rgba(237, 129, 40, 0.89)",
+                                "rgba(50, 172, 45, 0.97)"
+                            ],
+                            "decimals": 2,
+                            "pattern": "/.*/",
+                            "thresholds": [],
+                            "type": "number",
+                            "unit": "short"
+                        }
+                    ],
+                    "targets": [
+                        {
+                            "groupBy": [
+                                {
+                                    "params": ["host"],
+                                    "type": "tag"
+                                },
+                                {
+                                    "params": ["server_description"],
+                                    "type": "tag"
+                                },
+                                {
+                                    "params": ["log_level"],
+                                    "type": "tag"
+                                },
+                                {
+                                    "params": ["source_process"],
+                                    "type": "tag"
+                                }
+                            ],
+                            "measurement": "log_event",
+                            "orderByTime": "ASC",
+                            "policy": "default",
+                            "refId": "A",
+                            "resultFormat": "table",
+                            "select": [
+                                [
+                                    {
+                                        "params": ["message"],
+                                        "type": "field"
+                                    }
+                                ]
+                            ],
+                            "tags": [
+                                {
+                                    "key": "server_description",
+                                    "operator": "=~",
+                                    "value": "/^$server$/"
+                                }
+                            ]
+                        }
+                    ],
+                    "title": "Warnings & Errors",
+                    "transform": "table",
+                    "type": "table"
+                }
+            ],
+            "title": "Warnings & Errors (table)",
+            "type": "row"
+        }
+    ],
+    "refresh": "5s",
+    "schemaVersion": 19,
+    "style": "dark",
+    "tags": ["senseops"],
+    "templating": {
+        "list": [
+            {
+                "allValue": null,
+                "current": {
+                    "text": "ACCESS1 + Central + DEV + RELOAD",
+                    "value": ["ACCESS1", "Central", "DEV", "RELOAD"]
+                },
+                "datasource": "SenseOps",
+                "definition": "show tag values from \"apps\" with key IN (\"server_description\")",
+                "hide": 0,
+                "includeAll": false,
+                "label": null,
+                "multi": true,
+                "name": "server",
+                "options": [],
+                "query": "show tag values from \"apps\" with key IN (\"server_description\")",
+                "refresh": 2,
+                "regex": "",
+                "skipUrlSync": false,
+                "sort": 0,
+                "tagValuesQuery": "show tag values from \"apps\" with key=\"server_description\" where serverGroup='$tag'",
+                "tags": [],
+                "tagsQuery": "show tag values from \"apps\" with key=\"serverGroup\"",
+                "type": "query",
+                "useTags": true
+            },
+            {
+                "datasource": "SenseOps",
+                "filters": [],
+                "hide": 0,
+                "label": null,
+                "name": "adhoc",
+                "skipUrlSync": false,
+                "type": "adhoc"
+            }
+        ]
+    },
+    "time": {
+        "from": "now-1h",
+        "to": "now"
+    },
+    "timepicker": {
+        "refresh_intervals": [
+            "5s",
+            "10s",
+            "30s",
+            "1m",
+            "5m",
+            "15m",
+            "30m",
+            "1h",
+            "2h",
+            "1d"
+        ],
+        "time_options": [
+            "5m",
+            "15m",
+            "1h",
+            "6h",
+            "12h",
+            "24h",
+            "2d",
+            "7d",
+            "30d"
+        ]
+    },
+    "timezone": "browser",
+    "title": "SenseOps Overview",
+    "uid": "_U7Rjk_mk",
+    "version": 47
 }
