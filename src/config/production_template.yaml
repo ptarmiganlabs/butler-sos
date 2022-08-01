@@ -36,6 +36,9 @@ Butler-SOS:
       instanceTag: DEV              # Tag that can be used to differentiate data from multiple Butler SOS instances
     storeNewRelic:
       enable: false
+      destinationAccount:
+        - First NR account
+        - Second NR account
       metric:
         dynamic:
           butlerMemoryUsage:
@@ -55,13 +58,17 @@ Butler-SOS:
             enable: true            # Should the Butler SOS version be included in the data sent to New Relic?
 
 
-  # Credentials for third party systems that Butler integrate with.
-  # These can also be specified via command line parameters when starting Butler. 
+  # Credentials for third party systems that Butler SOS integrate with.
+  # These can also be specified via command line parameters when starting Butler SOS. 
   # Command line options takes precedence over settings in this config file.
   thirdPartyToolsCredentials:
-    newRelic: 
-      insertApiKey: <API key>
-      accountId: <account id>
+    newRelic:         # Array of New Relic accounts/insert keys.
+      - accountName: First NR account
+        insertApiKey: <API key 1 (with insert permissions) from New Relic> 
+        accountId: <New Relic account ID 1>
+      - accountName: Second NR account
+        insertApiKey: <API key 2 (with insert permissions) from New Relic> 
+        accountId: <New Relic account ID 2>
 
   # Track individual users opening/closing apps and starting/stopping sessions. 
   # Requires log appender XML file(s) to be added to Sense server(s).
@@ -102,6 +109,9 @@ Butler-SOS:
       enable: true                  # Set to true if user events should be stored in InfluxDB
     sendToNewRelic:
       enable: false                  # Should log events be sent to New Relic?
+      destinationAccount:
+        - First NR account
+        - Second NR account
       scramble: true                # Should user info (user directory and user ID) be scrambled before sent to NR?
 
   # Log events are used to capture Sense warnings, errors and fatals in real time
@@ -131,6 +141,30 @@ Butler-SOS:
       enable: false                    # Should log events be stored in InfluxDB?
     sendToNewRelic:
       enable: false                    # Should log events be sent to New Relic?
+      destinationAccount:
+        - First NR account
+        - Second NR account
+      source:
+        engine:
+          enable: true                   # Should log events from the engine service be handled?
+          logLevel: 
+            error: true                 # Should error level log events be handled by Butler SOS?
+            warn: true               # Should warning level log events be handled by Butler SOS?
+        proxy:
+          enable: true                   # Should log events from the proxy service be handled?
+          logLevel: 
+            error: true                 # Should error level log events be handled by Butler SOS?
+            warn: true               # Should warning level log events be handled by Butler SOS?
+        repository:
+          enable: true                   # Should log events from the repository service be handled?
+          logLevel: 
+            error: true                 # Should error level log events be handled by Butler SOS?
+            warn: true               # Should warning level log events be handled by Butler SOS?
+        scheduler:
+          enable: true                   # Should log events from the scheduler service be handled?
+          logLevel: 
+            error: true                 # Should error level log events be handled by Butler SOS?
+            warn: true               # Should warning level log events be handled by Butler SOS?
 
   # Qlik Sense logging db config parameters
   logdb:
@@ -194,7 +228,9 @@ Butler-SOS:
           butlerSosVersion: 
             enable: true       # Should the Butler SOS version be included in the events sent to New Relic?
     metric:
-      enable: false
+      destinationAccount:
+        - First NR account
+        - Second NR account
       # There are different URLs depending on whther you have an EU or US region New Relic account.
       # The available URLs are listed here: https://docs.newrelic.com/docs/accounts/accounts-billing/account-setup/choose-your-data-center/
       # As of this writing the options for the New Relic metrics API are
