@@ -81,6 +81,7 @@ async function mainScript() {
         globals.logger.info(`Cores          : ${globals.hostInfo.si.cpu.cores}`);
         globals.logger.info(`Docker arch.   : ${globals.hostInfo.si.cpu.hypervizor}`);
         globals.logger.info(`Total memory   : ${globals.hostInfo.si.memory.total}`);
+        globals.logger.info(`Standalone app : ${globals.isPkg}`);
         globals.logger.info('--------------------------------------');
 
         // Log info about what Qlik Sense certificates are being used
