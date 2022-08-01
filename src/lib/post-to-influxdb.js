@@ -110,7 +110,7 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
     sessionAppNamesActive.sort();
 
     // -------------------------------
-    // Get in active app names
+    // Get loaded app names
     const appNamesLoaded = [];
     const sessionAppNamesLoaded = [];
 
