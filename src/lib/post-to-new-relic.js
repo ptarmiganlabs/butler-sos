@@ -649,7 +649,7 @@ async function postButlerSOSUptimeToNewRelic(fields) {
 
             if (newRelicConfig.length === 0) {
                 globals.logger.error(
-                    `UPTIME NEW RELIC: New Relic config "${accountName}" does not exist in the Butler SOS config file.`
+                    `UPTIME NEW RELIC: Unknown New Relic config "${accountName}". Make sure it is defined in config file or via command line options.`
                 );
             } else {
                 headers['Api-Key'] = newRelicConfig[0].insertApiKey;

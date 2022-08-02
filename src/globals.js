@@ -45,8 +45,12 @@ program
             'silly',
         ])
     )
-    .option('--new-relic-api-key <key>', 'insert API key to use with New Relic')
-    .option('--new-relic-account-id <id>', 'New Relic account ID');
+    .option(
+        '--new-relic-account-name  <name...>',
+        'New Relic account name. Used within Butler SOS to differentiate between different target New Relic accounts'
+    )
+    .option('--new-relic-api-key <key...>', 'insert API key to use with New Relic')
+    .option('--new-relic-account-id <id...>', 'New Relic account ID');
 
 // Parse command line params
 program.parse(process.argv);
@@ -96,16 +100,6 @@ if (options.loglevel && options.loglevel.length > 0) {
     config['Butler-SOS'].logLevel = options.loglevel;
 }
 
-// Is there a New Relic API key specified on the command line?
-if (options.newRelicApiKey && options.newRelicApiKey.length > 0) {
-    config['Butler-SOS'].thirdPartyToolsCredentials.newRelic.insertApiKey = options.newRelicApiKey;
-}
-
-// Is there a New Relic account ID specified on the command line?
-if (options.newRelicAccountId && options.newRelicAccountId.length > 0) {
-    config['Butler-SOS'].thirdPartyToolsCredentials.newRelic.accountId = options.newRelicAccountId;
-}
-
 // Set up array for storing app ids and names
 const appNames = [];
 
@@ -148,6 +142,40 @@ const logger = winston.createLogger({
 
 // Function to get current logging level
 const getLoggingLevel = () => logTransports.find((transport) => transport.name === 'console').level;
+
+// Are there New Relic account name(s), API key(s) and account ID(s) specified on the command line?
+// There must be the same number of each specified!
+// If so, replace any info from the config file with data from command line options
+if (
+    options?.newRelicAccountName?.length > 0 &&
+    options?.newRelicApiKey?.length > 0 &&
+    options?.newRelicAccountId?.length > 0 &&
+    options?.newRelicAccountName?.length === options?.newRelicApiKey?.length &&
+    options?.newRelicApiKey?.length === options?.newRelicAccountId?.length
+) {
+    config['Butler-SOS'].thirdPartyToolsCredentials.newRelic = [];
+
+    for (let index = 0; index < options.newRelicApiKey.length; index++) {
+        const accountName = options.newRelicAccountName[index];
+        const accountId = options.newRelicAccountId[index];
+        const insertApiKey = options.newRelicApiKey[index];
+
+        config['Butler-SOS'].thirdPartyToolsCredentials.newRelic.push({
+            accountName,
+            accountId,
+            insertApiKey,
+        });
+    }
+} else if (
+    options?.newRelicAccountName?.length > 0 ||
+    options?.newRelicApiKey?.length > 0 ||
+    options?.newRelicAccountId?.length > 0
+) {
+    logger.error(
+        'Incorrect command line parameters: Number of New Relic account names/IDs/API keys must match.'
+    );
+    process.exit(1);
+}
 
 // ------------------------------------
 // User activity UDP server
