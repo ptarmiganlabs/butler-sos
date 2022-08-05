@@ -27,19 +27,19 @@
                   <param name="name" value="encodedmessage" /> 
                   <param name="type" value="Qlik.Sense.Logging.log4net.Layout.Pattern.EncodedMessagePatternConverter" /> 
             </converter> 
-            <converter> 
-                  <param name="name" value="encodedexception" /> 
-                  <param name="type" value="Qlik.Sense.Logging.log4net.Layout.Pattern.EncodedExceptionPatternConverter" /> 
-            </converter>
-            <param name="conversionpattern" value="/qseow-scheduler/;%rownum{9999};%longIso8601date;%date;%level;%hostname;%logger;%user;%encodedmessage;%encodedexception;%property{UserDirectory};%property{UserId};%property{User};%property{TaskName};%property{AppName};%property{TaskId};%property{AppId};%property{ExecutionId}" />
+            <param name="conversionpattern" value="/qseow-engine/;%rownum{9999};%longIso8601date;%date;%level;%hostname;%logger;%user;%encodedmessage;%property{ProxySessionId};%property{ActiveUserDirectory};%property{ActiveUserId};%property{EngineTimestamp};%property{ProcessId};%property{Exe Version};%property{Server Started};%property{Entry Type};%property{SessionId};%property{AppId}" />
         </layout>
     </appender>
 
+
     <!-- Send UDP message to Butler SOS on warnings and errors -->
-    <logger name="Service">
+    <logger name="Performance">
         <appender-ref ref="LogEvent" />
     </logger>
     <logger name="System">
+        <appender-ref ref="LogEvent" />
+    </logger>
+    <logger name="Session">
         <appender-ref ref="LogEvent" />
     </logger>
 </configuration>
