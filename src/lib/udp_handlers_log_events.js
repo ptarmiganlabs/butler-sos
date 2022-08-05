@@ -24,7 +24,7 @@ function udpInitLogEventServer() {
     globals.udpServerLogEvents.socket.on('message', async (message, _remote) => {
         try {
             // >> Message parts for log messages from engine service, for Qix engine performance
-            //
+            // TODO
 
             // >> Message parts for log messages from proxy service
             // 0:  Message type. Always /qseow-proxy/
@@ -90,8 +90,10 @@ function udpInitLogEventServer() {
             );
 
             if (
-                (globals.config.get('Butler-SOS.logEvents.source.proxy.enable') === true &&
+                (globals.config.get('Butler-SOS.logEvents.source.engine.enable') === true &&
                     msg[0].toLowerCase() === '/qseow-qix-perf/') ||
+                (globals.config.get('Butler-SOS.logEvents.source.engine.enable') === true &&
+                    msg[0].toLowerCase() === '/qseow-engine/') ||
                 (globals.config.get('Butler-SOS.logEvents.source.proxy.enable') === true &&
                     msg[0].toLowerCase() === '/qseow-proxy/') ||
                 (globals.config.get('Butler-SOS.logEvents.source.repository.enable') === true &&
@@ -106,7 +108,7 @@ function udpInitLogEventServer() {
 
                 // Build object and convert to JSON
                 let msgObj;
-                if (msg[0] === 'qseow-qix-perf') {
+                if (msg[0] === 'qseow-engine') {
                     msgObj = {
                         source: msg[0],
                         log_row: msg[1],
@@ -117,13 +119,16 @@ function udpInitLogEventServer() {
                         subsystem: msg[6],
                         windows_user: msg[7],
                         message: msg[8],
-                        exception_message: msg[9],
+                        proxy_session_id: msg[9],
                         user_directory: msg[10],
                         user_id: msg[11],
-                        command: msg[12],
-                        result_code: msg[13],
-                        origin: msg[14],
-                        context: msg[15],
+                        engine_ts: msg[12],
+                        process_id: msg[13],
+                        engine_exe_version: msg[14],
+                        server_started: msg[15],
+                        entry_type: msg[16],
+                        session_id: msg[17],
+                        app_id: msg[18],
                     };
 
                     // Different log events deliver QSEoW user directory/user differently.

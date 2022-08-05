@@ -125,6 +125,8 @@ Butler-SOS:
       - tag: foo
         value: bar
     source:
+      engine:
+        enable: false                   # Should log events from the engine service be handled?
       proxy:
         enable: false                   # Should log events from the proxy service be handled?
       repository:

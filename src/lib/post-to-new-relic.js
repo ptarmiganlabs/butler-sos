@@ -745,13 +745,6 @@ async function postUserEventToNewRelic(msg) {
                 ? globals.config.get('Butler-SOS.newRelic.event.url')
                 : `${globals.config.get('Butler-SOS.newRelic.event.url')}/`;
 
-        // Build final URL
-        const eventUrl = `${tmpUrl}v1/accounts/${globals.config.get(
-            'Butler-SOS.thirdPartyToolsCredentials.newRelic.accountId'
-        )}/events`;
-
-        globals.logger.debug(`USER EVENT NEW RELIC: Event API url=${eventUrl}`);
-
         // Add headers
         const headers = {
             'Content-Type': 'application/json',
@@ -797,6 +790,11 @@ async function postUserEventToNewRelic(msg) {
                     `USER EVENT NEW RELIC: New Relic config "${accountName}" does not exist in the Butler SOS config file.`
                 );
             } else {
+                // Build final URL
+                const eventUrl = `${tmpUrl}v1/accounts/${newRelicConfig[0].accountId}/events`;
+                globals.logger.debug(`USER EVENT NEW RELIC: Event API url=${eventUrl}`);
+
+                // Add API key for this NR account as http header
                 headers['Api-Key'] = newRelicConfig[0].insertApiKey;
 
                 // eslint-disable-next-line no-await-in-loop
@@ -830,7 +828,7 @@ async function postUserEventToNewRelic(msg) {
 function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
     // Engine log event
     if (
-        sourceService.toLowerCase() === 'engine' &&
+        sourceService.toLowerCase() === 'qseow-engine' &&
         globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.engine.enable') &&
         globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.engine.enable') === true
     ) {
@@ -856,7 +854,7 @@ function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
 
     // Proxy log event
     if (
-        sourceService.toLowerCase() === 'proxy' &&
+        sourceService.toLowerCase() === 'qseow-proxy' &&
         globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.proxy.enable') &&
         globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.proxy.enable') === true
     ) {
@@ -880,7 +878,7 @@ function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
 
     // Repository log event
     if (
-        sourceService.toLowerCase() === 'repository' &&
+        sourceService.toLowerCase() === 'qseow-repository' &&
         globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.repository.enable') &&
         globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.repository.enable') === true
     ) {
@@ -906,7 +904,7 @@ function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
 
     // Scheduler log event
     if (
-        sourceService.toLowerCase() === 'scheduler' &&
+        sourceService.toLowerCase() === 'qseow-scheduler' &&
         globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.scheduler.enable') &&
         globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.scheduler.enable') === true
     ) {
@@ -969,6 +967,13 @@ async function postLogEventToNewRelic(msg) {
                 qs_task_id: msg.task_id,
                 qs_app_id: msg.app_id,
                 qs_execution_id: msg.execution_id,
+                qs_proxy_session_id: msg.proxy_session_id,
+                qs_engine_ts: msg.engine_ts,
+                qs_process_id: msg.process_id,
+                qs_engine_exe_version: msg.engine_exe_version,
+                qs_server_started: msg.server_started,
+                qs_entry_type: msg.entry_type,
+                qs_session_id: msg.session_id,
             };
 
             // Att log event tags as attributes
@@ -1023,13 +1028,6 @@ async function postLogEventToNewRelic(msg) {
                     ? globals.config.get('Butler-SOS.newRelic.event.url')
                     : `${globals.config.get('Butler-SOS.newRelic.event.url')}/`;
 
-            // Build final URL
-            const eventUrl = `${tmpUrl}v1/accounts/${globals.config.get(
-                'Butler-SOS.thirdPartyToolsCredentials.newRelic.accountId'
-            )}/events`;
-
-            globals.logger.debug(`LOG EVENT NEW RELIC: Event API url=${eventUrl}`);
-
             // Add headers
             const headers = {
                 'Content-Type': 'application/json',
@@ -1079,6 +1077,11 @@ async function postLogEventToNewRelic(msg) {
                         `LOG EVENT NEW RELIC: New Relic config "${accountName}" does not exist in the Butler SOS config file.`
                     );
                 } else {
+                    // Build final URL
+                    const eventUrl = `${tmpUrl}v1/accounts/${newRelicConfig[0].accountId}/events`;
+                    globals.logger.debug(`USER EVENT NEW RELIC: Event API url=${eventUrl}`);
+
+                    // Add API key for this NR account as http header
                     headers['Api-Key'] = newRelicConfig[0].insertApiKey;
 
                     // eslint-disable-next-line no-await-in-loop

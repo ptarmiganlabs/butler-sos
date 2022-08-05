@@ -486,119 +486,125 @@ function postLogEventToInfluxdb(msg) {
         let tags;
         let fields;
 
-        if (msg.source === 'qseow-proxy') {
-            tags = {
-                host: msg.host,
-                level: msg.level,
-                source: msg.source,
-                log_row: msg.log_row,
-                subsystem: msg.subsystem,
-            };
-            // Tags that are empty in some cases. Only add if they are non-empty
-            if (msg.user_full.length > 0) tags.user_full = msg.user_full;
-            if (msg.user_directory.length > 0) tags.user_directory = msg.user_directory;
-            if (msg.user_id.length > 0) tags.user_id = msg.user_id;
-            if (msg.result_code.length > 0) tags.result_code = msg.result_code;
-
-            fields = {
-                message: msg.message,
-                exception_message: msg.exception_message,
-                command: msg.command,
-                result_code: msg.result_code,
-                origin: msg.origin,
-                context: msg.context,
-                raw_event: JSON.stringify(msg),
-            };
-        } else if (msg.source === 'qseow-scheduler') {
-            tags = {
-                host: msg.host,
-                level: msg.level,
-                source: msg.source,
-                log_row: msg.log_row,
-                subsystem: msg.subsystem,
-            };
-            // Tags that are empty in some cases. Only add if they are non-empty
-            if (msg.user_full.length > 0) tags.user_full = msg.user_full;
-            if (msg.user_directory.length > 0) tags.user_directory = msg.user_directory;
-            if (msg.user_id.length > 0) tags.user_id = msg.user_id;
-            if (msg.task_id.length > 0) tags.task_id = msg.task_id;
-            if (msg.task_name.length > 0) tags.task_name = msg.task_name;
-
-            fields = {
-                message: msg.message,
-                exception_message: msg.exception_message,
-                app_name: msg.app_name,
-                app_id: msg.app_id,
-                execution_id: msg.execution_id,
-                raw_event: JSON.stringify(msg),
-            };
-        } else if (msg.source === 'qseow-repository') {
-            tags = {
-                host: msg.host,
-                level: msg.level,
-                source: msg.source,
-                log_row: msg.log_row,
-                subsystem: msg.subsystem,
-            };
-            // Tags that are empty in some cases. Only add if they are non-empty
-            if (msg.user_full.length > 0) tags.user_full = msg.user_full;
-            if (msg.user_directory.length > 0) tags.user_directory = msg.user_directory;
-            if (msg.user_id.length > 0) tags.user_id = msg.user_id;
-            if (msg.result_code.length > 0) tags.result_code = msg.result_code;
-
-            fields = {
-                message: msg.message,
-                exception_message: msg.exception_message,
-                command: msg.command,
-                result_code: msg.result_code,
-                origin: msg.origin,
-                context: msg.context,
-                raw_event: JSON.stringify(msg),
-            };
-        }
-
         if (
-            globals.config.has('Butler-SOS.logEvents.tags') &&
-            globals.config.get('Butler-SOS.logEvents.tags') !== null &&
-            globals.config.get('Butler-SOS.logEvents.tags').length > 0
+            msg.source === 'qseow-proxy' ||
+            msg.source === 'qseow-scheduler' ||
+            msg.source === 'qseow-repository'
         ) {
-            const configTags = globals.config.get('Butler-SOS.logEvents.tags');
-            // eslint-disable-next-line no-restricted-syntax
-            for (const item of configTags) {
-                tags[item.tag] = item.value;
+            if (msg.source === 'qseow-proxy') {
+                tags = {
+                    host: msg.host,
+                    level: msg.level,
+                    source: msg.source,
+                    log_row: msg.log_row,
+                    subsystem: msg.subsystem,
+                };
+                // Tags that are empty in some cases. Only add if they are non-empty
+                if (msg.user_full.length > 0) tags.user_full = msg.user_full;
+                if (msg.user_directory.length > 0) tags.user_directory = msg.user_directory;
+                if (msg.user_id.length > 0) tags.user_id = msg.user_id;
+                if (msg.result_code.length > 0) tags.result_code = msg.result_code;
+
+                fields = {
+                    message: msg.message,
+                    exception_message: msg.exception_message,
+                    command: msg.command,
+                    result_code: msg.result_code,
+                    origin: msg.origin,
+                    context: msg.context,
+                    raw_event: JSON.stringify(msg),
+                };
+            } else if (msg.source === 'qseow-scheduler') {
+                tags = {
+                    host: msg.host,
+                    level: msg.level,
+                    source: msg.source,
+                    log_row: msg.log_row,
+                    subsystem: msg.subsystem,
+                };
+                // Tags that are empty in some cases. Only add if they are non-empty
+                if (msg.user_full.length > 0) tags.user_full = msg.user_full;
+                if (msg.user_directory.length > 0) tags.user_directory = msg.user_directory;
+                if (msg.user_id.length > 0) tags.user_id = msg.user_id;
+                if (msg.task_id.length > 0) tags.task_id = msg.task_id;
+                if (msg.task_name.length > 0) tags.task_name = msg.task_name;
+
+                fields = {
+                    message: msg.message,
+                    exception_message: msg.exception_message,
+                    app_name: msg.app_name,
+                    app_id: msg.app_id,
+                    execution_id: msg.execution_id,
+                    raw_event: JSON.stringify(msg),
+                };
+            } else if (msg.source === 'qseow-repository') {
+                tags = {
+                    host: msg.host,
+                    level: msg.level,
+                    source: msg.source,
+                    log_row: msg.log_row,
+                    subsystem: msg.subsystem,
+                };
+                // Tags that are empty in some cases. Only add if they are non-empty
+                if (msg.user_full.length > 0) tags.user_full = msg.user_full;
+                if (msg.user_directory.length > 0) tags.user_directory = msg.user_directory;
+                if (msg.user_id.length > 0) tags.user_id = msg.user_id;
+                if (msg.result_code.length > 0) tags.result_code = msg.result_code;
+
+                fields = {
+                    message: msg.message,
+                    exception_message: msg.exception_message,
+                    command: msg.command,
+                    result_code: msg.result_code,
+                    origin: msg.origin,
+                    context: msg.context,
+                    raw_event: JSON.stringify(msg),
+                };
             }
+
+            if (
+                globals.config.has('Butler-SOS.logEvents.tags') &&
+                globals.config.get('Butler-SOS.logEvents.tags') !== null &&
+                globals.config.get('Butler-SOS.logEvents.tags').length > 0
+            ) {
+                const configTags = globals.config.get('Butler-SOS.logEvents.tags');
+                // eslint-disable-next-line no-restricted-syntax
+                for (const item of configTags) {
+                    tags[item.tag] = item.value;
+                }
+            }
+
+            const datapoint = [
+                {
+                    measurement: 'log_event',
+                    tags,
+                    fields,
+                },
+            ];
+
+            globals.influx
+                .writePoints(datapoint)
+                .then(() => {
+                    globals.logger.silly(
+                        `LOG EVENT INFLUXDB: Influxdb datapoint for Butler SOS log event: ${JSON.stringify(
+                            datapoint,
+                            null,
+                            2
+                        )}`
+                    );
+
+                    globals.logger.verbose(
+                        'LOG EVENT INFLUXDB: Sent Butler SOS log event data to InfluxDB'
+                    );
+                })
+                .catch((err) => {
+                    globals.logger.error(
+                        `LOG EVENT INFLUXDB 1: Error saving log event to InfluxDB! ${err}`
+                    );
+                });
         }
-
-        const datapoint = [
-            {
-                measurement: 'log_event',
-                tags,
-                fields,
-            },
-        ];
-
-        globals.influx
-            .writePoints(datapoint)
-            .then(() => {
-                globals.logger.silly(
-                    `LOG EVENT INFLUXDB: Influxdb datapoint for Butler SOS log event: ${JSON.stringify(
-                        datapoint,
-                        null,
-                        2
-                    )}`
-                );
-
-                globals.logger.verbose(
-                    'LOG EVENT INFLUXDB: Sent Butler SOS log event data to InfluxDB'
-                );
-            })
-            .catch((err) => {
-                globals.logger.error(
-                    `LOG EVENT INFLUXDB: Error saving log event to InfluxDB! ${err}`
-                );
-            });
     } catch (err) {
-        globals.logger.error(`LOG EVENT INFLUXDB: Error saving log event to InfluxDB! ${err}`);
+        globals.logger.error(`LOG EVENT INFLUXDB 2: Error saving log event to InfluxDB! ${err}`);
     }
 }
 
