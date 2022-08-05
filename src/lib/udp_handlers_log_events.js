@@ -91,8 +91,6 @@ function udpInitLogEventServer() {
 
             if (
                 (globals.config.get('Butler-SOS.logEvents.source.engine.enable') === true &&
-                    msg[0].toLowerCase() === '/qseow-qix-perf/') ||
-                (globals.config.get('Butler-SOS.logEvents.source.engine.enable') === true &&
                     msg[0].toLowerCase() === '/qseow-engine/') ||
                 (globals.config.get('Butler-SOS.logEvents.source.proxy.enable') === true &&
                     msg[0].toLowerCase() === '/qseow-proxy/') ||
