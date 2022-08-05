@@ -155,6 +155,7 @@ if (
 ) {
     config['Butler-SOS'].thirdPartyToolsCredentials.newRelic = [];
 
+    //
     for (let index = 0; index < options.newRelicApiKey.length; index++) {
         const accountName = options.newRelicAccountName[index];
         const accountId = options.newRelicAccountId[index];
