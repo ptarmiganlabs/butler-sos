@@ -37,3 +37,5 @@ release-macos export-ignore
 *.gif binary
 *.png binary
 *.jpeg binary
+*.qvf binary
+*.zip binary
