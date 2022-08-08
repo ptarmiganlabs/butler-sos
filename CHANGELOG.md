@@ -1,5 +1,32 @@
 # Changelog
 
+## [9.2.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.1.0...v9.2.0) (2022-08-08)
+
+
+### Features
+
+* Add support for storing Sense engine warning/error log messages in InfluxDB. ([40d784f](https://github.com/ptarmiganlabs/butler-sos/commit/40d784f037c5db57ab9ad4c5931303ae61bf914b)), closes [#435](https://github.com/ptarmiganlabs/butler-sos/issues/435)
+* Make it possible to specify one or more New Relic account credentials via command line ([66cda6d](https://github.com/ptarmiganlabs/butler-sos/commit/66cda6d0ab9b9a5d1dd853ec7b8008115ad0f8b5)), closes [#429](https://github.com/ptarmiganlabs/butler-sos/issues/429)
+* Specify zero or more New Relic credentials via command line option ([fccea2a](https://github.com/ptarmiganlabs/butler-sos/commit/fccea2a053e644596073af49a510e93952760e30)), closes [#429](https://github.com/ptarmiganlabs/butler-sos/issues/429)
+* support for sending metrics and events to multiple New Relic accounts ([a872181](https://github.com/ptarmiganlabs/butler-sos/commit/a8721816dffac938ccc3b9783a1fec1e17d7cdeb)), closes [#417](https://github.com/ptarmiganlabs/butler-sos/issues/417)
+* Write info on startup about execution type ([4e99e5f](https://github.com/ptarmiganlabs/butler-sos/commit/4e99e5f34379914c0f138f828ddeab1c5f84c5a5)), closes [#430](https://github.com/ptarmiganlabs/butler-sos/issues/430)
+
+
+### Bug Fixes
+
+* Add missing XML log appender file for QS engine service ([6b0f79a](https://github.com/ptarmiganlabs/butler-sos/commit/6b0f79a1a224e79c38fe24ca9b5c3c0132648999)), closes [#433](https://github.com/ptarmiganlabs/butler-sos/issues/433)
+* Log events now correctly sent to New Relic, incl engine log events. ([54123fb](https://github.com/ptarmiganlabs/butler-sos/commit/54123fb280ac167eddfbd19e1f60cea5882eeb51)), closes [#432](https://github.com/ptarmiganlabs/butler-sos/issues/432)
+
+
+### Refactoring
+
+* Remove unnecessary handling of engine performance log messages ([f05d501](https://github.com/ptarmiganlabs/butler-sos/commit/f05d5017aa48e1950829ccf1a961379512250199)), closes [#434](https://github.com/ptarmiganlabs/butler-sos/issues/434)
+
+
+### Miscellaneous
+
+* **deps:** Updated dependencies ([7836739](https://github.com/ptarmiganlabs/butler-sos/commit/7836739c27eb2fe95e51c87232674ebceba6e907))
+
 ## [9.1.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.0.2...v9.1.0) (2022-07-27)
 
 
