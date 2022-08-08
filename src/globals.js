@@ -273,7 +273,11 @@ tagValuesLogEvent.push('user_directory');
 tagValuesLogEvent.push('user_id');
 tagValuesLogEvent.push('task_id');
 tagValuesLogEvent.push('task_name');
+tagValuesLogEvent.push('app_id');
+tagValuesLogEvent.push('app_name');
 tagValuesLogEvent.push('result_code');
+tagValuesLogEvent.push('windows_user');
+tagValuesLogEvent.push('engine_exe_version');
 
 // Check if there are any extra log event tags in the config file
 if (config.has('Butler-SOS.logEvents.tags') && config.get('Butler-SOS.logEvents.tags') !== null) {
@@ -416,6 +420,7 @@ const influx = new Influx.InfluxDB({
                 result_code: Influx.FieldType.STRING,
                 origin: Influx.FieldType.STRING,
                 context: Influx.FieldType.STRING,
+                session_id: Influx.FieldType.STRING,
                 raw_event: Influx.FieldType.STRING,
             },
             tags: tagValuesLogEvent,

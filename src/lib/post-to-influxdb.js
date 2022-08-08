@@ -487,11 +487,12 @@ function postLogEventToInfluxdb(msg) {
         let fields;
 
         if (
+            msg.source === 'qseow-engine' ||
             msg.source === 'qseow-proxy' ||
             msg.source === 'qseow-scheduler' ||
             msg.source === 'qseow-repository'
         ) {
-            if (msg.source === 'qseow-proxy') {
+            if (msg.source === 'qseow-engine') {
                 tags = {
                     host: msg.host,
                     level: msg.level,
@@ -500,10 +501,41 @@ function postLogEventToInfluxdb(msg) {
                     subsystem: msg.subsystem,
                 };
                 // Tags that are empty in some cases. Only add if they are non-empty
-                if (msg.user_full.length > 0) tags.user_full = msg.user_full;
-                if (msg.user_directory.length > 0) tags.user_directory = msg.user_directory;
-                if (msg.user_id.length > 0) tags.user_id = msg.user_id;
-                if (msg.result_code.length > 0) tags.result_code = msg.result_code;
+                if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
+                if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
+                if (msg?.user_id?.length > 0) tags.user_id = msg.user_id;
+                if (msg?.result_code?.length > 0) tags.result_code = msg.result_code;
+                if (msg?.windows_user?.length > 0) tags.windows_user = msg.windows_user;
+                if (msg?.task_id?.length > 0) tags.task_id = msg.task_id;
+                if (msg?.task_name?.length > 0) tags.task_name = msg.task_name;
+                if (msg?.app_id?.length > 0) tags.app_id = msg.app_id;
+                if (msg?.app_name?.length > 0) tags.app_name = msg.app_name;
+                if (msg?.engine_exe_version?.length > 0)
+                    tags.engine_exe_version = msg.engine_exe_version;
+
+                fields = {
+                    message: msg.message,
+                    exception_message: msg.exception_message,
+                    command: msg.command,
+                    result_code: msg.result_code,
+                    origin: msg.origin,
+                    context: msg.context,
+                    session_id: msg.session_id,
+                    raw_event: JSON.stringify(msg),
+                };
+            } else if (msg.source === 'qseow-proxy') {
+                tags = {
+                    host: msg.host,
+                    level: msg.level,
+                    source: msg.source,
+                    log_row: msg.log_row,
+                    subsystem: msg.subsystem,
+                };
+                // Tags that are empty in some cases. Only add if they are non-empty
+                if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
+                if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
+                if (msg?.user_id?.length > 0) tags.user_id = msg.user_id;
+                if (msg?.result_code?.length > 0) tags.result_code = msg.result_code;
 
                 fields = {
                     message: msg.message,
@@ -523,11 +555,11 @@ function postLogEventToInfluxdb(msg) {
                     subsystem: msg.subsystem,
                 };
                 // Tags that are empty in some cases. Only add if they are non-empty
-                if (msg.user_full.length > 0) tags.user_full = msg.user_full;
-                if (msg.user_directory.length > 0) tags.user_directory = msg.user_directory;
-                if (msg.user_id.length > 0) tags.user_id = msg.user_id;
-                if (msg.task_id.length > 0) tags.task_id = msg.task_id;
-                if (msg.task_name.length > 0) tags.task_name = msg.task_name;
+                if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
+                if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
+                if (msg?.user_id?.length > 0) tags.user_id = msg.user_id;
+                if (msg?.task_id?.length > 0) tags.task_id = msg.task_id;
+                if (msg?.task_name?.length > 0) tags.task_name = msg.task_name;
 
                 fields = {
                     message: msg.message,
@@ -546,10 +578,10 @@ function postLogEventToInfluxdb(msg) {
                     subsystem: msg.subsystem,
                 };
                 // Tags that are empty in some cases. Only add if they are non-empty
-                if (msg.user_full.length > 0) tags.user_full = msg.user_full;
-                if (msg.user_directory.length > 0) tags.user_directory = msg.user_directory;
-                if (msg.user_id.length > 0) tags.user_id = msg.user_id;
-                if (msg.result_code.length > 0) tags.result_code = msg.result_code;
+                if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
+                if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
+                if (msg?.user_id?.length > 0) tags.user_id = msg.user_id;
+                if (msg?.result_code?.length > 0) tags.result_code = msg.result_code;
 
                 fields = {
                     message: msg.message,
