@@ -1,13 +1,12 @@
 /* eslint-disable prefer-destructuring */
 /* eslint-disable no-unused-vars */
 
-const { users } = require('systeminformation');
 const axios = require('axios');
 const crypto = require('crypto');
 
 const globals = require('../globals');
 
-const sessionAppPrefix = 'SessionApp';
+// const sessionAppPrefix = 'SessionApp';
 
 /**
  *
@@ -73,9 +72,6 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
     globals.logger.debug(
         `HEALTH METRICS NEW RELIC: Number of apps in memory: ${body.apps.in_memory_docs.length}`
     );
-    // Get app names
-
-    let app;
 
     // Prepare message to New Relic
     try {
@@ -294,21 +290,69 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
         // Add headers
         const headers = {
             'Content-Type': 'application/json',
-            'Api-Key': globals.config.get(
-                'Butler-SOS.thirdPartyToolsCredentials.newRelic.insertApiKey'
-            ),
         };
 
-        // eslint-disable-next-line no-restricted-syntax
-        for (const header of globals.config.get('Butler-SOS.newRelic.metric.header')) {
-            headers[header.name] = header.value;
+        if (
+            globals.config.has('Butler-SOS.newRelic.metric.header') &&
+            globals.config.get('Butler-SOS.newRelic.metric.header') !== null &&
+            globals.config.get('Butler-SOS.newRelic.metric.header').length > 0
+        ) {
+            const configHeaders = globals.config.get('Butler-SOS.newRelic.metric.header');
+            // eslint-disable-next-line no-restricted-syntax
+            for (const header of configHeaders) {
+                headers[header.name] = header.value;
+            }
         }
 
-        const res = await axios.post(remoteUrl, payload, { headers });
-        if (res.status !== 202) {
-            globals.logger.warn(
-                `UPTIME NEW RELIC: Failed sending engine health metrics to New Relic: ${res.status}, ${res.statusText}`
+        //
+        // Send data to all New Relic accounts that are enabled for this metric/event
+        //
+        // Get New Relic accounts
+        const nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        globals.logger.debug(
+            `HEALTH METRICS NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
+        );
+
+        // eslint-disable-next-line no-restricted-syntax
+        for (const accountName of globals.config.get(
+            'Butler-SOS.userEvents.sendToNewRelic.destinationAccount'
+        )) {
+            globals.logger.debug(
+                `HEALTH METRICS NEW RELIC: Current loop New Relic config=${JSON.stringify(
+                    accountName
+                )}`
             );
+
+            // Is there any config available for the current account?
+            const newRelicConfig = nrAccounts.filter((item) => item.accountName === accountName);
+            globals.logger.debug(
+                `HEALTH METRICS NEW RELIC: New Relic config=${JSON.stringify(newRelicConfig)}`
+            );
+
+            if (newRelicConfig.length === 0) {
+                globals.logger.error(
+                    `HEALTH METRICS NEW RELIC: New Relic config "${accountName}" does not exist in the Butler SOS config file.`
+                );
+            } else {
+                headers['Api-Key'] = newRelicConfig[0].insertApiKey;
+
+                // eslint-disable-next-line no-await-in-loop
+                const res = await axios.post(remoteUrl, payload, { headers, timeout: 10000 });
+
+                globals.logger.debug(
+                    `HEALTH METRICS NEW RELIC: Result code from posting Qlik Sense health metrics to New Relic account ${newRelicConfig[0].accountId} ("${accountName}"): ${res.status}, ${res.statusText}`
+                );
+                if (res.status === 200 || res.status === 202) {
+                    // Posting done without error
+                    globals.logger.verbose(
+                        `HEALTH METRICS NEW RELIC: Sent Qlik Sense health metrics to New Relic account ${newRelicConfig[0].accountId} ("${accountName}")`
+                    );
+                } else {
+                    globals.logger.error(
+                        `HEALTH METRICS NEW RELIC: Error code from posting Qlik Sense health metrics to New Relic account ${newRelicConfig[0].accountId} ("${accountName}"): ${res.status}, ${res.statusText}`
+                    );
+                }
+            }
         }
     } catch (error) {
         // handle error
@@ -316,7 +360,10 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
     }
 }
 
-// function postProxySessionsToInfluxdb(host, virtualProxy, body, tags) {
+/**
+ *
+ * @param {*} userSessions
+ */
 async function postProxySessionsToNewRelic(userSessions) {
     globals.logger.debug(
         `PROXY SESSIONS NEW RELIC: User sessions: ${JSON.stringify(userSessions)}`
@@ -326,7 +373,6 @@ async function postProxySessionsToNewRelic(userSessions) {
         const payload = [];
         const metrics = [];
         let attributes = {};
-        // const attributes =            userSessions.datapointNewRelic.butlersos_user_session_summary_total.attributes;
         const ts = new Date().getTime(); // Timestamp in millisec
 
         // Add attributes from session object
@@ -392,30 +438,74 @@ async function postProxySessionsToNewRelic(userSessions) {
         // Add headers
         const headers = {
             'Content-Type': 'application/json',
-            'Api-Key': globals.config.get(
-                'Butler-SOS.thirdPartyToolsCredentials.newRelic.insertApiKey'
-            ),
         };
 
+        if (
+            globals.config.has('Butler-SOS.newRelic.metric.header') &&
+            globals.config.get('Butler-SOS.newRelic.metric.header') !== null &&
+            globals.config.get('Butler-SOS.newRelic.metric.header').length > 0
+        ) {
+            const configHeaders = globals.config.get('Butler-SOS.newRelic.metric.header');
+            // eslint-disable-next-line no-restricted-syntax
+            for (const header of configHeaders) {
+                headers[header.name] = header.value;
+            }
+        }
+
+        //
+        // Send data to all New Relic accounts that are enabled for this metric/event
+        //
+        // Get New Relic accounts
+        const nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        globals.logger.debug(
+            `PROXY SESSIONS NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
+        );
+
         // eslint-disable-next-line no-restricted-syntax
-        for (const header of globals.config.get('Butler-SOS.newRelic.metric.header')) {
-            headers[header.name] = header.value;
-        }
-
-        const res = await axios.post(remoteUrl, payload, { headers, timeout: 5000 });
-        if (res.status !== 202) {
-            globals.logger.warn(
-                `UPTIME NEW RELIC: Failed sending proxy sessions metrics to New Relic: ${res.status}, ${res.statusText}`
+        for (const accountName of globals.config.get(
+            'Butler-SOS.userEvents.sendToNewRelic.destinationAccount'
+        )) {
+            globals.logger.debug(
+                `PROXY SESSIONS NEW RELIC: Current loop New Relic config=${JSON.stringify(
+                    accountName
+                )}`
             );
-        }
 
-        globals.logger.debug(
-            `PROXY SESSIONS NEW RELIC: Proxy session count for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"": ${userSessions.sessionCount}`
-        );
-        globals.logger.debug(
-            `PROXY SESSIONS NEW RELIC: Result code from posting to New Relic: ${res.status}, ${res.statusText}`
-        );
-        globals.logger.verbose(`PROXY SESSIONS NEW RELIC: Sent proxy sessions data to New Relic`);
+            // Is there any config available for the current account?
+            const newRelicConfig = nrAccounts.filter((item) => item.accountName === accountName);
+            globals.logger.debug(
+                `PROXY SESSIONS NEW RELIC: New Relic config=${JSON.stringify(newRelicConfig)}`
+            );
+
+            if (newRelicConfig.length === 0) {
+                globals.logger.error(
+                    `PROXY SESSIONS NEW RELIC: New Relic config "${accountName}" does not exist in the Butler SOS config file.`
+                );
+            } else {
+                headers['Api-Key'] = newRelicConfig[0].insertApiKey;
+
+                globals.logger.debug(
+                    `PROXY SESSIONS NEW RELIC: Proxy session count for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}": ${userSessions.sessionCount}`
+                );
+
+                // eslint-disable-next-line no-await-in-loop
+                const res = await axios.post(remoteUrl, payload, { headers, timeout: 5000 });
+
+                globals.logger.debug(
+                    `PROXY SESSIONS NEW RELIC: Result code from posting Qlik Sense proxy sessions to New Relic account ${newRelicConfig[0].accountId} ("${accountName}"): ${res.status}, ${res.statusText}`
+                );
+                if (res.status === 200 || res.status === 202) {
+                    // Posting done without error
+                    globals.logger.verbose(
+                        `PROXY SESSIONS NEW RELIC: Sent Qlik Sense proxy sessions to New Relic account ${newRelicConfig[0].accountId} ("${accountName}")`
+                    );
+                } else {
+                    globals.logger.error(
+                        `PROXY SESSIONS NEW RELIC: Error code from posting Qlik Sense proxy sessions to New Relic account ${newRelicConfig[0].accountId} ("${accountName}"): ${res.status}, ${res.statusText}`
+                    );
+                }
+            }
+        }
     } catch (error) {
         // handle error
         globals.logger.error(`PROXY SESSIONS NEW RELIC: Error sending proxy sessions: ${error}`);
@@ -527,9 +617,6 @@ async function postButlerSOSUptimeToNewRelic(fields) {
         // Add headers
         const headers = {
             'Content-Type': 'application/json',
-            'Api-Key': globals.config.get(
-                'Butler-SOS.thirdPartyToolsCredentials.newRelic.insertApiKey'
-            ),
         };
 
         // eslint-disable-next-line no-restricted-syntax
@@ -537,16 +624,54 @@ async function postButlerSOSUptimeToNewRelic(fields) {
             headers[header.name] = header.value;
         }
 
-        const res = await axios.post(remoteUrl, payload, { headers });
+        //
+        // Send data to all New Relic accounts that are enabled for this metric/event
+        //
+        // Get New Relic accounts
+        const nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
         globals.logger.debug(
-            `UPTIME NEW RELIC: Result code from posting to New Relic: ${res.status}, ${res.statusText}`
+            `UPTIME NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
-        if (res.status !== 202) {
-            globals.logger.warn(
-                `UPTIME NEW RELIC: Failed sending Butler SOS uptime metrics to New Relic: ${res.status}, ${res.statusText}`
+
+        // eslint-disable-next-line no-restricted-syntax
+        for (const accountName of globals.config.get(
+            'Butler-SOS.uptimeMonitor.storeNewRelic.destinationAccount'
+        )) {
+            globals.logger.debug(
+                `UPTIME NEW RELIC: Current loop New Relic config=${JSON.stringify(accountName)}`
             );
+
+            // Is there any config available for the current account?
+            const newRelicConfig = nrAccounts.filter((item) => item.accountName === accountName);
+            globals.logger.debug(
+                `UPTIME NEW RELIC: New Relic config=${JSON.stringify(newRelicConfig)}`
+            );
+
+            if (newRelicConfig.length === 0) {
+                globals.logger.error(
+                    `UPTIME NEW RELIC: Unknown New Relic config "${accountName}". Make sure it is defined in config file or via command line options.`
+                );
+            } else {
+                headers['Api-Key'] = newRelicConfig[0].insertApiKey;
+
+                // eslint-disable-next-line no-await-in-loop
+                const res = await axios.post(remoteUrl, payload, { headers, timeout: 5000 });
+
+                globals.logger.debug(
+                    `UPTIME NEW RELIC: Result code from posting to New Relic account ${newRelicConfig[0].accountId} ("${accountName}"): ${res.status}, ${res.statusText}`
+                );
+                if (res.status === 200 || res.status === 202) {
+                    // Posting done without error
+                    globals.logger.verbose(
+                        `UPTIME NEW RELIC: Sent Butler SOS memory usage data to New Relic account ${newRelicConfig[0].accountId} ("${accountName}")`
+                    );
+                } else {
+                    globals.logger.error(
+                        `UPTIME NEW RELIC: Error code from posting memory usage data to New Relic account ${newRelicConfig[0].accountId} ("${accountName}"): ${res.status}, ${res.statusText}`
+                    );
+                }
+            }
         }
-        globals.logger.verbose(`UPTIME NEW RELIC: Sent Butler SOS memory usage data to New Relic`);
     } catch (error) {
         // handle error
         globals.logger.error(`UPTIME NEW RELIC: Error sending uptime: ${error}`);
@@ -620,40 +745,76 @@ async function postUserEventToNewRelic(msg) {
                 ? globals.config.get('Butler-SOS.newRelic.event.url')
                 : `${globals.config.get('Butler-SOS.newRelic.event.url')}/`;
 
-        // Build final URL
-        const eventUrl = `${tmpUrl}v1/accounts/${globals.config.get(
-            'Butler-SOS.thirdPartyToolsCredentials.newRelic.accountId'
-        )}/events`;
-
-        globals.logger.debug(`USER EVENT NEW RELIC: Event API url=${eventUrl}`);
-
         // Add headers
         const headers = {
             'Content-Type': 'application/json',
-            'Api-Key': globals.config.get(
-                'Butler-SOS.thirdPartyToolsCredentials.newRelic.insertApiKey'
-            ),
         };
 
-        // eslint-disable-next-line no-restricted-syntax
-        for (const header of globals.config.get('Butler-SOS.newRelic.event.header')) {
-            headers[header.name] = header.value;
+        if (
+            globals.config.has('Butler-SOS.newRelic.event.header') &&
+            globals.config.get('Butler-SOS.newRelic.event.header') !== null &&
+            globals.config.get('Butler-SOS.newRelic.event.header').length > 0
+        ) {
+            const configHeaders = globals.config.get('Butler-SOS.newRelic.event.header');
+            // eslint-disable-next-line no-restricted-syntax
+            for (const header of configHeaders) {
+                headers[header.name] = header.value;
+            }
         }
 
-        const axiosRequest = {
-            url: eventUrl,
-            method: 'post',
-            timeout: 10000,
-            data: payload,
-            headers,
-        };
-
-        const res = await axios.request(axiosRequest);
-
+        //
+        // Send data to all New Relic accounts that are enabled for this metric/event
+        //
+        // Get New Relic accounts
+        const nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
         globals.logger.debug(
-            `USER EVENT NEW RELIC: Result code from posting to New Relic: ${res.status}, ${res.statusText}`
+            `USER EVENT NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
-        globals.logger.verbose(`USER EVENT NEW RELIC: Sent user event to New Relic`);
+
+        // eslint-disable-next-line no-restricted-syntax
+        for (const accountName of globals.config.get(
+            'Butler-SOS.userEvents.sendToNewRelic.destinationAccount'
+        )) {
+            globals.logger.debug(
+                `USER EVENT NEW RELIC: Current loop New Relic config=${JSON.stringify(accountName)}`
+            );
+
+            // Is there any config available for the current account?
+            const newRelicConfig = nrAccounts.filter((item) => item.accountName === accountName);
+            globals.logger.debug(
+                `USER EVENT NEW RELIC: New Relic config=${JSON.stringify(newRelicConfig)}`
+            );
+
+            if (newRelicConfig.length === 0) {
+                globals.logger.error(
+                    `USER EVENT NEW RELIC: New Relic config "${accountName}" does not exist in the Butler SOS config file.`
+                );
+            } else {
+                // Build final URL
+                const eventUrl = `${tmpUrl}v1/accounts/${newRelicConfig[0].accountId}/events`;
+                globals.logger.debug(`USER EVENT NEW RELIC: Event API url=${eventUrl}`);
+
+                // Add API key for this NR account as http header
+                headers['Api-Key'] = newRelicConfig[0].insertApiKey;
+
+                // eslint-disable-next-line no-await-in-loop
+                const res = await axios.post(eventUrl, payload, { headers, timeout: 10000 });
+
+                globals.logger.debug(
+                    `USER EVENT NEW RELIC: Result code from posting user event to New Relic account ${newRelicConfig[0].accountId} ("${accountName}"): ${res.status}, ${res.statusText}`
+                );
+                if (res.status === 200 || res.status === 202) {
+                    // Posting done without error
+                    globals.logger.verbose(
+                        `USER EVENT NEW RELIC: Sent user event to New Relic account ${newRelicConfig[0].accountId} ("${accountName}")`
+                    );
+                } else {
+                    globals.logger.error(
+                        `USER EVENT NEW RELIC: Error code from posting user event to New Relic account ${newRelicConfig[0].accountId} ("${accountName}"): ${res.status}, ${res.statusText}`
+                    );
+                }
+            }
+        }
     } catch (err) {
         globals.logger.error(`USER EVENT NEW RELIC: Error saving user event to New Relic! ${err}`);
     }
@@ -667,7 +828,7 @@ async function postUserEventToNewRelic(msg) {
 function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
     // Engine log event
     if (
-        sourceService.toLowerCase() === 'engine' &&
+        sourceService.toLowerCase() === 'qseow-engine' &&
         globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.engine.enable') &&
         globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.engine.enable') === true
     ) {
@@ -693,7 +854,7 @@ function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
 
     // Proxy log event
     if (
-        sourceService.toLowerCase() === 'proxy' &&
+        sourceService.toLowerCase() === 'qseow-proxy' &&
         globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.proxy.enable') &&
         globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.proxy.enable') === true
     ) {
@@ -717,7 +878,7 @@ function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
 
     // Repository log event
     if (
-        sourceService.toLowerCase() === 'repository' &&
+        sourceService.toLowerCase() === 'qseow-repository' &&
         globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.repository.enable') &&
         globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.repository.enable') === true
     ) {
@@ -743,7 +904,7 @@ function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
 
     // Scheduler log event
     if (
-        sourceService.toLowerCase() === 'scheduler' &&
+        sourceService.toLowerCase() === 'qseow-scheduler' &&
         globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.scheduler.enable') &&
         globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.scheduler.enable') === true
     ) {
@@ -806,6 +967,13 @@ async function postLogEventToNewRelic(msg) {
                 qs_task_id: msg.task_id,
                 qs_app_id: msg.app_id,
                 qs_execution_id: msg.execution_id,
+                qs_proxy_session_id: msg.proxy_session_id,
+                qs_engine_ts: msg.engine_ts,
+                qs_process_id: msg.process_id,
+                qs_engine_exe_version: msg.engine_exe_version,
+                qs_server_started: msg.server_started,
+                qs_entry_type: msg.entry_type,
+                qs_session_id: msg.session_id,
             };
 
             // Att log event tags as attributes
@@ -860,19 +1028,9 @@ async function postLogEventToNewRelic(msg) {
                     ? globals.config.get('Butler-SOS.newRelic.event.url')
                     : `${globals.config.get('Butler-SOS.newRelic.event.url')}/`;
 
-            // Build final URL
-            const eventUrl = `${tmpUrl}v1/accounts/${globals.config.get(
-                'Butler-SOS.thirdPartyToolsCredentials.newRelic.accountId'
-            )}/events`;
-
-            globals.logger.debug(`LOG EVENT NEW RELIC: Event API url=${eventUrl}`);
-
             // Add headers
             const headers = {
                 'Content-Type': 'application/json',
-                'Api-Key': globals.config.get(
-                    'Butler-SOS.thirdPartyToolsCredentials.newRelic.insertApiKey'
-                ),
             };
 
             if (
@@ -887,20 +1045,63 @@ async function postLogEventToNewRelic(msg) {
                 }
             }
 
-            const axiosRequest = {
-                url: eventUrl,
-                method: 'post',
-                timeout: 10000,
-                data: payload,
-                headers,
-            };
-
-            const res = await axios.request(axiosRequest);
-
+            //
+            // Send data to all New Relic accounts that are enabled for this metric/event
+            //
+            // Get New Relic accounts
+            const nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
             globals.logger.debug(
-                `LOG EVENT NEW RELIC: Result code from posting to New Relic: ${res.status}, ${res.statusText}`
+                `LOG EVENT NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
             );
-            globals.logger.verbose(`LOG EVENT NEW RELIC: Sent event to New Relic`);
+
+            // eslint-disable-next-line no-restricted-syntax
+            for (const accountName of globals.config.get(
+                'Butler-SOS.logEvents.sendToNewRelic.destinationAccount'
+            )) {
+                globals.logger.debug(
+                    `LOG EVENT NEW RELIC: Current loop New Relic config=${JSON.stringify(
+                        accountName
+                    )}`
+                );
+
+                // Is there any config available for the current account?
+                const newRelicConfig = nrAccounts.filter(
+                    (item) => item.accountName === accountName
+                );
+                globals.logger.debug(
+                    `LOG EVENT NEW RELIC: New Relic config=${JSON.stringify(newRelicConfig)}`
+                );
+
+                if (newRelicConfig.length === 0) {
+                    globals.logger.error(
+                        `LOG EVENT NEW RELIC: New Relic config "${accountName}" does not exist in the Butler SOS config file.`
+                    );
+                } else {
+                    // Build final URL
+                    const eventUrl = `${tmpUrl}v1/accounts/${newRelicConfig[0].accountId}/events`;
+                    globals.logger.debug(`USER EVENT NEW RELIC: Event API url=${eventUrl}`);
+
+                    // Add API key for this NR account as http header
+                    headers['Api-Key'] = newRelicConfig[0].insertApiKey;
+
+                    // eslint-disable-next-line no-await-in-loop
+                    const res = await axios.post(eventUrl, payload, { headers, timeout: 10000 });
+
+                    globals.logger.debug(
+                        `LOG EVENT NEW RELIC: Result code from posting log event to New Relic account ${newRelicConfig[0].accountId} ("${accountName}"): ${res.status}, ${res.statusText}`
+                    );
+                    if (res.status === 200 || res.status === 202) {
+                        // Posting done without error
+                        globals.logger.verbose(
+                            `LOG EVENT NEW RELIC: Sent log event to New Relic account ${newRelicConfig[0].accountId} ("${accountName}")`
+                        );
+                    } else {
+                        globals.logger.error(
+                            `LOG EVENT NEW RELIC: Error code from posting log event to New Relic account ${newRelicConfig[0].accountId} ("${accountName}"): ${res.status}, ${res.statusText}`
+                        );
+                    }
+                }
+            }
         }
     } catch (err) {
         globals.logger.error(`LOG EVENT NEW RELIC: Error saving event to New Relic! ${err}`);
