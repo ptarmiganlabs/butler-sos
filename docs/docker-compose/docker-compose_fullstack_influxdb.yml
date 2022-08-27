@@ -1,4 +1,4 @@
-# docker-compose.yml
+# docker-compose_fullstack_influxdb.yml
 version: "3.3"
 services:
     butler-sos:
@@ -6,11 +6,11 @@ services:
         container_name: butler-sos
         restart: always
         volumes:
-            # Make config file accessible outside of container
+            # Make config file and log files accessible outside of container
             - "./config:/nodeapp/config"
             - "./log:/nodeapp/log"
         environment:
-            - "NODE_ENV=production_influxdb" # Means that Butler SOS will read config data from production.yaml
+            - "NODE_ENV=production_influxdb" # Means that Butler SOS will read config data from production_influxdb.yaml
         logging:
             driver: "json-file"
             options:
