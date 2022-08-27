@@ -215,7 +215,7 @@ Butler-SOS:
       # Note that the URL path should *not* be included in the url setting below!
       # As of this writing the valid options are
       # https://insights-collector.eu01.nr-data.net
-      # https://insights-collector.newrelic.com 
+      # https://insights-collector.newrelic.com
       url: https://insights-collector.eu01.nr-data.net
       header:                   # Custom http headers
         - name: X-My-Header
@@ -237,7 +237,7 @@ Butler-SOS:
       # The available URLs are listed here: https://docs.newrelic.com/docs/accounts/accounts-billing/account-setup/choose-your-data-center/
       # As of this writing the options for the New Relic metrics API are
       # https://insights-collector.eu01.nr-data.net/metric/v1
-      # https://metric-api.newrelic.com/metric/v1 
+      # https://metric-api.newrelic.com/metric/v1
       url: https://insights-collector.eu01.nr-data.net/metric/v1   # Where should uptime data be sent?
       header:                   # Custom http headers
         - name: X-My-Header
@@ -364,7 +364,7 @@ Butler-SOS:
         serverTags:
           server_group: DEV
           serverLocation: Asia
-          server-type: virtual
+          server_type: virtual
           serverBrand: Dell
       - host: <server2.my.domain>:4747        # Example: 10.34.3.46:4747
         serverName: <server2>
@@ -379,6 +379,6 @@ Butler-SOS:
         serverTags:
           server_group: PROD
           serverLocation: Europe
-          server-type: physical
+          server_type: physical
           serverBrand: HP
     
