@@ -6,7 +6,7 @@ services:
         container_name: butler-sos
         restart: always
         volumes:
-            # Make config file accessible outside of container
+            # Make config file and log files accessible outside of container
             - "./config:/nodeapp/config"
             - "./log:/nodeapp/log"
         environment:
@@ -30,7 +30,7 @@ services:
             - "--storage.tsdb.path=/prometheus"
             - "--web.console.libraries=/usr/share/prometheus/console_libraries"
             - "--web.console.templates=/usr/share/prometheus/consoles"
-            - "--log.level=debug"
+            # - "--log.level=debug"
         ports:
             - 9090:9090
         links:
