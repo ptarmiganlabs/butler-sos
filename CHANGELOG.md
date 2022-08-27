@@ -1,5 +1,18 @@
 # Changelog
 
+## [9.2.1](https://github.com/ptarmiganlabs/butler-sos/compare/v9.2.0...v9.2.1) (2022-08-27)
+
+
+### Bug Fixes
+
+* Incorrect comments in sample docker-compose files ([326cf58](https://github.com/ptarmiganlabs/butler-sos/commit/326cf5846fde12f5f149be96dc66b284a8dc2422)), closes [#439](https://github.com/ptarmiganlabs/butler-sos/issues/439)
+* Unmatched server tags in sample YAML config file ([5a9d3b6](https://github.com/ptarmiganlabs/butler-sos/commit/5a9d3b67010202b58effbc22da6a17924a6e7ee0)), closes [#438](https://github.com/ptarmiganlabs/butler-sos/issues/438)
+
+
+### Documentation
+
+* Add Grafana 9 dashboard for Butler SOS 9.2 ([4c21567](https://github.com/ptarmiganlabs/butler-sos/commit/4c2156782b6130c4f03fe4f262f1c80540292744)), closes [#440](https://github.com/ptarmiganlabs/butler-sos/issues/440)
+
 ## [9.2.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.1.0...v9.2.0) (2022-08-08)
 
 
