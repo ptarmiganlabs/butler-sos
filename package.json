@@ -38,7 +38,7 @@
         "eslint-config-prettier": "8.5.0",
         "eslint-plugin-import": "^2.26.0",
         "eslint-plugin-prettier": "^4.2.1",
-        "fastify": "^4.5.3",
+        "fastify": "^4.8.1",
         "fastify-healthcheck": "^4.1.0",
         "fastify-metrics": "^9.2.1",
         "fs-extra": "^10.1.0",
