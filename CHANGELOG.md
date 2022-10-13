@@ -1,5 +1,12 @@
 # Changelog
 
+## [9.2.2](https://github.com/ptarmiganlabs/butler-sos/compare/v9.2.1...v9.2.2) (2022-10-13)
+
+
+### Miscellaneous
+
+* **deps:** bump fastify from 4.5.3 to 4.8.1 ([42d6f52](https://github.com/ptarmiganlabs/butler-sos/commit/42d6f52024f5aa10239348fd94dd9750a4b2aaaf))
+
 ## [9.2.1](https://github.com/ptarmiganlabs/butler-sos/compare/v9.2.0...v9.2.1) (2022-08-27)
 
 
