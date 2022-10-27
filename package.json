@@ -40,7 +40,7 @@
         "eslint-plugin-prettier": "^4.2.1",
         "fastify": "^4.9.2",
         "fastify-healthcheck": "^4.2.0",
-        "fastify-metrics": "^9.2.1",
+        "fastify-metrics": "^10.0.0",
         "fs-extra": "^10.1.0",
         "influx": "^5.9.3",
         "js-yaml": "^4.1.0",
