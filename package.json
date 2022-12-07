@@ -55,7 +55,7 @@
         "winston-daily-rotate-file": "^4.7.1"
     },
     "devDependencies": {
-        "prettier": "2.7.1"
+        "prettier": "2.8.1"
     },
     "pkg": {
         "scripts": "node_modules/js-yaml/**/*.js"
