@@ -1,5 +1,18 @@
 # Changelog
 
+## [9.3.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.2.2...v9.3.0) (2023-01-04)
+
+
+### Features
+
+* Add virus/malware scanning of standalone binaries during build ([2aaf091](https://github.com/ptarmiganlabs/butler-sos/commit/2aaf0919b62e724b2063e17572ac2ba84364c4a7)), closes [#449](https://github.com/ptarmiganlabs/butler-sos/issues/449)
+
+
+### Miscellaneous
+
+* **deps:** Update dependencies to stay safe & secure ([600b22d](https://github.com/ptarmiganlabs/butler-sos/commit/600b22d745b1df46a47a480708ecbb1b7f393213))
+* **deps:** Update dependencies to stay safe & secure ([2142590](https://github.com/ptarmiganlabs/butler-sos/commit/2142590e34ab672ed04cb9d4307c342214deef58))
+
 ## [9.2.2](https://github.com/ptarmiganlabs/butler-sos/compare/v9.2.1...v9.2.2) (2022-10-13)
 
 
