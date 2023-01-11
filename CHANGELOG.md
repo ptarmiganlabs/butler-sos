@@ -1,5 +1,19 @@
 # Changelog
 
+## [9.3.1](https://github.com/ptarmiganlabs/butler-sos/compare/v9.3.0...v9.3.1) (2023-01-11)
+
+
+### Miscellaneous
+
+* **deps:** Update dependencies to stay safe & secure ([bf91c4f](https://github.com/ptarmiganlabs/butler-sos/commit/bf91c4f05a45d1d4e5422576aee082381453c649))
+* **deps:** update node.js to v19 ([ba72504](https://github.com/ptarmiganlabs/butler-sos/commit/ba72504eb2ab1a6e6e3f613ce94b2c07f7eb8d97))
+* **security:** Add automatic scans for updated dependencies ([e61e28e](https://github.com/ptarmiganlabs/butler-sos/commit/e61e28ee7696743af0e05a67a2d8d10bd92f43da))
+
+
+### Documentation
+
+* Clean up Markdown ([cd79b3c](https://github.com/ptarmiganlabs/butler-sos/commit/cd79b3c9aae394e787ceb224b15478c3e8198c25))
+
 ## [9.3.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.2.2...v9.3.0) (2023-01-04)
 
 
