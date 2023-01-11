@@ -31,7 +31,7 @@
     "dependencies": {
         "@breejs/later": "^4.1.0",
         "axios": "^0.27.2",
-        "commander": "^9.4.1",
+        "commander": "^9.5.0",
         "config": "^3.3.8",
         "eslint": "^8.31.0",
         "eslint-config-airbnb-base": "^15.0.0",
@@ -39,8 +39,8 @@
         "eslint-plugin-import": "^2.26.0",
         "eslint-plugin-prettier": "^4.2.1",
         "fastify": "^4.11.0",
-        "fastify-healthcheck": "^4.3.0",
-        "fastify-metrics": "^10.0.1",
+        "fastify-healthcheck": "^4.4.0",
+        "fastify-metrics": "^10.0.2",
         "fs-extra": "^11.1.0",
         "influx": "^5.9.3",
         "js-yaml": "^4.1.0",
@@ -50,12 +50,12 @@
         "pg": "^8.8.0",
         "prom-client": "^14.1.1",
         "qrs-interact": "^6.3.1",
-        "systeminformation": "^5.16.9",
+        "systeminformation": "^5.17.3",
         "winston": "^3.8.2",
         "winston-daily-rotate-file": "^4.7.1"
     },
     "devDependencies": {
-        "prettier": "^2.8.1"
+        "prettier": "^2.8.2"
     },
     "pkg": {
         "scripts": "node_modules/js-yaml/**/*.js"
