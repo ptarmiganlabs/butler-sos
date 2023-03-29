@@ -35,8 +35,6 @@
     ],
     "packages": {
         "src": {
-            "last-release-sha": "d3fc9e6be5dea516629a436298f513d1d46f9681",
-            "release-as": "9.4.0",        
             "package-name": "butler-sos"
         }
     }
