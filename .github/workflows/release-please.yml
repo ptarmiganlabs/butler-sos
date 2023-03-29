@@ -99,7 +99,7 @@ jobs:
           pkg --config package.json --output build/linux/${DIST_FILE_NAME} -t node16-linux-x64 ./build/lib/index.js --compress GZip
 
       - name: Debug
-        if: ${{ steps.release.outputs.src--release_created }}
+        if: ${{ steps.release.outputs.release_created }}
         run: |
           pwd
           ls -la
