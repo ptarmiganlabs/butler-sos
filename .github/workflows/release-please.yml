@@ -33,6 +33,12 @@ jobs:
           clean: true
 
       - name: Show output from Release-Please
+        if: always()
+        env:
+          RELEASE_PLEASE_OUTPUT: ${{ toJSON(steps.release.outputs) }}
+        run: echo "$RELEASE_PLEASE_OUTPUT"
+
+      - name: Show output from Release-Please
         if: ${{ steps.release.outputs.release_created }}
         run: |
           echo "release_created: ${{ steps.release.outputs.release_created }}"
@@ -49,6 +55,13 @@ jobs:
         if: github.repository_owner == 'ptarmiganlabs'
         uses: actions/checkout@v3
 
+      - name: Install dependencies
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          pwd
+          ls -la
+          npm install
+
       - name: Run Snyk to check for vulnerabilities
         if: github.repository_owner == 'ptarmiganlabs'
         uses: snyk/actions/node@master
@@ -56,69 +69,115 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          command: monitor    
+          args: --file=./package.json --sarif-file-output=./snyk.sarif
+          # command: monitor    
 
-      - name: Install dependencies
-        if: ${{ steps.release.outputs.release_created }}
-        run: |
-          ls -la
-          npm install
+      - name: Upload Snyk result to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: ./snyk.sarif
 
       - name: Install tool for creating stand-alone executables
         if: ${{ steps.release.outputs.release_created }}
-        run: npm install -g pkg
+        run: |
+          npm install -g pkg
+          npm i -g @vercel/ncc
 
       - name: Package stand-alone binaries
         if: ${{ steps.release.outputs.release_created }}
           # mkdir release/alpine
           # pkg --output release/alpine/${DIST_FILE_NAME} -t node16-alpine-x64 index.js
         run: |
+          pwd
           ls -la
-          mkdir release
-          mkdir release/linux
-          mkdir release/macos
-          mkdir release/win
-          pkg --config package.json --output release/linux/${DIST_FILE_NAME} -t node16-linux-x64 src/bundle.js --compress GZip
-          pkg --config package.json --output release/macos/${DIST_FILE_NAME} -t node16-macos-x64 src/bundle.js --compress GZip
-          pkg --config package.json --output release/win/${DIST_FILE_NAME}.exe -t node16-win-x64 src/bundle.js --compress GZip
+          mkdir build
+          mkdir build/linux
+          mkdir build/macos
+          mkdir build/win
+          ncc build -o build/lib -e enigma.js ./src/bundle.js
+          pkg --config package.json --output build/macos/${DIST_FILE_NAME} -t node16-macos-x64 ./build/lib/index.js --compress GZip
+          pkg --config package.json --output build/win/${DIST_FILE_NAME}.exe -t node16-win-x64 ./build/lib/index.js --compress GZip
+          pkg --config package.json --output build/linux/${DIST_FILE_NAME} -t node16-linux-x64 ./build/lib/index.js --compress GZip
 
-      - name: Compress binaries
-        if: ${{ steps.release.outputs.release_created }}
-          # zip release-zip/${DIST_FILE_NAME}-alpine.zip release/alpine/${DIST_FILE_NAME}
-          # zip release-zip/${DIST_FILE_NAME}-macos.zip release/macos/${DIST_FILE_NAME}
+      - name: Debug
+        if: ${{ steps.release.outputs.src--release_created }}
         run: |
+          pwd
           ls -la
-          mkdir release-zip
-          zip --junk-paths release-zip/${DIST_FILE_NAME}-linux.zip release/linux/${DIST_FILE_NAME}
-          zip --junk-paths release-zip/${DIST_FILE_NAME}-win.zip release/win/${DIST_FILE_NAME}.exe
+          ls -la build
+          ls -la build/macos
+          ls -la build/win
+          ls -la build/linux
+          mkdir ghaction-virustotal
+
+      # - name: Compress binaries
+      #   if: ${{ steps.release.outputs.release_created }}
+      #     # zip release-zip/${DIST_FILE_NAME}-alpine.zip release/alpine/${DIST_FILE_NAME}
+      #     # zip release-zip/${DIST_FILE_NAME}-macos.zip release/macos/${DIST_FILE_NAME}
+      #   run: |
+      #     ls -la
+      #     mkdir release-zip
+      #     zip --junk-paths release-zip/${DIST_FILE_NAME}-linux.zip release/linux/${DIST_FILE_NAME}
+      #     zip --junk-paths release-zip/${DIST_FILE_NAME}-win.zip release/win/${DIST_FILE_NAME}.exe
+
+      # - name: Debug
+      #   if: ${{ steps.release.outputs.release_created }}
+      #   run: |
+      #     ls -la
+      #     ls -la release
+      #     ls -la release/macos
+
+      - name: VirusTotal Scan
+        if: ${{ steps.release.outputs.release_created }}
+        uses: crazy-max/ghaction-virustotal@v3
+        with:
+          vt_api_key: ${{ secrets.VIRUSTOTAL_API_KEY }}
+          request_rate: 4
+          files: |
+            ./build/macos/*
+            ./build/win/*
+            ./build/linux/*
 
       - name: Debug
         if: ${{ steps.release.outputs.release_created }}
         run: |
-          ls -la
-          ls -la release
-          ls -la release/macos
+          ls -la ghaction-virustotal
 
-      - name: Upload build artifacts
+      - name: Upload macOS build artifacts
         if: ${{ steps.release.outputs.release_created }}
         uses: actions/upload-artifact@v3
         with:
           name: binaries-macos
-          path: release/macos/*
+          path: build/macos/*
 
-      - name: Upload to existing release
+      - name: Upload Linux build artifacts
         if: ${{ steps.release.outputs.release_created }}
-        uses: ncipollo/release-action@v1
+        uses: actions/upload-artifact@v3
         with:
-          allowUpdates: true
-          omitBodyDuringUpdate: true
-          omitNameDuringUpdate: true
-          # artifactContentType: application/zip
-          artifactContentType: raw
-          draft: true
-          tag: ${{ steps.release.outputs.tag_name }}
-          artifacts: release-zip/*
-          token: ${{ github.token }}
+          name: binaries-linux
+          path: build/build/linux/*
+
+      - name: Upload Windows build artifacts
+        if: ${{ steps.release.outputs.release_created }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: binaries-win
+          path: build/win/*
+
+
+      # - name: Upload to existing release
+      #   if: ${{ steps.release.outputs.release_created }}
+      #   uses: ncipollo/release-action@v1
+      #   with:
+      #     allowUpdates: true
+      #     omitBodyDuringUpdate: true
+      #     omitNameDuringUpdate: true
+      #     # artifactContentType: application/zip
+      #     artifactContentType: raw
+      #     draft: true
+      #     tag: ${{ steps.release.outputs.tag_name }}
+      #     artifacts: release-zip/*
+      #     token: ${{ github.token }}
 
 
   release-macos:
@@ -130,6 +189,7 @@ jobs:
       - macos
       - sp53
     # timeout-minutes: 15
+
     if: ${{ needs.release-please.outputs.release_created }} 
     env:
       DIST_FILE_NAME: butler-sos
@@ -141,6 +201,11 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
 
       - name: Download-Binaries
         uses: actions/download-artifact@v3
@@ -162,10 +227,10 @@ jobs:
       #     # The password used to import the PKCS12 file.
       #     p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
 
-      - name: Install gon via HomeBrew for code signing and app notarization
-        run: |
-          brew tap mitchellh/gon
-          brew install mitchellh/gon/gon
+      # - name: Install gon via HomeBrew for code signing and app notarization
+      #   run: |
+      #     brew tap mitchellh/gon
+      #     brew install mitchellh/gon/gon
 
       - name: Debug
         run: |
@@ -178,8 +243,16 @@ jobs:
           AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
           AC_APP_IDENTITY: ${{ secrets.AC_APP_IDENTITY }}
         run: |
+          pwd
           ls -la
           gon ./release-config/gon.json
+
+      - name: Change name of zip file
+        run: |
+          pwd
+          ls -la
+          ls -la ./release-macos
+          mv ./${{ env.DIST_FILE_NAME }}-macos.zip ./${{ needs.release-please.outputs.release_tag_name }}-macos.zip
 
       - name: Debug
         run: |
@@ -196,11 +269,151 @@ jobs:
           # artifactContentType: application/zip
           draft: true
           tag: ${{ needs.release-please.outputs.release_tag_name }}
-          artifacts: release-macos/${{ env.DIST_FILE_NAME }}-macos.zip
+          artifacts: ./${{ needs.release-please.outputs.release_tag_name }}-macos.zip
           token: ${{ github.token }}
 
-      # - name: Upload build artifacts
-      #   uses: actions/upload-artifact@v2
-      #   with:
-      #     name: binaries-macos
-      #     path: release-macos/*
+      - name: Tidy up before existing
+        run: |
+          rm -r release-macos
+
+  release-linux:
+    needs: release-please
+    runs-on: ubuntu-latest
+    # timeout-minutes: 15
+
+    if: ${{ needs.release-please.outputs.release_created }} 
+    env:
+      DIST_FILE_NAME: butler-sos
+    steps:
+      - name: Release tag and upload url from previous job
+        run: |
+          echo "tag_name   : ${{ needs.release-please.outputs.release_tag_name }}"
+          echo "upload_url : ${{ needs.release-please.outputs.release_upload_url }}"
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
+
+      - name: Download-Binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: binaries-linux
+          path: release-linux/
+
+      - name: Make binary executable
+        run: |
+          chmod +x release-linux/${DIST_FILE_NAME}
+
+      - name: Compress into zip
+        run: |
+          ls -la
+          ls -la ./release-linux
+          zip -9 -r ./${{ needs.release-please.outputs.release_tag_name }}-linux.zip release-linux/
+
+      - name: Debug
+        run: |
+          ls -la
+          ls -la ./release-linux
+
+      - name: Upload to existing release
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
+          artifactContentType: raw
+          # artifactContentType: application/zip
+          draft: true
+          tag: ${{ needs.release-please.outputs.release_tag_name }}
+          artifacts: ./${{ needs.release-please.outputs.release_tag_name }}-linux.zip
+          token: ${{ github.token }}
+
+      - name: Tidy up before existing
+        run: |
+          rm -r release-linux
+
+  release-win64:
+    needs: release-please
+    runs-on:
+      - self-hosted
+      - x64
+      - windows
+      - sp53
+    # timeout-minutes: 15
+    if: ${{ needs.release-please.outputs.release_created }} 
+    env:
+      DIST_FILE_NAME: butler-sos
+    steps:
+      - name: Release tag and upload url from previous job
+        run: |
+          Write-Output 'tag_name        : ${{ needs.release-please.outputs.release_tag_name }}'
+          Write-Output 'upload_url      : ${{ needs.release-please.outputs.release_upload_url }}'
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
+
+      - name: Download-Binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: binaries-win
+          path: release-win/
+
+      - name: Sign the executable
+        env:
+          CODESIGN_PWD: ${{ secrets.WIN_CODESIGN_PWD}}
+          CODESIGN_INTERMEDIATE_BASE64: ${{ secrets.WIN_CODESIGN_INTERMEDIATE_BASE64 }}
+          CODESIGN_BASE64: ${{ secrets.WIN_CODESIGN_BASE64}}
+        run: |
+          New-Item -ItemType directory -Path certificate
+          Set-Content -Path certificate\certificate.txt -Value $env:CODESIGN_BASE64
+          certutil -decode certificate\certificate.txt certificate\certificate.pfx
+          Set-Content -Path certificate\intermediate.txt -Value $env:CODESIGN_INTERMEDIATE_BASE64
+          certutil -decode certificate\intermediate.txt certificate\intermediate.crt
+
+          & 'C:\Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/signtool.exe' sign /fd SHA256 /p $env:CODESIGN_PWD /ac certificate\intermediate.crt /f certificate\certificate.pfx /tr "http://timestamp.sectigo.com/rfc3161" /td sha256 release-win/butler-sos.exe
+          
+          Remove-Item -Recurse -Force certificate
+
+      - name: Install dependencies and zip into release asset
+        run: |
+          cd release-win
+          dir
+          $compress = @{
+            Path = "."
+            CompressionLevel = "Fastest"
+            DestinationPath = "${{ needs.release-please.outputs.release_tag_name }}-win.zip"
+          }
+          Compress-Archive @compress
+
+      - name: Debug
+        run: |
+          dir
+          dir ./release-win
+
+      - name: Upload to existing release
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
+          artifactContentType: raw
+          # artifactContentType: application/zip
+          draft: true
+          tag: ${{ needs.release-please.outputs.release_tag_name }}
+          artifacts: release-win/${{ needs.release-please.outputs.release_tag_name }}-win.zip
+          token: ${{ github.token }}
+
+      - name: Tidy up before existing
+        run: |
+          dir
+          Remove-Item -path ./release-win -recurse 
+
