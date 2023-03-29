@@ -1,5 +1,17 @@
 # Changelog
 
+## [9.3.2](https://github.com/ptarmiganlabs/butler-sos/compare/v9.3.1...v9.3.2) (2023-03-29)
+
+
+### Documentation
+
+* Add status badge to README file ([11871c8](https://github.com/ptarmiganlabs/butler-sos/commit/11871c82aa828269ca17b3a36c692525453ecfa3))
+
+
+### Miscellaneous
+
+* **deps:** Update dependencies to stay safe and secure ([e7de02b](https://github.com/ptarmiganlabs/butler-sos/commit/e7de02b1d8244c1a62f1a60b8f45d39212bf493c))
+
 ## [9.3.1](https://github.com/ptarmiganlabs/butler-sos/compare/v9.3.0...v9.3.1) (2023-01-11)
 
 
