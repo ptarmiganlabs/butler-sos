@@ -41,15 +41,18 @@ jobs:
       - name: Show output from Release-Please
         if: ${{ steps.release.outputs.release_created }}
         run: |
-          echo "release_created: ${{ steps.release.outputs.release_created }}"
-          echo "upload_url: ${{ steps.release.outputs.upload_url }}"
-          echo "html_url: ${{ steps.release.outputs.html_url }}"
-          echo "tag_name: ${{ steps.release.outputs.tag_name }}"
-          echo "major: ${{ steps.release.outputs.major }}"
-          echo "minor: ${{ steps.release.outputs.minor }}"
-          echo "patch: ${{ steps.release.outputs.patch }}"
-          echo "sha: ${{ steps.release.outputs.sha }}"
-          echo "pr: ${{ steps.release.outputs.pr }}"
+          echo "releases_created: ${{ steps.release.outputs.releases_created }}"
+          echo "release_created : ${{ steps.release.outputs.release_created }}"
+          echo "draft           : ${{ steps.release.outputs.draft }}"
+          echo "path            : ${{ steps.release.outputs.path }}"
+          echo "upload_url      : ${{ steps.release.outputs.upload_url }}"
+          echo "html_url        : ${{ steps.release.outputs.html_url }}"
+          echo "tag_name        : ${{ steps.release.outputs.tag_name }}"
+          echo "major           : ${{ steps.release.outputs.major }}"
+          echo "minor           : ${{ steps.release.outputs.minor }}"
+          echo "patch           : ${{ steps.release.outputs.patch }}"
+          echo "sha             : ${{ steps.release.outputs.sha }}"
+          echo "pr              : ${{ steps.release.outputs.pr }}"
 
       - name: Checkout repository
         if: github.repository_owner == 'ptarmiganlabs'
