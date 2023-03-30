@@ -1,5 +1,12 @@
 # Changelog
 
+## [9.3.3](https://github.com/ptarmiganlabs/butler-sos/compare/v9.3.2...v9.3.3) (2023-03-30)
+
+
+### Bug Fixes
+
+* Build process broken ([5fb2a51](https://github.com/ptarmiganlabs/butler-sos/commit/5fb2a51c0c39eca775bb5e6f51b1c11fbeab4665))
+
 ## [9.3.2](https://github.com/ptarmiganlabs/butler-sos/compare/v9.3.1...v9.3.2) (2023-03-29)
 
 
