@@ -316,7 +316,7 @@ jobs:
           ls -la
           ls -la ./release-linux
           cd release-linux
-          zip -9 -r ./${{ env.DIST_FILE_NAME }}-linux.zip ${{ env.DIST_FILE_NAME }}-${{ needs.release-please.outputs.release_tag_name }}-linux.zip
+          zip -9 -r ${{ env.DIST_FILE_NAME }}-${{ needs.release-please.outputs.release_tag_name }}-linux.zip ./${{ env.DIST_FILE_NAME }}
 
       - name: Debug
         run: |
@@ -396,7 +396,7 @@ jobs:
           $compress = @{
             Path = "."
             CompressionLevel = "Fastest"
-            DestinationPath = "$${{ env.DIST_FILE_NAME }}-{{ needs.release-please.outputs.release_tag_name }}-win.zip"
+            DestinationPath = "${{ env.DIST_FILE_NAME }}-${{ needs.release-please.outputs.release_tag_name }}-win.zip"
           }
           Compress-Archive @compress
 
@@ -415,7 +415,7 @@ jobs:
           # artifactContentType: application/zip
           draft: true
           tag: ${{ needs.release-please.outputs.release_tag_name }}
-          artifacts: release-win/$${{ env.DIST_FILE_NAME }}-{{ needs.release-please.outputs.release_tag_name }}-win.zip
+          artifacts: release-win/${{ env.DIST_FILE_NAME }}-${{ needs.release-please.outputs.release_tag_name }}-win.zip
           token: ${{ github.token }}
 
       - name: Tidy up before existing
