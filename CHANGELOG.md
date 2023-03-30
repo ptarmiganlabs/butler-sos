@@ -1,5 +1,17 @@
 # Changelog
 
+## [9.4.1](https://github.com/ptarmiganlabs/butler-sos/compare/v9.4.0...v9.4.1) (2023-03-30)
+
+
+### Bug Fixes
+
+* Fix broken Windows build pipeline ([72ab01f](https://github.com/ptarmiganlabs/butler-sos/commit/72ab01f356a3707c3ca018bc7714aa0931d3f5fe))
+
+
+### Miscellaneous
+
+* **deps:** Upgrade Docker build pipeline ([c6ad9c7](https://github.com/ptarmiganlabs/butler-sos/commit/c6ad9c7e80d28c524d934bf07e818fceebf1b1b0))
+
 ## [9.4.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.3.3...v9.4.0) (2023-03-30)
 
 
