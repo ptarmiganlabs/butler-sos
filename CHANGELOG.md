@@ -1,5 +1,12 @@
 # Changelog
 
+## [9.4.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.3.3...v9.4.0) (2023-03-30)
+
+
+### Features
+
+* Sign windows binaries ([9d2a311](https://github.com/ptarmiganlabs/butler-sos/commit/9d2a311fd697154d518d28692684cb52596c1a45))
+
 ## [9.3.3](https://github.com/ptarmiganlabs/butler-sos/compare/v9.3.2...v9.3.3) (2023-03-30)
 
 
