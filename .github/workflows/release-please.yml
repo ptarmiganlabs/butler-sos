@@ -157,7 +157,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: binaries-linux
-          path: build/build/linux/*
+          path: build/linux/*
 
       - name: Upload Windows build artifacts
         if: ${{ steps.release.outputs.release_created }}
@@ -254,7 +254,7 @@ jobs:
           pwd
           ls -la
           ls -la ./release-macos
-          mv ./${{ env.DIST_FILE_NAME }}-macos.zip ./${{ needs.release-please.outputs.release_tag_name }}-macos.zip
+          mv ./release-macos/${{ env.DIST_FILE_NAME }}-macos.zip ./release-macos/${{ env.DIST_FILE_NAME }}-${{ needs.release-please.outputs.release_tag_name }}-macos.zip
 
       - name: Debug
         run: |
@@ -271,7 +271,7 @@ jobs:
           # artifactContentType: application/zip
           draft: true
           tag: ${{ needs.release-please.outputs.release_tag_name }}
-          artifacts: ./${{ needs.release-please.outputs.release_tag_name }}-macos.zip
+          artifacts: ./release-macos/${{ env.DIST_FILE_NAME }}-${{ needs.release-please.outputs.release_tag_name }}-macos.zip
           token: ${{ github.token }}
 
       - name: Tidy up before existing
@@ -312,12 +312,15 @@ jobs:
 
       - name: Compress into zip
         run: |
+          pwd
           ls -la
           ls -la ./release-linux
-          zip -9 -r ./${{ needs.release-please.outputs.release_tag_name }}-linux.zip release-linux/
+          cd release-linux
+          zip -9 -r ./${{ env.DIST_FILE_NAME }}-linux.zip ${{ env.DIST_FILE_NAME }}-${{ needs.release-please.outputs.release_tag_name }}-linux.zip
 
       - name: Debug
         run: |
+          pwd
           ls -la
           ls -la ./release-linux
 
@@ -331,11 +334,12 @@ jobs:
           # artifactContentType: application/zip
           draft: true
           tag: ${{ needs.release-please.outputs.release_tag_name }}
-          artifacts: ./${{ needs.release-please.outputs.release_tag_name }}-linux.zip
+          artifacts: ./release-linux/${{ env.DIST_FILE_NAME }}-${{ needs.release-please.outputs.release_tag_name }}-linux.zip
           token: ${{ github.token }}
 
       - name: Tidy up before existing
         run: |
+          pwd
           rm -r release-linux
 
   release-win64:
@@ -392,7 +396,7 @@ jobs:
           $compress = @{
             Path = "."
             CompressionLevel = "Fastest"
-            DestinationPath = "${{ needs.release-please.outputs.release_tag_name }}-win.zip"
+            DestinationPath = "$${{ env.DIST_FILE_NAME }}-{{ needs.release-please.outputs.release_tag_name }}-win.zip"
           }
           Compress-Archive @compress
 
@@ -411,11 +415,10 @@ jobs:
           # artifactContentType: application/zip
           draft: true
           tag: ${{ needs.release-please.outputs.release_tag_name }}
-          artifacts: release-win/${{ needs.release-please.outputs.release_tag_name }}-win.zip
+          artifacts: release-win/$${{ env.DIST_FILE_NAME }}-{{ needs.release-please.outputs.release_tag_name }}-win.zip
           token: ${{ github.token }}
 
       - name: Tidy up before existing
         run: |
           dir
           Remove-Item -path ./release-win -recurse 
-
