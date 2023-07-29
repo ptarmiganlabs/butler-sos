@@ -97,6 +97,9 @@ async function mainScript() {
         ) {
             telemetry.setupAnonUsageReportTimer();
             globals.logger.verbose('MAIN: Anonymous telemetry reporting has been set up.');
+            globals.logger.verbose(
+                'MAIN: ❤️  Thank you for your supporting Butler SOS by allowing telemetry! ❤️'
+            );
         }
     } catch (err) {
         globals.logger.error(`CONFIG: Error initiating host info: ${err}`);

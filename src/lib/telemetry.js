@@ -1,9 +1,9 @@
-const axios = require('axios');
+const { PostHog } = require('posthog-node');
+
 const globals = require('../globals');
 
-// const telemetryBaseUrl = 'http://localhost:7071/';
-const telemetryBaseUrl = 'https://ptarmiganlabs-telemetry.azurewebsites.net/';
-const telemetryUrl = '/api/butlerTelemetry';
+// Define variable to hold the PostHog client
+let posthogClient;
 
 const callRemoteURL = async function reportTelemetry() {
     try {
@@ -128,11 +128,10 @@ const callRemoteURL = async function reportTelemetry() {
             mqttEnable = true;
         }
 
+        // Is New Relic enabled?
         if (
-            (globals.config.has('Butler-SOS.newRelic.enableMQTT') &&
-                globals.config.get('Butler-SOS.newRelic.enableMQTT') === true) ||
-            (globals.config.has('Butler-SOS.newRelic.enable') &&
-                globals.config.get('Butler-SOS.newRelic.enable') === true)
+            globals.config.has('Butler-SOS.newRelic.enable') &&
+            globals.config.get('Butler-SOS.newRelic.enable') === true
         ) {
             newRelicEnable = true;
         }
@@ -167,64 +166,105 @@ const callRemoteURL = async function reportTelemetry() {
             userSessionsEnable = true;
         }
 
+        // Build body that can be sent to PostHog
         const body = {
-            service: 'butler-sos',
-            serviceVersion: globals.appVersion,
-            system: {
-                id: globals.hostInfo.id,
-                arch: globals.hostInfo.si.os.arch,
-                platform: globals.hostInfo.si.os.platform,
-                release: globals.hostInfo.si.os.release,
-                distro: globals.hostInfo.si.os.distro,
-                codename: globals.hostInfo.si.os.codename,
-                virtual: globals.hostInfo.si.system.virtual,
-                hypervisor: globals.hostInfo.si.os.hypervizor,
-                nodeVersion: globals.hostInfo.node.nodeVersion,
-            },
-            enabledFeatures: {
-                feature: {
-                    heartbeat,
-                    dockerHealthCheck,
-                    uptimeMonitor,
-                    uptimeMonitor_storeInInfluxdb: globals.config.has(
-                        'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
-                    )
-                        ? globals.config.get(
-                              'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
-                          )
-                        : false,
-                    udpServer: globals.config.has('Butler-SOS.userEvents.enable')
-                        ? globals.config.get('Butler-SOS.userEvents.enable')
-                        : false,
-                    userEvents: userEventsEnable,
-                    userEventsMQTT: userEventsMQTTEnable,
-                    userEventsInfluxdb: userEventsInfluxDBEnable,
-                    logEventsProxy: logEventsProxyEnable,
-                    logEventsScheduler: logEventsSchedulerEnable,
-                    logEventsRepository: logEventsRepositoryEnable,
-                    logEventsMQTT: logEventsMQTTEnable,
-                    logEventsInfluxdb: logEventsInfluxDBEnable,
-                    logdb: logdbEnable,
-                    mqtt: mqttEnable,
-                    newRelic: newRelicEnable,
-                    prometheus: prometheusEnable,
-                    influxdb: influxdbEnable,
-                    appNames: appNamesExtractEnable,
-                    userSessions: userSessionsEnable,
+            distinctId: globals.hostInfo.id,
+            event: 'telemetry sent',
+
+            properties: {
+                service: 'butler-sos',
+                serviceVersion: globals.appVersion,
+
+                system_id: globals.hostInfo.id,
+                system_arch: globals.hostInfo.si.os.arch,
+                system_platform: globals.hostInfo.si.os.platform,
+                system_release: globals.hostInfo.si.os.release,
+                system_distro: globals.hostInfo.si.os.distro,
+                system_codename: globals.hostInfo.si.os.codename,
+                system_virtual: globals.hostInfo.si.system.virtual,
+                system_hypervisor: globals.hostInfo.si.os.hypervizor,
+                system_nodeVersion: globals.hostInfo.node.nodeVersion,
+
+                feature_heartbeat: heartbeat,
+                feature_dockerHealthCheck: dockerHealthCheck,
+                feature_uptimeMonitor: uptimeMonitor,
+                feature_uptimeMonitor_storeInInfluxdb: globals.config.has(
+                    'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
+                )
+                    ? globals.config.get(
+                          'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
+                      )
+                    : false,
+                feature_udpServer: globals.config.has('Butler-SOS.userEvents.enable')
+                    ? globals.config.get('Butler-SOS.userEvents.enable')
+                    : false,
+                feature_userEvents: userEventsEnable,
+                feature_userEventsMQTT: userEventsMQTTEnable,
+                feature_userEventsInfluxdb: userEventsInfluxDBEnable,
+                feature_logEventsProxy: logEventsProxyEnable,
+                feature_logEventsScheduler: logEventsSchedulerEnable,
+                feature_logEventsRepository: logEventsRepositoryEnable,
+                feature_logEventsMQTT: logEventsMQTTEnable,
+                feature_logEventsInfluxdb: logEventsInfluxDBEnable,
+                feature_logdb: logdbEnable,
+                feature_mqtt: mqttEnable,
+                feature_newRelic: newRelicEnable,
+                feature_prometheus: prometheusEnable,
+                feature_influxdb: influxdbEnable,
+                feature_appNames: appNamesExtractEnable,
+                feature_userSessions: userSessionsEnable,
+
+                telemetry_json:  {
+                    system: {
+                        id: globals.hostInfo.id,
+                        arch: globals.hostInfo.si.os.arch,
+                        platform: globals.hostInfo.si.os.platform,
+                        release: globals.hostInfo.si.os.release,
+                        distro: globals.hostInfo.si.os.distro,
+                        codename: globals.hostInfo.si.os.codename,
+                        virtual: globals.hostInfo.si.system.virtual,
+                        hypervisor: globals.hostInfo.si.os.hypervizor,
+                        nodeVersion: globals.hostInfo.node.nodeVersion,
+                    },
+                    enabledFeatures: {
+                        feature: {
+                            heartbeat,
+                            dockerHealthCheck,
+                            uptimeMonitor,
+                            uptimeMonitor_storeInInfluxdb: globals.config.has(
+                                'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
+                            )
+                                ? globals.config.get(
+                                    'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
+                                )
+                                : false,
+                            udpServer: globals.config.has('Butler-SOS.userEvents.enable')
+                                ? globals.config.get('Butler-SOS.userEvents.enable')
+                                : false,
+                            userEvents: userEventsEnable,
+                            userEventsMQTT: userEventsMQTTEnable,
+                            userEventsInfluxdb: userEventsInfluxDBEnable,
+                            logEventsProxy: logEventsProxyEnable,
+                            logEventsScheduler: logEventsSchedulerEnable,
+                            logEventsRepository: logEventsRepositoryEnable,
+                            logEventsMQTT: logEventsMQTTEnable,
+                            logEventsInfluxdb: logEventsInfluxDBEnable,
+                            logdb: logdbEnable,
+                            mqtt: mqttEnable,
+                            newRelic: newRelicEnable,
+                            prometheus: prometheusEnable,
+                            influxdb: influxdbEnable,
+                            appNames: appNamesExtractEnable,
+                            userSessions: userSessionsEnable,
+                        },
+                    },
                 },
             },
         };
 
-        const axiosConfig = {
-            url: telemetryUrl,
-            method: 'post',
-            baseURL: telemetryBaseUrl,
-            data: body,
-            timeout: 5000,
-            responseType: 'text',
-        };
+        // Send the telemetry to PostHog
+        posthogClient.capture(body);
 
-        await axios.request(axiosConfig);
         globals.logger.debug(
             'TELEMETRY: Sent anonymous telemetry. Thanks for contributing to making Butler SOS better!'
         );
@@ -249,11 +289,20 @@ const callRemoteURL = async function reportTelemetry() {
 
 function setupAnonUsageReportTimer(logger, hostInfo) {
     try {
+        // Setup PostHog client
+        posthogClient = new PostHog('phc_5cmKiX9OubQjsSfOZuaolWaxo2z7WXqd295eB0uOtTb', {
+            host: 'https://eu.posthog.com',
+            flushAt: 1, // Flush events to PostHog as soon as they are captured
+            flushInterval: 60 * 1000, // Flush every 60 seconds
+            requestTimeout: 30 * 1000, // 30 secpnds timeout
+        });
+
         setInterval(() => {
             callRemoteURL(logger, hostInfo);
-        }, 1000 * 60 * 60 * 12); // Report anon usage every 12 hours
+        }, 1000 * 60 * 15); // Report anon usage every 15 monutes for testing
+        // }, 1000 * 60 * 60 * 12); // Report anon usage every 12 hours
 
-        // Do an initial report to the remote URL
+        // Do an initial telemetry report
         callRemoteURL(logger, hostInfo);
     } catch (err) {
         logger.error(`TELEMETRY: ${err}`);

@@ -547,6 +547,8 @@ async function initHostInfo() {
         const salt = networkInterface[0].mac;
         const hash = crypto.createHmac('sha256', salt);
         hash.update(idSrc);
+
+        // Get first 50 characters of hash
         const id = hash.digest('hex');
 
         hostInfo = {
