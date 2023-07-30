@@ -1,6 +1,6 @@
 {
     "name": "butler-sos",
-    "version": "9.4.1",
+    "version": "9.5.0",
     "description": "Butler SenseOps Stats (\"Butler SOS\") is a tool that publishes operational Qlik Sense metrics to Influxdb, Prometheus, New Relic and MQTT.",
     "main": "src/butler-sos.js",
     "scripts": {
