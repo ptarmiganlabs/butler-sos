@@ -539,7 +539,6 @@ async function initHostInfo() {
 
         const networkInterface = siNetwork.filter((item) => item.iface === defaultNetworkInterface);
 
-        
         const idSrc =
             networkInterface[0].mac +
             networkInterface[0].ip4 +
