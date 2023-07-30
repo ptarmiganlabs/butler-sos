@@ -32,13 +32,13 @@ jobs:
           # fork: false
           # clean: true
 
-      - name: Show output from Release-Please
+      - name: Show output from Release-Please 1
         if: always()
         env:
           RELEASE_PLEASE_OUTPUT: ${{ toJSON(steps.release.outputs) }}
         run: echo "$RELEASE_PLEASE_OUTPUT"
 
-      - name: Show output from Release-Please
+      - name: Show output from Release-Please 2
         if: ${{ steps.release.outputs.release_created }}
         run: |
           echo "releases_created: ${{ steps.release.outputs.releases_created }}"
@@ -52,7 +52,7 @@ jobs:
           echo "minor           : ${{ steps.release.outputs.minor }}"
           echo "patch           : ${{ steps.release.outputs.patch }}"
           echo "sha             : ${{ steps.release.outputs.sha }}"
-          echo "pr              : ${{ steps.release.outputs.pr }}"
+          # echo "pr              : ${{ steps.release.outputs.pr }}"
 
       - name: Checkout repository
         if: github.repository_owner == 'ptarmiganlabs'
