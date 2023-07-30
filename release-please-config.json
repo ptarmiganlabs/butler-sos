@@ -3,6 +3,7 @@
     "release-as": "9.5.0",
     "release-type": "node",
     "draft": true,
+    "commit-search-depth": 500,
     "changelog-sections": [
         {
             "type": "feat",
@@ -36,7 +37,7 @@
         }
     ],
     "packages": {
-        "src": {
+        ".": {
             "package-name": "butler-sos"
         }
     }
