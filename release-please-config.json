@@ -1,9 +1,8 @@
 {
-    "last-release-sha": "d3fc9e6be5dea516629a436298f513d1d46f9681",
+    "bootstrap-sha": "c23c63217a256f24710f68c562ddfc39f4ddb28e",
     "release-as": "9.5.0",
     "release-type": "node",
     "draft": true,
-    "commit-search-depth": 500,
     "changelog-sections": [
         {
             "type": "feat",
