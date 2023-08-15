@@ -295,6 +295,7 @@ function setupAnonUsageReportTimer(logger, hostInfo) {
             flushAt: 1, // Flush events to PostHog as soon as they are captured
             flushInterval: 60 * 1000, // Flush every 60 seconds
             requestTimeout: 30 * 1000, // 30 secpnds timeout
+            disableGeoip: false, // Enable geoip lookups
         });
 
         setInterval(() => {
