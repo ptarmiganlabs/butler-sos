@@ -13,7 +13,7 @@ jobs:
           - os: winsrv-2016
             build: |
               cd src
-              ../node_modules/.bin/esbuild "${env:DIST_FILE_NAME}.js" --bundle --external:axios --external:xdg-open --external:enigma.js --outfile=build.cjs --format=cjs --platform=node --target=node18
+              ./node_modules/.bin/esbuild "${env:DIST_FILE_NAME}.js" --bundle --external:axios --external:xdg-open --external:enigma.js --outfile=build.cjs --format=cjs --platform=node --target=node18
               pkg --output "../${env:DIST_FILE_NAME}.exe" -t node18-win-x64 ./build.cjs --config package.json --compress GZip
 
               dir
@@ -397,7 +397,7 @@ jobs:
       - name: Build binaries
         run: |
           cd src
-          ../node_modules/.bin/esbuild "${env:DIST_FILE_NAME}.js" --bundle --external:axios --external:xdg-open --external:enigma.js --outfile=build.cjs --format=cjs --platform=node --target=node18
+          ./node_modules/.bin/esbuild "${env:DIST_FILE_NAME}.js" --bundle --external:axios --external:xdg-open --external:enigma.js --outfile=build.cjs --format=cjs --platform=node --target=node18
           pkg --output "../${env:DIST_FILE_NAME}.exe" -t node18-win-x64 ./build.cjs --config package.json --compress GZip
 
           cd ..
