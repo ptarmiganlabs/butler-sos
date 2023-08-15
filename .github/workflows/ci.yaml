@@ -206,8 +206,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
-      release_tag_name: ${{ steps.release.outputs['src--tag_name'] }}
-      release_upload_url: ${{ steps.release.outputs['src--upload_url'] }}
+      release_tag_name: ${{ steps.release.outputs['tag_name'] }}
+      release_upload_url: ${{ steps.release.outputs['upload_url'] }}
     env:
       GITHUB_REF: ${{ github.ref }}
       GITHUB_TOKEN: ${{ secrets.PAT }}
@@ -232,16 +232,16 @@ jobs:
         run: |
           echo "releases_created: ${{ steps.release.outputs.releases_created }}"
           echo "release_created : ${{ steps.release.outputs.release_created }}"
-          echo "draft           : ${{ steps.release.outputs['src--draft'] }}"
-          echo "path            : ${{ steps.release.outputs['src--path'] }}"
-          echo "upload_url      : ${{ steps.release.outputs['src--upload_url'] }}"
-          echo "html_url        : ${{ steps.release.outputs['src--html_url'] }}"
-          echo "tag_name        : ${{ steps.release.outputs['src--tag_name'] }}"
-          echo "version         : ${{ steps.release.outputs['src--version'] }}"
-          echo "major           : ${{ steps.release.outputs['src--major'] }}"
-          echo "minor           : ${{ steps.release.outputs['src--minor'] }}"
-          echo "patch           : ${{ steps.release.outputs['src--patch'] }}"
-          echo "sha             : ${{ steps.release.outputs['src--sha'] }}"
+          echo "draft           : ${{ steps.release.outputs['draft'] }}"
+          echo "path            : ${{ steps.release.outputs['path'] }}"
+          echo "upload_url      : ${{ steps.release.outputs['upload_url'] }}"
+          echo "html_url        : ${{ steps.release.outputs['html_url'] }}"
+          echo "tag_name        : ${{ steps.release.outputs['tag_name'] }}"
+          echo "version         : ${{ steps.release.outputs['version'] }}"
+          echo "major           : ${{ steps.release.outputs['major'] }}"
+          echo "minor           : ${{ steps.release.outputs['minor'] }}"
+          echo "patch           : ${{ steps.release.outputs['patch'] }}"
+          echo "sha             : ${{ steps.release.outputs['sha'] }}"
 
   release-macos:
     needs: release-please
