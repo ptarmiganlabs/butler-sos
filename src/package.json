@@ -2,13 +2,13 @@
     "name": "butler-sos",
     "version": "9.5.0",
     "description": "Butler SenseOps Stats (\"Butler SOS\") is a tool that publishes operational Qlik Sense metrics to Influxdb, Prometheus, New Relic and MQTT.",
-    "main": "src/butler-sos.js",
+    "main": "butler-sos.js",
     "scripts": {
-        "butler-sos": "node src/butler-sos.js",
+        "butler-sos": "node butler-sos.js",
         "test": "snyk test && npm run format",
         "format": "npm run format:prettier",
-        "format:prettier": "npx prettier --config src/.prettierrc.yaml \"./src/**/*.{ts,css,less,js}\" --write",
-        "lint": "npx eslint src/ --format table"
+        "format:prettier": "npx prettier --config .prettierrc.yaml \"./**/*.{ts,css,less,js}\" --write",
+        "lint": "npx eslint --format table"
     },
     "repository": {
         "type": "git",
@@ -33,6 +33,7 @@
         "axios": "^1.4.0",
         "commander": "^11.0.0",
         "config": "^3.3.9",
+        "esbuild": "^0.19.0",
         "eslint": "^8.46.0",
         "eslint-config-airbnb-base": "^15.0.0",
         "eslint-config-prettier": "^8.9.0",
@@ -56,9 +57,17 @@
         "winston-daily-rotate-file": "^4.7.1"
     },
     "devDependencies": {
-        "prettier": "^3.0.0"
+        "prettier": "^3.0.0",
+        "snyk": "^1.1194.0"
     },
     "pkg": {
-        "scripts": "node_modules/js-yaml/**/*.js"
+        "assets": [
+            "node_modules/axios/**/*",
+            "node_modules/open/xdg-open"
+          ],
+        "scripts": [
+            "node_modules/enigma.js/**/*.json",
+            "node_modules/js-yaml/**/*.js"
+        ]
     }
 }
