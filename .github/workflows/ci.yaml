@@ -156,7 +156,7 @@ jobs:
           # artifactContentType: application/zip
           draft: true
           tag: ${{ needs.release-please.outputs.release_tag_name }}
-          artifacts: ./${{ needs.release-please.outputs.release_tag_name }}-macos.zip
+          artifacts: ./butler-sos-${{ needs.release-please.outputs.release_tag_name }}-macos.zip
           token: ${{ github.token }}
 
       - name: Tidy up before existing
@@ -246,7 +246,7 @@ jobs:
           # artifactContentType: application/zip
           draft: true
           tag: ${{ needs.release-please.outputs.release_tag_name }}
-          artifacts: ./${env:DIST_FILE_NAME}-${{ needs.release-please.outputs.release_tag_name }}-win.zip
+          artifacts: ./butler-sos-${{ needs.release-please.outputs.release_tag_name }}-win.zip
           token: ${{ github.token }}
 
       - name: Tidy up before existing
@@ -318,7 +318,7 @@ jobs:
           # artifactContentType: application/zip
           draft: true
           tag: ${{ needs.release-please.outputs.release_tag_name }}
-          artifacts: ./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_tag_name }}-linux.zip
+          artifacts: ./butler-sos-${{ needs.release-please.outputs.release_tag_name }}-linux.zip
           token: ${{ github.token }}
 
       - name: Tidy up before existing
