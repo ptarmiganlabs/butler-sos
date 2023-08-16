@@ -1,5 +1,57 @@
 # Changelog
 
+## [9.5.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.5.2...v9.5.0) (2023-08-16)
+
+
+### Features
+
+* Sign windows binaries ([9d2a311](https://github.com/ptarmiganlabs/butler-sos/commit/9d2a311fd697154d518d28692684cb52596c1a45))
+* **telemetry:** Replace existing telemetry solution with PostHog ([0f60edc](https://github.com/ptarmiganlabs/butler-sos/commit/0f60edcdd421fd4956b8e26897ad75b4239fad26)), closes [#523](https://github.com/ptarmiganlabs/butler-sos/issues/523)
+
+
+### Bug Fixes
+
+* Build process broken ([5fb2a51](https://github.com/ptarmiganlabs/butler-sos/commit/5fb2a51c0c39eca775bb5e6f51b1c11fbeab4665))
+* **build:** Disable Docker image build status via MQTT ([84c1bae](https://github.com/ptarmiganlabs/butler-sos/commit/84c1bae136a9fedca52b7cb21fe51ec4d56006f8))
+* **build:** Fix broken Docker build ([eaa36d3](https://github.com/ptarmiganlabs/butler-sos/commit/eaa36d307b74be3bc787db5d5c93b5681a535044))
+* **docs:** Status badges in README now show as intended ([5b154af](https://github.com/ptarmiganlabs/butler-sos/commit/5b154af26bf4c7a16a743c040565f0e450e84976))
+* Fix broken Windows build pipeline ([72ab01f](https://github.com/ptarmiganlabs/butler-sos/commit/72ab01f356a3707c3ca018bc7714aa0931d3f5fe))
+* Refine Docker image build ([2a07f8a](https://github.com/ptarmiganlabs/butler-sos/commit/2a07f8a259a8e1e936b841dc4a17182a10767f94))
+
+
+### Miscellaneous
+
+* **build:** Clean up build script ([5a42aad](https://github.com/ptarmiganlabs/butler-sos/commit/5a42aad08757b141c8c8cbb5a12eab4e019ce5e3))
+* **deps:** Update dependencies to stay safe and secure ([cfee6f7](https://github.com/ptarmiganlabs/butler-sos/commit/cfee6f7e739f9ee495e4f70054e5b50dc7f48dcb))
+* **deps:** Update dependencies to stay safe and secure ([3244a0d](https://github.com/ptarmiganlabs/butler-sos/commit/3244a0dabc07a5e27a27b62fd495448c56f992a4))
+* **deps:** Update dependencies to stay safe and secure ([48efac0](https://github.com/ptarmiganlabs/butler-sos/commit/48efac0041dbccf604b325f5732c40df424b9172))
+* **deps:** Update dependencies to stay safe and secure ([e7de02b](https://github.com/ptarmiganlabs/butler-sos/commit/e7de02b1d8244c1a62f1a60b8f45d39212bf493c))
+* **deps:** Upgrade Docker build pipeline ([c6ad9c7](https://github.com/ptarmiganlabs/butler-sos/commit/c6ad9c7e80d28c524d934bf07e818fceebf1b1b0))
+* Fix broken builds ([00cef7b](https://github.com/ptarmiganlabs/butler-sos/commit/00cef7b68547c1839db268fff76e370c191ceb89))
+* **master:** release 9.3.2 ([6211b5a](https://github.com/ptarmiganlabs/butler-sos/commit/6211b5ab0404dd95649971a734d6ced6383ba9f1))
+* **master:** release 9.3.3 ([6d920a5](https://github.com/ptarmiganlabs/butler-sos/commit/6d920a5c9a9b525c36029cfc686b3b550d4e37c2))
+* **master:** release 9.4.0 ([084b336](https://github.com/ptarmiganlabs/butler-sos/commit/084b336da413466dfc1df0be53fbf7fd19e7561d))
+* **master:** release 9.4.1 ([5888553](https://github.com/ptarmiganlabs/butler-sos/commit/58885533cf077b251d70c046f35b3090f0d85fca))
+* **master:** release 9.5.2 ([fd99774](https://github.com/ptarmiganlabs/butler-sos/commit/fd99774c983be5b864f38c5ca3c1a602ff697e02))
+* **master:** release butler-sos 9.5.0 ([76f3b18](https://github.com/ptarmiganlabs/butler-sos/commit/76f3b18d14bcac4b78fcfbf83bbb6921808b6128))
+* **master:** release butler-sos 9.5.0 ([e3c5ed1](https://github.com/ptarmiganlabs/butler-sos/commit/e3c5ed147a1d62d45921b62e9dab78031c469fbf))
+* **master:** release butler-sos 9.5.0 ([ab5c2ec](https://github.com/ptarmiganlabs/butler-sos/commit/ab5c2ec7b055f68428682b0cbe59abda9aacf050))
+* **master:** release butler-sos 9.5.0 ([d5edb61](https://github.com/ptarmiganlabs/butler-sos/commit/d5edb61cec4afc1278847ba1054f5f9b96d6e588))
+* **master:** release butler-sos 9.5.0 ([49bfff2](https://github.com/ptarmiganlabs/butler-sos/commit/49bfff29550a54eb74791e9f2d2dbe4862734c29))
+* **master:** release butler-sos 9.5.1 ([ad2255c](https://github.com/ptarmiganlabs/butler-sos/commit/ad2255c9c24f68d0adb5255159fa5a849ab880e4))
+* **master:** release butler-sos 9.5.2 ([9f235d9](https://github.com/ptarmiganlabs/butler-sos/commit/9f235d9f438f09879b80f50cd9a75769ed15311b))
+* Sign Win binaries, upload binaries to antivirus scanner ([da537d8](https://github.com/ptarmiganlabs/butler-sos/commit/da537d8210024d0319b64555f3e39cdef02966a1))
+
+
+### Refactoring
+
+* Change structure of source code for better maintainability ([a4ebe4e](https://github.com/ptarmiganlabs/butler-sos/commit/a4ebe4e2cacac0c104895b514f691b7ce6ba98f1))
+
+
+### Documentation
+
+* Add status badge to README file ([11871c8](https://github.com/ptarmiganlabs/butler-sos/commit/11871c82aa828269ca17b3a36c692525453ecfa3))
+
 ## [9.5.2](https://github.com/ptarmiganlabs/butler-sos/compare/v9.5.2...v9.5.2) (2023-08-16)
 
 
