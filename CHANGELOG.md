@@ -1,5 +1,18 @@
 # Changelog
 
+## [9.5.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v9.5.0...butler-sos-v9.5.1) (2023-08-16)
+
+
+### Bug Fixes
+
+* **build:** Disable Docker image build status via MQTT ([84c1bae](https://github.com/ptarmiganlabs/butler-sos/commit/84c1bae136a9fedca52b7cb21fe51ec4d56006f8))
+* **docs:** Status badges in README now show as intended ([5b154af](https://github.com/ptarmiganlabs/butler-sos/commit/5b154af26bf4c7a16a743c040565f0e450e84976))
+
+
+### Miscellaneous
+
+* **build:** Clean up build script ([5a42aad](https://github.com/ptarmiganlabs/butler-sos/commit/5a42aad08757b141c8c8cbb5a12eab4e019ce5e3))
+
 ## [9.5.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v9.5.0...butler-sos-v9.5.0) (2023-08-15)
 
 
