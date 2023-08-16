@@ -29,6 +29,7 @@ jobs:
           release-as: 9.5.0
           release-type: node
           package-name: butler-sos
+          default-branch: master
           draft: true
           changelog-types: '[{"type": "feat","section": "Features","hidden": false},{"type": "fix","section": "Bug Fixes","hidden": false},{"type": "chore","section": "Miscellaneous","hidden": false},{"type": "refactor","section": "Refactoring","hidden": false},{"type": "docs","section": "Documentation","hidden": false},{"type": "build","section": "Miscellaneous","hidden": false}]'
 
