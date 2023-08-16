@@ -1,5 +1,22 @@
 # Changelog
 
+## [9.5.2](https://github.com/ptarmiganlabs/butler-sos/compare/v9.5.2...v9.5.2) (2023-08-16)
+
+
+### Bug Fixes
+
+* **build:** Fix broken Docker build ([eaa36d3](https://github.com/ptarmiganlabs/butler-sos/commit/eaa36d307b74be3bc787db5d5c93b5681a535044))
+
+
+### Miscellaneous
+
+* **master:** release butler-sos 9.5.2 ([9f235d9](https://github.com/ptarmiganlabs/butler-sos/commit/9f235d9f438f09879b80f50cd9a75769ed15311b))
+
+
+### Refactoring
+
+* Change structure of source code for better maintainability ([a4ebe4e](https://github.com/ptarmiganlabs/butler-sos/commit/a4ebe4e2cacac0c104895b514f691b7ce6ba98f1))
+
 ## [9.5.2](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v9.5.1...butler-sos-v9.5.2) (2023-08-16)
 
 
