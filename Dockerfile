@@ -10,10 +10,10 @@ WORKDIR /nodeapp
 
 # Install app dependencies separately (creating a separate layer for node_modules, effectively caching them between image rebuilds)
 COPY package.json .
-RUN npm install
+RUN npm ci
 
 # Copy app's source files
-COPY . .
+COPY ./src .
 
 # Create and use non-root user 
 RUN groupadd -r nodejs \
@@ -22,6 +22,6 @@ RUN groupadd -r nodejs \
 USER nodejs
 
 # Set up Docker healthcheck
-HEALTHCHECK --interval=12s --timeout=12s --start-period=30s CMD ["node", "src/docker-healthcheck.js"]
+HEALTHCHECK --interval=12s --timeout=12s --start-period=30s CMD ["node", "docker-healthcheck.js"]
 
-CMD ["node", "src/butler-sos.js"]
+CMD ["node", "butler-sos.js"]

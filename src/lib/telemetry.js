@@ -279,9 +279,7 @@ const callRemoteURL = async function reportTelemetry() {
         globals.logger.error(
             '     This information makes it possible to focus development efforts where they will make most impact and be most valuable.'
         );
-        globals.logger.error(
-            '❤️  Thank you for your supporting Butler SOS by allowing telemetry! ❤️'
-        );
+        globals.logger.error('❤️  Thank you for supporting Butler SOS by allowing telemetry! ❤️');
         globals.logger.error('');
         globals.logger.error(JSON.stringify(err, null, 2));
     }

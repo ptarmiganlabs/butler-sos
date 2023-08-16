@@ -98,7 +98,7 @@ async function mainScript() {
             telemetry.setupAnonUsageReportTimer();
             globals.logger.verbose('MAIN: Anonymous telemetry reporting has been set up.');
             globals.logger.verbose(
-                'MAIN: ❤️  Thank you for your supporting Butler SOS by allowing telemetry! ❤️'
+                'MAIN: ❤️  Thank you for supporting Butler SOS by allowing telemetry! ❤️'
             );
         }
     } catch (err) {
