@@ -71,10 +71,15 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       
+      # Docker tag has format: refs/tags/butler-sos-v1.2.3
+      # We need to extract the tag semver from the full tag      
+      # Store the tag in GITHUB_ENV environment variable
       - name: Create clean tag for Docker
         run: |
           export TAGTMP1=${{ github.ref }}
-          echo "TAG=$(echo "${TAGTMP1##*/}")" >> $GITHUB_ENV
+          export TAGTMP2=${TAGTMP1##*/}
+          export TAG=${TAGTMP2##*-}
+          echo "TAG=$TAG" >> $GITHUB_ENV
 
       - name: Dump GitHub context
         if: always()
