@@ -10,7 +10,7 @@ WORKDIR /nodeapp
 
 # Install app dependencies separately (creating a separate layer for node_modules, effectively caching them between image rebuilds)
 COPY package.json .
-RUN npm ci
+RUN npm i
 
 # Copy app's source files
 COPY ./src .
