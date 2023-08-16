@@ -130,17 +130,14 @@ jobs:
           # Notarize release binary
           echo "Creating temp notarization archive for release binary"
           # ditto -c -k --keepParent "./${DIST_FILE_NAME}" "./${DIST_FILE_NAME}.zip"
-          ditto -c -k --keepParent "./${DIST_FILE_NAME}" "./${{ needs.release-please.outputs.release_tag_name }}-macos.zip"
+          ditto -c -k --keepParent "./${DIST_FILE_NAME}" "./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_tag_name }}-macos.zip"
 
           # Here we send the notarization request to the Apple's Notarization service, waiting for the result.
           # This typically takes a few seconds inside a CI environment, but it might take more depending on the App
           # characteristics. Visit the Notarization docs for more information and strategies on how to optimize it if
           # you're curious
           echo "Notarize release app"
-          xcrun notarytool submit "./${{ needs.release-please.outputs.release_tag_name }}-macos.zip" --keychain-profile "notarytool-profile" --wait
-
-          # mkdir release-binaries-macos
-          # mv "./${{ needs.release-please.outputs.release_tag_name }}-macos.zip" release-binaries-macos
+          xcrun notarytool submit "./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_tag_name }}-macos.zip" --keychain-profile "notarytool-profile" --wait
 
           # Delete build keychain
           security delete-keychain build.keychain
@@ -164,7 +161,7 @@ jobs:
           ls -la 
           rm build.cjs
           rm "./${DIST_FILE_NAME}"
-          rm "./${{ needs.release-please.outputs.release_tag_name }}-macos.zip"
+          rm "./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_tag_name }}-macos.zip"
 
   release-win64:
     needs: release-please
@@ -231,7 +228,7 @@ jobs:
           $compress = @{
             Path = "./${env:DIST_FILE_NAME}.exe"
             CompressionLevel = "Fastest"
-            DestinationPath = "${{ needs.release-please.outputs.release_tag_name }}-win.zip"
+            DestinationPath = "${env:DIST_FILE_NAME}-${{ needs.release-please.outputs.release_tag_name }}-win.zip"
           }
           Compress-Archive @compress
 
@@ -245,7 +242,7 @@ jobs:
           # artifactContentType: application/zip
           draft: true
           tag: ${{ needs.release-please.outputs.release_tag_name }}
-          artifacts: ./${{ needs.release-please.outputs.release_tag_name }}-win.zip
+          artifacts: ./${env:DIST_FILE_NAME}-${{ needs.release-please.outputs.release_tag_name }}-win.zip
           token: ${{ github.token }}
 
       - name: Tidy up before existing
@@ -253,7 +250,7 @@ jobs:
           dir
           del build.cjs
           del "./${env:DIST_FILE_NAME}.exe"
-          del "./${{ needs.release-please.outputs.release_tag_name }}-win.zip"
+          del "./${env:DIST_FILE_NAME}-${{ needs.release-please.outputs.release_tag_name }}-win.zip"
 
   release-linux:
     needs: release-please
@@ -301,7 +298,7 @@ jobs:
       - name: Compress release binary
         run: |
           ls -la
-          zip -9 -r ./${{ needs.release-please.outputs.release_tag_name }}-linux.zip ${DIST_FILE_NAME}
+          zip -9 -r ./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_tag_name }}-linux.zip ${DIST_FILE_NAME}
 
       - name: Debug
         run: |
@@ -317,7 +314,7 @@ jobs:
           # artifactContentType: application/zip
           draft: true
           tag: ${{ needs.release-please.outputs.release_tag_name }}
-          artifacts: ./${{ needs.release-please.outputs.release_tag_name }}-linux.zip
+          artifacts: ./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_tag_name }}-linux.zip
           token: ${{ github.token }}
 
       - name: Tidy up before existing
@@ -326,4 +323,4 @@ jobs:
           ls -la
           rm build.cjs
           rm "./${DIST_FILE_NAME}"
-          rm "./${{ needs.release-please.outputs.release_tag_name }}-linux.zip"
+          rm "./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_tag_name }}-linux.zip"
