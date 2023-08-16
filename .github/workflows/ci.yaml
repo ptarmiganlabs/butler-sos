@@ -24,9 +24,9 @@ jobs:
         if: github.repository_owner == 'ptarmiganlabs'
         with:
           # command: manifest
-          bootstrap-sha: ad2255c9c24f68d0adb5255159fa5a849ab880e4
+          # bootstrap-sha: ad2255c9c24f68d0adb5255159fa5a849ab880e4
           # last-release-sha: ad2255c9c24f68d0adb5255159fa5a849ab880e4
-          release-as: 9.5.2
+          # release-as: 9.5.2
           release-type: node
           package-name: butler-sos
           draft: true
