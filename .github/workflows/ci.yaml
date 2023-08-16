@@ -25,11 +25,14 @@ jobs:
         with:
           # command: manifest
           # bootstrap-sha: ad2255c9c24f68d0adb5255159fa5a849ab880e4
-          last-release-sha: d3fc9e6be5dea516629a436298f513d1d46f9681
-          release-as: 9.5.0
+          last-release-sha: 150cabd675e6e46899362da9231f9ed08aec2c18
+          release-as: 9.5.1
           release-type: node
           package-name: butler-sos
           default-branch: master
+          prerelease: false
+          release-search-depth: 5
+          commit-search-depth: 200
           draft: true
           changelog-types: '[{"type": "feat","section": "Features","hidden": false},{"type": "fix","section": "Bug Fixes","hidden": false},{"type": "chore","section": "Miscellaneous","hidden": false},{"type": "refactor","section": "Refactoring","hidden": false},{"type": "docs","section": "Documentation","hidden": false},{"type": "build","section": "Miscellaneous","hidden": false}]'
 
