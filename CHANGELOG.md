@@ -1,5 +1,14 @@
 # Changelog
 
+## [9.5.2](https://github.com/ptarmiganlabs/butler-sos/compare/v9.5.1...v9.5.2) (2023-08-16)
+
+
+### Bug Fixes
+
+* **deps:** update dependency mqtt to v5.0.3 ([8bb01ca](https://github.com/ptarmiganlabs/butler-sos/commit/8bb01caae1395434143d1b3768678c9c94a9f201))
+* Tweaking CI... ([67f7823](https://github.com/ptarmiganlabs/butler-sos/commit/67f7823c80aeb722506fd726a203a11374090b53))
+* Update Dockerfile ([00cb3a5](https://github.com/ptarmiganlabs/butler-sos/commit/00cb3a571f81843a6b27fa7c0f90de38b33b681f))
+
 ## [9.5.1](https://github.com/ptarmiganlabs/butler-sos/compare/v9.5.0...v9.5.1) (2023-08-16)
 
 
