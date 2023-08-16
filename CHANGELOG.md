@@ -1,5 +1,17 @@
 # Changelog
 
+## [9.5.1](https://github.com/ptarmiganlabs/butler-sos/compare/v9.5.0...v9.5.1) (2023-08-16)
+
+
+### Bug Fixes
+
+* Update ci.yaml ([4e9326d](https://github.com/ptarmiganlabs/butler-sos/commit/4e9326d0e65f5fbb22ee60019731590688bdfcf2))
+
+
+### Refactoring
+
+* Tweak CI ([989db19](https://github.com/ptarmiganlabs/butler-sos/commit/989db197240b1aaf83f8c0d5cf6b853cc729b441))
+
 ## [9.5.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.5.2...v9.5.0) (2023-08-16)
 
 
