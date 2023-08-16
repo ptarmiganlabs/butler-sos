@@ -77,9 +77,11 @@ jobs:
       - name: Create clean tag for Docker
         run: |
           export TAGTMP1=${{ github.ref }}
-          export TAGTMP2=${TAGTMP1##*/}
-          export TAG=${TAGTMP2##*-}
+          export TAG=${TAGTMP1##*/}
           echo "TAG=$TAG" >> $GITHUB_ENV
+          # export TAGTMP2=${TAGTMP1##*/}
+          # export TAG=${TAGTMP2##*-}
+          # echo "TAG=$TAG" >> $GITHUB_ENV
 
       - name: Dump GitHub context
         if: always()
