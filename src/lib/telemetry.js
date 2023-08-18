@@ -214,7 +214,7 @@ const callRemoteURL = async function reportTelemetry() {
                 feature_appNames: appNamesExtractEnable,
                 feature_userSessions: userSessionsEnable,
 
-                telemetry_json:  {
+                telemetry_json: {
                     system: {
                         id: globals.hostInfo.id,
                         arch: globals.hostInfo.si.os.arch,
@@ -235,8 +235,8 @@ const callRemoteURL = async function reportTelemetry() {
                                 'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
                             )
                                 ? globals.config.get(
-                                    'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
-                                )
+                                      'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
+                                  )
                                 : false,
                             udpServer: globals.config.has('Butler-SOS.userEvents.enable')
                                 ? globals.config.get('Butler-SOS.userEvents.enable')
@@ -296,10 +296,13 @@ function setupAnonUsageReportTimer(logger, hostInfo) {
             disableGeoip: false, // Enable geoip lookups
         });
 
-        setInterval(() => {
-            callRemoteURL(logger, hostInfo);
-        }, 1000 * 60 * 15); // Report anon usage every 15 monutes for testing
-        // }, 1000 * 60 * 60 * 12); // Report anon usage every 12 hours
+        setInterval(
+            () => {
+                callRemoteURL(logger, hostInfo);
+            },
+            1000 * 60 * 60 * 12
+        ); // Report anon usage every 12 hours
+        // }, 1000 * 60 * 15); // Report anon usage every 15 monutes for testing
 
         // Do an initial telemetry report
         callRemoteURL(logger, hostInfo);
