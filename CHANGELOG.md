@@ -1,5 +1,28 @@
 # Changelog
 
+## [9.5.3](https://github.com/ptarmiganlabs/butler-sos/compare/v9.5.2...v9.5.3) (2023-08-18)
+
+
+### Bug Fixes
+
+* **deps:** update dependency pg to v8.11.3 ([51d2c9c](https://github.com/ptarmiganlabs/butler-sos/commit/51d2c9c812aa0db23de43a2a815bccc368b610e5))
+* **deps:** update dependency posthog-node to v3.1.2 ([1a1817f](https://github.com/ptarmiganlabs/butler-sos/commit/1a1817f43f7595e1686dc0537a098d17fc97bece))
+* **docker:** Fix broken Docker image ([16f57cd](https://github.com/ptarmiganlabs/butler-sos/commit/16f57cd960187f6b474cf389656ec484cd8cc1be))
+* **telemetry:** Set telemetry reporting interval to 12 hours ([cb2f518](https://github.com/ptarmiganlabs/butler-sos/commit/cb2f518c1981f5737fda4cef914b9b595f438f6e)), closes [#581](https://github.com/ptarmiganlabs/butler-sos/issues/581)
+* Update README.md ([d043446](https://github.com/ptarmiganlabs/butler-sos/commit/d043446de950aaa3ceb1f153ae3ef93044f88dea))
+
+
+### Miscellaneous
+
+* **deps:** update dependency snyk to v1.1203.0 ([835444d](https://github.com/ptarmiganlabs/butler-sos/commit/835444ddc5a283181f17a1daa8941f98a63b22a8))
+* Fine tuning of build pipeline ([2d7ef9b](https://github.com/ptarmiganlabs/butler-sos/commit/2d7ef9bd018f4f5f8e5022e2afec0437121fb583))
+
+
+### Documentation
+
+* FIxing typos in readme file ([6d9920f](https://github.com/ptarmiganlabs/butler-sos/commit/6d9920f5ca7786181b7b249b8a61de9660004360))
+* Update docs ([be1ef8d](https://github.com/ptarmiganlabs/butler-sos/commit/be1ef8d54649f4d1b054dad41d1d3f462e5cd21b))
+
 ## [9.5.2](https://github.com/ptarmiganlabs/butler-sos/compare/v9.5.1...v9.5.2) (2023-08-16)
 
 
