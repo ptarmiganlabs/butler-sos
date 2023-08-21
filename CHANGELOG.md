@@ -1,5 +1,14 @@
 # Changelog
 
+## [9.6.1](https://github.com/ptarmiganlabs/butler-sos/compare/v9.6.0...v9.6.1) (2023-08-21)
+
+
+### Bug Fixes
+
+* Make InfluxDB debug msgs during startup more informative ([212fc72](https://github.com/ptarmiganlabs/butler-sos/commit/212fc721b6971407d60521c838b563ec55cf2cae)), closes [#596](https://github.com/ptarmiganlabs/butler-sos/issues/596)
+* Make QS cert passphrase optional ([9e77d10](https://github.com/ptarmiganlabs/butler-sos/commit/9e77d1080da2e04ff498d629cc76d952a499f26d))
+* Won't start when no config file specified on command line ([d1d0090](https://github.com/ptarmiganlabs/butler-sos/commit/d1d00902c6f6c5829024ccff2a55a399a5603970))
+
 ## [9.6.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.5.3...v9.6.0) (2023-08-21)
 
 
