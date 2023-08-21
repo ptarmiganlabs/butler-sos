@@ -37,7 +37,7 @@
         "eslint": "^8.47.0",
         "eslint-config-airbnb-base": "^15.0.0",
         "eslint-config-prettier": "^9.0.0",
-        "eslint-plugin-import": "^2.28.0",
+        "eslint-plugin-import": "^2.28.1",
         "eslint-plugin-prettier": "^5.0.0",
         "fastify": "^4.21.0",
         "fastify-healthcheck": "^4.4.0",
@@ -60,7 +60,7 @@
     "devDependencies": {
         "eslint-formatter-table": "^7.32.1",
         "prettier": "^3.0.2",
-        "snyk": "^1.1202.0"
+        "snyk": "^1.1204.0"
     },
     "pkg": {
         "assets": [
