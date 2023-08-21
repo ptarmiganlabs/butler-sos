@@ -8,7 +8,7 @@
         "test": "snyk test && npm run format",
         "format": "npm run format:prettier",
         "format:prettier": "npx prettier --config .prettierrc.yaml \"./**/*.{ts,css,less,js}\" --write",
-        "lint": "npx eslint --format table"
+        "lint": "npx eslint src/**/*.js"
     },
     "repository": {
         "type": "git",
@@ -54,9 +54,11 @@
         "qrs-interact": "^6.3.1",
         "systeminformation": "^5.18.15",
         "winston": "^3.10.0",
-        "winston-daily-rotate-file": "^4.7.1"
+        "winston-daily-rotate-file": "^4.7.1",
+        "yaml-validator": "^5.0.1"
     },
     "devDependencies": {
+        "eslint-formatter-table": "^7.32.1",
         "prettier": "^3.0.2",
         "snyk": "^1.1202.0"
     },

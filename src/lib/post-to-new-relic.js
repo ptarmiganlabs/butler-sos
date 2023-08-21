@@ -1,8 +1,8 @@
 /* eslint-disable prefer-destructuring */
 /* eslint-disable no-unused-vars */
 
-const axios = require('axios');
 const crypto = require('crypto');
+const axios = require('axios');
 
 const globals = require('../globals');
 

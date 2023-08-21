@@ -68,7 +68,10 @@ function setupLogDbTimer() {
                                 globals.logger.silly(`LOGDB: Posting log db data to Influxdb...`);
 
                                 // Make sure that the payload message exists - storing it to Influx would otherwise throw an error
-                                if (!row.payload.hasOwnProperty('Message')) {
+                                // if (!row.payload.hasOwnProperty('Message')) {
+                                // Suggested by GitHub Copilot:
+                                if (!Object.prototype.hasOwnProperty.call(row.payload, 'Message')) {
+                                    // eslint-disable-next-line no-param-reassign
                                     row.payload.Message = '';
                                 }
 
@@ -110,7 +113,12 @@ function setupLogDbTimer() {
 
                                     // Add all tags defined for this server in the config file
                                     if (
-                                        serverItem.hasOwnProperty('serverTags') &&
+                                        // serverItem.hasOwnProperty('serverTags') &&
+                                        // Suggestions by GitHub Copilot:
+                                        Object.prototype.hasOwnProperty.call(
+                                            serverItem,
+                                            'serverTags'
+                                        ) &&
                                         serverItem.serverTags !== null
                                     ) {
                                         // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
