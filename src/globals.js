@@ -307,7 +307,9 @@ tagValuesLogEvent.push('engine_exe_version');
 if (config.has('Butler-SOS.logEvents.tags') && config.get('Butler-SOS.logEvents.tags') !== null) {
     config.get('Butler-SOS.logEvents.tags').forEach((entry) => {
         logger.debug(
-            `CONFIG: Setting up new Influx database: Found log event tag in config file: ${entry}`
+            `CONFIG: Setting up new Influx database: Found log event tag in config file: ${JSON.stringify(
+                entry
+            )}`
         );
 
         tagValuesLogEvent.push(entry.tag);

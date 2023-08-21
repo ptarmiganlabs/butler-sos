@@ -199,7 +199,6 @@ const confifgFileSchema = {
             clientCert: 'string',
             clientCertKey: 'string',
             clientCertCA: 'string',
-            'clientCertPassphrase?': 'string',
         },
         mqttConfig: {
             enable: 'boolean',
