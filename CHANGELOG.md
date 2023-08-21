@@ -1,5 +1,23 @@
 # Changelog
 
+## [9.6.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.5.3...v9.6.0) (2023-08-21)
+
+
+### Features
+
+* **config:** Config file verification ([8e3e6f4](https://github.com/ptarmiganlabs/butler-sos/commit/8e3e6f4178e931effc882286eaf07055495fafe0)), closes [#585](https://github.com/ptarmiganlabs/butler-sos/issues/585)
+
+
+### Miscellaneous
+
+* **deps-dev:** Bump semver from 6.3.0 to 6.3.1 ([24b8d35](https://github.com/ptarmiganlabs/butler-sos/commit/24b8d35df52840caed2b7fed738c15675593085f))
+* **deps:** Update dependencies to stay safe and secure ([9980039](https://github.com/ptarmiganlabs/butler-sos/commit/998003974fe96cc2743b7461f3c0202e4e064681))
+
+
+### Refactoring
+
+* More consistent source code structure ([d52a029](https://github.com/ptarmiganlabs/butler-sos/commit/d52a029fc4abe0f7b07832d5f46dae5d6a414368))
+
 ## [9.5.3](https://github.com/ptarmiganlabs/butler-sos/compare/v9.5.2...v9.5.3) (2023-08-18)
 
 
