@@ -58,8 +58,6 @@ program
 program.parse(process.argv);
 const options = program.opts();
 
-
-
 // Is there a config file specified on the command line?
 let configFileOption;
 let configFileExpanded;
