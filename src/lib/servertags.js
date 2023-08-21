@@ -9,7 +9,12 @@ function getServerTags(server) {
         };
 
         // Check if there are any extra tags for this server that should be added
-        if (server.hasOwnProperty('serverTags') && server.serverTags !== null) {
+        // if (server.hasOwnProperty('serverTags') && server.serverTags !== null) {
+        // Suggested by GitHub Copilot
+        if (
+            Object.prototype.hasOwnProperty.call(server, 'serverTags') &&
+            server.serverTags !== null
+        ) {
             // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
             Object.entries(server.serverTags).forEach((entry) => {
                 globals.logger.debug(`SERVERTAGS: Found server tag: ${JSON.stringify(entry)}`);

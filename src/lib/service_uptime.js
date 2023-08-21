@@ -8,7 +8,8 @@ const postToNewRelic = require('./post-to-new-relic');
 
 const fullUnits = ['years', 'months', 'days', 'hours', 'minutes', 'seconds'];
 luxon.Duration.prototype.toFull = function convToFull() {
-    return this.shiftTo.apply(this, fullUnits);
+    // return this.shiftTo.apply(this, fullUnits);
+    return this.shiftTo(...fullUnits); // Suggested bt GitHub Copilot
 };
 
 function serviceUptimeStart() {

@@ -1,8 +1,9 @@
 // Get app names from the Qlik Repository Service (QRS) API
 
+const path = require('path');
+
 const qrsInteract = require('qrs-interact');
 const clonedeep = require('lodash.clonedeep');
-const path = require('path');
 const globals = require('../globals');
 
 const certPath = path.resolve(process.cwd(), globals.config.get('Butler-SOS.cert.clientCert'));

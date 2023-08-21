@@ -2,10 +2,10 @@
  * Get metrics from the Sense health check API
  */
 
-const axios = require('axios');
+const path = require('path');
 const https = require('https');
 const fs = require('fs');
-const path = require('path');
+const axios = require('axios');
 const globals = require('../globals');
 const postToInfluxdb = require('./post-to-influxdb');
 const postToNewRelic = require('./post-to-new-relic');
