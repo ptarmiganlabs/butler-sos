@@ -24,6 +24,7 @@ const udpUserActivity = require('./lib/udp_handlers_user_activity');
 const udpLogEvents = require('./lib/udp_handlers_log_events');
 const telemetry = require('./lib/telemetry');
 const promClient = require('./lib/prom-client');
+const { verifyConfigFile } = require('./lib/config-file-verify');
 
 globals.initInfluxDB();
 
@@ -37,6 +38,14 @@ if (
 }
 
 async function mainScript() {
+    // Verify that the config file has the correct format
+    // Only do this if the command line option no-config-file-verify is NOT set
+    if (globals.options.skipConfigVerification) {
+        globals.logger.warn('MAIN: Skipping config file verification');
+    } else {
+        await verifyConfigFile();
+    }
+
     // Load certificates to use when connecting to healthcheck API
     const certFile = path.resolve(process.cwd(), globals.config.get('Butler-SOS.cert.clientCert'));
     const keyFile = path.resolve(

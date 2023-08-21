@@ -1,13 +1,13 @@
+const path = require('path');
+const dgram = require('dgram');
+const os = require('os');
+const crypto = require('crypto');
+
 const mqtt = require('mqtt');
 const fs = require('fs-extra');
 const winston = require('winston');
 require('winston-daily-rotate-file');
-const path = require('path');
-const dgram = require('dgram');
 const si = require('systeminformation');
-const os = require('os');
-const crypto = require('crypto');
-
 const { Command, Option } = require('commander');
 
 const Influx = require('influx');
@@ -50,7 +50,9 @@ program
         'New Relic account name. Used within Butler SOS to differentiate between different target New Relic accounts'
     )
     .option('--new-relic-api-key <key...>', 'insert API key to use with New Relic')
-    .option('--new-relic-account-id <id...>', 'New Relic account ID');
+    .option('--new-relic-account-id <id...>', 'New Relic account ID')
+
+    .option('--skip-config-verification', 'Disable config file verification', false);
 
 // Parse command line params
 program.parse(process.argv);
@@ -61,7 +63,7 @@ let configFileOption;
 let configFileExpanded;
 let configFilePath;
 let configFileBasename;
-let configFileExtension;
+let configFileExtension = 'yaml';
 if (options.configfile && options.configfile.length > 0) {
     configFileOption = options.configfile;
     configFileExpanded = path.resolve(options.configfile);
@@ -84,6 +86,12 @@ if (options.configfile && options.configfile.length > 0) {
         process.exit(1);
     }
 }
+
+// Set global variable conttaining the name and full pathof the config file
+const configFile = path.join(
+    process.env.NODE_CONFIG_DIR,
+    process.env.NODE_ENV + configFileExtension
+);
 
 // Are we running as standalone app or not?
 const isPkg = typeof process.pkg !== 'undefined';
@@ -509,10 +517,19 @@ function initInfluxDB() {
 
 // ------------------------------------
 // Create MQTT client object and connect to MQTT broker
-const mqttClient = mqtt.connect({
-    port: config.get('Butler-SOS.mqttConfig.brokerPort'),
-    host: config.get('Butler-SOS.mqttConfig.brokerHost'),
-});
+// Only do this if MQTT is enabled
+// ------------------------------------
+let mqttClient;
+
+if (
+    config.has('Butler-SOS.mqttConfig.enable') &&
+    config.get('Butler-SOS.mqttConfig.enable') === true
+) {
+    mqttClient = mqtt.connect({
+        port: config.get('Butler-SOS.mqttConfig.brokerPort'),
+        host: config.get('Butler-SOS.mqttConfig.brokerHost'),
+    });
+}
 
 /*
   Following might be needed for conecting to older Mosquitto versions
@@ -603,4 +620,6 @@ module.exports = {
     hostInfo,
     isPkg,
     checkFileExistsSync,
+    configFile,
+    options,
 };
