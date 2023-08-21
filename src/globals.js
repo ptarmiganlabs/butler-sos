@@ -87,10 +87,10 @@ if (options.configfile && options.configfile.length > 0) {
     }
 }
 
-// Set global variable conttaining the name and full pathof the config file
+// Set global variable conttaining the name and full path of the config file
 const configFile = path.join(
     process.env.NODE_CONFIG_DIR,
-    process.env.NODE_ENV + configFileExtension
+    `${process.env.NODE_ENV}.${configFileExtension}`
 );
 
 // Are we running as standalone app or not?
@@ -147,6 +147,13 @@ const logger = winston.createLogger({
         winston.format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}`)
     ),
 });
+
+// Show contents of environment variables controlling config file location and name
+logger.debug(`NODE_CONFIG_DIR: ${process.env.NODE_CONFIG_DIR}`);
+logger.debug(`NODE_ENV: ${process.env.NODE_ENV}`);
+
+// Output config file name and path to log
+logger.info(`Using config file: ${configFile}`);
 
 // Function to get current logging level
 const getLoggingLevel = () => logTransports.find((transport) => transport.name === 'console').level;
