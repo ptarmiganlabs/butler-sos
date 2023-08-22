@@ -261,6 +261,13 @@ Butler-SOS:
         apps:
           docCount:
             enable: true
+          # Use with caution! Enabling activeDocs, loadedDocs or inMemoryDocs may result in lots of data sent to New Relic.
+          activeDocs:           # Should data on what docs are active in engine be sent to New Relic (true/false)? 
+            enable: true
+          loadedDocs:           # Should data on what docs are loaded (=having open sessions or connections) in engine be sent to New Relic (true/false)?
+            enable: true
+          inMemoryDocs:         # Should data on what docs are in engine memory be sent to New Relic (true/false)?
+            enable: true
         cache:
           cache:                # Cache metrics.
             enable: true
