@@ -50,7 +50,7 @@ const confifgFileSchema = {
             },
         },
 
-        thirdPartyToolsCredentials: {
+        'thirdPartyToolsCredentials?': {
             newRelic: [
                 {
                     accountName: 'string',
