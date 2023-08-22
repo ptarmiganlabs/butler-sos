@@ -1,5 +1,13 @@
 # Changelog
 
+## [9.6.2](https://github.com/ptarmiganlabs/butler-sos/compare/v9.6.1...v9.6.2) (2023-08-22)
+
+
+### Bug Fixes
+
+* Add missing entries to template config file ([d850543](https://github.com/ptarmiganlabs/butler-sos/commit/d85054395c9590321b36aaf8dadb90842692ffef)), closes [#600](https://github.com/ptarmiganlabs/butler-sos/issues/600)
+* Make thirdPartyToolsCredentials section in config file optional ([c20927b](https://github.com/ptarmiganlabs/butler-sos/commit/c20927bf05dbdd30cacabdb77c033b0fe208f7e1)), closes [#600](https://github.com/ptarmiganlabs/butler-sos/issues/600)
+
 ## [9.6.1](https://github.com/ptarmiganlabs/butler-sos/compare/v9.6.0...v9.6.1) (2023-08-21)
 
 
