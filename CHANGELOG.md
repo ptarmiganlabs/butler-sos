@@ -1,5 +1,24 @@
 # Changelog
 
+## [9.6.3](https://github.com/ptarmiganlabs/butler-sos/compare/v9.6.2...v9.6.3) (2023-09-23)
+
+
+### Bug Fixes
+
+* **deps:** update dependency eslint to v8.50.0 ([bb15f73](https://github.com/ptarmiganlabs/butler-sos/commit/bb15f73c4c93343a321e5bf36389cd1c467f0951))
+
+
+### Miscellaneous
+
+* **deps:** update actions/checkout action to v4 ([d4906ab](https://github.com/ptarmiganlabs/butler-sos/commit/d4906abfaf9a3e491ef0bace568dce2b1c9d34fd))
+* **deps:** update crazy-max/ghaction-virustotal action to v4 ([7e18183](https://github.com/ptarmiganlabs/butler-sos/commit/7e18183fc6c1911a61527e19c751759200fdcad5))
+* **deps:** Update dependencies ([750790d](https://github.com/ptarmiganlabs/butler-sos/commit/750790d79310dbf51f8707fa9831775ca8b5381e))
+* **deps:** update docker/build-push-action action to v5 ([52b8773](https://github.com/ptarmiganlabs/butler-sos/commit/52b8773662ab782ca02314e7a57faae24a9a8a9f))
+* **deps:** update docker/login-action action to v3 ([9693cc9](https://github.com/ptarmiganlabs/butler-sos/commit/9693cc9a711e179a02a1af8af4671b12ebf69ee7))
+* **deps:** update docker/metadata-action action to v5 ([18c3934](https://github.com/ptarmiganlabs/butler-sos/commit/18c3934282933d588e7771b9d33a706f3d3ce7de))
+* **deps:** update docker/setup-buildx-action action to v3 ([a3dc2c2](https://github.com/ptarmiganlabs/butler-sos/commit/a3dc2c2aff78ceff761045ad3e156a0c13844886))
+* **deps:** update docker/setup-qemu-action action to v3 ([eae1706](https://github.com/ptarmiganlabs/butler-sos/commit/eae1706399bfc18b654af3b50a135f2e2790edeb))
+
 ## [9.6.2](https://github.com/ptarmiganlabs/butler-sos/compare/v9.6.1...v9.6.2) (2023-08-22)
 
 
