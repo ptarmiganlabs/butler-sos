@@ -295,8 +295,8 @@ Butler-SOS:
   influxdbConfig:
     enable: true
     # Items below are mandatory if influxdbConfig.enable=true
-    hostIP: <IP or FQDN of Influxdb server>
-    hostPort: <Port where Influxdb is listening>    # Optional. Default value=8086
+    hostIP: influxdb.mycompany.com  # IP or FQDN of Influxdb server
+    hostPort: 8086                  # Port where Influxdb is listening. Default=8086
     auth:
       enable: false                 # Does influxdb instance require authentication (true/false)?
       username: <username>          # Username for Influxdb authentication. Mandatory if auth.enable=true
