@@ -1,5 +1,20 @@
 # Changelog
 
+## [9.6.4](https://github.com/ptarmiganlabs/butler-sos/compare/v9.6.3...v9.6.4) (2023-11-25)
+
+
+### Bug Fixes
+
+* Change default Influxdb config settings to avoid startup warning ([7e9ef40](https://github.com/ptarmiganlabs/butler-sos/commit/7e9ef40b04c1a29daffdf3d64a2b02d68b8a5443))
+
+
+### Miscellaneous
+
+* **deps:** Bump setup-node to v4 ([8bda3b0](https://github.com/ptarmiganlabs/butler-sos/commit/8bda3b0ac27a2c21ff3579a87f53a47725e9283c))
+* **deps:** Update dependencies to stay safe and secure ([684417a](https://github.com/ptarmiganlabs/butler-sos/commit/684417a599792c65d8e535b8ddd8ca251082b48c))
+* **deps:** Update deps Snyk and Prettier ([ae5bc0c](https://github.com/ptarmiganlabs/butler-sos/commit/ae5bc0c976a72c6280cccc62d3a154363b00540b))
+* Switch to Node 20 ([a4bf1bf](https://github.com/ptarmiganlabs/butler-sos/commit/a4bf1bf7788661c840615900bd8a5d14cef776a5))
+
 ## [9.6.3](https://github.com/ptarmiganlabs/butler-sos/compare/v9.6.2...v9.6.3) (2023-09-23)
 
 
