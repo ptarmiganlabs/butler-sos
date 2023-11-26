@@ -1,4 +1,6 @@
 /* eslint-disable no-unused-vars */
+const { validate } = require('uuid');
+const parser = require('ua-parser-js');
 
 // Load global variables and functions
 const globals = require('../globals');
@@ -40,14 +42,22 @@ function udpInitUserActivityServer() {
 
             globals.logger.debug(`USER EVENT (raw): ${message.toString()}`);
 
+            // First 7 fields are separated by ;
+            // 8th field (message) can contain ; and single quotes. Handle with care
             const msgTmp1 = message.toString().split(';');
+
+            // Get first 7 fields
             const msg = msgTmp1.slice(0, 7);
 
-            globals.logger.verbose(`USER EVENT: ${msg[0]} - ${msg[4]} - ${msg[6]}`);
+            // Get field 8
+            // Get all text after the 7th ;
+            const msgTmp2 = msgTmp1.slice(7, msgTmp1.length);
+            const msgTmp3 = msgTmp2.join(';');
 
-            // console.log('--------------------------------------------------');
-            // console.log(`USER: ${msg}`);
-            // console.log(`${msg[0]} - ${msg[4]} - ${msg[6]}`);
+            // Add field 8 to the message array
+            msg.push(msgTmp3);
+
+            globals.logger.verbose(`USER EVENT: ${msg[0]} - ${msg[4]} - ${msg[6]}`);
 
             // Clean up the first message field (=message source)
             // Remove leading and trailing /
@@ -99,6 +109,51 @@ function udpInitUserActivityServer() {
                     // The user associated with the event was found in the blacklist. Return with no further action.
                     return;
                 }
+            }
+
+            // Do we have an app id in the msgObj.context field?
+            // If that field starts with /app/<guid>?... then we have an app id
+            // Get that app ID and verify its a valid GUID
+            if (msgObj?.context.startsWith('/app/')) {
+                const appIdTmp = msgObj.context.split('?')[0];
+                const appIdTmp2 = appIdTmp.split('/app/')[1];
+
+                // Use uuid lib to verify that we have a valid GUID
+                if (validate(appIdTmp2)) {
+                    msgObj.appId = appIdTmp2;
+                }
+            }
+
+            // Do we have an app id to app name lookup table?
+            // If so, get the app name from the app id
+            if (msgObj.appId.length > 0) {
+                const app = globals?.appNames.find((element) => element.id === msgObj.appId);
+                if (app?.name === undefined) {
+                    msgObj.appName = '<unknown app name>';
+                } else {
+                    msgObj.appName = app?.name;
+                }
+            }
+
+            // Is there a user agent (browser etc) in the message?
+            // The user starts with UserAgent: and uses rest of the message
+            if (msgObj?.message?.includes('UserAgent:')) {
+                let userAgent = msgObj.message.split('UserAgent:')[1];
+
+                // Remove leading and trailing spaces and single quotes
+                userAgent = userAgent.trim();
+                userAgent = userAgent.replace(/'/g, '');
+
+                // Parse the user agent string
+                const ua = parser(userAgent);
+
+                msgObj.ua = {};
+                msgObj.ua.browser = ua.browser;
+                msgObj.ua.cpu = ua.cpu;
+                msgObj.ua.device = ua.device;
+                msgObj.ua.engine = ua.engine;
+                msgObj.ua.os = ua.os;
+                msgObj.ua.ua = ua.ua;
             }
 
             // Post to MQTT

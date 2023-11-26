@@ -1,6 +1,5 @@
 /* eslint-disable prefer-destructuring */
 /* eslint-disable no-unused-vars */
-
 const globals = require('../globals');
 
 const sessionAppPrefix = 'SessionApp';
@@ -427,8 +426,15 @@ function postUserEventToInfluxdb(msg) {
             userDirectory: msg.user_directory,
             userId: msg.user_id,
             origin: msg.origin,
+            appId: msg.appId,
+            appName: msg.appName,
+            uaBrowserName: msg.ua.browser.name,
+            uaBrowserMajorVersion: msg.ua.browser.major,
+            uaOsName: msg.ua.os.name,
+            uaOsVersion: msg.ua.os.version,
         };
 
+        // Add custom tags from config file to payload
         if (
             globals.config.has('Butler-SOS.userEvents.tags') &&
             globals.config.get('Butler-SOS.userEvents.tags') !== null &&
@@ -448,6 +454,8 @@ function postUserEventToInfluxdb(msg) {
                 fields: {
                     userFull: tags.userFull,
                     userId: tags.userId,
+                    appId: msg.appId,
+                    appName: msg.appName,
                 },
             },
         ];
