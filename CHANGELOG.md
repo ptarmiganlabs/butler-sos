@@ -1,5 +1,13 @@
 # Changelog
 
+## [9.7.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.6.4...v9.7.0) (2023-11-26)
+
+
+### Features
+
+* **user-event:** Add app id/name to user event logging ([5298866](https://github.com/ptarmiganlabs/butler-sos/commit/5298866939e913eb76d425fe6dcabf2cd6ddbd26)), closes [#674](https://github.com/ptarmiganlabs/butler-sos/issues/674)
+* **user-event:** Add browser & OS info to user events ([396b76d](https://github.com/ptarmiganlabs/butler-sos/commit/396b76df1f631949957c381ca2e5c2dab03043c5)), closes [#673](https://github.com/ptarmiganlabs/butler-sos/issues/673)
+
 ## [9.6.4](https://github.com/ptarmiganlabs/butler-sos/compare/v9.6.3...v9.6.4) (2023-11-25)
 
 
