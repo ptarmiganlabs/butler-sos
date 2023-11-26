@@ -111,6 +111,8 @@ function postUserEventToMQTT(msg) {
             userDir: msg.user_directory,
             userId: msg.user_id,
             origin: msg.origin,
+            appId: msg.appId,
+            appName: msg.appName,
             context: msg.context,
             message: msg.message,
             tags: {},

@@ -1,4 +1,5 @@
 /* eslint-disable no-unused-vars */
+const { validate } = require('uuid');
 
 // Load global variables and functions
 const globals = require('../globals');
@@ -98,6 +99,30 @@ function udpInitUserActivityServer() {
                 ) {
                     // The user associated with the event was found in the blacklist. Return with no further action.
                     return;
+                }
+            }
+
+            // Do we have an app id in the msgObj.context field?
+            // If that field starts with /app/<guid>?... then we have an app id
+            // Get that app ID and verify its a valid GUID
+            if (msgObj?.context.startsWith('/app/')) {
+                const appIdTmp = msgObj.context.split('?')[0];
+                const appIdTmp2 = appIdTmp.split('/app/')[1];
+
+                // Use uuid lib to verify that we have a valid GUID
+                if (validate(appIdTmp2)) {
+                    msgObj.appId = appIdTmp2;
+                }
+            }
+
+            // Do we have an app id to app name lookup table?
+            // If so, get the app name from the app id
+            if (msgObj.appId.length > 0) {
+                const app = globals?.appNames.find((element) => element.id === msgObj.appId);
+                if (app?.name === undefined) {
+                    msgObj.appName = '<unknown app name>';
+                } else {
+                    msgObj.appName = app?.name;
                 }
             }
 
