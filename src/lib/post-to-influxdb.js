@@ -428,6 +428,10 @@ function postUserEventToInfluxdb(msg) {
             origin: msg.origin,
             appId: msg.appId,
             appName: msg.appName,
+            uaBrowserName: msg.ua.browser.name,
+            uaBrowserMajorVersion: msg.ua.browser.major,
+            uaOsName: msg.ua.os.name,
+            uaOsVersion: msg.ua.os.version,
         };
 
         // Add custom tags from config file to payload

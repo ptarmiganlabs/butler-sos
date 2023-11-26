@@ -710,6 +710,10 @@ async function postUserEventToNewRelic(msg) {
                 qs_origin: msg.origin,
                 qs_appId: msg.appId,
                 qs_appName: msg.appName,
+                qs_uaBrowserName: msg.ua.browser.name,
+                qs_uaBrowserMajorVersion: msg.ua.browser.major,
+                qs_uaOsName: msg.ua.os.name,
+                qs_uaOsVersion: msg.ua.os.version,
             };
         } else {
             attributes = {
@@ -722,6 +726,10 @@ async function postUserEventToNewRelic(msg) {
                 qs_origin: msg.origin,
                 qs_appId: msg.appId,
                 qs_appName: msg.appName,
+                qs_uaBrowserName: msg.ua.browser.name,
+                qs_uaBrowserMajorVersion: msg.ua.browser.major,
+                qs_uaOsName: msg.ua.os.name,
+                qs_uaOsVersion: msg.ua.os.version,
             };
         }
 
