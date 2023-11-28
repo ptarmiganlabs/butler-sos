@@ -438,10 +438,6 @@ function postUserEventToInfluxdb(msg) {
         if (msg?.ua?.os?.name) tags.uaOsName = msg?.ua?.os?.name;
         if (msg?.ua?.os?.version) tags.uaOsVersion = msg?.ua?.os?.version;
 
-
-
-
-
         // Add custom tags from config file to payload
         if (
             globals.config.has('Butler-SOS.userEvents.tags') &&

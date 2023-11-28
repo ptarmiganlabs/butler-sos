@@ -111,16 +111,20 @@ function postUserEventToMQTT(msg) {
             userDir: msg.user_directory,
             userId: msg.user_id,
             origin: msg.origin,
-            appId: msg.appId,
-            appName: msg.appName,
-            uaBrowserName: msg.ua.browser.name,
-            uaBrowserMajorVersion: msg.ua.browser.major,
-            uaOsName: msg.ua.os.name,
-            uaOsVersion: msg.ua.os.version,
             context: msg.context,
             message: msg.message,
             tags: {},
         };
+
+        // Add app id and name if they exist
+        if (msg?.appId) payload.appId = msg.appId;
+        if (msg?.appName) payload.appName = msg.appName;
+
+        // Add user agent info if it exists
+        if (msg?.ua?.browser?.name) payload.uaBrowserName = msg.ua.browser.name;
+        if (msg?.ua?.browser?.major) payload.uaBrowserMajorVersion = msg.ua.browser.major;
+        if (msg?.ua?.os?.name) payload.uaOsName = msg.ua.os.name;
+        if (msg?.ua?.os?.version) payload.uaOsVersion = msg.ua.os.version;
 
         // Add custom tags from config file to payload
         if (
