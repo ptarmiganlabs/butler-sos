@@ -708,12 +708,6 @@ async function postUserEventToNewRelic(msg) {
                     .update(msg.user_id)
                     .digest('hex'),
                 qs_origin: msg.origin,
-                qs_appId: msg.appId,
-                qs_appName: msg.appName,
-                qs_uaBrowserName: msg.ua.browser.name,
-                qs_uaBrowserMajorVersion: msg.ua.browser.major,
-                qs_uaOsName: msg.ua.os.name,
-                qs_uaOsVersion: msg.ua.os.version,
             };
         } else {
             attributes = {
@@ -724,14 +718,18 @@ async function postUserEventToNewRelic(msg) {
                 qs_userDirectory: msg.user_directory,
                 qs_userId: msg.user_id,
                 qs_origin: msg.origin,
-                qs_appId: msg.appId,
-                qs_appName: msg.appName,
-                qs_uaBrowserName: msg.ua.browser.name,
-                qs_uaBrowserMajorVersion: msg.ua.browser.major,
-                qs_uaOsName: msg.ua.os.name,
-                qs_uaOsVersion: msg.ua.os.version,
             };
         }
+
+        // Add app id and name to attributes if they exist
+        if (msg?.appId) attributes.qs_appId = msg.appId;
+        if (msg?.appName) attributes.qs_appName = msg.appName;
+
+        // Add user agent fields to attributes if they exist
+        if (msg?.ua?.browser?.name) attributes.qs_uaBrowserName = msg.ua.browser.name;
+        if (msg?.ua?.browser?.major) attributes.qs_uaBrowserMajorVersion = msg.ua.browser.major;
+        if (msg?.ua?.os?.name) attributes.qs_uaOsName = msg.ua.os.name;
+        if (msg?.ua?.os?.version) attributes.qs_uaOsVersion = msg.ua.os.version;
 
         // Add custom tags from config file to payload
         if (
