@@ -1,5 +1,18 @@
 # Changelog
 
+## [9.7.1](https://github.com/ptarmiganlabs/butler-sos/compare/v9.7.0...v9.7.1) (2023-11-28)
+
+
+### Bug Fixes
+
+* Write to InfluxDB even when there is no app ID present ([b92cd2d](https://github.com/ptarmiganlabs/butler-sos/commit/b92cd2d8db761448606a7932ada0dabc22f68c2c)), closes [#678](https://github.com/ptarmiganlabs/butler-sos/issues/678)
+
+
+### Miscellaneous
+
+* Add shell script to send test user events ([958236e](https://github.com/ptarmiganlabs/butler-sos/commit/958236ed2efcd816036d574b9d0984f006755bfa))
+* **deps:** Update dependencies ([dd494a4](https://github.com/ptarmiganlabs/butler-sos/commit/dd494a4703e6e99568b318ba7e1bf5e84e1289a3))
+
 ## [9.7.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.6.4...v9.7.0) (2023-11-26)
 
 
