@@ -426,13 +426,21 @@ function postUserEventToInfluxdb(msg) {
             userDirectory: msg.user_directory,
             userId: msg.user_id,
             origin: msg.origin,
-            appId: msg.appId,
-            appName: msg.appName,
-            uaBrowserName: msg.ua.browser.name,
-            uaBrowserMajorVersion: msg.ua.browser.major,
-            uaOsName: msg.ua.os.name,
-            uaOsVersion: msg.ua.os.version,
         };
+
+        // Add app id and name to tags if available
+        if (msg?.appId) tags.appId = msg.appId;
+        if (msg?.appName) tags.appName = msg.appName;
+
+        // Add user agent info to tags if available
+        if (msg?.ua?.browser?.name) tags.uaBrowserName = msg?.ua?.browser?.name;
+        if (msg?.ua?.browser?.major) tags.uaBrowserMajorVersion = msg?.ua?.browser?.major;
+        if (msg?.ua?.os?.name) tags.uaOsName = msg?.ua?.os?.name;
+        if (msg?.ua?.os?.version) tags.uaOsVersion = msg?.ua?.os?.version;
+
+
+
+
 
         // Add custom tags from config file to payload
         if (
@@ -454,11 +462,13 @@ function postUserEventToInfluxdb(msg) {
                 fields: {
                     userFull: tags.userFull,
                     userId: tags.userId,
-                    appId: msg.appId,
-                    appName: msg.appName,
                 },
             },
         ];
+
+        // Add app id and name to fields if available
+        if (msg?.appId) datapoint[0].fields.appId = msg.appId;
+        if (msg?.appName) datapoint[0].fields.appName = msg.appName;
 
         globals.influx
             .writePoints(datapoint)

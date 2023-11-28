@@ -126,7 +126,7 @@ function udpInitUserActivityServer() {
 
             // Do we have an app id to app name lookup table?
             // If so, get the app name from the app id
-            if (msgObj.appId.length > 0) {
+            if (msgObj?.appId?.length > 0) {
                 const app = globals?.appNames.find((element) => element.id === msgObj.appId);
                 if (app?.name === undefined) {
                     msgObj.appName = '<unknown app name>';
