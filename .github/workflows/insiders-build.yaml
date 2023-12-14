@@ -49,7 +49,16 @@ jobs:
                 DestinationPath = "${env:DIST_FILE_NAME}--win-x64--${{ github.sha }}.zip"
               }
               Compress-Archive @compress
-              # dir
+
+              # Add following directories & files to the created zip file, in the ./config directory.
+              # - ./src/config/production_template.yaml
+              # - ./src/config/log_appender_xml
+              mkdir config
+              Copy-Item -Path ./src/config/log_appender_xml -Destination ./config/ -Recurse
+              Copy-Item -Path ./src/config/production_template.yaml -Destination ./config/
+
+              Compress-Archive -Path "./config" -Update -DestinationPath "./${env:DIST_FILE_NAME}--win-x64--${{ github.sha }}.zip"
+
             # artifact_release_name: release-binaries-win
             # artifact_release_path: release-binaries-win/*
             artifact_insider: butler-sos--win-x64--${{ github.sha }}.zip
@@ -95,7 +104,13 @@ jobs:
 
               # Notarize insider binary
               echo "Creating temp notarization archive for insider build"
-              ditto -c -k --keepParent "./${DIST_FILE_NAME}" "./${DIST_FILE_NAME}--macos-x64--${{ github.sha }}.zip"
+              # ditto -c -k --keepParent "./${DIST_FILE_NAME}" "./${DIST_FILE_NAME}--macos-x64--${{ github.sha }}.zip"
+              zip -r "./${DIST_FILE_NAME}--macos-x64--${{ github.sha }}.zip" "./${DIST_FILE_NAME}" -x "*.DS_Store"
+
+              # Add additional files to the zip file
+              cd src
+              zip -u -r "../${DIST_FILE_NAME}--macos-x64--${{ github.sha }}.zip" "./config/production_template.yaml" "./config/log_appender_xml" -x "*.DS_Store"
+              cd ..
 
               # Here we send the notarization request to the Apple's Notarization service, waiting for the result.
               # This typically takes a few seconds inside a CI environment, but it might take more depending on the App
@@ -117,7 +132,16 @@ jobs:
               chmod +x ${DIST_FILE_NAME}
 
               # Compress insider's build
-              tar -czf "${DIST_FILE_NAME}--linux-x64--${{ github.sha }}.tgz" "${DIST_FILE_NAME}"
+              # Include following directories & files in the created archive file.
+              # - ./src/config/log_appender_xml
+              # - ./src/config⁄production_template.yaml
+
+              ls -la
+              zip -9 -r ./${DIST_FILE_NAME}--linux-x64--${{ github.sha }}.zip ${DIST_FILE_NAME}
+
+              cd src
+              zip -9 -u -r "../${DIST_FILE_NAME}--linux-x64--${{ github.sha }}.zip" "./config/production_template.yaml" "./config/log_appender_xml"
+
               ls -la
 
             # artifact_release_name: release-binaries-linux

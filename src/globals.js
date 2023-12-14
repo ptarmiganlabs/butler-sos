@@ -459,7 +459,7 @@ const influx = new Influx.InfluxDB({
                 external: Influx.FieldType.FLOAT,
                 process_memory: Influx.FieldType.FLOAT,
             },
-            tags: ['butler_sos_instance'],
+            tags: ['butler_sos_instance', 'version'],
         },
         // {
         //     measurement: 'user_events',
