@@ -1,5 +1,18 @@
 # Changelog
 
+## [9.8.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.7.1...v9.8.0) (2023-12-14)
+
+
+### Features
+
+* **config:** Include sample config file in release ZIP ([4c650d7](https://github.com/ptarmiganlabs/butler-sos/commit/4c650d74ccbd9f48b3ef234a6328b2235f4f8bbf)), closes [#689](https://github.com/ptarmiganlabs/butler-sos/issues/689)
+* **influxdb:** Store Butler SOS version as tag when storing uptime data ([28e7878](https://github.com/ptarmiganlabs/butler-sos/commit/28e78789c122ad4feb636a41f9e26710f2f32454)), closes [#688](https://github.com/ptarmiganlabs/butler-sos/issues/688)
+
+
+### Miscellaneous
+
+* **deps:** Update dependencies ([27a892e](https://github.com/ptarmiganlabs/butler-sos/commit/27a892e1c53b774954bd0bb20ad2c4d55914cba7))
+
 ## [9.7.1](https://github.com/ptarmiganlabs/butler-sos/compare/v9.7.0...v9.7.1) (2023-11-28)
 
 
