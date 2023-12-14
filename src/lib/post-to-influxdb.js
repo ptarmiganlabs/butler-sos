@@ -376,11 +376,15 @@ function postProxySessionsToInfluxdb(userSessions) {
 function postButlerSOSMemoryUsageToInfluxdb(memory) {
     globals.logger.debug(`MEMORY USAGE: Memory usage ${JSON.stringify(memory, null, 2)})`);
 
+    // Get Butler version
+    const butlerVersion = globals.appVersion;
+
     const datapoint = [
         {
             measurement: 'butlersos_memory_usage',
             tags: {
                 butler_sos_instance: memory.instanceTag,
+                version: butlerVersion,
             },
             fields: {
                 heap_used: memory.heapUsedMByte,
