@@ -146,7 +146,7 @@ jobs:
 
             # artifact_release_name: release-binaries-linux
             # artifact_release_path: release-binaries-linux/*
-            artifact_insider: butler-sos--linux-x64--${{ github.sha }}.tgz
+            artifact_insider: butler-sos--linux-x64--${{ github.sha }}.zip
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
