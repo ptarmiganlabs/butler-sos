@@ -1,5 +1,110 @@
 # Changelog
 
+## [9.9.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.8.0...v9.9.0) (2023-12-14)
+
+
+### Features
+
+* **config:** Config file verification ([8e3e6f4](https://github.com/ptarmiganlabs/butler-sos/commit/8e3e6f4178e931effc882286eaf07055495fafe0)), closes [#585](https://github.com/ptarmiganlabs/butler-sos/issues/585)
+* **config:** Include sample config file in release ZIP ([4c650d7](https://github.com/ptarmiganlabs/butler-sos/commit/4c650d74ccbd9f48b3ef234a6328b2235f4f8bbf)), closes [#689](https://github.com/ptarmiganlabs/butler-sos/issues/689)
+* **influxdb:** Store Butler SOS version as tag when storing uptime data ([28e7878](https://github.com/ptarmiganlabs/butler-sos/commit/28e78789c122ad4feb636a41f9e26710f2f32454)), closes [#688](https://github.com/ptarmiganlabs/butler-sos/issues/688)
+* Sign windows binaries ([9d2a311](https://github.com/ptarmiganlabs/butler-sos/commit/9d2a311fd697154d518d28692684cb52596c1a45))
+* **telemetry:** Replace existing telemetry solution with PostHog ([0f60edc](https://github.com/ptarmiganlabs/butler-sos/commit/0f60edcdd421fd4956b8e26897ad75b4239fad26)), closes [#523](https://github.com/ptarmiganlabs/butler-sos/issues/523)
+* **user-event:** Add app id/name to user event logging ([5298866](https://github.com/ptarmiganlabs/butler-sos/commit/5298866939e913eb76d425fe6dcabf2cd6ddbd26)), closes [#674](https://github.com/ptarmiganlabs/butler-sos/issues/674)
+* **user-event:** Add browser & OS info to user events ([396b76d](https://github.com/ptarmiganlabs/butler-sos/commit/396b76df1f631949957c381ca2e5c2dab03043c5)), closes [#673](https://github.com/ptarmiganlabs/butler-sos/issues/673)
+
+
+### Bug Fixes
+
+* Add missing entries to template config file ([d850543](https://github.com/ptarmiganlabs/butler-sos/commit/d85054395c9590321b36aaf8dadb90842692ffef)), closes [#600](https://github.com/ptarmiganlabs/butler-sos/issues/600)
+* Build process broken ([5fb2a51](https://github.com/ptarmiganlabs/butler-sos/commit/5fb2a51c0c39eca775bb5e6f51b1c11fbeab4665))
+* **build:** Disable Docker image build status via MQTT ([84c1bae](https://github.com/ptarmiganlabs/butler-sos/commit/84c1bae136a9fedca52b7cb21fe51ec4d56006f8))
+* **build:** Fix broken Docker build ([eaa36d3](https://github.com/ptarmiganlabs/butler-sos/commit/eaa36d307b74be3bc787db5d5c93b5681a535044))
+* Change default Influxdb config settings to avoid startup warning ([7e9ef40](https://github.com/ptarmiganlabs/butler-sos/commit/7e9ef40b04c1a29daffdf3d64a2b02d68b8a5443))
+* **deps:** update dependency eslint to v8.50.0 ([bb15f73](https://github.com/ptarmiganlabs/butler-sos/commit/bb15f73c4c93343a321e5bf36389cd1c467f0951))
+* **deps:** update dependency mqtt to v5.0.3 ([8bb01ca](https://github.com/ptarmiganlabs/butler-sos/commit/8bb01caae1395434143d1b3768678c9c94a9f201))
+* **deps:** update dependency pg to v8.11.3 ([51d2c9c](https://github.com/ptarmiganlabs/butler-sos/commit/51d2c9c812aa0db23de43a2a815bccc368b610e5))
+* **deps:** update dependency posthog-node to v3.1.2 ([1a1817f](https://github.com/ptarmiganlabs/butler-sos/commit/1a1817f43f7595e1686dc0537a098d17fc97bece))
+* **docker:** Fix broken Docker image ([16f57cd](https://github.com/ptarmiganlabs/butler-sos/commit/16f57cd960187f6b474cf389656ec484cd8cc1be))
+* **docs:** Status badges in README now show as intended ([5b154af](https://github.com/ptarmiganlabs/butler-sos/commit/5b154af26bf4c7a16a743c040565f0e450e84976))
+* Fix broken Windows build pipeline ([72ab01f](https://github.com/ptarmiganlabs/butler-sos/commit/72ab01f356a3707c3ca018bc7714aa0931d3f5fe))
+* Make InfluxDB debug msgs during startup more informative ([212fc72](https://github.com/ptarmiganlabs/butler-sos/commit/212fc721b6971407d60521c838b563ec55cf2cae)), closes [#596](https://github.com/ptarmiganlabs/butler-sos/issues/596)
+* Make QS cert passphrase optional ([9e77d10](https://github.com/ptarmiganlabs/butler-sos/commit/9e77d1080da2e04ff498d629cc76d952a499f26d))
+* Make thirdPartyToolsCredentials section in config file optional ([c20927b](https://github.com/ptarmiganlabs/butler-sos/commit/c20927bf05dbdd30cacabdb77c033b0fe208f7e1)), closes [#600](https://github.com/ptarmiganlabs/butler-sos/issues/600)
+* Refine Docker image build ([2a07f8a](https://github.com/ptarmiganlabs/butler-sos/commit/2a07f8a259a8e1e936b841dc4a17182a10767f94))
+* **telemetry:** Set telemetry reporting interval to 12 hours ([cb2f518](https://github.com/ptarmiganlabs/butler-sos/commit/cb2f518c1981f5737fda4cef914b9b595f438f6e)), closes [#581](https://github.com/ptarmiganlabs/butler-sos/issues/581)
+* Tweaking CI... ([67f7823](https://github.com/ptarmiganlabs/butler-sos/commit/67f7823c80aeb722506fd726a203a11374090b53))
+* Update ci.yaml ([4e9326d](https://github.com/ptarmiganlabs/butler-sos/commit/4e9326d0e65f5fbb22ee60019731590688bdfcf2))
+* Update Dockerfile ([00cb3a5](https://github.com/ptarmiganlabs/butler-sos/commit/00cb3a571f81843a6b27fa7c0f90de38b33b681f))
+* Update README.md ([d043446](https://github.com/ptarmiganlabs/butler-sos/commit/d043446de950aaa3ceb1f153ae3ef93044f88dea))
+* Won't start when no config file specified on command line ([d1d0090](https://github.com/ptarmiganlabs/butler-sos/commit/d1d00902c6f6c5829024ccff2a55a399a5603970))
+* Write to InfluxDB even when there is no app ID present ([b92cd2d](https://github.com/ptarmiganlabs/butler-sos/commit/b92cd2d8db761448606a7932ada0dabc22f68c2c)), closes [#678](https://github.com/ptarmiganlabs/butler-sos/issues/678)
+
+
+### Miscellaneous
+
+* Add shell script to send test user events ([958236e](https://github.com/ptarmiganlabs/butler-sos/commit/958236ed2efcd816036d574b9d0984f006755bfa))
+* **build:** Clean up build script ([5a42aad](https://github.com/ptarmiganlabs/butler-sos/commit/5a42aad08757b141c8c8cbb5a12eab4e019ce5e3))
+* **deps-dev:** Bump semver from 6.3.0 to 6.3.1 ([24b8d35](https://github.com/ptarmiganlabs/butler-sos/commit/24b8d35df52840caed2b7fed738c15675593085f))
+* **deps:** Bump setup-node to v4 ([8bda3b0](https://github.com/ptarmiganlabs/butler-sos/commit/8bda3b0ac27a2c21ff3579a87f53a47725e9283c))
+* **deps:** update actions/checkout action to v4 ([d4906ab](https://github.com/ptarmiganlabs/butler-sos/commit/d4906abfaf9a3e491ef0bace568dce2b1c9d34fd))
+* **deps:** update crazy-max/ghaction-virustotal action to v4 ([7e18183](https://github.com/ptarmiganlabs/butler-sos/commit/7e18183fc6c1911a61527e19c751759200fdcad5))
+* **deps:** Update dependencies ([27a892e](https://github.com/ptarmiganlabs/butler-sos/commit/27a892e1c53b774954bd0bb20ad2c4d55914cba7))
+* **deps:** Update dependencies ([dd494a4](https://github.com/ptarmiganlabs/butler-sos/commit/dd494a4703e6e99568b318ba7e1bf5e84e1289a3))
+* **deps:** Update dependencies ([750790d](https://github.com/ptarmiganlabs/butler-sos/commit/750790d79310dbf51f8707fa9831775ca8b5381e))
+* **deps:** Update dependencies to stay safe and secure ([684417a](https://github.com/ptarmiganlabs/butler-sos/commit/684417a599792c65d8e535b8ddd8ca251082b48c))
+* **deps:** Update dependencies to stay safe and secure ([9980039](https://github.com/ptarmiganlabs/butler-sos/commit/998003974fe96cc2743b7461f3c0202e4e064681))
+* **deps:** Update dependencies to stay safe and secure ([cfee6f7](https://github.com/ptarmiganlabs/butler-sos/commit/cfee6f7e739f9ee495e4f70054e5b50dc7f48dcb))
+* **deps:** Update dependencies to stay safe and secure ([3244a0d](https://github.com/ptarmiganlabs/butler-sos/commit/3244a0dabc07a5e27a27b62fd495448c56f992a4))
+* **deps:** Update dependencies to stay safe and secure ([48efac0](https://github.com/ptarmiganlabs/butler-sos/commit/48efac0041dbccf604b325f5732c40df424b9172))
+* **deps:** update dependency snyk to v1.1203.0 ([835444d](https://github.com/ptarmiganlabs/butler-sos/commit/835444ddc5a283181f17a1daa8941f98a63b22a8))
+* **deps:** Update deps Snyk and Prettier ([ae5bc0c](https://github.com/ptarmiganlabs/butler-sos/commit/ae5bc0c976a72c6280cccc62d3a154363b00540b))
+* **deps:** update docker/build-push-action action to v5 ([52b8773](https://github.com/ptarmiganlabs/butler-sos/commit/52b8773662ab782ca02314e7a57faae24a9a8a9f))
+* **deps:** update docker/login-action action to v3 ([9693cc9](https://github.com/ptarmiganlabs/butler-sos/commit/9693cc9a711e179a02a1af8af4671b12ebf69ee7))
+* **deps:** update docker/metadata-action action to v5 ([18c3934](https://github.com/ptarmiganlabs/butler-sos/commit/18c3934282933d588e7771b9d33a706f3d3ce7de))
+* **deps:** update docker/setup-buildx-action action to v3 ([a3dc2c2](https://github.com/ptarmiganlabs/butler-sos/commit/a3dc2c2aff78ceff761045ad3e156a0c13844886))
+* **deps:** update docker/setup-qemu-action action to v3 ([eae1706](https://github.com/ptarmiganlabs/butler-sos/commit/eae1706399bfc18b654af3b50a135f2e2790edeb))
+* **deps:** Upgrade Docker build pipeline ([c6ad9c7](https://github.com/ptarmiganlabs/butler-sos/commit/c6ad9c7e80d28c524d934bf07e818fceebf1b1b0))
+* Fine tuning of build pipeline ([2d7ef9b](https://github.com/ptarmiganlabs/butler-sos/commit/2d7ef9bd018f4f5f8e5022e2afec0437121fb583))
+* Fix broken builds ([00cef7b](https://github.com/ptarmiganlabs/butler-sos/commit/00cef7b68547c1839db268fff76e370c191ceb89))
+* **master:** release 9.3.3 ([6d920a5](https://github.com/ptarmiganlabs/butler-sos/commit/6d920a5c9a9b525c36029cfc686b3b550d4e37c2))
+* **master:** release 9.4.0 ([084b336](https://github.com/ptarmiganlabs/butler-sos/commit/084b336da413466dfc1df0be53fbf7fd19e7561d))
+* **master:** release 9.4.1 ([5888553](https://github.com/ptarmiganlabs/butler-sos/commit/58885533cf077b251d70c046f35b3090f0d85fca))
+* **master:** release 9.5.0 ([a69d427](https://github.com/ptarmiganlabs/butler-sos/commit/a69d42747111afc9ff31330c0e7078c370de9557))
+* **master:** release 9.5.1 ([ec0be96](https://github.com/ptarmiganlabs/butler-sos/commit/ec0be96f953012bd3c054c3ef003f2f034252392))
+* **master:** release 9.5.2 ([40db97c](https://github.com/ptarmiganlabs/butler-sos/commit/40db97c32e55943a385a051afdc313e2bc5c3829))
+* **master:** release 9.5.2 ([fd99774](https://github.com/ptarmiganlabs/butler-sos/commit/fd99774c983be5b864f38c5ca3c1a602ff697e02))
+* **master:** release 9.5.3 ([de28f11](https://github.com/ptarmiganlabs/butler-sos/commit/de28f119f635bfbf2d0dd9f536b657b3ca682ac0))
+* **master:** release 9.6.0 ([c242088](https://github.com/ptarmiganlabs/butler-sos/commit/c24208871c316722d9084766129dc7eac96fd057))
+* **master:** release 9.6.1 ([36dae65](https://github.com/ptarmiganlabs/butler-sos/commit/36dae65013ad65931b171bf421499bd545f32160))
+* **master:** release 9.6.2 ([02c6196](https://github.com/ptarmiganlabs/butler-sos/commit/02c6196bdd5d8059aae2c192c8f2deb62f94236f))
+* **master:** release 9.6.3 ([12156e7](https://github.com/ptarmiganlabs/butler-sos/commit/12156e7648357b1ae99e80977d176342f1177a4a))
+* **master:** release 9.6.4 ([28ac3d0](https://github.com/ptarmiganlabs/butler-sos/commit/28ac3d05bb69bebba4ef161ea02f08a898e48d6e))
+* **master:** release 9.7.0 ([1f82c62](https://github.com/ptarmiganlabs/butler-sos/commit/1f82c627fc8a6412d6bf2c59bcc2d40e3fe6e2b9))
+* **master:** release 9.7.1 ([768bcf8](https://github.com/ptarmiganlabs/butler-sos/commit/768bcf83e0b5b29abbbc72bf1a9fd8d225ea1730))
+* **master:** release 9.8.0 ([f65d475](https://github.com/ptarmiganlabs/butler-sos/commit/f65d47539fbf04124184cc50920652d226723f2c))
+* **master:** release butler-sos 9.5.0 ([76f3b18](https://github.com/ptarmiganlabs/butler-sos/commit/76f3b18d14bcac4b78fcfbf83bbb6921808b6128))
+* **master:** release butler-sos 9.5.0 ([e3c5ed1](https://github.com/ptarmiganlabs/butler-sos/commit/e3c5ed147a1d62d45921b62e9dab78031c469fbf))
+* **master:** release butler-sos 9.5.0 ([ab5c2ec](https://github.com/ptarmiganlabs/butler-sos/commit/ab5c2ec7b055f68428682b0cbe59abda9aacf050))
+* **master:** release butler-sos 9.5.0 ([d5edb61](https://github.com/ptarmiganlabs/butler-sos/commit/d5edb61cec4afc1278847ba1054f5f9b96d6e588))
+* **master:** release butler-sos 9.5.0 ([49bfff2](https://github.com/ptarmiganlabs/butler-sos/commit/49bfff29550a54eb74791e9f2d2dbe4862734c29))
+* **master:** release butler-sos 9.5.1 ([ad2255c](https://github.com/ptarmiganlabs/butler-sos/commit/ad2255c9c24f68d0adb5255159fa5a849ab880e4))
+* **master:** release butler-sos 9.5.2 ([9f235d9](https://github.com/ptarmiganlabs/butler-sos/commit/9f235d9f438f09879b80f50cd9a75769ed15311b))
+* Switch to Node 20 ([a4bf1bf](https://github.com/ptarmiganlabs/butler-sos/commit/a4bf1bf7788661c840615900bd8a5d14cef776a5))
+
+
+### Refactoring
+
+* Change structure of source code for better maintainability ([a4ebe4e](https://github.com/ptarmiganlabs/butler-sos/commit/a4ebe4e2cacac0c104895b514f691b7ce6ba98f1))
+* More consistent source code structure ([d52a029](https://github.com/ptarmiganlabs/butler-sos/commit/d52a029fc4abe0f7b07832d5f46dae5d6a414368))
+* Tweak CI ([989db19](https://github.com/ptarmiganlabs/butler-sos/commit/989db197240b1aaf83f8c0d5cf6b853cc729b441))
+
+
+### Documentation
+
+* FIxing typos in readme file ([6d9920f](https://github.com/ptarmiganlabs/butler-sos/commit/6d9920f5ca7786181b7b249b8a61de9660004360))
+* Update docs ([be1ef8d](https://github.com/ptarmiganlabs/butler-sos/commit/be1ef8d54649f4d1b054dad41d1d3f462e5cd21b))
+
 ## [9.8.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.7.1...v9.8.0) (2023-12-14)
 
 
