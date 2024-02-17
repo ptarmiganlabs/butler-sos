@@ -1,5 +1,12 @@
 # Changelog
 
+## [9.9.1](https://github.com/ptarmiganlabs/butler-sos/compare/v9.9.0...v9.9.1) (2024-02-17)
+
+
+### Bug Fixes
+
+* Version debuggig ([6c0b6ea](https://github.com/ptarmiganlabs/butler-sos/commit/6c0b6ea0dbde02a090ad6fccf62ed39b09f8f540))
+
 ## [9.9.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.8.0...v9.9.0) (2024-02-17)
 
 
