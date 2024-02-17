@@ -373,6 +373,9 @@ Butler-SOS:
           serverLocation: Asia
           server_type: virtual
           serverBrand: Dell
+        headers: 
+          X-My-Header-1: Header value 1
+          X-My-Header-2: Header value 2
       - host: <server2.my.domain>:4747        # Example: 10.34.3.46:4747
         serverName: <server2>
         serverDescription: <description>
@@ -388,4 +391,7 @@ Butler-SOS:
           serverLocation: Europe
           server_type: physical
           serverBrand: HP
+        headers: 
+          X-My-Header-3: Header value 3
+          X-My-Header-4: Header value 4
     
