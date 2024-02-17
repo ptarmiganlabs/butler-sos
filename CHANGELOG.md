@@ -1,5 +1,12 @@
 # Changelog
 
+## [9.10.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.9.1...v9.10.0) (2024-02-17)
+
+
+### Features
+
+* Configurable headers when getting health data from Sense ([a4a27dd](https://github.com/ptarmiganlabs/butler-sos/commit/a4a27ddc3698242153f4e0072aa91022932a7366)), closes [#720](https://github.com/ptarmiganlabs/butler-sos/issues/720)
+
 ## [9.9.1](https://github.com/ptarmiganlabs/butler-sos/compare/v9.9.0...v9.9.1) (2024-02-17)
 
 
