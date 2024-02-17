@@ -1,4 +1,6 @@
 {
+    "bootstrap-sha": "f65d47539fbf04124184cc50920652d226723f2c",
+    "release-as": "9.9.1",
     "release-type": "node",
     "prerelease": false,
     "draft": true,
