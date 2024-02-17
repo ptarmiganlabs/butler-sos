@@ -1,7 +1,6 @@
 /* eslint-disable no-console */
 
 // Set up REST endpoint for Docker healthchecks
-
 const httpHealth = require('http');
 
 const optionsHealth = {
