@@ -7,9 +7,12 @@ on:
 jobs:
   virustotal:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name != 'pull_request' &&
+      github.repository_owner == 'ptarmiganlabs'
+
     steps:
-      -
-        name: VirusTotal Scan
+      - name: VirusTotal Scan
         uses: crazy-max/ghaction-virustotal@v4
         with:
           vt_api_key: ${{ secrets.VIRUSTOTAL_API_KEY }}
