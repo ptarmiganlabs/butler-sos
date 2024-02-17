@@ -1,5 +1,12 @@
 # Changelog
 
+## [9.9.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.8.0...v9.9.0) (2024-02-17)
+
+
+### Miscellaneous Chores
+
+* release 9.9.0 ([96fbbc9](https://github.com/ptarmiganlabs/butler-sos/commit/96fbbc9ae811c59e8d593f310502373773349dec))
+
 ## [9.8.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.7.1...v9.8.0) (2023-12-14)
 
 
