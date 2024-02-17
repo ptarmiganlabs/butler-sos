@@ -31,7 +31,7 @@ jobs:
           release-type: node
           target-branch: master
 
-          - name: Show output from Release-Please
+      - name: Show output from Release-Please
         if: always()
         env:
           RELEASE_PLEASE_OUTPUT: ${{ toJSON(steps.release.outputs) }}
