@@ -19,24 +19,19 @@ jobs:
       - name: Show github.ref
         run: echo "$GITHUB_REF"
 
-      - uses: google-github-actions/release-please-action@v3
+      - uses: google-github-actions/release-please-action@v4
         id: release
         if: github.repository_owner == 'ptarmiganlabs'
         with:
-          # command: manifest
-          # bootstrap-sha: ad2255c9c24f68d0adb5255159fa5a849ab880e4
-          # last-release-sha: b6266be9857c88405364c8af54fbfbed83bb9f66
-          # release-as: 9.1.0
+          token: ${{ secrets.RELEASE_PLEASE_PAT }}
+          # optional. customize path to release-please-config.json
+          config-file: release-please-config.json
+          # optional. customize path to .release-please-manifest.json
+          manifest-file: .release-please-manifest.json
           release-type: node
-          package-name: butler-sos
-          default-branch: master
-          prerelease: false
-          release-search-depth: 5
-          commit-search-depth: 200
-          draft: true
-          changelog-types: '[{"type": "feat","section": "Features","hidden": false},{"type": "fix","section": "Bug Fixes","hidden": false},{"type": "chore","section": "Miscellaneous","hidden": false},{"type": "refactor","section": "Refactoring","hidden": false},{"type": "docs","section": "Documentation","hidden": false},{"type": "build","section": "Miscellaneous","hidden": false}]'
+          target-branch: master
 
-      - name: Show output from Release-Please
+          - name: Show output from Release-Please
         if: always()
         env:
           RELEASE_PLEASE_OUTPUT: ${{ toJSON(steps.release.outputs) }}
@@ -99,7 +94,7 @@ jobs:
       - name: Install dependencies
         run: |
           pwd 
-          npm ci
+          npm ci --include=prod
 
       - name: Build binaries
         run: |
@@ -211,7 +206,7 @@ jobs:
       - name: Install dependencies
         run: |
           pwd 
-          npm ci
+          npm ci --include=prod
 
       - name: Build binaries
         run: |
@@ -303,7 +298,7 @@ jobs:
       - name: Install dependencies
         run: |
           pwd 
-          npm ci
+          npm ci --include=prod
 
       - name: Build binaries
         run: |
