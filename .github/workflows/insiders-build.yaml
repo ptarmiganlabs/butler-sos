@@ -228,14 +228,8 @@ jobs:
           pwd
           ${{ matrix.build }}
 
-      # - name: Upload release artifacts to GitHub
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: ${{ matrix.artifact_release_name }}
-      #     path: ${{ matrix.artifact_release_path }}
-
       - name: Upload insider build artifacts to GitHub
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_insider }}
           path: ${{ matrix.artifact_insider }}
