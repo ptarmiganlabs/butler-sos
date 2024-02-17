@@ -452,7 +452,7 @@ async function postProxySessionsToNewRelic(userSessions) {
             }
         }
 
-        // ------------------
+        //
         // Send data to all New Relic accounts that are enabled for this metric/event
         //
         // Get New Relic accounts
