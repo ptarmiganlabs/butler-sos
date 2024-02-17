@@ -186,9 +186,10 @@ jobs:
     env:
       DIST_FILE_NAME: butler-sos
       GITHUB_TOKEN: ${{ secrets.PAT }}
-      CODESIGN_PWD: ${{ secrets.WIN_CODESIGN_PWD}}
-      CODESIGN_INTERMEDIATE_BASE64: ${{ secrets.WIN_CODESIGN_INTERMEDIATE_BASE64 }}
-      CODESIGN_BASE64: ${{ secrets.WIN_CODESIGN_BASE64}}
+      # CODESIGN_PWD: ${{ secrets.WIN_CODESIGN_PWD}}
+      # CODESIGN_INTERMEDIATE_BASE64: ${{ secrets.WIN_CODESIGN_INTERMEDIATE_BASE64 }}
+      # CODESIGN_BASE64: ${{ secrets.WIN_CODESIGN_BASE64}}
+      CODESIGN_WIN_THUMBPRINT: ${{ secrets.WIN_CODESIGN_THUMBPRINT}}
     steps:
       - name: Release tag and upload url from previous job
         run: |
