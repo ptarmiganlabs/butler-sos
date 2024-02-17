@@ -11,6 +11,7 @@ const postToInfluxdb = require('./post-to-influxdb');
 const postToNewRelic = require('./post-to-new-relic');
 const postToMQTT = require('./post-to-mqtt');
 const serverTags = require('./servertags');
+const serverHeaders = require('./serverheaders');
 const prometheus = require('./prom-client');
 
 function getCertificates(options) {
@@ -23,7 +24,7 @@ function getCertificates(options) {
     return certificate;
 }
 
-function getHealthStatsFromSense(host, tags) {
+function getHealthStatsFromSense(host, tags, headers) {
     globals.logger.debug(`HEALTH: URL=https://${host}/engine/healthcheck/`);
 
     const options = {};
@@ -73,6 +74,16 @@ function getHealthStatsFromSense(host, tags) {
         timeout: 5000,
         maxRedirects: 5,
     };
+
+    // Add any additional headers
+    if (headers !== null) {
+        // Loop over all headers defined for the current server
+        Object.entries(headers).forEach(([key, value]) => {
+            globals.logger.debug(`HEALTH: Found header: ${JSON.stringify([key, value])}`);
+
+            requestSettings.headers[key] = value;
+        });
+    }
 
     axios
         .request(requestSettings)
@@ -137,8 +148,9 @@ function setupHealthMetricsTimer() {
             globals.logger.debug(`HEALTH: Server details: ${JSON.stringify(server)}`);
 
             const tags = serverTags.getServerTags(server);
+            const headers = serverHeaders.getServerHeaders(server);
 
-            getHealthStatsFromSense(server.host, tags);
+            getHealthStatsFromSense(server.host, tags, headers);
         });
     }, globals.config.get('Butler-SOS.serversToMonitor.pollingInterval'));
 }
