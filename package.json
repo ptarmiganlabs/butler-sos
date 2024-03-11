@@ -62,7 +62,7 @@
     "devDependencies": {
         "eslint-formatter-table": "^7.32.1",
         "prettier": "^3.2.5",
-        "snyk": "^1.1280.0"
+        "snyk": "^1.1283.0"
     },
     "pkg": {
         "assets": [
