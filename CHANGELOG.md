@@ -1,5 +1,19 @@
 # Changelog
 
+## [9.10.2](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v9.10.1...butler-sos-v9.10.2) (2024-04-09)
+
+
+### Bug Fixes
+
+* Fix broken Docker image build ([2c3a291](https://github.com/ptarmiganlabs/butler-sos/commit/2c3a291bf7c2d812ac296e8de5c461c4cb90db0a))
+* Fix incorrect zip file names for pre-compiled binaries ([f506ce1](https://github.com/ptarmiganlabs/butler-sos/commit/f506ce1e5fc254411ce9bff184fe634328b89b18))
+* Supress experimental/deprecated warnings on startup ([e2090a7](https://github.com/ptarmiganlabs/butler-sos/commit/e2090a76ff9426cc32ca0b139cda5808b2ef48ae)), closes [#762](https://github.com/ptarmiganlabs/butler-sos/issues/762)
+
+
+### Miscellaneous
+
+* **master:** release butler-sos 9.10.1 ([6c7b297](https://github.com/ptarmiganlabs/butler-sos/commit/6c7b297c9456994c75485ac0e2813287086c8a66))
+
 ## [9.10.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v9.10.1...butler-sos-v9.10.1) (2024-04-09)
 
 
