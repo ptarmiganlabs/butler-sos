@@ -1,5 +1,28 @@
 # Changelog
 
+## [9.10.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v9.10.0...butler-sos-v9.10.1) (2024-04-09)
+
+
+### Bug Fixes
+
+* Debugging release-please ([03759e5](https://github.com/ptarmiganlabs/butler-sos/commit/03759e5cd0971ffaddf72cb52308f148ae359d84))
+
+
+### Miscellaneous
+
+* Add defender-for-devops code scanning ([cfd29f3](https://github.com/ptarmiganlabs/butler-sos/commit/cfd29f307f9634b213f2bfaf7dde36afa7168b03))
+* Configure scheduled Snaky code scanning ([518bffd](https://github.com/ptarmiganlabs/butler-sos/commit/518bffd70613a0032cab4d47a299b2b898d6b0fd))
+* Debug MS Defender code scanning ([179a1df](https://github.com/ptarmiganlabs/butler-sos/commit/179a1df593e9d13cc6233ccd4b36f3423e73168e))
+* Debugging release-please ([ba8b1ec](https://github.com/ptarmiganlabs/butler-sos/commit/ba8b1ec1b64bec9f2bc4ae24d6a76984858bd567))
+* Debugging release-please... ([493dd3a](https://github.com/ptarmiganlabs/butler-sos/commit/493dd3a5086186c63279c166d02f8f8f8142bb76))
+* **deps:** Update dependencies ([03b8118](https://github.com/ptarmiganlabs/butler-sos/commit/03b811800cc6b26f1075552f812acf4fba14a3a3))
+* Disable MS Defender for DevOps action due to Node 16 no longer supported by GHA ([9cbe018](https://github.com/ptarmiganlabs/butler-sos/commit/9cbe018ac5d6cee30b88f09a68a99fad39cf8f94))
+* Fix GH Actions triggers ([1e0d0d6](https://github.com/ptarmiganlabs/butler-sos/commit/1e0d0d690f260f03d4720ffdb8ea28d93a344505))
+* Make insiders build more robust ([890962c](https://github.com/ptarmiganlabs/butler-sos/commit/890962c2c7388b0ceae0082d1ee18338848a9245))
+* Rename code quality GH action ([e8dc094](https://github.com/ptarmiganlabs/butler-sos/commit/e8dc094fab6d734ed4c15d26f29fee712bcc78e5))
+* Update MS Defender code scanning GH Action ([c80f239](https://github.com/ptarmiganlabs/butler-sos/commit/c80f239a433fe6f8a56255004c2a110e4c175704))
+* Update Snyk config ([ed36d1d](https://github.com/ptarmiganlabs/butler-sos/commit/ed36d1d2e615002a1efce22b3a77a3eefe877fc8))
+
 ## [9.10.0](https://github.com/ptarmiganlabs/butler-sos/compare/v9.9.1...v9.10.0) (2024-02-17)
 
 
