@@ -1,5 +1,12 @@
 # Changelog
 
+## [9.10.3](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v9.10.2...butler-sos-v9.10.3) (2024-04-09)
+
+
+### Bug Fixes
+
+* Fix broken Linux build ([8a8e160](https://github.com/ptarmiganlabs/butler-sos/commit/8a8e160be3beb14b8d6513abba1e5ab153bd914c))
+
 ## [9.10.2](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v9.10.1...butler-sos-v9.10.2) (2024-04-09)
 
 
