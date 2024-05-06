@@ -47,7 +47,7 @@
         "js-yaml": "^4.1.0",
         "lodash.clonedeep": "^4.5.0",
         "luxon": "^3.4.4",
-        "mqtt": "^5.5.0",
+        "mqtt": "^5.5.5",
         "pg": "^8.11.5",
         "posthog-node": "^4.0.0",
         "prom-client": "^15.1.1",
