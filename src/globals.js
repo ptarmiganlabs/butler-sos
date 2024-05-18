@@ -321,37 +321,56 @@ const tagValuesLogEventLogDb = tagValues.slice();
 tagValuesLogEventLogDb.push('source_process');
 tagValuesLogEventLogDb.push('log_level');
 
-if (
-    (config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
-        config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
-    (config.has('Butler-SOS.influxdbConfig.enable') &&
-        config.get('Butler-SOS.influxdbConfig.enable') === true)
-) {
+if (config.get('Butler-SOS.influxdbConfig.enable') === true) {
     logger.info(`CONFIG: Influxdb enabled: true`);
-    logger.info(`CONFIG: Influxdb host IP: ${config.get('Butler-SOS.influxdbConfig.hostIP')}`);
-    logger.info(`CONFIG: Influxdb host port: ${config.get('Butler-SOS.influxdbConfig.hostPort')}`);
-    logger.info(`CONFIG: Influxdb db name: ${config.get('Butler-SOS.influxdbConfig.dbName')}`);
+    logger.info(`CONFIG: Influxdb host IP: ${config.get('Butler-SOS.influxdbConfig.host')}`);
+    logger.info(`CONFIG: Influxdb host port: ${config.get('Butler-SOS.influxdbConfig.port')}`);
+    logger.info(`CONFIG: Influxdb version: ${config.get('Butler-SOS.influxdbConfig.version')}`);
+
+    // Version specific configs
+    if (config.get('Butler-SOS.influxdbConfig.version') === 1) {
+        logger.info(
+            `CONFIG: Influxdb db name: ${config.get('Butler-SOS.influxdbConfig.v1Config.dbName')}`
+        );
+        logger.info(
+            `CONFIG: Influxdb retention policy: ${config.get('Butler-SOS.influxdbConfig.v1Config.retentionPolicy.name')}`
+        );
+    } else if (config.get('Butler-SOS.influxdbConfig.version') === 2) {
+        logger.info(
+            `CONFIG: Influxdb organisation: ${config.get('Butler-SOS.influxdbConfig.v2Config.org')}`
+        );
+        logger.info(
+            `CONFIG: Influxdb bucket name: ${config.get('Butler-SOS.influxdbConfig.v2Config.bucket')}`
+        );
+        logger.info(
+            `CONFIG: Influxdb retention policy name: ${config.get('Butler-SOS.influxdbConfig.v2Config.retentionPolicy.name')}`
+        );
+    } else {
+        logger.error(
+            `CONFIG: Influxdb version ${config.get('Butler-SOS.influxdbConfig.version')} is not supported!`
+        );
+    }
 } else {
     logger.info(`CONFIG: Influxdb enabled: false`);
 }
 
-// Set up Influxdb client
+// Set up Influxdb v1 client
 const influx = new Influx.InfluxDB({
-    host: config.get('Butler-SOS.influxdbConfig.hostIP'),
+    host: config.get('Butler-SOS.influxdbConfig.host'),
     port: `${
-        config.has('Butler-SOS.influxdbConfig.hostPort')
-            ? config.get('Butler-SOS.influxdbConfig.hostPort')
+        config.has('Butler-SOS.influxdbConfig.port')
+            ? config.get('Butler-SOS.influxdbConfig.port')
             : '8086'
     }`,
-    database: config.get('Butler-SOS.influxdbConfig.dbName'),
+    database: config.get('Butler-SOS.influxdbConfig.v1Config.dbName'),
     username: `${
-        config.get('Butler-SOS.influxdbConfig.auth.enable')
-            ? config.get('Butler-SOS.influxdbConfig.auth.username')
+        config.get('Butler-SOS.influxdbConfig.v1Config.auth.enable')
+            ? config.get('Butler-SOS.influxdbConfig.v1Config.auth.username')
             : ''
     }`,
     password: `${
-        config.get('Butler-SOS.influxdbConfig.auth.enable')
-            ? config.get('Butler-SOS.influxdbConfig.auth.password')
+        config.get('Butler-SOS.influxdbConfig.v1Config.auth.enable')
+            ? config.get('Butler-SOS.influxdbConfig.v1Config.auth.password')
             : ''
     }`,
     schema: [
@@ -473,7 +492,7 @@ const influx = new Influx.InfluxDB({
 });
 
 function initInfluxDB() {
-    const dbName = config.get('Butler-SOS.influxdbConfig.dbName');
+    const dbName = config.get('Butler-SOS.influxdbConfig.v1Config.dbName');
     let enableInfluxdb = false;
 
     if (
@@ -496,7 +515,7 @@ function initInfluxDB() {
                             logger.info(`CONFIG: Created new InfluxDB database: ${dbName}`);
 
                             const newPolicy = config.get(
-                                'Butler-SOS.influxdbConfig.retentionPolicy'
+                                'Butler-SOS.influxdbConfig.v1Config.retentionPolicy'
                             );
 
                             // Create new default retention policy

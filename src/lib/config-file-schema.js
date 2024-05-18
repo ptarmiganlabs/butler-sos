@@ -310,17 +310,26 @@ const confifgFileSchema = {
         },
         influxdbConfig: {
             enable: 'boolean',
-            hostIP: 'string',
-            hostPort: 'number',
-            auth: {
-                enable: 'boolean',
-                username: 'string',
-                password: 'string',
+            host: 'string',
+            port: 'number',
+            version: 'number',
+            v2Config: {
+                org: 'string',
+                bucket: 'string',
+                token: 'string',
+                retentionDuration: 'string',
             },
-            dbName: 'string',
-            retentionPolicy: {
-                name: 'string',
-                duration: 'string',
+            v1Config: {
+                auth: {
+                    enable: 'boolean',
+                    username: 'string',
+                    password: 'string',
+                },
+                dbName: 'string',
+                retentionPolicy: {
+                    name: 'string',
+                    duration: 'string',
+                },
             },
             includeFields: {
                 activeDocs: 'boolean',

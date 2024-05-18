@@ -55,8 +55,7 @@ globals.initInfluxDB();
 if (
     (globals.config.has('Butler-SOS.uptimeMonitor.enabled') &&
         globals.config.get('Butler-SOS.uptimeMonitor.enabled') === true) ||
-    (globals.config.has('Butler-SOS.uptimeMonitor.enable') &&
-        globals.config.get('Butler-SOS.uptimeMonitor.enable') === true)
+    globals.config.get('Butler-SOS.uptimeMonitor.enable') === true
 ) {
     serviceUptime.serviceUptimeStart();
 }
@@ -82,8 +81,7 @@ async function mainScript() {
     if (
         (globals.config.has('Butler-SOS.heartbeat.enabled') &&
             globals.config.get('Butler-SOS.heartbeat.enabled') === true) ||
-        (globals.config.has('Butler-SOS.heartbeat.enable') &&
-            globals.config.get('Butler-SOS.heartbeat.enable') === true)
+        globals.config.get('Butler-SOS.heartbeat.enable') === true
     ) {
         heartbeat.setupHeartbeatTimer(globals.config, globals.logger);
     }
