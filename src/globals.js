@@ -495,12 +495,7 @@ function initInfluxDB() {
     const dbName = config.get('Butler-SOS.influxdbConfig.v1Config.dbName');
     let enableInfluxdb = false;
 
-    if (
-        (config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
-            config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
-        (config.has('Butler-SOS.influxdbConfig.enable') &&
-            config.get('Butler-SOS.influxdbConfig.enable') === true)
-    ) {
+    if (config.get('Butler-SOS.influxdbConfig.enable') === true) {
         enableInfluxdb = true;
     }
 
@@ -558,10 +553,7 @@ function initInfluxDB() {
 // ------------------------------------
 let mqttClient;
 
-if (
-    config.has('Butler-SOS.mqttConfig.enable') &&
-    config.get('Butler-SOS.mqttConfig.enable') === true
-) {
+if (config.get('Butler-SOS.mqttConfig.enable') === true) {
     mqttClient = mqtt.connect({
         port: config.get('Butler-SOS.mqttConfig.brokerPort'),
         host: config.get('Butler-SOS.mqttConfig.brokerHost'),
