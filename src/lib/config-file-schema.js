@@ -23,7 +23,7 @@ const confifgFileSchema = {
             },
             storeNewRelic: {
                 enable: 'boolean',
-                destinationAccount: ['string'],
+                'destinationAccount?': ['string'],
                 metric: {
                     dynamic: {
                         butlerMemoryUsage: {
@@ -35,7 +35,7 @@ const confifgFileSchema = {
                     },
                 },
                 attribute: {
-                    static: [
+                    'static?': [
                         {
                             name: 'string',
                             value: 'string',
@@ -107,7 +107,7 @@ const confifgFileSchema = {
             },
             sendToNewRelic: {
                 enable: 'boolean',
-                destinationAccount: ['string'],
+                'destinationAccount?': ['string'],
                 scramble: 'boolean',
             },
         },
@@ -116,7 +116,7 @@ const confifgFileSchema = {
                 serverHost: 'string',
                 portLogEvents: 'number',
             },
-            tags: [
+            'tags?': [
                 {
                     tag: 'string',
                     value: 'string',
@@ -149,7 +149,7 @@ const confifgFileSchema = {
             },
             sendToNewRelic: {
                 enable: 'boolean',
-                destinationAccount: ['string'],
+                'destinationAccount?': ['string'],
                 source: {
                     engine: {
                         enable: 'boolean',
@@ -210,14 +210,14 @@ const confifgFileSchema = {
             enable: 'boolean',
             event: {
                 url: 'string',
-                header: [
+                'header?': [
                     {
                         name: 'string',
                         value: 'string',
                     },
                 ],
                 attribute: {
-                    static: [
+                    'static?': [
                         {
                             name: 'string',
                             value: 'string',
@@ -231,9 +231,9 @@ const confifgFileSchema = {
                 },
             },
             metric: {
-                destinationAccount: ['string'],
+                'destinationAccount?': ['string'],
                 url: 'string',
-                header: [
+                'header?': [
                     {
                         name: 'string',
                         value: 'string',
@@ -289,7 +289,7 @@ const confifgFileSchema = {
                     },
                 },
                 attribute: {
-                    static: [
+                    'static?': [
                         {
                             name: 'string',
                             value: 'string',
