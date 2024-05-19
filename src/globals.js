@@ -179,8 +179,7 @@ if (
 ) {
     config['Butler-SOS'].thirdPartyToolsCredentials.newRelic = [];
 
-    //
-    for (let index = 0; index < options.newRelicApiKey.length; index++) {
+    for (let index = 0; index < options.newRelicApiKey.length; index += 1) {
         const accountName = options.newRelicAccountName[index];
         const accountId = options.newRelicAccountId[index];
         const insertApiKey = options.newRelicApiKey[index];
@@ -252,22 +251,26 @@ try {
 // Get info on what servers to monitor
 const serverList = config.get('Butler-SOS.serversToMonitor.servers');
 
-// Set up connection pool for accessing Qlik Sense log db
-const pgPool = new Pool({
-    host: config.get('Butler-SOS.logdb.host'),
-    database: 'QLogs',
-    user: config.get('Butler-SOS.logdb.qlogsReaderUser'),
-    password: config.get('Butler-SOS.logdb.qlogsReaderPwd'),
-    port: config.get('Butler-SOS.logdb.port'),
-});
+// Only set up connection pool for accessing Qlik Sense log db if that feature is enabled
+let pgPool;
+if (config.get('Butler-SOS.logdb.enable') === true) {
+    // Set up connection pool for accessing Qlik Sense log db
+    pgPool = new Pool({
+        host: config.get('Butler-SOS.logdb.host'),
+        database: 'QLogs',
+        user: config.get('Butler-SOS.logdb.qlogsReaderUser'),
+        password: config.get('Butler-SOS.logdb.qlogsReaderPwd'),
+        port: config.get('Butler-SOS.logdb.port'),
+    });
 
-// the pool will emit an error on behalf of any idle clients
-// it contains if a backend error or network partition happens
-// eslint-disable-next-line no-unused-vars
-pgPool.on('error', (err, client) => {
-    logger.error(`CONFIG: Unexpected error on idle client: ${err}`);
-    // process.exit(-1);
-});
+    // the pool will emit an error on behalf of any idle clients
+    // it contains if a backend error or network partition happens
+    // eslint-disable-next-line no-unused-vars
+    pgPool.on('error', (err, client) => {
+        logger.error(`CONFIG: Unexpected error on idle client: ${err}`);
+        // process.exit(-1);
+    });
+}
 
 // Get list of standard and user configurable tags
 // ..begin with standard tags
