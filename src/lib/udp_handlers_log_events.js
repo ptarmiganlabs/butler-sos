@@ -105,28 +105,55 @@ function udpInitLogEventServer() {
                 msg[0] = msg[0].replace('/', '');
 
                 // Build object and convert to JSON
+                // Data types to be verified (set to empty string if not matching types below):
+                // log_row: numeric
+                // ts_iso: ISO8601 date
+                // ts_local: ISO8601 date
+                // level: string
+                // host: string
+                // subsystem: string
+                // windows_user: string
+                // message: string
+                // proxy_session_id: uuid
+                // user_directory: string
+                // user_id: string
+                // engine_ts: ISO8601 date
+                // process_id: uuid
+                // engine_exe_version: string
+                // server_started: ISO8601 date
+                // entry_type: string
+                // session_id: uuid
+                // app_id: uuid
                 let msgObj;
+
+                // Deifne a regex for ISO8601 date format
+                const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}\+\d{4}$/;
+
+                // Define a regex for UUId format
+                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
                 if (msg[0] === 'qseow-engine') {
                     msgObj = {
                         source: msg[0],
                         log_row: msg[1],
-                        ts_iso: msg[2],
-                        ts_local: msg[3],
+                        // Verify that the date is in ISO8601 format before assigning it to ts_iso
+                        ts_iso: isoDateRegex.test(msg[2]) ? msg[2] : '',
+                        ts_local: isoDateRegex.test(msg[3]) ? msg[3] : '',
                         level: msg[4],
                         host: msg[5],
                         subsystem: msg[6],
                         windows_user: msg[7],
                         message: msg[8],
-                        proxy_session_id: msg[9],
+                        proxy_session_id: uuidRegex.test(msg[9]) ? msg[9] : '',
                         user_directory: msg[10],
                         user_id: msg[11],
                         engine_ts: msg[12],
-                        process_id: msg[13],
+                        process_id: uuidRegex.test(msg[13]) ? msg[13] : '',
                         engine_exe_version: msg[14],
                         server_started: msg[15],
                         entry_type: msg[16],
-                        session_id: msg[17],
-                        app_id: msg[18],
+                        session_id: uuidRegex.test(msg[17]) ? msg[17] : '',
+                        app_id: uuidRegex.test(msg[18]) ? msg[18] : '',
                     };
 
                     // Different log events deliver QSEoW user directory/user differently.
