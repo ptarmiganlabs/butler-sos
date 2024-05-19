@@ -342,18 +342,19 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
 function postProxySessionsToInfluxdb(userSessions) {
     globals.logger.debug(`PROXY SESSIONS: User sessions: ${JSON.stringify(userSessions)}`);
 
+    globals.logger.silly(
+        `PROXY SESSIONS: Influxdb datapoint for server "${
+            userSessions.host
+        }", virtual proxy "${userSessions.virtualProxy}"": ${JSON.stringify(
+            userSessions.datapointInfluxdb,
+            null,
+            2
+        )}`
+    );
+
     globals.influx
         .writePoints(userSessions.datapointInfluxdb)
         .then(() => {
-            globals.logger.silly(
-                `PROXY SESSIONS: Influxdb datapoint for server "${
-                    userSessions.host
-                }", virtual proxy "${userSessions.virtualProxy}"": ${JSON.stringify(
-                    userSessions.datapointInfluxdb,
-                    null,
-                    2
-                )}`
-            );
 
             globals.logger.debug(
                 `PROXY SESSIONS: Session count for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"": ${userSessions.sessionCount}`
@@ -395,16 +396,17 @@ function postButlerSOSMemoryUsageToInfluxdb(memory) {
         },
     ];
 
+    globals.logger.silly(
+        `MEMORY USAGE INFLUXDB: Influxdb datapoint for Butler SOS memory usage: ${JSON.stringify(
+            datapoint,
+            null,
+            2
+        )}`
+    );
+
     globals.influx
         .writePoints(datapoint)
         .then(() => {
-            globals.logger.silly(
-                `MEMORY USAGE INFLUXDB: Influxdb datapoint for Butler SOS memory usage: ${JSON.stringify(
-                    datapoint,
-                    null,
-                    2
-                )}`
-            );
 
             globals.logger.verbose(
                 'MEMORY USAGE INFLUXDB: Sent Butler SOS memory usage data to InfluxDB'
@@ -470,16 +472,17 @@ function postUserEventToInfluxdb(msg) {
         if (msg?.appId) datapoint[0].fields.appId = msg.appId;
         if (msg?.appName) datapoint[0].fields.appName = msg.appName;
 
+        globals.logger.silly(
+            `USER EVENT INFLUXDB: Influxdb datapoint for Butler SOS user event: ${JSON.stringify(
+                datapoint,
+                null,
+                2
+            )}`
+        );
+
         globals.influx
             .writePoints(datapoint)
             .then(() => {
-                globals.logger.silly(
-                    `USER EVENT INFLUXDB: Influxdb datapoint for Butler SOS user event: ${JSON.stringify(
-                        datapoint,
-                        null,
-                        2
-                    )}`
-                );
 
                 globals.logger.verbose(
                     'USER EVENT INFLUXDB: Sent Butler SOS user event data to InfluxDB'
@@ -632,17 +635,17 @@ function postLogEventToInfluxdb(msg) {
                 },
             ];
 
+            globals.logger.silly(
+                `LOG EVENT INFLUXDB: Influxdb datapoint for Butler SOS log event: ${JSON.stringify(
+                    datapoint,
+                    null,
+                    2
+                )}`
+            );
+
             globals.influx
                 .writePoints(datapoint)
                 .then(() => {
-                    globals.logger.silly(
-                        `LOG EVENT INFLUXDB: Influxdb datapoint for Butler SOS log event: ${JSON.stringify(
-                            datapoint,
-                            null,
-                            2
-                        )}`
-                    );
-
                     globals.logger.verbose(
                         'LOG EVENT INFLUXDB: Sent Butler SOS log event data to InfluxDB'
                     );

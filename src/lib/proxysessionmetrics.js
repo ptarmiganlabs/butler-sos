@@ -42,7 +42,8 @@ function getProxySessionStatsFromSense(host, virtualProxy, influxTags) {
         globals.config.get('Butler-SOS.cert.clientCertCA')
     );
 
-    if (globals.config.get('Butler-SOS.cert.clientCertPassphrase').length > 0) {
+    if (globals.config.has('Butler-SOS.cert.clientCertPassphrase') === true &&
+        globals.config.get('Butler-SOS.cert.clientCertPassphrase')?.length > 0) {
         options.CertificatePassphrase = globals.config.get('Butler-SOS.cert.clientCertPassphrase');
     } else {
         options.CertificatePassphrase = null;
