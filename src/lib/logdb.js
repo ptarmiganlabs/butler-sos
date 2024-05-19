@@ -54,14 +54,7 @@ function setupLogDbTimer() {
                             globals.logger.silly(`LOGDB: Row: ${JSON.stringify(row)}`);
 
                             // Post to Influxdb (if enabled)
-                            if (
-                                (globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
-                                    globals.config.get(
-                                        'Butler-SOS.influxdbConfig.enableInfluxdb'
-                                    ) === true) ||
-                                (globals.config.has('Butler-SOS.influxdbConfig.enable') &&
-                                    globals.config.get('Butler-SOS.influxdbConfig.enable') === true)
-                            ) {
+                            if (globals.config.get('Butler-SOS.influxdbConfig.enable') === true) {
                                 globals.logger.silly(`LOGDB: Posting log db data to Influxdb...`);
 
                                 // Make sure that the payload message exists - storing it to Influx would otherwise throw an error
@@ -160,13 +153,7 @@ function setupLogDbTimer() {
                                 }
 
                                 // Post to MQTT (if enabled)
-                                if (
-                                    (globals.config.has('Butler-SOS.mqttConfig.enableMQTT') &&
-                                        globals.config.get('Butler-SOS.mqttConfig.enableMQTT') ===
-                                            true) ||
-                                    (globals.config.has('Butler-SOS.mqttConfig.enable') &&
-                                        globals.config.get('Butler-SOS.mqttConfig.enable') === true)
-                                ) {
+                                if (globals.config.get('Butler-SOS.mqttConfig.enable') === true) {
                                     globals.logger.silly('LOGDB: Posting log db data to MQTT...');
                                     postToMQTT.postLogDbToMQTT(
                                         row.process_host,

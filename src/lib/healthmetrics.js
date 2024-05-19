@@ -41,7 +41,7 @@ function getHealthStatsFromSense(host, tags, headers) {
         process.cwd(),
         globals.config.get('Butler-SOS.cert.clientCertCA')
     );
-    if (globals.config.has('Butler-SOS.cert.clientCertPassphrase')) {
+    if (globals.config.get('Butler-SOS.cert.clientCertPassphrase').length > 0) {
         options.CertificatePassphrase = globals.config.get('Butler-SOS.cert.clientCertPassphrase');
     } else {
         options.CertificatePassphrase = null;
@@ -93,41 +93,25 @@ function getHealthStatsFromSense(host, tags, headers) {
                 globals.logger.debug(`HEALTH: ${JSON.stringify(response.data)}`);
 
                 // Post to MQTT
-                if (
-                    (globals.config.has('Butler-SOS.mqttConfig.enableMQTT') &&
-                        globals.config.get('Butler-SOS.mqttConfig.enableMQTT') === true) ||
-                    (globals.config.has('Butler-SOS.mqttConfig.enable') &&
-                        globals.config.get('Butler-SOS.mqttConfig.enable') === true)
-                ) {
+                if (globals.config.get('Butler-SOS.mqttConfig.enable') === true) {
                     globals.logger.debug('HEALTH: Calling HEALTH metrics MQTT posting method');
                     postToMQTT.postHealthToMQTT(host, tags.host, response.data);
                 }
 
                 // Post to Influxdb
-                if (
-                    (globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
-                        globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
-                    (globals.config.has('Butler-SOS.influxdbConfig.enable') &&
-                        globals.config.get('Butler-SOS.influxdbConfig.enable') === true)
-                ) {
+                if (globals.config.get('Butler-SOS.influxdbConfig.enable') === true) {
                     globals.logger.debug('HEALTH: Calling HEALTH metrics Influxdb posting method');
                     postToInfluxdb.postHealthMetricsToInfluxdb(host, response.data, tags);
                 }
 
                 // Post to New Relic
-                if (
-                    globals.config.has('Butler-SOS.newRelic.enable') &&
-                    globals.config.get('Butler-SOS.newRelic.enable') === true
-                ) {
+                if (globals.config.get('Butler-SOS.newRelic.enable') === true) {
                     globals.logger.debug('HEALTH: Calling HEALTH metrics New Relic posting method');
                     postToNewRelic.postHealthMetricsToNewRelic(host, response.data, tags);
                 }
 
                 // Save latest available data for Prometheus
-                if (
-                    globals.config.has('Butler-SOS.prometheus.enable') &&
-                    globals.config.get('Butler-SOS.prometheus.enable') === true
-                ) {
+                if (globals.config.get('Butler-SOS.prometheus.enable') === true) {
                     globals.logger.debug('HEALTH: Calling HEALTH metrics Prometheus method');
                     prometheus.saveHealthMetrics(host, response.data, tags);
                 }

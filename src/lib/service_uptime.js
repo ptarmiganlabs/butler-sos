@@ -81,12 +81,7 @@ function serviceUptimeStart() {
 
         let enableInfluxDB = false;
 
-        if (
-            (globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
-                globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
-            (globals.config.has('Butler-SOS.influxdbConfig.enable') &&
-                globals.config.get('Butler-SOS.influxdbConfig.enable') === true)
-        ) {
+        if (globals.config.get('Butler-SOS.influxdbConfig.enable') === true) {
             enableInfluxDB = true;
         }
 
@@ -105,10 +100,7 @@ function serviceUptimeStart() {
         }
 
         // Send to New Relic
-        if (
-            globals.config.has('Butler-SOS.uptimeMonitor.storeNewRelic.enable') &&
-            globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.enable') === true) {
             postToNewRelic.postButlerSOSUptimeToNewRelic({
                 intervalMillisec,
                 heapUsed,

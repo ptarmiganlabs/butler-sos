@@ -42,7 +42,7 @@ function getProxySessionStatsFromSense(host, virtualProxy, influxTags) {
         globals.config.get('Butler-SOS.cert.clientCertCA')
     );
 
-    if (globals.config.has('Butler-SOS.cert.clientCertPassphrase')) {
+    if (globals.config.get('Butler-SOS.cert.clientCertPassphrase').length > 0) {
         options.CertificatePassphrase = globals.config.get('Butler-SOS.cert.clientCertPassphrase');
     } else {
         options.CertificatePassphrase = null;
@@ -98,12 +98,7 @@ function getProxySessionStatsFromSense(host, virtualProxy, influxTags) {
                 );
 
                 // Post to MQTT
-                if (
-                    (globals.config.has('Butler-SOS.mqttConfig.enableMQTT') &&
-                        globals.config.get('Butler-SOS.mqttConfig.enableMQTT') === true) ||
-                    (globals.config.has('Butler-SOS.mqttConfig.enable') &&
-                        globals.config.get('Butler-SOS.mqttConfig.enable') === true)
-                ) {
+                if (globals.config.get('Butler-SOS.mqttConfig.enable') === true) {
                     globals.logger.debug(
                         'PROXY SESSIONS: Calling user sessions MQTT posting method'
                     );
@@ -125,12 +120,7 @@ function getProxySessionStatsFromSense(host, virtualProxy, influxTags) {
                 );
 
                 // Post to Influxdb
-                if (
-                    (globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
-                        globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
-                    (globals.config.has('Butler-SOS.influxdbConfig.enable') &&
-                        globals.config.get('Butler-SOS.influxdbConfig.enable') === true)
-                ) {
+                if (globals.config.get('Butler-SOS.influxdbConfig.enable') === true) {
                     globals.logger.debug(
                         'PROXY SESSIONS: Calling user sessions Influxdb posting method'
                     );
@@ -140,11 +130,7 @@ function getProxySessionStatsFromSense(host, virtualProxy, influxTags) {
 
                 // Post to New Relic
                 if (
-                    globals.config.has('Butler-SOS.newRelic.enable') &&
                     globals.config.get('Butler-SOS.newRelic.enable') === true &&
-                    globals.config.has(
-                        'Butler-SOS.newRelic.metric.dynamic.proxy.sessions.enable'
-                    ) &&
                     globals.config.get(
                         'Butler-SOS.newRelic.metric.dynamic.proxy.sessions.enable'
                     ) === true
@@ -157,10 +143,7 @@ function getProxySessionStatsFromSense(host, virtualProxy, influxTags) {
                 }
 
                 // Save latest available data for Prometheus
-                if (
-                    globals.config.has('Butler-SOS.prometheus.enable') &&
-                    globals.config.get('Butler-SOS.prometheus.enable') === true
-                ) {
+                if (globals.config.get('Butler-SOS.prometheus.enable') === true) {
                     globals.logger.debug('HEALTH: Calling SESSIONS metrics Prometheus method');
                     prometheus.saveUserSessionMetrics(userProxySessionsData);
                 }

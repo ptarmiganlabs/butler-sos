@@ -187,13 +187,8 @@ async function mainScript() {
 
     // Start Prometheus metrics REST server on port set in config file
     if (globals.config.get('Butler-SOS.prometheus.enable') === true) {
-        const promHost = globals.config.has('Butler-SOS.prometheus.host')
-            ? globals.config.get('Butler-SOS.prometheus.host')
-            : '0.0.0.0';
-
-        const promPort = globals.config.has('Butler-SOS.prometheus.port')
-            ? globals.config.get('Butler-SOS.prometheus.port')
-            : 9842;
+        const promHost = globals.config.get('Butler-SOS.prometheus.host');
+        const promPort = globals.config.get('Butler-SOS.prometheus.port');
 
         const promNodeHost = '0.0.0.0';
         const promNodePort = 9001;

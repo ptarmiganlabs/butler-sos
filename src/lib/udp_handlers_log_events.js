@@ -244,10 +244,7 @@ function udpInitLogEventServer() {
 
                 // Post to MQTT (if enabled)
                 if (
-                    ((globals.config.has('Butler-SOS.mqttConfig.enableMQTT') &&
-                        globals.config.get('Butler-SOS.mqttConfig.enableMQTT') === true) ||
-                        (globals.config.has('Butler-SOS.mqttConfig.enable') &&
-                            globals.config.get('Butler-SOS.mqttConfig.enable') === true)) &&
+                    globals.config.get('Butler-SOS.mqttConfig.enable') === true &&
                     globals.config.get('Butler-SOS.logEvents.sendToMQTT.enable')
                 ) {
                     globals.logger.debug('LOG EVENT: Calling log event MQTT posting method');
@@ -256,10 +253,7 @@ function udpInitLogEventServer() {
 
                 // Post to Influxdb (if enabled)
                 if (
-                    ((globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
-                        globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
-                        (globals.config.has('Butler-SOS.influxdbConfig.enable') &&
-                            globals.config.get('Butler-SOS.influxdbConfig.enable') === true)) &&
+                    globals.config.get('Butler-SOS.influxdbConfig.enable') === true &&
                     globals.config.get('Butler-SOS.logEvents.sendToInfluxdb.enable')
                 ) {
                     globals.logger.debug('LOG EVENT: Calling log event Influxdb posting method');
@@ -268,7 +262,6 @@ function udpInitLogEventServer() {
 
                 // Post to New Relic (if enabled)
                 if (
-                    globals.config.has('Butler-SOS.newRelic.enable') &&
                     globals.config.get('Butler-SOS.newRelic.enable') === true &&
                     globals.config.get('Butler-SOS.logEvents.sendToNewRelic.enable')
                 ) {

@@ -206,9 +206,7 @@ if (
 const udpServerUserActivity = {};
 
 try {
-    udpServerUserActivity.host = config.has('Butler-SOS.userEvents.udpServerConfig.serverHost')
-        ? config.get('Butler-SOS.userEvents.udpServerConfig.serverHost')
-        : '';
+    udpServerUserActivity.host = config.get('Butler-SOS.userEvents.udpServerConfig.serverHost');
 
     // Prepare to listen on port X for incoming UDP connections regarding user activity events
     udpServerUserActivity.socket = dgram.createSocket({
@@ -216,11 +214,9 @@ try {
         reuseAddr: true,
     });
 
-    udpServerUserActivity.portUserActivity = config.has(
+    udpServerUserActivity.portUserActivity = config.get(
         'Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents'
-    )
-        ? config.get('Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents')
-        : '';
+    );
 } catch (err) {
     logger.error(`CONFIG: Setting up UDP user activity listener: ${err}`);
 }
@@ -230,9 +226,7 @@ try {
 const udpServerLogEvents = {};
 
 try {
-    udpServerLogEvents.host = config.has('Butler-SOS.logEvents.udpServerConfig.serverHost')
-        ? config.get('Butler-SOS.logEvents.udpServerConfig.serverHost')
-        : '';
+    udpServerLogEvents.host = config.get('Butler-SOS.logEvents.udpServerConfig.serverHost');
 
     // Prepare to listen on port X for incoming UDP connections regarding user activity events
     udpServerLogEvents.socket = dgram.createSocket({
@@ -240,9 +234,7 @@ try {
         reuseAddr: true,
     });
 
-    udpServerLogEvents.port = config.has('Butler-SOS.logEvents.udpServerConfig.portLogEvents')
-        ? config.get('Butler-SOS.logEvents.udpServerConfig.portLogEvents')
-        : '';
+    udpServerLogEvents.port = config.get('Butler-SOS.logEvents.udpServerConfig.portLogEvents');
 } catch (err) {
     logger.error(`CONFIG: Setting up UDP log events listener: ${err}`);
 }
@@ -360,11 +352,7 @@ if (config.get('Butler-SOS.influxdbConfig.enable') === true) {
 // Set up Influxdb v1 client
 const influx = new Influx.InfluxDB({
     host: config.get('Butler-SOS.influxdbConfig.host'),
-    port: `${
-        config.has('Butler-SOS.influxdbConfig.port')
-            ? config.get('Butler-SOS.influxdbConfig.port')
-            : '8086'
-    }`,
+    port: config.get('Butler-SOS.influxdbConfig.port'),
     database: config.get('Butler-SOS.influxdbConfig.v1Config.dbName'),
     username: `${
         config.get('Butler-SOS.influxdbConfig.v1Config.auth.enable')
