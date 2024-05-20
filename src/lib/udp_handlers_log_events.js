@@ -106,24 +106,6 @@ function udpInitLogEventServer() {
 
                 // Build object and convert to JSON
                 // Data types to be verified (set to empty string if not matching types below):
-                // log_row: numeric
-                // ts_iso: ISO8601 date
-                // ts_local: ISO8601 date
-                // level: string
-                // host: string
-                // subsystem: string
-                // windows_user: string
-                // message: string
-                // proxy_session_id: uuid
-                // user_directory: string
-                // user_id: string
-                // engine_ts: ISO8601 date
-                // process_id: uuid
-                // engine_exe_version: string
-                // server_started: ISO8601 date
-                // entry_type: string
-                // session_id: uuid
-                // app_id: uuid
                 let msgObj;
 
                 // Deifne a regex for ISO8601 date format
@@ -133,10 +115,30 @@ function udpInitLogEventServer() {
                 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
                 if (msg[0] === 'qseow-engine') {
+                    // log_row: numeric
+                    // ts_iso: ISO8601 date
+                    // ts_local: ISO8601 date
+                    // level: string
+                    // host: string
+                    // subsystem: string
+                    // windows_user: string
+                    // message: string
+                    // proxy_session_id: uuid
+                    // user_directory: string
+                    // user_id: string
+                    // engine_ts: ISO8601 date
+                    // process_id: uuid
+                    // engine_exe_version: string
+                    // server_started: ISO8601 date
+                    // entry_type: string
+                    // session_id: uuid
+                    // app_id: uuid
                     msgObj = {
                         source: msg[0],
-                        log_row: msg[1],
-                        // Verify that the date is in ISO8601 format before assigning it to ts_iso
+                        log_row:
+                            Number.isInteger(parseInt(msg[1], 10)) && parseInt(msg[1], 10) > 0
+                                ? parseInt(msg[1], 10)
+                                : -1,
                         ts_iso: isoDateRegex.test(msg[2]) ? msg[2] : '',
                         ts_local: isoDateRegex.test(msg[3]) ? msg[3] : '',
                         level: msg[4],
@@ -168,9 +170,9 @@ function udpInitLogEventServer() {
                 } else if (msg[0] === 'qseow-proxy') {
                     msgObj = {
                         source: msg[0],
-                        log_row: msg[1],
-                        ts_iso: msg[2],
-                        ts_local: msg[3],
+                        log_row: Number.isInteger(parseInt(msg[1], 10)) ? parseInt(msg[1], 10) : -1,
+                        ts_iso: isoDateRegex.test(msg[2]) ? msg[2] : '',
+                        ts_local: isoDateRegex.test(msg[3]) ? msg[3] : '',
                         level: msg[4],
                         host: msg[5],
                         subsystem: msg[6],
@@ -197,9 +199,9 @@ function udpInitLogEventServer() {
                 } else if (msg[0] === 'qseow-scheduler') {
                     msgObj = {
                         source: msg[0],
-                        log_row: msg[1],
-                        ts_iso: msg[2],
-                        ts_local: msg[3],
+                        log_row: Number.isInteger(parseInt(msg[1], 10)) ? parseInt(msg[1], 10) : -1,
+                        ts_iso: isoDateRegex.test(msg[2]) ? msg[2] : '',
+                        ts_local: isoDateRegex.test(msg[3]) ? msg[3] : '',
                         level: msg[4],
                         host: msg[5],
                         subsystem: msg[6],
@@ -211,9 +213,9 @@ function udpInitLogEventServer() {
                         user_full: msg[12],
                         task_name: msg[13],
                         app_name: msg[14],
-                        task_id: msg[15],
-                        app_id: msg[16],
-                        execution_id: msg[17],
+                        task_id: uuidRegex.test(msg[15]) ? msg[15] : '',
+                        app_id: uuidRegex.test(msg[16]) ? msg[16] : '',
+                        execution_id: uuidRegex.test(msg[17]) ? msg[17] : '',
                     };
 
                     // Different log events deliver QSEoW user directory/user differently.
@@ -239,9 +241,9 @@ function udpInitLogEventServer() {
                 } else if (msg[0] === 'qseow-repository') {
                     msgObj = {
                         source: msg[0],
-                        log_row: msg[1],
-                        ts_iso: msg[2],
-                        ts_local: msg[3],
+                        log_row: Number.isInteger(parseInt(msg[1], 10)) ? parseInt(msg[1], 10) : -1,
+                        ts_iso: isoDateRegex.test(msg[2]) ? msg[2] : '',
+                        ts_local: isoDateRegex.test(msg[3]) ? msg[3] : '',
                         level: msg[4],
                         host: msg[5],
                         subsystem: msg[6],

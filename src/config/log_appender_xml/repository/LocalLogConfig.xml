@@ -39,10 +39,10 @@
     <logger name="Service">
         <appender-ref ref="LogEvent" />
     </logger>
-    <logger name="System">
+    <logger name="System.Repository">
         <appender-ref ref="LogEvent" />
     </logger>
-    <logger name="UserManagement">
+    <logger name="UserManagement.Repository">
         <appender-ref ref="LogEvent" />
     </logger>
 </configuration>

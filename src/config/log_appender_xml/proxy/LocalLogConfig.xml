@@ -84,16 +84,16 @@
     </logger>
 
     <!-- Send UDP message to Butler SOS on warnings and errors -->
-    <logger name="Audit">
+    <logger name="Audit.Proxy">
         <appender-ref ref="LogEvent" />
     </logger>
     <logger name="AuditSecurity">
         <appender-ref ref="LogEvent" />
     </logger>
-    <logger name="Security">
+    <logger name="Security.Proxy">
         <appender-ref ref="LogEvent" />
     </logger>
-    <logger name="System">
+    <logger name="System.Proxy">
         <appender-ref ref="LogEvent" />
     </logger>
 </configuration>
