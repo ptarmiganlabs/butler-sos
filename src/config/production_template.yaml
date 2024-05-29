@@ -37,8 +37,8 @@ Butler-SOS:
     storeNewRelic:
       enable: false
       destinationAccount:
-        - First NR account
-        - Second NR account
+        # - First NR account
+        # - Second NR account
       metric:
         dynamic:
           butlerMemoryUsage:
@@ -47,12 +47,12 @@ Butler-SOS:
             enable: true            # Should Butler SOS' uptime (how long since it was started) be sent to New Relic?
       attribute: 
         static:                     # Static attributes/dimensions to attach to the data sent to New Relic.
-          - name: metricType
-            value: butler-sos-uptime
-          - name: qs_service
-            value: butler-sos
-          - name: qs_environment
-            value: prod
+          # - name: metricType
+          #   value: butler-sos-uptime
+          # - name: qs_service
+          #   value: butler-sos
+          # - name: qs_environment
+          #   value: prod
         dynamic:
           butlerVersion: 
             enable: true            # Should the Butler SOS version be included in the data sent to New Relic?
@@ -63,30 +63,30 @@ Butler-SOS:
   # Command line options takes precedence over settings in this config file.
   thirdPartyToolsCredentials:
     newRelic:         # Array of New Relic accounts/insert keys.
-      - accountName: First NR account
-        insertApiKey: <API key 1 (with insert permissions) from New Relic> 
-        accountId: <New Relic account ID 1>
-      - accountName: Second NR account
-        insertApiKey: <API key 2 (with insert permissions) from New Relic> 
-        accountId: <New Relic account ID 2>
+      # - accountName: First NR account
+      #   insertApiKey: <API key 1 (with insert permissions) from New Relic> 
+      #   accountId: <New Relic account ID 1>
+      # - accountName: Second NR account
+      #   insertApiKey: <API key 2 (with insert permissions) from New Relic> 
+      #   accountId: <New Relic account ID 2>
 
   # Track individual users opening/closing apps and starting/stopping sessions. 
   # Requires log appender XML file(s) to be added to Sense server(s).
   userEvents:                       
     enable: false
     excludeUser:                    # Optional blacklist of users that should be disregarded when it comes to user events
-      - directory: LAB
-        userId: testuser1
-      - directory: LAB
-        userId: testuser2
+      # - directory: LAB
+      #   userId: testuser1
+      # - directory: LAB
+      #   userId: testuser2
     udpServerConfig:
       serverHost: <IP or FQDN>      # Host/IP where user event server will listen for events from Sense
       portUserActivityEvents: 9997  # Port on which user event server will listen for events from Sense
     tags:                           # Tags are added to the data before it's stored in InfluxDB
-      - tag: env
-        value: DEV
-      - tag: foo
-        value: bar
+      # - tag: env
+      #   value: DEV
+      # - tag: foo
+      #   value: bar
     sendToMQTT: 
       enable: false                 # Set to true if user events should be forwarded as MQTT messages
       postTo:                       # Control when and to which MQTT topics messages are sent 
@@ -110,8 +110,8 @@ Butler-SOS:
     sendToNewRelic:
       enable: false                  # Should log events be sent to New Relic?
       destinationAccount:
-        - First NR account
-        - Second NR account
+        # - First NR account
+        # - Second NR account
       scramble: true                # Should user info (user directory and user ID) be scrambled before sent to NR?
 
   # Log events are used to capture Sense warnings, errors and fatals in real time
@@ -120,10 +120,10 @@ Butler-SOS:
       serverHost: <IP or FQDN>      # Host/IP where log event server will listen for events from Sense
       portLogEvents: 9996           # Port on which log event server will listen for events from Sense
     tags:
-      - tag: env
-        value: DEV
-      - tag: foo
-        value: bar
+      # - tag: env
+      #   value: DEV
+      # - tag: foo
+      #   value: bar
     source:
       engine:
         enable: false                   # Should log events from the engine service be handled?
@@ -144,8 +144,8 @@ Butler-SOS:
     sendToNewRelic:
       enable: false                    # Should log events be sent to New Relic?
       destinationAccount:
-        - First NR account
-        - Second NR account
+        # - First NR account
+        # - Second NR account
       source:
         engine:
           enable: true                   # Should log events from the engine service be handled?
@@ -218,21 +218,21 @@ Butler-SOS:
       # https://insights-collector.newrelic.com
       url: https://insights-collector.eu01.nr-data.net
       header:                   # Custom http headers
-        - name: X-My-Header
-          value: Header value
+        # - name: X-My-Header
+        #   value: Header value
       attribute: 
         static:                 # Static attributes/dimensions to attach to the events sent to New Relic.
-          - name: service
-            value: butler-sos
-          - name: environment
-            value: prod
+          # - name: service
+          #   value: butler-sos
+          # - name: environment
+          #   value: prod
         dynamic:
           butlerSosVersion: 
             enable: true       # Should the Butler SOS version be included in the events sent to New Relic?
     metric:
       destinationAccount:
-        - First NR account
-        - Second NR account
+        # - First NR account
+        # - Second NR account
       # There are different URLs depending on whther you have an EU or US region New Relic account.
       # The available URLs are listed here: https://docs.newrelic.com/docs/accounts/accounts-billing/account-setup/choose-your-data-center/
       # As of this writing the options for the New Relic metrics API are
@@ -240,8 +240,8 @@ Butler-SOS:
       # https://metric-api.newrelic.com/metric/v1
       url: https://insights-collector.eu01.nr-data.net/metric/v1   # Where should uptime data be sent?
       header:                   # Custom http headers
-        - name: X-My-Header
-          value: Header value
+        # - name: X-My-Header
+        #   value: Header value
       dynamic:
         engine:
           memory:               # Engine RAM (free/committed/allocated).
@@ -276,10 +276,10 @@ Butler-SOS:
             enable: true
       attribute: 
         static:                 # Static attributes/dimensions to attach to the data sent to New Relic.
-          - name: service
-            value: butler-sos
-          - name: environment
-            value: prod
+          # - name: service
+          #   value: butler-sos
+          # - name: environment
+          #   value: prod
         dynamic:
           butlerSosVersion: 
             enable: true       # Should the Butler SOS version be included in the data sent to New Relic?
@@ -335,10 +335,10 @@ Butler-SOS:
     pollingInterval: 30000        # How often (milliseconds) should session data be polled?
     excludeUser:                  # Optional blacklist of users that should be disregarded when it comes to session monitoring.
                                   # Blacklist is only applied to data in InfluxDB. All session data will be sent to MQTT.
-      - directory: LAB
-        userId: testuser1
-      - directory: LAB
-        userId: testuser2
+      # - directory: LAB
+      #   userId: testuser1
+      # - directory: LAB
+      #   userId: testuser2
 
   serversToMonitor:
     pollingInterval: 30000          # How often (milliseconds) should the healthcheck API be polled?
@@ -355,10 +355,10 @@ Butler-SOS:
     # NOTE: Prometheus only allows label names consisting of ASCII letters, numbers, as well as underscores. They must match the regex [a-zA-Z_][a-zA-Z0-9_]*. 
     # I.e. if the Prometheus endpoint is enabled, the tag names below must follow the label naming standard of Prometheus. 
     serverTagsDefinition: 
-      - server_group
-      - serverLocation
-      - server_type
-      - serverBrand
+      # - server_group
+      # - serverLocation
+      # - server_type
+      # - serverBrand
 
     # Sense Servers that should be queried for healthcheck data 
     servers:
@@ -375,13 +375,13 @@ Butler-SOS:
             - virtualProxy: /hdr              # "hdr" virtual proxy
             - virtualProxy: /sales            # "sales" virtual proxy
         serverTags:
-          server_group: DEV
-          serverLocation: Asia
-          server_type: virtual
-          serverBrand: Dell
+          # server_group: DEV
+          # serverLocation: Asia
+          # server_type: virtual
+          # serverBrand: Dell
         headers: 
-          X-My-Header-1: Header value 1
-          X-My-Header-2: Header value 2
+          # X-My-Header-1: Header value 1
+          # X-My-Header-2: Header value 2
       - host: <server2.my.domain>:4747        # Example: 10.34.3.46:4747
         serverName: <server2>
         serverDescription: <description>
@@ -393,11 +393,11 @@ Butler-SOS:
           virtualProxies:
             - virtualProxy: /finance          # "finance" virtual proxy
         serverTags:
-          server_group: PROD
-          serverLocation: Europe
-          server_type: physical
-          serverBrand: HP
+          # server_group: PROD
+          # serverLocation: Europe
+          # server_type: physical
+          # serverBrand: HP
         headers: 
-          X-My-Header-3: Header value 3
-          X-My-Header-4: Header value 4
+          # X-My-Header-3: Header value 3
+          # X-My-Header-4: Header value 4
     
