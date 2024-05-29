@@ -301,6 +301,7 @@ Butler-SOS:
     v2Config:                       # Settings for InfluxDB v2.x only, i.e. Butler-SOS.influxdbConfig.version=2
       org: myorg
       bucket: mybucket
+      description: Butler SOS metrics
       token: mytoken
       retentionDuration: 10d
     v1Config:                       # Settings below are for InfluxDB v1.x only, i.e. Butler-SOS.influxdbConfig.version=1

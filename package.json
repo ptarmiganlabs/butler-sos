@@ -30,6 +30,8 @@
     "homepage": "https://github.com/ptarmiganlabs/butler-sos#readme",
     "dependencies": {
         "@breejs/later": "^4.2.0",
+        "@influxdata/influxdb-client": "^1.33.2",
+        "@influxdata/influxdb-client-apis": "^1.33.2",
         "axios": "^1.7.0",
         "commander": "^12.1.0",
         "config": "^3.3.11",

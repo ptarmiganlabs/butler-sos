@@ -316,6 +316,7 @@ const confifgFileSchema = {
             v2Config: {
                 org: 'string',
                 bucket: 'string',
+                description: 'string',
                 token: 'string',
                 retentionDuration: 'string',
             },

@@ -202,140 +202,156 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
     appNamesInMemory.sort();
     sessionAppNamesInMemory.sort();
 
+    // Only write to influuxdb if the global influx object has been initialized
+    if (!globals.influx) {
+        globals.logger.warn(
+            'HEALTH METRICS: Influxdb object not initialized. Data will not be sent to InfluxDB'
+        );
+        return;
+    }
     // Write the whole reading to Influxdb
-    globals.influx
-        .writePoints([
-            {
-                measurement: 'sense_server',
-                tags: influxTags,
-                fields: {
-                    version: body.version,
-                    started: body.started,
-                    uptime: formattedTime,
+    // InfluxDB 1.x
+    if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
+        globals.influx
+            .writePoints([
+                {
+                    measurement: 'sense_server',
+                    tags: influxTags,
+                    fields: {
+                        version: body.version,
+                        started: body.started,
+                        uptime: formattedTime,
+                    },
                 },
-            },
-            {
-                measurement: 'mem',
-                tags: influxTags,
-                fields: {
-                    comitted: body.mem.committed,
-                    allocated: body.mem.allocated,
-                    free: body.mem.free,
+                {
+                    measurement: 'mem',
+                    tags: influxTags,
+                    fields: {
+                        comitted: body.mem.committed,
+                        allocated: body.mem.allocated,
+                        free: body.mem.free,
+                    },
                 },
-            },
-            {
-                measurement: 'apps',
-                tags: influxTags,
-                fields: {
-                    active_docs_count: body.apps.active_docs.length,
-                    loaded_docs_count: body.apps.loaded_docs.length,
-                    in_memory_docs_count: body.apps.in_memory_docs.length,
+                {
+                    measurement: 'apps',
+                    tags: influxTags,
+                    fields: {
+                        active_docs_count: body.apps.active_docs.length,
+                        loaded_docs_count: body.apps.loaded_docs.length,
+                        in_memory_docs_count: body.apps.in_memory_docs.length,
 
-                    active_docs: globals.config.get(
-                        'Butler-SOS.influxdbConfig.includeFields.activeDocs'
-                    )
-                        ? body.apps.active_docs
-                        : '',
-                    active_docs_names:
-                        globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
-                        globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
-                            ? appNamesActive.toString()
+                        active_docs: globals.config.get(
+                            'Butler-SOS.influxdbConfig.includeFields.activeDocs'
+                        )
+                            ? body.apps.active_docs
                             : '',
-                    active_session_docs_names:
-                        globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
-                        globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
-                            ? sessionAppNamesActive.toString()
-                            : '',
+                        active_docs_names:
+                            globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
+                            globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
+                                ? appNamesActive.toString()
+                                : '',
+                        active_session_docs_names:
+                            globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
+                            globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
+                                ? sessionAppNamesActive.toString()
+                                : '',
 
-                    loaded_docs: globals.config.get(
-                        'Butler-SOS.influxdbConfig.includeFields.loadedDocs'
-                    )
-                        ? body.apps.loaded_docs
-                        : '',
-                    loaded_docs_names:
-                        globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
-                        globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
-                            ? appNamesLoaded.toString()
+                        loaded_docs: globals.config.get(
+                            'Butler-SOS.influxdbConfig.includeFields.loadedDocs'
+                        )
+                            ? body.apps.loaded_docs
                             : '',
-                    loaded_session_docs_names:
-                        globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
-                        globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
-                            ? sessionAppNamesLoaded.toString()
-                            : '',
+                        loaded_docs_names:
+                            globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
+                            globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
+                                ? appNamesLoaded.toString()
+                                : '',
+                        loaded_session_docs_names:
+                            globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
+                            globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
+                                ? sessionAppNamesLoaded.toString()
+                                : '',
 
-                    in_memory_docs: globals.config.get(
-                        'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs'
-                    )
-                        ? body.apps.in_memory_docs
-                        : '',
-                    in_memory_docs_names:
-                        globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
-                        globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs')
-                            ? appNamesInMemory.toString()
+                        in_memory_docs: globals.config.get(
+                            'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs'
+                        )
+                            ? body.apps.in_memory_docs
                             : '',
-                    in_memory_session_docs_names:
-                        globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
-                        globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs')
-                            ? sessionAppNamesInMemory.toString()
-                            : '',
-                    calls: body.apps.calls,
-                    selections: body.apps.selections,
+                        in_memory_docs_names:
+                            globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
+                            globals.config.get(
+                                'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs'
+                            )
+                                ? appNamesInMemory.toString()
+                                : '',
+                        in_memory_session_docs_names:
+                            globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
+                            globals.config.get(
+                                'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs'
+                            )
+                                ? sessionAppNamesInMemory.toString()
+                                : '',
+                        calls: body.apps.calls,
+                        selections: body.apps.selections,
+                    },
                 },
-            },
-            {
-                measurement: 'cpu',
-                tags: influxTags,
-                fields: {
-                    total: body.cpu.total,
+                {
+                    measurement: 'cpu',
+                    tags: influxTags,
+                    fields: {
+                        total: body.cpu.total,
+                    },
                 },
-            },
-            {
-                measurement: 'session',
-                tags: influxTags,
-                fields: {
-                    active: body.session.active,
-                    total: body.session.total,
+                {
+                    measurement: 'session',
+                    tags: influxTags,
+                    fields: {
+                        active: body.session.active,
+                        total: body.session.total,
+                    },
                 },
-            },
-            {
-                measurement: 'users',
-                tags: influxTags,
-                fields: {
-                    active: body.users.active,
-                    total: body.users.total,
+                {
+                    measurement: 'users',
+                    tags: influxTags,
+                    fields: {
+                        active: body.users.active,
+                        total: body.users.total,
+                    },
                 },
-            },
-            {
-                measurement: 'cache',
-                tags: influxTags,
-                fields: {
-                    hits: body.cache.hits,
-                    lookups: body.cache.lookups,
-                    added: body.cache.added,
-                    replaced: body.cache.replaced,
-                    bytes_added: body.cache.bytes_added,
+                {
+                    measurement: 'cache',
+                    tags: influxTags,
+                    fields: {
+                        hits: body.cache.hits,
+                        lookups: body.cache.lookups,
+                        added: body.cache.added,
+                        replaced: body.cache.replaced,
+                        bytes_added: body.cache.bytes_added,
+                    },
                 },
-            },
-            {
-                measurement: 'saturated',
-                tags: influxTags,
-                fields: {
-                    saturated: body.saturated,
+                {
+                    measurement: 'saturated',
+                    tags: influxTags,
+                    fields: {
+                        saturated: body.saturated,
+                    },
                 },
-            },
-        ])
+            ])
 
-        .then(() => {
-            globals.logger.verbose(
-                `HEALTH METRICS: Sent health data to Influxdb for server ${influxTags.server_name}`
-            );
-        })
+            .then(() => {
+                globals.logger.verbose(
+                    `HEALTH METRICS: Sent health data to Influxdb for server ${influxTags.server_name}`
+                );
+            })
 
-        .catch((err) => {
-            globals.logger.error(
-                `HEALTH METRICS: Error saving health data to InfluxDB! ${err.stack}`
-            );
-        });
+            .catch((err) => {
+                globals.logger.error(
+                    `HEALTH METRICS: Error saving health data to InfluxDB! ${err.stack}`
+                );
+            });
+    } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
+        // TODO v2
+    }
 }
 
 // function postProxySessionsToInfluxdb(host, virtualProxy, body, influxTags) {
@@ -352,26 +368,38 @@ function postProxySessionsToInfluxdb(userSessions) {
         )}`
     );
 
-    globals.influx
-        .writePoints(userSessions.datapointInfluxdb)
-        .then(() => {
+    // Only write to influuxdb if the global influx object has been initialized
+    if (!globals.influx) {
+        globals.logger.warn(
+            'PROXY SESSIONS: Influxdb object not initialized. Data will not be sent to InfluxDB'
+        );
+        return;
+    }
 
-            globals.logger.debug(
-                `PROXY SESSIONS: Session count for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"": ${userSessions.sessionCount}`
-            );
-            globals.logger.debug(
-                `PROXY SESSIONS: User list for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"": ${userSessions.uniqueUserList}`
-            );
+    // InfluxDB 1.x
+    if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
+        globals.influx
+            .writePoints(userSessions.datapointInfluxdb)
+            .then(() => {
+                globals.logger.debug(
+                    `PROXY SESSIONS: Session count for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"": ${userSessions.sessionCount}`
+                );
+                globals.logger.debug(
+                    `PROXY SESSIONS: User list for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"": ${userSessions.uniqueUserList}`
+                );
 
-            globals.logger.verbose(
-                `PROXY SESSIONS: Sent user session data to InfluxDB for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"`
-            );
-        })
-        .catch((err) => {
-            globals.logger.error(
-                `PROXY SESSIONS: Error saving user session data to InfluxDB! ${err.stack}`
-            );
-        });
+                globals.logger.verbose(
+                    `PROXY SESSIONS: Sent user session data to InfluxDB for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"`
+                );
+            })
+            .catch((err) => {
+                globals.logger.error(
+                    `PROXY SESSIONS: Error saving user session data to InfluxDB! ${err.stack}`
+                );
+            });
+    } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
+        // TODO v2
+    }
 }
 
 function postButlerSOSMemoryUsageToInfluxdb(memory) {
@@ -404,19 +432,31 @@ function postButlerSOSMemoryUsageToInfluxdb(memory) {
         )}`
     );
 
-    globals.influx
-        .writePoints(datapoint)
-        .then(() => {
+    // Only write to influuxdb if the global influx object has been initialized
+    if (!globals.influx) {
+        globals.logger.warn(
+            'MEMORY USAGE INFLUXDB: Influxdb object not initialized. Data will not be sent to InfluxDB'
+        );
+        return;
+    }
 
-            globals.logger.verbose(
-                'MEMORY USAGE INFLUXDB: Sent Butler SOS memory usage data to InfluxDB'
-            );
-        })
-        .catch((err) => {
-            globals.logger.error(
-                `MEMORY USAGE INFLUXDB: Error saving user session data to InfluxDB! ${err.stack}`
-            );
-        });
+    // InfluxDB 1.x
+    if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
+        globals.influx
+            .writePoints(datapoint)
+            .then(() => {
+                globals.logger.verbose(
+                    'MEMORY USAGE INFLUXDB: Sent Butler SOS memory usage data to InfluxDB'
+                );
+            })
+            .catch((err) => {
+                globals.logger.error(
+                    `MEMORY USAGE INFLUXDB: Error saving user session data to InfluxDB! ${err.stack}`
+                );
+            });
+    } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
+        // TODO v2
+    }
 }
 
 function postUserEventToInfluxdb(msg) {
@@ -480,19 +520,31 @@ function postUserEventToInfluxdb(msg) {
             )}`
         );
 
-        globals.influx
-            .writePoints(datapoint)
-            .then(() => {
+        // Only write to influuxdb if the global influx object has been initialized
+        if (!globals.influx) {
+            globals.logger.warn(
+                'USER EVENT INFLUXDB: Influxdb object not initialized. Data will not be sent to InfluxDB'
+            );
+            return;
+        }
 
-                globals.logger.verbose(
-                    'USER EVENT INFLUXDB: Sent Butler SOS user event data to InfluxDB'
-                );
-            })
-            .catch((err) => {
-                globals.logger.error(
-                    `USER EVENT INFLUXDB: Error saving user event to InfluxDB! ${err}`
-                );
-            });
+        // InfluxDB 1.x
+        if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
+            globals.influx
+                .writePoints(datapoint)
+                .then(() => {
+                    globals.logger.verbose(
+                        'USER EVENT INFLUXDB: Sent Butler SOS user event data to InfluxDB'
+                    );
+                })
+                .catch((err) => {
+                    globals.logger.error(
+                        `USER EVENT INFLUXDB: Error saving user event to InfluxDB! ${err}`
+                    );
+                });
+        } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
+            // TODO v2
+        }
     } catch (err) {
         globals.logger.error(`USER EVENT INFLUXDB: Error saving user event to InfluxDB! ${err}`);
     }
@@ -643,18 +695,31 @@ function postLogEventToInfluxdb(msg) {
                 )}`
             );
 
-            globals.influx
-                .writePoints(datapoint)
-                .then(() => {
-                    globals.logger.verbose(
-                        'LOG EVENT INFLUXDB: Sent Butler SOS log event data to InfluxDB'
-                    );
-                })
-                .catch((err) => {
-                    globals.logger.error(
-                        `LOG EVENT INFLUXDB 1: Error saving log event to InfluxDB! ${err}`
-                    );
-                });
+            // Only write to influuxdb if the global influx object has been initialized
+            if (!globals.influx) {
+                globals.logger.warn(
+                    'LOG EVENT INFLUXDB: Influxdb object not initialized. Data will not be sent to InfluxDB'
+                );
+                return;
+            }
+
+            // InfluxDB 1.x
+            if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
+                globals.influx
+                    .writePoints(datapoint)
+                    .then(() => {
+                        globals.logger.verbose(
+                            'LOG EVENT INFLUXDB: Sent Butler SOS log event data to InfluxDB'
+                        );
+                    })
+                    .catch((err) => {
+                        globals.logger.error(
+                            `LOG EVENT INFLUXDB 1: Error saving log event to InfluxDB! ${err}`
+                        );
+                    });
+            } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
+                // TODO v2
+            }
         }
     } catch (err) {
         globals.logger.error(`LOG EVENT INFLUXDB 2: Error saving log event to InfluxDB! ${err}`);
