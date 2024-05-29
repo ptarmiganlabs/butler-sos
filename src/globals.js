@@ -527,50 +527,45 @@ async function initInfluxDB() {
         }
 
         if (enableInfluxdb) {
-            influx
-                .getDatabaseNames()
-                .then((names) => {
-                    if (!names.includes(dbName)) {
-                        influx
-                            .createDatabase(dbName)
-                            .then(() => {
-                                logger.info(`CONFIG: Created new InfluxDB database: ${dbName}`);
+            try {
+                const names = await influx.getDatabaseNames();
+                if (!names.includes(dbName)) {
+                    try {
+                        const res = await influx.createDatabase(dbName);
+                        logger.info(`CONFIG: Created new InfluxDB v1 database: ${dbName}`);
 
-                                const newPolicy = config.get(
-                                    'Butler-SOS.influxdbConfig.v1Config.retentionPolicy'
-                                );
+                        const newPolicy = config.get(
+                            'Butler-SOS.influxdbConfig.v1Config.retentionPolicy'
+                        );
 
-                                // Create new default retention policy
-                                influx
-                                    .createRetentionPolicy(newPolicy.name, {
-                                        database: dbName,
-                                        duration: newPolicy.duration,
-                                        replication: 1,
-                                        isDefault: true,
-                                    })
-                                    .then(() => {
-                                        logger.info(
-                                            `CONFIG: Created new InfluxDB retention policy: ${newPolicy.name}`
-                                        );
-                                    })
-                                    .catch((err) => {
-                                        logger.error(
-                                            `CONFIG: Error creating new InfluxDB retention policy "${newPolicy.name}"! ${err.stack}`
-                                        );
-                                    });
-                            })
-                            .catch((err) => {
-                                logger.error(
-                                    `CONFIG: Error creating new InfluxDB database "${dbName}"! ${err.stack}`
-                                );
+                        // Create new default retention policy
+                        try {
+                            const res2 = await influx.createRetentionPolicy(newPolicy.name, {
+                                database: dbName,
+                                duration: newPolicy.duration,
+                                replication: 1,
+                                isDefault: true,
                             });
-                    } else {
-                        logger.info(`CONFIG: Found InfluxDB database: ${dbName}`);
+
+                            logger.info(
+                                `CONFIG: Created new InfluxDB v1 retention policy: ${newPolicy.name}`
+                            );
+                        } catch (err) {
+                            logger.error(
+                                `CONFIG: Error creating new InfluxDB v1 retention policy "${newPolicy.name}"! ${err.stack}`
+                            );
+                        }
+                    } catch (err) {
+                        logger.error(
+                            `CONFIG: Error creating new InfluxDB v1 database "${dbName}"! ${err.stack}`
+                        );
                     }
-                })
-                .catch((err) => {
-                    logger.error(`CONFIG: Error getting list of InfluxDB databases. ${err.stack}`);
-                });
+                } else {
+                    logger.info(`CONFIG: Found InfluxDB v1 database: ${dbName}`);
+                }
+            } catch (err) {
+                logger.error(`CONFIG: Error getting list of InfluxDB v1 databases. ${err.stack}`);
+            }
         }
     } else if (config.get('Butler-SOS.influxdbConfig.version') === 2) {
         // Get config

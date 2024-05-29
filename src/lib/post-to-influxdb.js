@@ -212,8 +212,8 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
     // Write the whole reading to Influxdb
     // InfluxDB 1.x
     if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
-        globals.influx
-            .writePoints([
+        try {
+            const res = await globals.influx.writePoints([
                 {
                     measurement: 'sense_server',
                     tags: influxTags,
@@ -336,26 +336,23 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
                         saturated: body.saturated,
                     },
                 },
-            ])
+            ]);
+        } catch (err) {
+            globals.logger.error(
+                `HEALTH METRICS: Error saving health data to InfluxDB! ${err.stack}`
+            );
+        }
 
-            .then(() => {
-                globals.logger.verbose(
-                    `HEALTH METRICS: Sent health data to Influxdb for server ${influxTags.server_name}`
-                );
-            })
-
-            .catch((err) => {
-                globals.logger.error(
-                    `HEALTH METRICS: Error saving health data to InfluxDB! ${err.stack}`
-                );
-            });
+        globals.logger.verbose(
+            `HEALTH METRICS: Sent health data to Influxdb for server ${influxTags.server_name}`
+        );
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
         // TODO v2
     }
 }
 
 // function postProxySessionsToInfluxdb(host, virtualProxy, body, influxTags) {
-function postProxySessionsToInfluxdb(userSessions) {
+async function postProxySessionsToInfluxdb(userSessions) {
     globals.logger.debug(`PROXY SESSIONS: User sessions: ${JSON.stringify(userSessions)}`);
 
     globals.logger.silly(
@@ -378,31 +375,30 @@ function postProxySessionsToInfluxdb(userSessions) {
 
     // InfluxDB 1.x
     if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
-        globals.influx
-            .writePoints(userSessions.datapointInfluxdb)
-            .then(() => {
-                globals.logger.debug(
-                    `PROXY SESSIONS: Session count for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"": ${userSessions.sessionCount}`
-                );
-                globals.logger.debug(
-                    `PROXY SESSIONS: User list for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"": ${userSessions.uniqueUserList}`
-                );
+        try {
+            const res = await globals.influx.writePoints(userSessions.datapointInfluxdb);
+        } catch (err) {
+            globals.logger.error(
+                `PROXY SESSIONS: Error saving user session data to InfluxDB! ${err.stack}`
+            );
+        }
 
-                globals.logger.verbose(
-                    `PROXY SESSIONS: Sent user session data to InfluxDB for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"`
-                );
-            })
-            .catch((err) => {
-                globals.logger.error(
-                    `PROXY SESSIONS: Error saving user session data to InfluxDB! ${err.stack}`
-                );
-            });
+        globals.logger.debug(
+            `PROXY SESSIONS: Session count for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"": ${userSessions.sessionCount}`
+        );
+        globals.logger.debug(
+            `PROXY SESSIONS: User list for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"": ${userSessions.uniqueUserList}`
+        );
+
+        globals.logger.verbose(
+            `PROXY SESSIONS: Sent user session data to InfluxDB for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"`
+        );
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
         // TODO v2
     }
 }
 
-function postButlerSOSMemoryUsageToInfluxdb(memory) {
+async function postButlerSOSMemoryUsageToInfluxdb(memory) {
     globals.logger.debug(`MEMORY USAGE: Memory usage ${JSON.stringify(memory, null, 2)})`);
 
     // Get Butler version
@@ -442,24 +438,23 @@ function postButlerSOSMemoryUsageToInfluxdb(memory) {
 
     // InfluxDB 1.x
     if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
-        globals.influx
-            .writePoints(datapoint)
-            .then(() => {
-                globals.logger.verbose(
-                    'MEMORY USAGE INFLUXDB: Sent Butler SOS memory usage data to InfluxDB'
-                );
-            })
-            .catch((err) => {
-                globals.logger.error(
-                    `MEMORY USAGE INFLUXDB: Error saving user session data to InfluxDB! ${err.stack}`
-                );
-            });
+        try {
+            const res = await globals.influx.writePoints(datapoint);
+        } catch (err) {
+            globals.logger.error(
+                `MEMORY USAGE INFLUXDB: Error saving user session data to InfluxDB! ${err.stack}`
+            );
+        }
+
+        globals.logger.verbose(
+            'MEMORY USAGE INFLUXDB: Sent Butler SOS memory usage data to InfluxDB'
+        );
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
         // TODO v2
     }
 }
 
-function postUserEventToInfluxdb(msg) {
+async function postUserEventToInfluxdb(msg) {
     globals.logger.debug(`USER EVENT INFLUXDB: ${msg})`);
 
     try {
@@ -530,18 +525,17 @@ function postUserEventToInfluxdb(msg) {
 
         // InfluxDB 1.x
         if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
-            globals.influx
-                .writePoints(datapoint)
-                .then(() => {
-                    globals.logger.verbose(
-                        'USER EVENT INFLUXDB: Sent Butler SOS user event data to InfluxDB'
-                    );
-                })
-                .catch((err) => {
-                    globals.logger.error(
-                        `USER EVENT INFLUXDB: Error saving user event to InfluxDB! ${err}`
-                    );
-                });
+            try {
+                const res = await globals.influx.writePoints(datapoint);
+            } catch (err) {
+                globals.logger.error(
+                    `USER EVENT INFLUXDB: Error saving user event to InfluxDB! ${err}`
+                );
+            }
+
+            globals.logger.verbose(
+                'USER EVENT INFLUXDB: Sent Butler SOS user event data to InfluxDB'
+            );
         } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
             // TODO v2
         }
@@ -550,7 +544,7 @@ function postUserEventToInfluxdb(msg) {
     }
 }
 
-function postLogEventToInfluxdb(msg) {
+async function postLogEventToInfluxdb(msg) {
     globals.logger.debug(`LOG EVENT INFLUXDB: ${msg})`);
 
     try {
@@ -705,18 +699,17 @@ function postLogEventToInfluxdb(msg) {
 
             // InfluxDB 1.x
             if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
-                globals.influx
-                    .writePoints(datapoint)
-                    .then(() => {
-                        globals.logger.verbose(
-                            'LOG EVENT INFLUXDB: Sent Butler SOS log event data to InfluxDB'
-                        );
-                    })
-                    .catch((err) => {
-                        globals.logger.error(
-                            `LOG EVENT INFLUXDB 1: Error saving log event to InfluxDB! ${err}`
-                        );
-                    });
+                try {
+                    globals.influx.writePoints(datapoint);
+                } catch (err) {
+                    globals.logger.error(
+                        `LOG EVENT INFLUXDB 1: Error saving log event to InfluxDB! ${err}`
+                    );
+                }
+
+                globals.logger.verbose(
+                    'LOG EVENT INFLUXDB: Sent Butler SOS log event data to InfluxDB'
+                );
             } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
                 // TODO v2
             }
