@@ -4,7 +4,7 @@ const globals = require('../globals');
 const postToMQTT = require('./post-to-mqtt');
 
 function setupLogDbTimer() {
-    // Get query period from config file. 
+    // Get query period from config file.
     const queryPeriod = globals.config.get('Butler-SOS.logdb.queryPeriod');
 
     // Configure timer for getting log data from Postgres

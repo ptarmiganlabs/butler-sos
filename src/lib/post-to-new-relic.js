@@ -150,7 +150,8 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
         }
 
         if (
-            globals.config.get('Butler-SOS.newRelic.metric.dynamic.engine.selections.enable') === true
+            globals.config.get('Butler-SOS.newRelic.metric.dynamic.engine.selections.enable') ===
+            true
         ) {
             metrics.push({
                 name: 'qs_engineSelections',
@@ -190,7 +191,8 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
         }
 
         if (
-            globals.config.get('Butler-SOS.newRelic.metric.dynamic.engine.saturated.enable') === true
+            globals.config.get('Butler-SOS.newRelic.metric.dynamic.engine.saturated.enable') ===
+            true
         ) {
             metrics.push({
                 name: 'qs_engineSaturated',
