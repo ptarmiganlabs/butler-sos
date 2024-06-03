@@ -50,13 +50,31 @@ process.emit = function (name, data, ...args) {
     return originalEmit.apply(process, arguments);
 };
 
-globals.initInfluxDB();
-
-if (globals.config.get('Butler-SOS.uptimeMonitor.enable') === true) {
-    serviceUptime.serviceUptimeStart();
+async function sleep(ms) {
+    // eslint-disable-next-line no-promise-executor-return
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function mainScript() {
+    // Sleep 5 seconds to allow inits to complete
+    globals.logger.info('MAIN: Waiting 5 seconds for initializations to complete...');
+    globals.logger.info('5...');
+    await sleep(1000);
+    globals.logger.info('4...');
+    await sleep(1000);
+    globals.logger.info('3...');
+    await sleep(1000);
+    globals.logger.info('2...');
+    await sleep(1000);
+    globals.logger.info('1...');
+    await sleep(1000);
+
+    await globals.initInfluxDB();
+
+    if (globals.config.get('Butler-SOS.uptimeMonitor.enable') === true) {
+        serviceUptime.serviceUptimeStart();
+    }
+
     // Verify that the config file has the correct format
     // Only do this if the command line option no-config-file-verify is NOT set
     if (globals.options.skipConfigVerification) {
