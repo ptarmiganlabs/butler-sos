@@ -1,5 +1,41 @@
 # Changelog
 
+## [10.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v9.10.3...butler-sos-v10.0.0) (2024-06-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* Added support for InfluxDB v2, config file format has changed
+
+### Bug Fixes
+
+* **config:** Allow empty arrays in config file ([df98478](https://github.com/ptarmiganlabs/butler-sos/commit/df984789331ec86a0bba158df60ae68717ab0509))
+* **config:** Make template YAML config file easier to get started with by commenting out all optional array values ([a26d0f0](https://github.com/ptarmiganlabs/butler-sos/commit/a26d0f01ef9e276d29bbb918ae182d62f4743c88)), closes [#808](https://github.com/ptarmiganlabs/butler-sos/issues/808)
+* **log-event:** Make handling of log and user events sent from QS server more robust ([45822c5](https://github.com/ptarmiganlabs/butler-sos/commit/45822c5a330c312b831605e06a3839ff5794be80)), closes [#806](https://github.com/ptarmiganlabs/butler-sos/issues/806)
+* **log-events:** Ensure only QS engine messages are forwarded as qseow-engine messages to Butler SOS ([9dcc328](https://github.com/ptarmiganlabs/butler-sos/commit/9dcc3287cbfd08d315124357b6244d4043eff6dd)), closes [#805](https://github.com/ptarmiganlabs/butler-sos/issues/805)
+* **logdb:** Don't set up log db data structures if that feature is disabled in config file ([153ad9d](https://github.com/ptarmiganlabs/butler-sos/commit/153ad9dc2ab3febee3623e4bdc678ec53754f120))
+* **startup:** Add 5 second delay during startup to make that phase more robust ([4e75727](https://github.com/ptarmiganlabs/butler-sos/commit/4e757273885b575bc93c0db9f088074e3aef9122))
+* **startup:** Make indentation of startup info consistent ([0d70f52](https://github.com/ptarmiganlabs/butler-sos/commit/0d70f52d4b5e76882aa4dd9d629d59b29038202e)), closes [#761](https://github.com/ptarmiganlabs/butler-sos/issues/761)
+* **uptime:** Round uptime seconds value to whole seconds ([16097a0](https://github.com/ptarmiganlabs/butler-sos/commit/16097a0cae9ed5f2bb99da25999d5c2284cf9bc1)), closes [#807](https://github.com/ptarmiganlabs/butler-sos/issues/807)
+
+
+### Miscellaneous
+
+* **deps:** Update dependencies ([95be9a0](https://github.com/ptarmiganlabs/butler-sos/commit/95be9a0f0ad3c1df138c494d5f1b6674a504d2d7))
+* **deps:** Update dependencies ([a56f5a7](https://github.com/ptarmiganlabs/butler-sos/commit/a56f5a79b8359499f075c8b0d18c3f688cadb2bb))
+* **deps:** Update dependencies to stay safe and secure ([e7ba150](https://github.com/ptarmiganlabs/butler-sos/commit/e7ba150c0c79e6df9f055297cc6a5c139d88b142))
+
+
+### Refactoring
+
+* **config:** Remove support for old config file formats now that all config file settings are mandatory ([350f57c](https://github.com/ptarmiganlabs/butler-sos/commit/350f57ca8d1b5d12d3b5c262fe819f44cdfa9b0b))
+* Remove support for old, long deprecated config file formats ([1d6989e](https://github.com/ptarmiganlabs/butler-sos/commit/1d6989e221e9b51eafe4e989eddab349e313e4c3))
+
+
+### Documentation
+
+* Added support for InfluxDB v2, config file format has changed ([97e5faa](https://github.com/ptarmiganlabs/butler-sos/commit/97e5faae2f0d9cec86364702f03be7ad153e9db3))
+
 ## [9.10.3](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v9.10.2...butler-sos-v9.10.3) (2024-04-09)
 
 
