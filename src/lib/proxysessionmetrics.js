@@ -173,7 +173,6 @@ function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
                             },
                         };
                     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
-                        // TODO v2
                         // Create data point for InfluxDB v2
                         sessionDatapoint = new Point('user_session_details')
                             .tag('user_session_id', bodyItem.SessionId)

@@ -351,8 +351,6 @@ async function postHealthMetricsToInfluxdb(serverName, host, body, serverTags) {
             `HEALTH METRICS: Sent health data to Influxdb for server ${serverTags.server_name}`
         );
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
-        // TODO v2
-
         // Only write to influuxdb if the global influxWriteApi object has been initialized
         if (!globals.influxWriteApi) {
             globals.logger.warn(
@@ -528,8 +526,6 @@ async function postProxySessionsToInfluxdb(userSessions) {
             `PROXY SESSIONS: Sent user session data to InfluxDB for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"`
         );
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
-        // TODO v2
-
         // Only write to influuxdb if the global influxWriteApi object has been initialized
         if (!globals.influxWriteApi) {
             globals.logger.warn(
@@ -616,11 +612,7 @@ async function postButlerSOSMemoryUsageToInfluxdb(memory) {
             'MEMORY USAGE INFLUXDB: Sent Butler SOS memory usage data to InfluxDB'
         );
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
-        // TODO v2
-
         // Create new write API object
-        // This is in contrast to elsewhere in the code, where the write API object is created once and reused
-        // The rationale for this is that the memory usage data is only sent infrequently and it's then ok with the extra overhead of creating the API object each time
         // advanced write options
         const writeOptions = {
             /* the maximum points/lines to send in a single batch to InfluxDB server */
@@ -773,12 +765,8 @@ async function postUserEventToInfluxdb(msg) {
 
         globals.logger.verbose('USER EVENT INFLUXDB: Sent Butler SOS user event data to InfluxDB');
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
-        // TODO v2
-
         // Create new write API object
-        // This is in contrast to elsewhere in the code, where the write API object is created once and reused
-        // The rationale for this is that the memory usage data is only sent infrequently and it's then ok with the extra overhead of creating the API object each time
-        // advanced write options
+        // Advanced write options
         const writeOptions = {
             /* the maximum points/lines to send in a single batch to InfluxDB server */
             // batchSize: flushBatchSize + 1, // don't let automatically flush data
@@ -887,157 +875,159 @@ async function postLogEventToInfluxdb(msg) {
     globals.logger.debug(`LOG EVENT INFLUXDB: ${msg})`);
 
     try {
-        // First prepare tags relating to the actual log event, then add tags defined in the config file
-        // The config file tags can for example be used to separate data from DEV/TEST/PROD environments
-        let tags;
-        let fields;
+        // Only write to influuxdb if the global influx object has been initialized
+        if (!globals.influx) {
+            globals.logger.warn(
+                'LOG EVENT INFLUXDB: Influxdb object not initialized. Data will not be sent to InfluxDB'
+            );
+            return;
+        }
 
-        if (
-            msg.source === 'qseow-engine' ||
-            msg.source === 'qseow-proxy' ||
-            msg.source === 'qseow-scheduler' ||
-            msg.source === 'qseow-repository'
-        ) {
-            if (msg.source === 'qseow-engine') {
-                tags = {
-                    host: msg.host,
-                    level: msg.level,
-                    source: msg.source,
-                    log_row: msg.log_row,
-                    subsystem: msg.subsystem,
-                };
-                // Tags that are empty in some cases. Only add if they are non-empty
-                if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
-                if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
-                if (msg?.user_id?.length > 0) tags.user_id = msg.user_id;
-                if (msg?.result_code?.length > 0) tags.result_code = msg.result_code;
-                if (msg?.windows_user?.length > 0) tags.windows_user = msg.windows_user;
-                if (msg?.task_id?.length > 0) tags.task_id = msg.task_id;
-                if (msg?.task_name?.length > 0) tags.task_name = msg.task_name;
-                if (msg?.app_id?.length > 0) tags.app_id = msg.app_id;
-                if (msg?.app_name?.length > 0) tags.app_name = msg.app_name;
-                if (msg?.engine_exe_version?.length > 0)
-                    tags.engine_exe_version = msg.engine_exe_version;
+        let datapoint;
 
-                fields = {
-                    message: msg.message,
-                    exception_message: msg.exception_message,
-                    command: msg.command,
-                    result_code: msg.result_code,
-                    origin: msg.origin,
-                    context: msg.context,
-                    session_id: msg.session_id,
-                    raw_event: JSON.stringify(msg),
-                };
-            } else if (msg.source === 'qseow-proxy') {
-                tags = {
-                    host: msg.host,
-                    level: msg.level,
-                    source: msg.source,
-                    log_row: msg.log_row,
-                    subsystem: msg.subsystem,
-                };
-                // Tags that are empty in some cases. Only add if they are non-empty
-                if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
-                if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
-                if (msg?.user_id?.length > 0) tags.user_id = msg.user_id;
-                if (msg?.result_code?.length > 0) tags.result_code = msg.result_code;
-
-                fields = {
-                    message: msg.message,
-                    exception_message: msg.exception_message,
-                    command: msg.command,
-                    result_code: msg.result_code,
-                    origin: msg.origin,
-                    context: msg.context,
-                    raw_event: JSON.stringify(msg),
-                };
-            } else if (msg.source === 'qseow-scheduler') {
-                tags = {
-                    host: msg.host,
-                    level: msg.level,
-                    source: msg.source,
-                    log_row: msg.log_row,
-                    subsystem: msg.subsystem,
-                };
-                // Tags that are empty in some cases. Only add if they are non-empty
-                if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
-                if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
-                if (msg?.user_id?.length > 0) tags.user_id = msg.user_id;
-                if (msg?.task_id?.length > 0) tags.task_id = msg.task_id;
-                if (msg?.task_name?.length > 0) tags.task_name = msg.task_name;
-
-                fields = {
-                    message: msg.message,
-                    exception_message: msg.exception_message,
-                    app_name: msg.app_name,
-                    app_id: msg.app_id,
-                    execution_id: msg.execution_id,
-                    raw_event: JSON.stringify(msg),
-                };
-            } else if (msg.source === 'qseow-repository') {
-                tags = {
-                    host: msg.host,
-                    level: msg.level,
-                    source: msg.source,
-                    log_row: msg.log_row,
-                    subsystem: msg.subsystem,
-                };
-                // Tags that are empty in some cases. Only add if they are non-empty
-                if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
-                if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
-                if (msg?.user_id?.length > 0) tags.user_id = msg.user_id;
-                if (msg?.result_code?.length > 0) tags.result_code = msg.result_code;
-
-                fields = {
-                    message: msg.message,
-                    exception_message: msg.exception_message,
-                    command: msg.command,
-                    result_code: msg.result_code,
-                    origin: msg.origin,
-                    context: msg.context,
-                    raw_event: JSON.stringify(msg),
-                };
-            }
+        // InfluxDB 1.x
+        if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
+            // First prepare tags relating to the actual log event, then add tags defined in the config file
+            // The config file tags can for example be used to separate data from DEV/TEST/PROD environments
+            let tags;
+            let fields;
 
             if (
-                globals.config.has('Butler-SOS.logEvents.tags') &&
-                globals.config.get('Butler-SOS.logEvents.tags') !== null &&
-                globals.config.get('Butler-SOS.logEvents.tags').length > 0
+                msg.source === 'qseow-engine' ||
+                msg.source === 'qseow-proxy' ||
+                msg.source === 'qseow-scheduler' ||
+                msg.source === 'qseow-repository'
             ) {
-                const configTags = globals.config.get('Butler-SOS.logEvents.tags');
-                // eslint-disable-next-line no-restricted-syntax
-                for (const item of configTags) {
-                    tags[item.tag] = item.value;
+                if (msg.source === 'qseow-engine') {
+                    tags = {
+                        host: msg.host,
+                        level: msg.level,
+                        source: msg.source,
+                        log_row: msg.log_row,
+                        subsystem: msg.subsystem,
+                    };
+                    // Tags that are empty in some cases. Only add if they are non-empty
+                    if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
+                    if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
+                    if (msg?.user_id?.length > 0) tags.user_id = msg.user_id;
+                    if (msg?.result_code?.length > 0) tags.result_code = msg.result_code;
+                    if (msg?.windows_user?.length > 0) tags.windows_user = msg.windows_user;
+                    if (msg?.task_id?.length > 0) tags.task_id = msg.task_id;
+                    if (msg?.task_name?.length > 0) tags.task_name = msg.task_name;
+                    if (msg?.app_id?.length > 0) tags.app_id = msg.app_id;
+                    if (msg?.app_name?.length > 0) tags.app_name = msg.app_name;
+                    if (msg?.engine_exe_version?.length > 0)
+                        tags.engine_exe_version = msg.engine_exe_version;
+
+                    fields = {
+                        message: msg.message,
+                        exception_message: msg.exception_message,
+                        command: msg.command,
+                        result_code: msg.result_code,
+                        origin: msg.origin,
+                        context: msg.context,
+                        session_id: msg.session_id,
+                        raw_event: JSON.stringify(msg),
+                    };
+                } else if (msg.source === 'qseow-proxy') {
+                    tags = {
+                        host: msg.host,
+                        level: msg.level,
+                        source: msg.source,
+                        log_row: msg.log_row,
+                        subsystem: msg.subsystem,
+                    };
+                    // Tags that are empty in some cases. Only add if they are non-empty
+                    if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
+                    if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
+                    if (msg?.user_id?.length > 0) tags.user_id = msg.user_id;
+                    if (msg?.result_code?.length > 0) tags.result_code = msg.result_code;
+
+                    fields = {
+                        message: msg.message,
+                        exception_message: msg.exception_message,
+                        command: msg.command,
+                        result_code: msg.result_code,
+                        origin: msg.origin,
+                        context: msg.context,
+                        raw_event: JSON.stringify(msg),
+                    };
+                } else if (msg.source === 'qseow-scheduler') {
+                    tags = {
+                        host: msg.host,
+                        level: msg.level,
+                        source: msg.source,
+                        log_row: msg.log_row,
+                        subsystem: msg.subsystem,
+                    };
+                    // Tags that are empty in some cases. Only add if they are non-empty
+                    if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
+                    if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
+                    if (msg?.user_id?.length > 0) tags.user_id = msg.user_id;
+                    if (msg?.task_id?.length > 0) tags.task_id = msg.task_id;
+                    if (msg?.task_name?.length > 0) tags.task_name = msg.task_name;
+
+                    fields = {
+                        message: msg.message,
+                        exception_message: msg.exception_message,
+                        app_name: msg.app_name,
+                        app_id: msg.app_id,
+                        execution_id: msg.execution_id,
+                        raw_event: JSON.stringify(msg),
+                    };
+                } else if (msg.source === 'qseow-repository') {
+                    tags = {
+                        host: msg.host,
+                        level: msg.level,
+                        source: msg.source,
+                        log_row: msg.log_row,
+                        subsystem: msg.subsystem,
+                    };
+                    // Tags that are empty in some cases. Only add if they are non-empty
+                    if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
+                    if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
+                    if (msg?.user_id?.length > 0) tags.user_id = msg.user_id;
+                    if (msg?.result_code?.length > 0) tags.result_code = msg.result_code;
+
+                    fields = {
+                        message: msg.message,
+                        exception_message: msg.exception_message,
+                        command: msg.command,
+                        result_code: msg.result_code,
+                        origin: msg.origin,
+                        context: msg.context,
+                        raw_event: JSON.stringify(msg),
+                    };
                 }
-            }
 
-            const datapoint = [
-                {
-                    measurement: 'log_event',
-                    tags,
-                    fields,
-                },
-            ];
+                if (
+                    globals.config.has('Butler-SOS.logEvents.tags') &&
+                    globals.config.get('Butler-SOS.logEvents.tags') !== null &&
+                    globals.config.get('Butler-SOS.logEvents.tags').length > 0
+                ) {
+                    const configTags = globals.config.get('Butler-SOS.logEvents.tags');
+                    // eslint-disable-next-line no-restricted-syntax
+                    for (const item of configTags) {
+                        tags[item.tag] = item.value;
+                    }
+                }
 
-            globals.logger.silly(
-                `LOG EVENT INFLUXDB: Influxdb datapoint for Butler SOS log event: ${JSON.stringify(
-                    datapoint,
-                    null,
-                    2
-                )}`
-            );
+                datapoint = [
+                    {
+                        measurement: 'log_event',
+                        tags,
+                        fields,
+                    },
+                ];
 
-            // Only write to influuxdb if the global influx object has been initialized
-            if (!globals.influx) {
-                globals.logger.warn(
-                    'LOG EVENT INFLUXDB: Influxdb object not initialized. Data will not be sent to InfluxDB'
+                globals.logger.silly(
+                    `LOG EVENT INFLUXDB: Influxdb datapoint for Butler SOS log event: ${JSON.stringify(
+                        datapoint,
+                        null,
+                        2
+                    )}`
                 );
-                return;
-            }
 
-            // InfluxDB 1.x
-            if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
                 try {
                     globals.influx.writePoints(datapoint);
                 } catch (err) {
@@ -1049,8 +1039,200 @@ async function postLogEventToInfluxdb(msg) {
                 globals.logger.verbose(
                     'LOG EVENT INFLUXDB: Sent Butler SOS log event data to InfluxDB'
                 );
-            } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
-                // TODO v2
+            }
+        } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
+            if (
+                msg.source === 'qseow-engine' ||
+                msg.source === 'qseow-proxy' ||
+                msg.source === 'qseow-scheduler' ||
+                msg.source === 'qseow-repository'
+            ) {
+                // Create new write API object
+                // Advanced write options
+                const writeOptions = {
+                    /* the maximum points/lines to send in a single batch to InfluxDB server */
+                    // batchSize: flushBatchSize + 1, // don't let automatically flush data
+
+                    /* default tags to add to every point */
+                    // defaultTags: {
+                    //     butler_sos_instance: memory.instanceTag,
+                    //     version: butlerVersion,
+                    // },
+
+                    /* maximum time in millis to keep points in an unflushed batch, 0 means don't periodically flush */
+                    flushInterval: 1000,
+
+                    /* maximum size of the retry buffer - it contains items that could not be sent for the first time */
+                    // maxBufferLines: 30_000,
+
+                    /* the count of internally-scheduled retries upon write failure, the delays between write attempts follow an exponential backoff strategy if there is no Retry-After HTTP header */
+                    maxRetries: 2, // do not retry writes
+
+                    // ... there are more write options that can be customized, see
+                    // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeoptions.html and
+                    // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeretryoptions.html
+                };
+
+                // Create new datapoint object
+                let point;
+
+                try {
+                    const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
+                    const bucketName = globals.config.get(
+                        'Butler-SOS.influxdbConfig.v2Config.bucket'
+                    );
+
+                    const writeApi = globals.influx.getWriteApi(
+                        org,
+                        bucketName,
+                        'ns',
+                        writeOptions
+                    );
+
+                    // Ensure that the writeApi object was found
+                    if (!writeApi) {
+                        globals.logger.warn(
+                            `LOG EVENT INFLUXDB: Influxdb write API object not found. Data will not be sent to InfluxDB`
+                        );
+                        return;
+                    }
+
+                    if (msg.source === 'qseow-engine') {
+                        // Create a new point with the data to be written to InfluxDB
+                        point = new Point('log_event')
+                            .tag('host', msg.host)
+                            .tag('level', msg.level)
+                            .tag('source', msg.source)
+                            .tag('log_row', msg.log_row)
+                            .tag('subsystem', msg.subsystem)
+                            .stringField('message', msg.message)
+                            .stringField('exception_message', msg.exception_message)
+                            .stringField('command', msg.command)
+                            .stringField('result_code', msg.result_code)
+                            .stringField('origin', msg.origin)
+                            .stringField('context', msg.context)
+                            .stringField('session_id', msg.session_id)
+                            .stringField('raw_event', JSON.stringify(msg));
+
+                        // Tags that are empty in some cases. Only add if they are non-empty
+                        if (msg?.user_full?.length > 0) point.tag('user_full', msg.user_full);
+                        if (msg?.user_directory?.length > 0)
+                            point.tag('user_directory', msg.user_directory);
+                        if (msg?.user_id?.length > 0) point.tag('user_id', msg.user_id);
+                        if (msg?.result_code?.length > 0) point.tag('result_code', msg.result_code);
+                        if (msg?.windows_user?.length > 0)
+                            point.tag('windows_user', msg.windows_user);
+                        if (msg?.task_id?.length > 0) point.tag('task_id', msg.task_id);
+                        if (msg?.task_name?.length > 0) point.tag('task_name', msg.task_name);
+                        if (msg?.app_id?.length > 0) point.tag('app_id', msg.app_id);
+                        if (msg?.app_name?.length > 0) point.tag('app_name', msg.app_name);
+                        if (msg?.engine_exe_version?.length > 0)
+                            point.tag('engine_exe_version', msg.engine_exe_version);
+                    } else if (msg.source === 'qseow-proxy') {
+                        // Create a new point with the data to be written to InfluxDB
+                        point = new Point('log_event')
+                            .tag('host', msg.host)
+                            .tag('level', msg.level)
+                            .tag('source', msg.source)
+                            .tag('log_row', msg.log_row)
+                            .tag('subsystem', msg.subsystem)
+                            .stringField('message', msg.message)
+                            .stringField('exception_message', msg.exception_message)
+                            .stringField('command', msg.command)
+                            .stringField('result_code', msg.result_code)
+                            .stringField('origin', msg.origin)
+                            .stringField('context', msg.context)
+                            .stringField('raw_event', JSON.stringify(msg));
+
+                        // Tags that are empty in some cases. Only add if they are non-empty
+                        if (msg?.user_full?.length > 0) point.tag('user_full', msg.user_full);
+                        if (msg?.user_directory?.length > 0)
+                            point.tag('user_directory', msg.user_directory);
+                        if (msg?.user_id?.length > 0) point.tag('user_id', msg.user_id);
+                        if (msg?.result_code?.length > 0) point.tag('result_code', msg.result_code);
+                    } else if (msg.source === 'qseow-scheduler') {
+                        // Create a new point with the data to be written to InfluxDB
+                        point = new Point('log_event')
+                            .tag('host', msg.host)
+                            .tag('level', msg.level)
+                            .tag('source', msg.source)
+                            .tag('log_row', msg.log_row)
+                            .tag('subsystem', msg.subsystem)
+                            .stringField('message', msg.message)
+                            .stringField('exception_message', msg.exception_message)
+                            .stringField('app_name', msg.app_name)
+                            .stringField('app_id', msg.app_id)
+                            .stringField('execution_id', msg.execution_id)
+                            .stringField('raw_event', JSON.stringify(msg));
+
+                        // Tags that are empty in some cases. Only add if they are non-empty
+                        if (msg?.user_full?.length > 0) point.tag('user_full', msg.user_full);
+                        if (msg?.user_directory?.length > 0)
+                            point.tag('user_directory', msg.user_directory);
+                        if (msg?.user_id?.length > 0) point.tag('user_id', msg.user_id);
+                        if (msg?.task_id?.length > 0) point.tag('task_id', msg.task_id);
+                        if (msg?.task_name?.length > 0) point.tag('task_name', msg.task_name);
+                    } else if (msg.source === 'qseow-repository') {
+                        // Create a new point with the data to be written to InfluxDB
+                        point = new Point('log_event')
+                            .tag('host', msg.host)
+                            .tag('level', msg.level)
+                            .tag('source', msg.source)
+                            .tag('log_row', msg.log_row)
+                            .tag('subsystem', msg.subsystem)
+                            .stringField('message', msg.message)
+                            .stringField('exception_message', msg.exception_message)
+                            .stringField('command', msg.command)
+                            .stringField('result_code', msg.result_code)
+                            .stringField('origin', msg.origin)
+                            .stringField('context', msg.context)
+                            .stringField('raw_event', JSON.stringify(msg));
+
+                        // Tags that are empty in some cases. Only add if they are non-empty
+                        if (msg?.user_full?.length > 0) point.tag('user_full', msg.user_full);
+                        if (msg?.user_directory?.length > 0)
+                            point.tag('user_directory', msg.user_directory);
+                        if (msg?.user_id?.length > 0) point.tag('user_id', msg.user_id);
+                        if (msg?.result_code?.length > 0) point.tag('result_code', msg.result_code);
+                    }
+
+                    // Add custom tags from config file to payload
+                    if (
+                        globals.config.has('Butler-SOS.logEvents.tags') &&
+                        globals.config.get('Butler-SOS.logEvents.tags') !== null &&
+                        globals.config.get('Butler-SOS.logEvents.tags').length > 0
+                    ) {
+                        const configTags = globals.config.get('Butler-SOS.logEvents.tags');
+                        // eslint-disable-next-line no-restricted-syntax
+                        for (const item of configTags) {
+                            point.tag(item.tag, item.value);
+                        }
+                    }
+
+                    globals.logger.silly(
+                        `LOG EVENT INFLUXDB: Influxdb datapoint for Butler SOS log event: ${JSON.stringify(
+                            point,
+                            null,
+                            2
+                        )}`
+                    );
+
+                    // Write to InfluxDB
+                    try {
+                        const res = await writeApi.writePoint(point);
+                        globals.logger.debug(`LOG EVENT INFLUXDB: Wrote data to InfluxDB v2`);
+                    } catch (err) {
+                        globals.logger.error(
+                            `LOG EVENT INFLUXDB: Error saving health data to InfluxDB v2! ${err.stack}`
+                        );
+                    }
+
+                    globals.logger.verbose(
+                        'LOG EVENT INFLUXDB: Sent Butler SOS log event data to InfluxDB'
+                    );
+                } catch (err) {
+                    globals.logger.error(`LOG EVENT INFLUXDB: Error getting write API: ${err}`);
+                }
             }
         }
     } catch (err) {
