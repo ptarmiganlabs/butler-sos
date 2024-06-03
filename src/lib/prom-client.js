@@ -3,7 +3,7 @@ const client = require('prom-client');
 
 // Load global variables and functions
 const globals = require('../globals');
-const serverTags = require('./servertags');
+const { getServerTags } = require('./servertags');
 
 let promLabels = null;
 
@@ -47,7 +47,7 @@ async function setupPromClient(promServer, promPort, promHost) {
             );
             globals.logger.debug(`PROM: Server details: ${JSON.stringify(server)}`);
 
-            promLabels = Object.keys(serverTags.getServerTags(server));
+            promLabels = Object.keys(getServerTags(globals.logger, server));
         });
 
         // Define Butler SOS metrics, Prometheus style

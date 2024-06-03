@@ -1,5 +1,8 @@
 /* eslint-disable prefer-destructuring */
 /* eslint-disable no-unused-vars */
+
+const { Point } = require('@influxdata/influxdb-client');
+
 const globals = require('../globals');
 
 const sessionAppPrefix = 'SessionApp';
@@ -39,14 +42,14 @@ function getFormattedTime(serverStarted) {
     return `${days} days, ${hours}h ${minutes.substr(-2)}m ${seconds.substr(-2)}s`;
 }
 
-async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
+async function postHealthMetricsToInfluxdb(serverName, host, body, serverTags) {
     // Calculate server uptime
     const formattedTime = getFormattedTime(body.started);
 
     // Build tags structure that will be passed to InfluxDB
     globals.logger.debug(
         `HEALTH METRICS TO INFLUXDB: Health data: Tags sent to InfluxDB: ${JSON.stringify(
-            influxTags
+            serverTags
         )}`
     );
 
@@ -209,6 +212,7 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
         );
         return;
     }
+
     // Write the whole reading to Influxdb
     // InfluxDB 1.x
     if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
@@ -216,7 +220,7 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
             const res = await globals.influx.writePoints([
                 {
                     measurement: 'sense_server',
-                    tags: influxTags,
+                    tags: serverTags,
                     fields: {
                         version: body.version,
                         started: body.started,
@@ -225,7 +229,7 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
                 },
                 {
                     measurement: 'mem',
-                    tags: influxTags,
+                    tags: serverTags,
                     fields: {
                         comitted: body.mem.committed,
                         allocated: body.mem.allocated,
@@ -234,7 +238,7 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
                 },
                 {
                     measurement: 'apps',
-                    tags: influxTags,
+                    tags: serverTags,
                     fields: {
                         active_docs_count: body.apps.active_docs.length,
                         loaded_docs_count: body.apps.loaded_docs.length,
@@ -297,14 +301,14 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
                 },
                 {
                     measurement: 'cpu',
-                    tags: influxTags,
+                    tags: serverTags,
                     fields: {
                         total: body.cpu.total,
                     },
                 },
                 {
                     measurement: 'session',
-                    tags: influxTags,
+                    tags: serverTags,
                     fields: {
                         active: body.session.active,
                         total: body.session.total,
@@ -312,7 +316,7 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
                 },
                 {
                     measurement: 'users',
-                    tags: influxTags,
+                    tags: serverTags,
                     fields: {
                         active: body.users.active,
                         total: body.users.total,
@@ -320,7 +324,7 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
                 },
                 {
                     measurement: 'cache',
-                    tags: influxTags,
+                    tags: serverTags,
                     fields: {
                         hits: body.cache.hits,
                         lookups: body.cache.lookups,
@@ -331,7 +335,7 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
                 },
                 {
                     measurement: 'saturated',
-                    tags: influxTags,
+                    tags: serverTags,
                     fields: {
                         saturated: body.saturated,
                     },
@@ -344,14 +348,143 @@ async function postHealthMetricsToInfluxdb(_host, body, influxTags) {
         }
 
         globals.logger.verbose(
-            `HEALTH METRICS: Sent health data to Influxdb for server ${influxTags.server_name}`
+            `HEALTH METRICS: Sent health data to Influxdb for server ${serverTags.server_name}`
         );
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
         // TODO v2
+
+        // Only write to influuxdb if the global influxWriteApi object has been initialized
+        if (!globals.influxWriteApi) {
+            globals.logger.warn(
+                'HEALTH METRICS: Influxdb write API object not initialized. Data will not be sent to InfluxDB'
+            );
+            return;
+        }
+
+        // Find writeApi for the server specified by host
+        const writeApi = globals.influxWriteApi.find(
+            (element) => element.serverName === serverName
+        );
+
+        // Ensure that the writeApi object was found
+        if (!writeApi) {
+            globals.logger.warn(
+                `HEALTH METRICS: Influxdb write API object not found for host ${host}. Data will not be sent to InfluxDB`
+            );
+            return;
+        }
+
+        // Create a new point with the data to be written to InfluxDB
+        const points = [
+            new Point('sense_server')
+                .stringField('version', body.version)
+                .stringField('started', body.started)
+                .stringField('uptime', formattedTime),
+
+            new Point('mem')
+                .floatField('comitted', body.mem.committed)
+                .floatField('allocated', body.mem.allocated)
+                .floatField('free', body.mem.free),
+
+            new Point('apps')
+                .intField('active_docs_count', body.apps.active_docs.length)
+                .intField('loaded_docs_count', body.apps.loaded_docs.length)
+                .intField('in_memory_docs_count', body.apps.in_memory_docs.length)
+                .stringField(
+                    'active_docs',
+                    globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
+                        ? body.apps.active_docs
+                        : ''
+                )
+                .stringField(
+                    'active_docs_names',
+                    globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
+                        globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
+                        ? appNamesActive.toString()
+                        : ''
+                )
+                .stringField(
+                    'active_session_docs_names',
+                    globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
+                        globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
+                        ? sessionAppNamesActive.toString()
+                        : ''
+                )
+                .stringField(
+                    'loaded_docs',
+                    globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
+                        ? body.apps.loaded_docs
+                        : ''
+                )
+                .stringField(
+                    'loaded_docs_names',
+                    globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
+                        globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
+                        ? appNamesLoaded.toString()
+                        : ''
+                )
+                .stringField(
+                    'loaded_session_docs_names',
+                    globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
+                        globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
+                        ? sessionAppNamesLoaded.toString()
+                        : ''
+                )
+                .stringField(
+                    'in_memory_docs',
+                    globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs')
+                        ? body.apps.in_memory_docs
+                        : ''
+                )
+                .stringField(
+                    'in_memory_docs_names',
+                    globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
+                        globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs')
+                        ? appNamesInMemory.toString()
+                        : ''
+                )
+                .stringField(
+                    'in_memory_docs_names',
+                    globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
+                        globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs')
+                        ? sessionAppNamesInMemory.toString()
+                        : ''
+                )
+                .uintField('calls', body.apps.calls)
+                .uintField('selections', body.apps.selections),
+
+            new Point('cpu').floatField('total', body.cpu.total),
+
+            new Point('session')
+                .uintField('active', body.session.active)
+                .uintField('total', body.session.total),
+
+            new Point('users')
+                .uintField('active', body.users.active)
+                .uintField('total', body.users.total),
+
+            new Point('cache')
+                .uintField('hits', body.cache.hits)
+                .uintField('lookups', body.cache.lookups)
+                .uintField('added', body.cache.added)
+                .uintField('replaced', body.cache.replaced)
+                .uintField('bytes_added', body.cache.bytes_added),
+
+            new Point('saturated').booleanField('saturated', body.saturated),
+        ];
+
+        // Write to InfluxDB
+        try {
+            const res = await writeApi.writeAPI.writePoints(points);
+            globals.logger.debug(`HEALTH METRICS: Wrote data to InfluxDB v2`);
+        } catch (err) {
+            globals.logger.error(
+                `HEALTH METRICS: Error saving health data to InfluxDB v2! ${err.stack}`
+            );
+        }
     }
 }
 
-// function postProxySessionsToInfluxdb(host, virtualProxy, body, influxTags) {
 async function postProxySessionsToInfluxdb(userSessions) {
     globals.logger.debug(`PROXY SESSIONS: User sessions: ${JSON.stringify(userSessions)}`);
 
@@ -376,10 +509,11 @@ async function postProxySessionsToInfluxdb(userSessions) {
     // InfluxDB 1.x
     if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
         try {
+            // Data points are already in InfluxDB v1 format
             const res = await globals.influx.writePoints(userSessions.datapointInfluxdb);
         } catch (err) {
             globals.logger.error(
-                `PROXY SESSIONS: Error saving user session data to InfluxDB! ${err.stack}`
+                `PROXY SESSIONS: Error saving user session data to InfluxDB v1! ${err.stack}`
             );
         }
 
@@ -395,6 +529,38 @@ async function postProxySessionsToInfluxdb(userSessions) {
         );
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
         // TODO v2
+
+        // Only write to influuxdb if the global influxWriteApi object has been initialized
+        if (!globals.influxWriteApi) {
+            globals.logger.warn(
+                'HEALTH METRICS: Influxdb write API object not initialized. Data will not be sent to InfluxDB'
+            );
+            return;
+        }
+
+        // Find writeApi for the server specified by host
+        // Separate writeApi objects are created for each server, as each server may have different tags
+        const writeApi = globals.influxWriteApi.find(
+            (element) => element.serverName === userSessions.serverName
+        );
+
+        // Ensure that the writeApi object was found
+        if (!writeApi) {
+            globals.logger.warn(
+                `PROXY SESSIONS: Influxdb v2 write API object not found for host ${userSessions.host}. Data will not be sent to InfluxDB`
+            );
+            return;
+        }
+
+        // Write the datapoint to InfluxDB
+        try {
+            // Data points are already in InfluxDB v2 format
+            const res = await writeApi.writeAPI.writePoints(userSessions.datapointInfluxdb);
+        } catch (err) {
+            globals.logger.error(
+                `PROXY SESSIONS: Error saving user session data to InfluxDB v2! ${err.stack}`
+            );
+        }
     }
 }
 
@@ -403,30 +569,6 @@ async function postButlerSOSMemoryUsageToInfluxdb(memory) {
 
     // Get Butler version
     const butlerVersion = globals.appVersion;
-
-    const datapoint = [
-        {
-            measurement: 'butlersos_memory_usage',
-            tags: {
-                butler_sos_instance: memory.instanceTag,
-                version: butlerVersion,
-            },
-            fields: {
-                heap_used: memory.heapUsedMByte,
-                heap_total: memory.heapTotalMByte,
-                external: memory.externalMemoryMByte,
-                process_memory: memory.processMemoryMByte,
-            },
-        },
-    ];
-
-    globals.logger.silly(
-        `MEMORY USAGE INFLUXDB: Influxdb datapoint for Butler SOS memory usage: ${JSON.stringify(
-            datapoint,
-            null,
-            2
-        )}`
-    );
 
     // Only write to influuxdb if the global influx object has been initialized
     if (!globals.influx) {
@@ -438,6 +580,30 @@ async function postButlerSOSMemoryUsageToInfluxdb(memory) {
 
     // InfluxDB 1.x
     if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
+        const datapoint = [
+            {
+                measurement: 'butlersos_memory_usage',
+                tags: {
+                    butler_sos_instance: memory.instanceTag,
+                    version: butlerVersion,
+                },
+                fields: {
+                    heap_used: memory.heapUsedMByte,
+                    heap_total: memory.heapTotalMByte,
+                    external: memory.externalMemoryMByte,
+                    process_memory: memory.processMemoryMByte,
+                },
+            },
+        ];
+
+        globals.logger.silly(
+            `MEMORY USAGE INFLUXDB: Influxdb datapoint for Butler SOS memory usage: ${JSON.stringify(
+                datapoint,
+                null,
+                2
+            )}`
+        );
+
         try {
             const res = await globals.influx.writePoints(datapoint);
         } catch (err) {
@@ -451,6 +617,78 @@ async function postButlerSOSMemoryUsageToInfluxdb(memory) {
         );
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
         // TODO v2
+
+        // Only write to influuxdb if the global influxWriteApi object has been initialized
+        if (!globals.influxWriteApi) {
+            globals.logger.warn(
+                'MEMORY USAGE INFLUXDB: Influxdb write API object not initialized. Data will not be sent to InfluxDB'
+            );
+            return;
+        }
+
+        // Create new write API object
+        // This is in contrast to elsewhere in the code, where the write API object is created once and reused
+        // The rationale for this is that the memory usage data is only sent infrequently and it's then ok with the extra overhead of creating the API object each time
+        // advanced write options
+        const writeOptions = {
+            /* the maximum points/lines to send in a single batch to InfluxDB server */
+            // batchSize: flushBatchSize + 1, // don't let automatically flush data
+
+            /* default tags to add to every point */
+            // defaultTags: {
+            //     butler_sos_instance: memory.instanceTag,
+            //     version: butlerVersion,
+            // },
+
+            /* maximum time in millis to keep points in an unflushed batch, 0 means don't periodically flush */
+            flushInterval: 1000,
+
+            /* maximum size of the retry buffer - it contains items that could not be sent for the first time */
+            // maxBufferLines: 30_000,
+
+            /* the count of internally-scheduled retries upon write failure, the delays between write attempts follow an exponential backoff strategy if there is no Retry-After HTTP header */
+            maxRetries: 2, // do not retry writes
+
+            // ... there are more write options that can be customized, see
+            // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeoptions.html and
+            // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeretryoptions.html
+        };
+
+        try {
+            const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
+            const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
+
+            const writeApi = globals.influx.getWriteApi(org, bucketName, 'ns', writeOptions);
+
+            // Ensure that the writeApi object was found
+            if (!writeApi) {
+                globals.logger.warn(
+                    `MEMORY USAGE INFLUXDB: Influxdb write API object not found. Data will not be sent to InfluxDB`
+                );
+                return;
+            }
+
+            // Create a new point with the data to be written to InfluxDB
+            const point = new Point('butlersos_memory_usage')
+                .tag('butler_sos_instance', memory.instanceTag)
+                .tag('version', butlerVersion)
+                .floatField('heap_used', memory.heapUsedMByte)
+                .floatField('heap_total', memory.heapTotalMByte)
+                .floatField('external', memory.externalMemoryMByte)
+                .floatField('process_memory', memory.processMemoryMByte);
+
+            // Write to InfluxDB
+            try {
+                const res = await writeApi.writePoint(point);
+                globals.logger.debug(`MEMORY USAGE INFLUXDB: Wrote data to InfluxDB v2`);
+            } catch (err) {
+                globals.logger.error(
+                    `MEMORY USAGE INFLUXDB: Error saving health data to InfluxDB v2! ${err.stack}`
+                );
+            }
+        } catch (err) {
+            globals.logger.error(`MEMORY USAGE INFLUXDB: Error getting write API: ${err}`);
+        }
     }
 }
 

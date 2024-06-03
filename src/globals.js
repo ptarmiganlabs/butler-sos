@@ -9,10 +9,11 @@ const winston = require('winston');
 require('winston-daily-rotate-file');
 const si = require('systeminformation');
 const { Command, Option } = require('commander');
-
 const Influx = require('influx');
-const { InfluxDB, HttpError } = require('@influxdata/influxdb-client');
+const { InfluxDB, HttpError, DEFAULT_WriteOptions } = require('@influxdata/influxdb-client');
 const { OrgsAPI, BucketsAPI } = require('@influxdata/influxdb-client-apis');
+
+const { getServerTags } = require('./lib/servertags');
 
 const InfluxDB2 = InfluxDB;
 
@@ -357,6 +358,7 @@ if (config.get('Butler-SOS.influxdbConfig.enable') === true) {
 
 // Set up Influxdb client
 let influx;
+let influxWriteApi = [];
 if (config.get('Butler-SOS.influxdbConfig.enable') === true) {
     if (config.get('Butler-SOS.influxdbConfig.version') === 1) {
         // Set up Influxdb v1 client
@@ -608,8 +610,8 @@ async function initInfluxDB() {
                 // Get buckets by name
                 const bucketsAPI = new BucketsAPI(influx);
                 try {
-                    const buckets = await bucketsAPI.getBuckets({ orgID, bucketName });
-                    if (buckets && buckets.buckets && buckets.buckets.length) {
+                    const buckets = await bucketsAPI.getBuckets({ orgID, name: bucketName });
+                    if (buckets && buckets.buckets && buckets.buckets.length > 0) {
                         const bucketID = buckets.buckets[0].id;
                         logger.info(
                             `INFLUXDB2: Bucket named "${bucketName}" already exists, bucket ID="${bucketID}"`
@@ -641,6 +643,49 @@ async function initInfluxDB() {
             } catch (err) {
                 logger.error(`INFLUXDB2: Error getting bucket: ${err}`);
             }
+
+            // Get write API
+
+            // Create array of per-server writeAPI objects
+            // Each object has two properties: host and writeAPI, where host can be used as key later on
+            serverList.forEach((server) => {
+                // Get per-server tags
+                const tags = getServerTags(logger, server);
+
+                // advanced write options
+                const writeOptions = {
+                    /* the maximum points/lines to send in a single batch to InfluxDB server */
+                    // batchSize: flushBatchSize + 1, // don't let automatically flush data
+
+                    /* default tags to add to every point */
+                    defaultTags: tags,
+
+                    /* maximum time in millis to keep points in an unflushed batch, 0 means don't periodically flush */
+                    // flushInterval: 0,
+
+                    /* maximum size of the retry buffer - it contains items that could not be sent for the first time */
+                    // maxBufferLines: 30_000,
+
+                    /* the count of internally-scheduled retries upon write failure, the delays between write attempts follow an exponential backoff strategy if there is no Retry-After HTTP header */
+                    maxRetries: 2, // do not retry writes
+
+                    // ... there are more write options that can be customized, see
+                    // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeoptions.html and
+                    // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeretryoptions.html
+                };
+
+                try {
+                    const serverWriteApi = influx.getWriteApi(org, bucketName, 'ns', writeOptions);
+
+                    // Save to global variable, using hostNamre as key
+                    influxWriteApi.push({
+                        serverName: server.serverName,
+                        writeAPI: serverWriteApi,
+                    });
+                } catch (err) {
+                    logger.error(`INFLUXDB2: Error getting write API: ${err}`);
+                }
+            });
         }
     }
 }
@@ -736,6 +781,7 @@ module.exports = {
     logger,
     getLoggingLevel,
     influx,
+    influxWriteApi,
     pgPool,
     appVersion,
     serverList,

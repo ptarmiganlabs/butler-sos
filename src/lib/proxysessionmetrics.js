@@ -6,11 +6,13 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+const { Point } = require('@influxdata/influxdb-client');
+
 const globals = require('../globals');
 const postToInfluxdb = require('./post-to-influxdb');
 const postToNewRelic = require('./post-to-new-relic');
 const postToMQTT = require('./post-to-mqtt');
-const serverTags = require('./servertags');
+const { getServerTags } = require('./servertags');
 const prometheus = require('./prom-client');
 
 function getCertificates(options) {
@@ -23,7 +25,183 @@ function getCertificates(options) {
     return certificate;
 }
 
-function getProxySessionStatsFromSense(host, virtualProxy, influxTags) {
+// Prepare user session metrics data pointfor posting to InfluxDB v1
+function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
+    return new Promise((resolve, reject) => {
+        try {
+            globals.logger.debug('PROXY SESSIONS: Prepping user sessions data structure');
+
+            const userProxySessionsData = {};
+
+            userProxySessionsData.serverName = serverName;
+            userProxySessionsData.host = host;
+            userProxySessionsData.virtualProxy = virtualProxy;
+
+            // Build tags structure, adding tags for virtual proxy and host the session is associated with
+            // Start with common/shared set of tags, then add user session specific tags
+            userProxySessionsData.tags = { ...tags };
+            // Esnure the virtual proxy does not begin or end with a slash or backslash
+            userProxySessionsData.tags.user_session_virtual_proxy = virtualProxy.replace(
+                /^[/\\]+|[/\\]+$/g,
+                ''
+            );
+            userProxySessionsData.tags.user_session_host = host;
+
+            // Build comma separated list of all user IDs connected via the current virtual proxy
+            const userArray = Array.prototype.map.call(
+                body,
+                (s) => `${s.UserDirectory}\\${s.UserId}`
+            );
+            userProxySessionsData.uniqueUserList = Array.from(new Set(userArray)).toString();
+
+            userProxySessionsData.sessionCount = body.length;
+
+            // InfluxDB specific.
+            if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
+                // Create data point for InfluxDB v1
+
+                userProxySessionsData.datapointInfluxdb = [
+                    {
+                        measurement: 'user_session_summary',
+                        tags: userProxySessionsData.tags,
+                        fields: {
+                            session_count: userProxySessionsData.sessionCount,
+                            session_user_id_list: userProxySessionsData.uniqueUserList,
+                        },
+                    },
+                    {
+                        measurement: 'user_session_list',
+                        tags: userProxySessionsData.tags,
+                        fields: {
+                            session_user_id_list: userProxySessionsData.uniqueUserList,
+                        },
+                    },
+                ];
+            } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
+                // Create data point for InfluxDB v2
+
+                userProxySessionsData.datapointInfluxdb = [
+                    new Point('user_session_summary')
+                        .tag(
+                            'user_session_virtual_proxy',
+                            userProxySessionsData.tags.user_session_virtual_proxy
+                        )
+                        .tag('user_session_host', userProxySessionsData.tags.user_session_host)
+                        .uintField('session_count', userProxySessionsData.sessionCount)
+                        .stringField('session_user_id_list', userProxySessionsData.uniqueUserList),
+
+                    new Point('user_session_list')
+                        .tag(
+                            'user_session_virtual_proxy',
+                            userProxySessionsData.tags.user_session_virtual_proxy
+                        )
+                        .tag('user_session_host', userProxySessionsData.tags.user_session_host)
+                        .uintField('session_count', userProxySessionsData.sessionCount)
+                        .stringField('session_user_id_list', userProxySessionsData.uniqueUserList),
+                ];
+            }
+
+            // Prometheus specific.
+            userProxySessionsData.datapointPrometheus = {};
+            userProxySessionsData.datapointPrometheus.butlersos_user_session_summary_total = {
+                value: userProxySessionsData.sessionCount,
+                labels: userProxySessionsData.tags,
+            };
+
+            // New Relic specific
+            userProxySessionsData.datapointNewRelic = {};
+            userProxySessionsData.datapointNewRelic.butlersos_user_session_summary_total = {
+                value: userProxySessionsData.sessionCount,
+                attributes: userProxySessionsData.tags,
+            };
+
+            // Add details for each session
+            // Discussion about forEach vs for...of: https://github.com/airbnb/javascript/issues/1271
+            // https://gist.github.com/ljharb/58faf1cfcb4e6808f74aae4ef7944cff
+            // eslint-disable-next-line no-restricted-syntax
+            for (const bodyItem of body) {
+                // Is user in blacklist?
+                // If so just skip this user's session
+
+                let includeUser = true;
+                if (
+                    globals.config.has('Butler-SOS.userSessions.excludeUser') &&
+                    globals.config.get('Butler-SOS.userSessions.excludeUser') !== null &&
+                    globals.config.get('Butler-SOS.userSessions.excludeUser').length > 0
+                ) {
+                    const excludeList = globals.config.get('Butler-SOS.userSessions.excludeUser');
+                    if (
+                        excludeList.findIndex(
+                            (blacklistUser) =>
+                                blacklistUser.directory === bodyItem.UserDirectory &&
+                                blacklistUser.userId === bodyItem.UserId
+                        ) >= 0
+                    ) {
+                        // The user associated with the session was found in the blacklist. Return with no further action.
+                        globals.logger.debug(
+                            `PROXY SESSIONS: User ${bodyItem.UserDirectory}\\${bodyItem.UserId} in blacklist, not reporting session.`
+                        );
+
+                        includeUser = false;
+                    }
+                }
+
+                if (includeUser === true) {
+                    globals.logger.debug(
+                        `PROXY SESSIONS: User session: Body item: ${JSON.stringify(bodyItem)}`
+                    );
+
+                    // InfluxDB specific.
+                    // Add InfluxDB datapoints
+                    const influxTags = { ...userProxySessionsData.tags };
+                    // Add extra tags for this body item
+                    influxTags.user_session_id = bodyItem.SessionId;
+                    influxTags.user_session_user_directory = bodyItem.UserDirectory;
+                    influxTags.user_session_user_id = bodyItem.UserId;
+
+                    let sessionDatapoint;
+                    if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
+                        // Create data point for InfluxDB v1
+                        sessionDatapoint = {
+                            measurement: 'user_session_details',
+                            tags: influxTags,
+                            fields: {
+                                // attributes: bodyItem.Attributes,
+                                session_id: bodyItem.SessionId,
+                                user_directory: bodyItem.UserDirectory,
+                                user_id: bodyItem.UserId,
+                            },
+                        };
+                    } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
+                        // TODO v2
+                        // Create data point for InfluxDB v2
+                        sessionDatapoint = new Point('user_session_details')
+                            .tag('user_session_id', bodyItem.SessionId)
+                            .tag('user_session_user_directory', bodyItem.UserDirectory)
+                            .tag('user_session_user_id', bodyItem.UserId)
+                            .tag(
+                                'user_session_virtual_proxy',
+                                userProxySessionsData.tags.user_session_virtual_proxy
+                            )
+                            .tag('user_session_host', userProxySessionsData.tags.user_session_host)
+                            .stringField('session_id', bodyItem.SessionId)
+                            .stringField('user_directory', bodyItem.UserDirectory)
+                            .stringField('user_id', bodyItem.UserId);
+                    }
+
+                    userProxySessionsData.datapointInfluxdb.push(sessionDatapoint);
+                }
+            }
+
+            resolve(userProxySessionsData);
+        } catch (err) {
+            globals.logger.error(`PROXY SESSIONS: ${err}`);
+            reject();
+        }
+    });
+}
+
+function getProxySessionStatsFromSense(serverName, host, virtualProxy, influxTags) {
     // Current user sessions are retrived using this API:
     // https://help.qlik.com/en-US/sense-developer/February2021/Subsystems/ProxyServiceAPI/Content/Sense_ProxyServiceAPI/ProxyServiceAPI-Proxy-API.htm
 
@@ -42,8 +220,10 @@ function getProxySessionStatsFromSense(host, virtualProxy, influxTags) {
         globals.config.get('Butler-SOS.cert.clientCertCA')
     );
 
-    if (globals.config.has('Butler-SOS.cert.clientCertPassphrase') === true &&
-        globals.config.get('Butler-SOS.cert.clientCertPassphrase')?.length > 0) {
+    if (
+        globals.config.has('Butler-SOS.cert.clientCertPassphrase') === true &&
+        globals.config.get('Butler-SOS.cert.clientCertPassphrase')?.length > 0
+    ) {
         options.CertificatePassphrase = globals.config.get('Butler-SOS.cert.clientCertPassphrase');
     } else {
         options.CertificatePassphrase = null;
@@ -112,8 +292,8 @@ function getProxySessionStatsFromSense(host, virtualProxy, influxTags) {
                     );
                 }
 
-                // eslint-disable-next-line no-use-before-define
                 const userProxySessionsData = await prepUserSessionMetrics(
+                    serverName,
                     host,
                     virtualProxy,
                     response.data,
@@ -171,7 +351,7 @@ function setupUserSessionsTimer() {
 
         globals.serverList.forEach((server) => {
             if (server.userSessions.enable) {
-                const tags = serverTags.getServerTags(server);
+                const tags = getServerTags(globals.logger, server);
                 server.userSessions.virtualProxies.forEach((virtualProxy) => {
                     globals.logger.debug(
                         `PROXY SESSIONS: Getting user sessions for host=${
@@ -180,6 +360,7 @@ function setupUserSessionsTimer() {
                     );
 
                     getProxySessionStatsFromSense(
+                        server.serverName,
                         server.userSessions.host,
                         virtualProxy.virtualProxy,
                         tags
@@ -188,130 +369,6 @@ function setupUserSessionsTimer() {
             }
         });
     }, globals.config.get('Butler-SOS.userSessions.pollingInterval'));
-}
-
-function prepUserSessionMetrics(host, virtualProxy, body, tags) {
-    return new Promise((resolve, reject) => {
-        try {
-            globals.logger.debug('PROXY SESSIONS: Prepping user sessions data structure');
-
-            const userProxySessionsData = {};
-
-            userProxySessionsData.host = host;
-            userProxySessionsData.virtualProxy = virtualProxy;
-
-            // Build tags structure, adding tags for virtual proxy and host the session is associated with
-            // Start with common/shared set of tags, then add user session specific tags
-            userProxySessionsData.tags = { ...tags };
-            userProxySessionsData.tags.user_session_virtual_proxy = virtualProxy;
-            userProxySessionsData.tags.user_session_host = host;
-
-            // Build comma separated list of all user IDs connected via the current virtual proxy
-            const userArray = Array.prototype.map.call(
-                body,
-                (s) => `${s.UserDirectory}\\${s.UserId}`
-            );
-            userProxySessionsData.uniqueUserList = Array.from(new Set(userArray)).toString();
-
-            userProxySessionsData.sessionCount = body.length;
-
-            // InfluxDB specific.
-            userProxySessionsData.datapointInfluxdb = [
-                {
-                    measurement: 'user_session_summary',
-                    tags: userProxySessionsData.tags,
-                    fields: {
-                        session_count: userProxySessionsData.sessionCount,
-                        session_user_id_list: userProxySessionsData.uniqueUserList,
-                    },
-                },
-                {
-                    measurement: 'user_session_list',
-                    tags: userProxySessionsData.tags,
-                    fields: {
-                        session_user_id_list: userProxySessionsData.uniqueUserList,
-                    },
-                },
-            ];
-
-            // Prometheus specific.
-            userProxySessionsData.datapointPrometheus = {};
-            userProxySessionsData.datapointPrometheus.butlersos_user_session_summary_total = {
-                value: userProxySessionsData.sessionCount,
-                labels: userProxySessionsData.tags,
-            };
-
-            // New Relic specific
-            userProxySessionsData.datapointNewRelic = {};
-            userProxySessionsData.datapointNewRelic.butlersos_user_session_summary_total = {
-                value: userProxySessionsData.sessionCount,
-                attributes: userProxySessionsData.tags,
-            };
-
-            // Add details for each session
-            // Discussion about forEach vs for...of: https://github.com/airbnb/javascript/issues/1271
-            // https://gist.github.com/ljharb/58faf1cfcb4e6808f74aae4ef7944cff
-            // eslint-disable-next-line no-restricted-syntax
-            for (const bodyItem of body) {
-                // Is user in blacklist?
-                // If so just skip this user's session
-
-                let includeUser = true;
-                if (
-                    globals.config.has('Butler-SOS.userSessions.excludeUser') &&
-                    globals.config.get('Butler-SOS.userSessions.excludeUser') !== null &&
-                    globals.config.get('Butler-SOS.userSessions.excludeUser').length > 0
-                ) {
-                    const excludeList = globals.config.get('Butler-SOS.userSessions.excludeUser');
-                    if (
-                        excludeList.findIndex(
-                            (blacklistUser) =>
-                                blacklistUser.directory === bodyItem.UserDirectory &&
-                                blacklistUser.userId === bodyItem.UserId
-                        ) >= 0
-                    ) {
-                        // The user associated with the session was found in the blacklist. Return with no further action.
-                        globals.logger.debug(
-                            `PROXY SESSIONS: User ${bodyItem.UserDirectory}\\${bodyItem.UserId} in blacklist, not reporting session.`
-                        );
-
-                        includeUser = false;
-                    }
-                }
-
-                if (includeUser === true) {
-                    globals.logger.debug(
-                        `PROXY SESSIONS: User session: Body item: ${JSON.stringify(bodyItem)}`
-                    );
-
-                    // InfluxDB specific.
-                    // Add InfluxDB datapoints
-                    const influxTags = { ...userProxySessionsData.tags };
-                    // Add extra tags for this body item
-                    influxTags.user_session_id = bodyItem.SessionId;
-                    influxTags.user_session_user_directory = bodyItem.UserDirectory;
-                    influxTags.user_session_user_id = bodyItem.UserId;
-
-                    const sessionDatapoint = {
-                        measurement: 'user_session_details',
-                        tags: influxTags,
-                        fields: {
-                            // attributes: bodyItem.Attributes,
-                            session_id: bodyItem.SessionId,
-                            user_directory: bodyItem.UserDirectory,
-                            user_id: bodyItem.UserId,
-                        },
-                    };
-                    userProxySessionsData.datapointInfluxdb.push(sessionDatapoint);
-                }
-            }
-
-            resolve(userProxySessionsData);
-        } catch (err) {
-            globals.logger.error(`PROXY SESSIONS: ${err}`);
-            reject();
-        }
-    });
 }
 
 module.exports = {

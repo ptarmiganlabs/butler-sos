@@ -10,7 +10,7 @@ const globals = require('../globals');
 const postToInfluxdb = require('./post-to-influxdb');
 const postToNewRelic = require('./post-to-new-relic');
 const postToMQTT = require('./post-to-mqtt');
-const serverTags = require('./servertags');
+const { getServerTags } = require('./servertags');
 const serverHeaders = require('./serverheaders');
 const prometheus = require('./prom-client');
 
@@ -24,7 +24,7 @@ function getCertificates(options) {
     return certificate;
 }
 
-function getHealthStatsFromSense(host, tags, headers) {
+function getHealthStatsFromSense(serverName, host, tags, headers) {
     globals.logger.debug(`HEALTH: URL=https://${host}/engine/healthcheck/`);
 
     const options = {};
@@ -104,7 +104,12 @@ function getHealthStatsFromSense(host, tags, headers) {
                 // Post to Influxdb
                 if (globals.config.get('Butler-SOS.influxdbConfig.enable') === true) {
                     globals.logger.debug('HEALTH: Calling HEALTH metrics Influxdb posting method');
-                    postToInfluxdb.postHealthMetricsToInfluxdb(host, response.data, tags);
+                    postToInfluxdb.postHealthMetricsToInfluxdb(
+                        serverName,
+                        host,
+                        response.data,
+                        tags
+                    );
                 }
 
                 // Post to New Relic
@@ -134,10 +139,22 @@ function setupHealthMetricsTimer() {
             globals.logger.verbose(`HEALTH: Getting stats for server: ${server.serverName}`);
             globals.logger.debug(`HEALTH: Server details: ${JSON.stringify(server)}`);
 
-            const tags = serverTags.getServerTags(server);
+            // Get per-server tags
+            const tags = getServerTags(globals.logger, server);
+
+            // Save tags to global variable.
+            // Add a new object to the array, with properties host andd tags.
+            // The tags property is an array with all the tags for the server.
+            // Each tag object has a name and a value.
+            // globals.serverTags.push({
+            //     host: server.host,
+            //     tags,
+            // });
+
+            // Get per-server headers
             const headers = serverHeaders.getServerHeaders(server);
 
-            getHealthStatsFromSense(server.host, tags, headers);
+            getHealthStatsFromSense(server.serverName, server.host, tags, headers);
         });
     }, globals.config.get('Butler-SOS.serversToMonitor.pollingInterval'));
 }
