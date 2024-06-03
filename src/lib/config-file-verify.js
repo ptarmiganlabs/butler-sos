@@ -1,4 +1,4 @@
-const { configFile, logger } = require('../globals');
+const { config, configFile, logger } = require('../globals');
 const { confifgFileSchema } = require('./config-file-schema');
 
 // Function to verify that the config file has the correct format
@@ -40,6 +40,20 @@ async function verifyConfigFile() {
             logger.error(`${validator.logs}`);
 
             process.exit(1);
+        }
+
+        // Verify values of specific config entries
+
+        // If InfluxDB is enabled, check if the version is valid
+        // Valid values: 1 and 2
+        if (config.get('Butler-SOS.influxdbConfig.enable') === true) {
+            const influxdbVersion = config.get('Butler-SOS.influxdbConfig.version');
+            if (influxdbVersion !== 1 && influxdbVersion !== 2) {
+                logger.error(
+                    `VERIFY CONFIG FILE: Butler-SOS.influxdbConfig.enable (=InfluxDB version) ${influxdbVersion} is invalid. Exiting.`
+                );
+                process.exit(1);
+            }
         }
 
         logger.info(`VERIFY CONFIG FILE: Your config file at ${configFile} is valid, good work!`);

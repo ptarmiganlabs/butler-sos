@@ -112,7 +112,6 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
 
         // Add engine metrics
         if (
-            globals.config.has('Butler-SOS.newRelic.metric.dynamic.engine.memory.enable') &&
             globals.config.get('Butler-SOS.newRelic.metric.dynamic.engine.memory.enable') === true
         ) {
             metrics.push({
@@ -134,10 +133,7 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
             });
         }
 
-        if (
-            globals.config.has('Butler-SOS.newRelic.metric.dynamic.engine.cpu.enable') &&
-            globals.config.get('Butler-SOS.newRelic.metric.dynamic.engine.cpu.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.newRelic.metric.dynamic.engine.cpu.enable') === true) {
             metrics.push({
                 name: 'qs_cpuTotal',
                 type: 'gauge',
@@ -145,10 +141,7 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
             });
         }
 
-        if (
-            globals.config.has('Butler-SOS.newRelic.metric.dynamic.engine.calls.enable') &&
-            globals.config.get('Butler-SOS.newRelic.metric.dynamic.engine.calls.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.newRelic.metric.dynamic.engine.calls.enable') === true) {
             metrics.push({
                 name: 'qs_engineCalls',
                 type: 'gauge',
@@ -157,9 +150,8 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
         }
 
         if (
-            globals.config.has('Butler-SOS.newRelic.metric.dynamic.engine.selections.enable') &&
             globals.config.get('Butler-SOS.newRelic.metric.dynamic.engine.selections.enable') ===
-                true
+            true
         ) {
             metrics.push({
                 name: 'qs_engineSelections',
@@ -169,7 +161,6 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
         }
 
         if (
-            globals.config.has('Butler-SOS.newRelic.metric.dynamic.engine.sessions.enable') &&
             globals.config.get('Butler-SOS.newRelic.metric.dynamic.engine.sessions.enable') === true
         ) {
             metrics.push({
@@ -185,10 +176,7 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
             });
         }
 
-        if (
-            globals.config.has('Butler-SOS.newRelic.metric.dynamic.engine.users.enable') &&
-            globals.config.get('Butler-SOS.newRelic.metric.dynamic.engine.users.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.newRelic.metric.dynamic.engine.users.enable') === true) {
             metrics.push({
                 name: 'qs_engineUsersActive',
                 type: 'gauge',
@@ -203,9 +191,8 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
         }
 
         if (
-            globals.config.has('Butler-SOS.newRelic.metric.dynamic.engine.saturated.enable') &&
             globals.config.get('Butler-SOS.newRelic.metric.dynamic.engine.saturated.enable') ===
-                true
+            true
         ) {
             metrics.push({
                 name: 'qs_engineSaturated',
@@ -216,7 +203,6 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
 
         // Add app metrics
         if (
-            globals.config.has('Butler-SOS.newRelic.metric.dynamic.apps.docCount.enable') &&
             globals.config.get('Butler-SOS.newRelic.metric.dynamic.apps.docCount.enable') === true
         ) {
             metrics.push({
@@ -239,10 +225,7 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
         }
 
         // Add cache metrics
-        if (
-            globals.config.has('Butler-SOS.newRelic.metric.dynamic.cache.cache.enable') &&
-            globals.config.get('Butler-SOS.newRelic.metric.dynamic.cache.cache.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.newRelic.metric.dynamic.cache.cache.enable') === true) {
             metrics.push({
                 name: 'qs_cacheHits',
                 type: 'gauge',
@@ -412,7 +395,6 @@ async function postProxySessionsToNewRelic(userSessions) {
 
         // Add metrics
         if (
-            globals.config.has('Butler-SOS.newRelic.metric.dynamic.proxy.sessions.enable') &&
             globals.config.get('Butler-SOS.newRelic.metric.dynamic.proxy.sessions.enable') === true
         ) {
             metrics.push({
@@ -537,9 +519,6 @@ async function postButlerSOSUptimeToNewRelic(fields) {
 
         // Add version to attributes
         if (
-            globals.config.has(
-                'Butler-SOS.uptimeMonitor.storeNewRelic.attribute.dynamic.butlerVersion.enable'
-            ) &&
             globals.config.get(
                 'Butler-SOS.uptimeMonitor.storeNewRelic.attribute.dynamic.butlerVersion.enable'
             ) === true
@@ -555,9 +534,6 @@ async function postButlerSOSUptimeToNewRelic(fields) {
 
         // Add memory usage
         if (
-            globals.config.has(
-                'Butler-SOS.uptimeMonitor.storeNewRelic.metric.dynamic.butlerMemoryUsage.enable'
-            ) &&
             globals.config.get(
                 'Butler-SOS.uptimeMonitor.storeNewRelic.metric.dynamic.butlerMemoryUsage.enable'
             ) === true
@@ -589,9 +565,6 @@ async function postButlerSOSUptimeToNewRelic(fields) {
 
         // Add uptime
         if (
-            globals.config.has(
-                'Butler-SOS.uptimeMonitor.storeNewRelic.metric.dynamic.butlerUptime.enable'
-            ) &&
             globals.config.get(
                 'Butler-SOS.uptimeMonitor.storeNewRelic.metric.dynamic.butlerUptime.enable'
             ) === true
@@ -687,10 +660,7 @@ async function postUserEventToNewRelic(msg) {
         const ts = new Date().getTime(); // Timestamp in millisec
         let attributes;
         // Scramble the data if needed before sending to New Relic
-        if (
-            globals.config.has('Butler-SOS.userEvents.sendToNewRelic.scramble') &&
-            globals.config.get('Butler-SOS.userEvents.sendToNewRelic.scramble')
-        ) {
+        if (globals.config.get('Butler-SOS.userEvents.sendToNewRelic.scramble')) {
             attributes = {
                 timestamp: ts,
                 qs_host: msg.host,
@@ -840,7 +810,6 @@ function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
     // Engine log event
     if (
         sourceService.toLowerCase() === 'qseow-engine' &&
-        globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.engine.enable') &&
         globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.engine.enable') === true
     ) {
         if (
@@ -866,7 +835,6 @@ function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
     // Proxy log event
     if (
         sourceService.toLowerCase() === 'qseow-proxy' &&
-        globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.proxy.enable') &&
         globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.proxy.enable') === true
     ) {
         if (
@@ -890,7 +858,6 @@ function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
     // Repository log event
     if (
         sourceService.toLowerCase() === 'qseow-repository' &&
-        globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.repository.enable') &&
         globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.repository.enable') === true
     ) {
         if (
@@ -916,7 +883,6 @@ function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
     // Scheduler log event
     if (
         sourceService.toLowerCase() === 'qseow-scheduler' &&
-        globals.config.has('Butler-SOS.logEvents.sendToNewRelic.source.scheduler.enable') &&
         globals.config.get('Butler-SOS.logEvents.sendToNewRelic.source.scheduler.enable') === true
     ) {
         if (

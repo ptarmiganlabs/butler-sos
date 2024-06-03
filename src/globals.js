@@ -9,8 +9,14 @@ const winston = require('winston');
 require('winston-daily-rotate-file');
 const si = require('systeminformation');
 const { Command, Option } = require('commander');
-
 const Influx = require('influx');
+const { InfluxDB, HttpError, DEFAULT_WriteOptions } = require('@influxdata/influxdb-client');
+const { OrgsAPI, BucketsAPI } = require('@influxdata/influxdb-client-apis');
+
+const { getServerTags } = require('./lib/servertags');
+
+const InfluxDB2 = InfluxDB;
+
 const { Pool } = require('pg');
 
 function checkFileExistsSync(filepath) {
@@ -179,8 +185,7 @@ if (
 ) {
     config['Butler-SOS'].thirdPartyToolsCredentials.newRelic = [];
 
-    //
-    for (let index = 0; index < options.newRelicApiKey.length; index++) {
+    for (let index = 0; index < options.newRelicApiKey.length; index += 1) {
         const accountName = options.newRelicAccountName[index];
         const accountId = options.newRelicAccountId[index];
         const insertApiKey = options.newRelicApiKey[index];
@@ -207,9 +212,7 @@ if (
 const udpServerUserActivity = {};
 
 try {
-    udpServerUserActivity.host = config.has('Butler-SOS.userEvents.udpServerConfig.serverHost')
-        ? config.get('Butler-SOS.userEvents.udpServerConfig.serverHost')
-        : '';
+    udpServerUserActivity.host = config.get('Butler-SOS.userEvents.udpServerConfig.serverHost');
 
     // Prepare to listen on port X for incoming UDP connections regarding user activity events
     udpServerUserActivity.socket = dgram.createSocket({
@@ -217,11 +220,9 @@ try {
         reuseAddr: true,
     });
 
-    udpServerUserActivity.portUserActivity = config.has(
+    udpServerUserActivity.portUserActivity = config.get(
         'Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents'
-    )
-        ? config.get('Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents')
-        : '';
+    );
 } catch (err) {
     logger.error(`CONFIG: Setting up UDP user activity listener: ${err}`);
 }
@@ -231,9 +232,7 @@ try {
 const udpServerLogEvents = {};
 
 try {
-    udpServerLogEvents.host = config.has('Butler-SOS.logEvents.udpServerConfig.serverHost')
-        ? config.get('Butler-SOS.logEvents.udpServerConfig.serverHost')
-        : '';
+    udpServerLogEvents.host = config.get('Butler-SOS.logEvents.udpServerConfig.serverHost');
 
     // Prepare to listen on port X for incoming UDP connections regarding user activity events
     udpServerLogEvents.socket = dgram.createSocket({
@@ -241,9 +240,7 @@ try {
         reuseAddr: true,
     });
 
-    udpServerLogEvents.port = config.has('Butler-SOS.logEvents.udpServerConfig.portLogEvents')
-        ? config.get('Butler-SOS.logEvents.udpServerConfig.portLogEvents')
-        : '';
+    udpServerLogEvents.port = config.get('Butler-SOS.logEvents.udpServerConfig.portLogEvents');
 } catch (err) {
     logger.error(`CONFIG: Setting up UDP log events listener: ${err}`);
 }
@@ -252,22 +249,26 @@ try {
 // Get info on what servers to monitor
 const serverList = config.get('Butler-SOS.serversToMonitor.servers');
 
-// Set up connection pool for accessing Qlik Sense log db
-const pgPool = new Pool({
-    host: config.get('Butler-SOS.logdb.host'),
-    database: 'QLogs',
-    user: config.get('Butler-SOS.logdb.qlogsReaderUser'),
-    password: config.get('Butler-SOS.logdb.qlogsReaderPwd'),
-    port: config.get('Butler-SOS.logdb.port'),
-});
+// Only set up connection pool for accessing Qlik Sense log db if that feature is enabled
+let pgPool;
+if (config.get('Butler-SOS.logdb.enable') === true) {
+    // Set up connection pool for accessing Qlik Sense log db
+    pgPool = new Pool({
+        host: config.get('Butler-SOS.logdb.host'),
+        database: 'QLogs',
+        user: config.get('Butler-SOS.logdb.qlogsReaderUser'),
+        password: config.get('Butler-SOS.logdb.qlogsReaderPwd'),
+        port: config.get('Butler-SOS.logdb.port'),
+    });
 
-// the pool will emit an error on behalf of any idle clients
-// it contains if a backend error or network partition happens
-// eslint-disable-next-line no-unused-vars
-pgPool.on('error', (err, client) => {
-    logger.error(`CONFIG: Unexpected error on idle client: ${err}`);
-    // process.exit(-1);
-});
+    // the pool will emit an error on behalf of any idle clients
+    // it contains if a backend error or network partition happens
+    // eslint-disable-next-line no-unused-vars
+    pgPool.on('error', (err, client) => {
+        logger.error(`CONFIG: Unexpected error on idle client: ${err}`);
+        // process.exit(-1);
+    });
+}
 
 // Get list of standard and user configurable tags
 // ..begin with standard tags
@@ -321,215 +322,371 @@ const tagValuesLogEventLogDb = tagValues.slice();
 tagValuesLogEventLogDb.push('source_process');
 tagValuesLogEventLogDb.push('log_level');
 
-if (
-    (config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
-        config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
-    (config.has('Butler-SOS.influxdbConfig.enable') &&
-        config.get('Butler-SOS.influxdbConfig.enable') === true)
-) {
+// Show Influxdb config
+if (config.get('Butler-SOS.influxdbConfig.enable') === true) {
     logger.info(`CONFIG: Influxdb enabled: true`);
-    logger.info(`CONFIG: Influxdb host IP: ${config.get('Butler-SOS.influxdbConfig.hostIP')}`);
-    logger.info(`CONFIG: Influxdb host port: ${config.get('Butler-SOS.influxdbConfig.hostPort')}`);
-    logger.info(`CONFIG: Influxdb db name: ${config.get('Butler-SOS.influxdbConfig.dbName')}`);
+    logger.info(`CONFIG: Influxdb host IP: ${config.get('Butler-SOS.influxdbConfig.host')}`);
+    logger.info(`CONFIG: Influxdb host port: ${config.get('Butler-SOS.influxdbConfig.port')}`);
+    logger.info(`CONFIG: Influxdb version: ${config.get('Butler-SOS.influxdbConfig.version')}`);
+
+    // Version specific configs
+    if (config.get('Butler-SOS.influxdbConfig.version') === 1) {
+        logger.info(
+            `CONFIG: Influxdb db name: ${config.get('Butler-SOS.influxdbConfig.v1Config.dbName')}`
+        );
+        logger.info(
+            `CONFIG: Influxdb retention policy: ${config.get('Butler-SOS.influxdbConfig.v1Config.retentionPolicy.name')}`
+        );
+    } else if (config.get('Butler-SOS.influxdbConfig.version') === 2) {
+        logger.info(
+            `CONFIG: Influxdb organisation: ${config.get('Butler-SOS.influxdbConfig.v2Config.org')}`
+        );
+        logger.info(
+            `CONFIG: Influxdb bucket name: ${config.get('Butler-SOS.influxdbConfig.v2Config.bucket')}`
+        );
+        logger.info(
+            `CONFIG: Influxdb retention policy duration: ${config.get('Butler-SOS.influxdbConfig.v2Config.retentionDuration')}`
+        );
+    } else {
+        logger.error(
+            `CONFIG: Influxdb version ${config.get('Butler-SOS.influxdbConfig.version')} is not supported!`
+        );
+    }
 } else {
     logger.info(`CONFIG: Influxdb enabled: false`);
 }
 
 // Set up Influxdb client
-const influx = new Influx.InfluxDB({
-    host: config.get('Butler-SOS.influxdbConfig.hostIP'),
-    port: `${
-        config.has('Butler-SOS.influxdbConfig.hostPort')
-            ? config.get('Butler-SOS.influxdbConfig.hostPort')
-            : '8086'
-    }`,
-    database: config.get('Butler-SOS.influxdbConfig.dbName'),
-    username: `${
-        config.get('Butler-SOS.influxdbConfig.auth.enable')
-            ? config.get('Butler-SOS.influxdbConfig.auth.username')
-            : ''
-    }`,
-    password: `${
-        config.get('Butler-SOS.influxdbConfig.auth.enable')
-            ? config.get('Butler-SOS.influxdbConfig.auth.password')
-            : ''
-    }`,
-    schema: [
-        {
-            measurement: 'sense_server',
-            fields: {
-                version: Influx.FieldType.STRING,
-                started: Influx.FieldType.STRING,
-                uptime: Influx.FieldType.STRING,
-            },
-            tags: tagValues,
-        },
-        {
-            measurement: 'mem',
-            fields: {
-                comitted: Influx.FieldType.INTEGER,
-                allocated: Influx.FieldType.INTEGER,
-                free: Influx.FieldType.INTEGER,
-            },
-            tags: tagValues,
-        },
-        {
-            measurement: 'apps',
-            fields: {
-                active_docs_count: Influx.FieldType.INTEGER,
-                loaded_docs_count: Influx.FieldType.INTEGER,
-                in_memory_docs_count: Influx.FieldType.INTEGER,
-                active_docs: Influx.FieldType.STRING,
-                active_docs_names: Influx.FieldType.STRING,
-                active_session_docs_names: Influx.FieldType.STRING,
-                loaded_docs: Influx.FieldType.STRING,
-                loaded_docs_names: Influx.FieldType.STRING,
-                loaded_session_docs_names: Influx.FieldType.STRING,
-                in_memory_docs: Influx.FieldType.STRING,
-                in_memory_docs_names: Influx.FieldType.STRING,
-                in_memory_session_docs_names: Influx.FieldType.STRING,
-                calls: Influx.FieldType.INTEGER,
-                selections: Influx.FieldType.INTEGER,
-            },
-            tags: tagValues,
-        },
-        {
-            measurement: 'cpu',
-            fields: {
-                total: Influx.FieldType.INTEGER,
-            },
-            tags: tagValues,
-        },
-        {
-            measurement: 'session',
-            fields: {
-                active: Influx.FieldType.INTEGER,
-                total: Influx.FieldType.INTEGER,
-            },
-            tags: tagValues,
-        },
-        {
-            measurement: 'users',
-            fields: {
-                active: Influx.FieldType.INTEGER,
-                total: Influx.FieldType.INTEGER,
-            },
-            tags: tagValues,
-        },
-        {
-            measurement: 'cache',
-            fields: {
-                hits: Influx.FieldType.INTEGER,
-                lookups: Influx.FieldType.INTEGER,
-                added: Influx.FieldType.INTEGER,
-                replaced: Influx.FieldType.INTEGER,
-                bytes_added: Influx.FieldType.INTEGER,
-            },
-            tags: tagValues,
-        },
-        {
-            measurement: 'log_event_logdb',
-            fields: {
-                message: Influx.FieldType.STRING,
-            },
-            tags: tagValuesLogEventLogDb,
-        },
-        {
-            measurement: 'log_event',
-            fields: {
-                message: Influx.FieldType.STRING,
-                exception_message: Influx.FieldType.STRING,
-                app_name: Influx.FieldType.STRING,
-                app_id: Influx.FieldType.STRING,
-                execution_id: Influx.FieldType.STRING,
-                command: Influx.FieldType.STRING,
-                result_code: Influx.FieldType.STRING,
-                origin: Influx.FieldType.STRING,
-                context: Influx.FieldType.STRING,
-                session_id: Influx.FieldType.STRING,
-                raw_event: Influx.FieldType.STRING,
-            },
-            tags: tagValuesLogEvent,
-        },
-        {
-            measurement: 'butlersos_memory_usage',
-            fields: {
-                heap_used: Influx.FieldType.FLOAT,
-                heap_total: Influx.FieldType.FLOAT,
-                external: Influx.FieldType.FLOAT,
-                process_memory: Influx.FieldType.FLOAT,
-            },
-            tags: ['butler_sos_instance', 'version'],
-        },
-        // {
-        //     measurement: 'user_events',
-        //     fields: {
-        //         userFull: Influx.FieldType.STRING,
-        //         userId: Influx.FieldType.STRING
-        //     },
-        //     tags: ['host', 'event_action', 'userFull', 'userDirectory', 'userId', 'origin']
-        // },
-    ],
-});
+let influx;
+let influxWriteApi = [];
+if (config.get('Butler-SOS.influxdbConfig.enable') === true) {
+    if (config.get('Butler-SOS.influxdbConfig.version') === 1) {
+        // Set up Influxdb v1 client
+        influx = new Influx.InfluxDB({
+            host: config.get('Butler-SOS.influxdbConfig.host'),
+            port: config.get('Butler-SOS.influxdbConfig.port'),
+            database: config.get('Butler-SOS.influxdbConfig.v1Config.dbName'),
+            username: `${
+                config.get('Butler-SOS.influxdbConfig.v1Config.auth.enable')
+                    ? config.get('Butler-SOS.influxdbConfig.v1Config.auth.username')
+                    : ''
+            }`,
+            password: `${
+                config.get('Butler-SOS.influxdbConfig.v1Config.auth.enable')
+                    ? config.get('Butler-SOS.influxdbConfig.v1Config.auth.password')
+                    : ''
+            }`,
+            schema: [
+                {
+                    measurement: 'sense_server',
+                    fields: {
+                        version: Influx.FieldType.STRING,
+                        started: Influx.FieldType.STRING,
+                        uptime: Influx.FieldType.STRING,
+                    },
+                    tags: tagValues,
+                },
+                {
+                    measurement: 'mem',
+                    fields: {
+                        comitted: Influx.FieldType.INTEGER,
+                        allocated: Influx.FieldType.INTEGER,
+                        free: Influx.FieldType.INTEGER,
+                    },
+                    tags: tagValues,
+                },
+                {
+                    measurement: 'apps',
+                    fields: {
+                        active_docs_count: Influx.FieldType.INTEGER,
+                        loaded_docs_count: Influx.FieldType.INTEGER,
+                        in_memory_docs_count: Influx.FieldType.INTEGER,
+                        active_docs: Influx.FieldType.STRING,
+                        active_docs_names: Influx.FieldType.STRING,
+                        active_session_docs_names: Influx.FieldType.STRING,
+                        loaded_docs: Influx.FieldType.STRING,
+                        loaded_docs_names: Influx.FieldType.STRING,
+                        loaded_session_docs_names: Influx.FieldType.STRING,
+                        in_memory_docs: Influx.FieldType.STRING,
+                        in_memory_docs_names: Influx.FieldType.STRING,
+                        in_memory_session_docs_names: Influx.FieldType.STRING,
+                        calls: Influx.FieldType.INTEGER,
+                        selections: Influx.FieldType.INTEGER,
+                    },
+                    tags: tagValues,
+                },
+                {
+                    measurement: 'cpu',
+                    fields: {
+                        total: Influx.FieldType.INTEGER,
+                    },
+                    tags: tagValues,
+                },
+                {
+                    measurement: 'session',
+                    fields: {
+                        active: Influx.FieldType.INTEGER,
+                        total: Influx.FieldType.INTEGER,
+                    },
+                    tags: tagValues,
+                },
+                {
+                    measurement: 'users',
+                    fields: {
+                        active: Influx.FieldType.INTEGER,
+                        total: Influx.FieldType.INTEGER,
+                    },
+                    tags: tagValues,
+                },
+                {
+                    measurement: 'cache',
+                    fields: {
+                        hits: Influx.FieldType.INTEGER,
+                        lookups: Influx.FieldType.INTEGER,
+                        added: Influx.FieldType.INTEGER,
+                        replaced: Influx.FieldType.INTEGER,
+                        bytes_added: Influx.FieldType.INTEGER,
+                    },
+                    tags: tagValues,
+                },
+                {
+                    measurement: 'log_event_logdb',
+                    fields: {
+                        message: Influx.FieldType.STRING,
+                    },
+                    tags: tagValuesLogEventLogDb,
+                },
+                {
+                    measurement: 'log_event',
+                    fields: {
+                        message: Influx.FieldType.STRING,
+                        exception_message: Influx.FieldType.STRING,
+                        app_name: Influx.FieldType.STRING,
+                        app_id: Influx.FieldType.STRING,
+                        execution_id: Influx.FieldType.STRING,
+                        command: Influx.FieldType.STRING,
+                        result_code: Influx.FieldType.STRING,
+                        origin: Influx.FieldType.STRING,
+                        context: Influx.FieldType.STRING,
+                        session_id: Influx.FieldType.STRING,
+                        raw_event: Influx.FieldType.STRING,
+                    },
+                    tags: tagValuesLogEvent,
+                },
+                {
+                    measurement: 'butlersos_memory_usage',
+                    fields: {
+                        heap_used: Influx.FieldType.FLOAT,
+                        heap_total: Influx.FieldType.FLOAT,
+                        external: Influx.FieldType.FLOAT,
+                        process_memory: Influx.FieldType.FLOAT,
+                    },
+                    tags: ['butler_sos_instance', 'version'],
+                },
+                // {
+                //     measurement: 'user_events',
+                //     fields: {
+                //         userFull: Influx.FieldType.STRING,
+                //         userId: Influx.FieldType.STRING
+                //     },
+                //     tags: ['host', 'event_action', 'userFull', 'userDirectory', 'userId', 'origin']
+                // },
+            ],
+        });
+    } else if (config.get('Butler-SOS.influxdbConfig.version') === 2) {
+        // Set up Influxdb v2 client
+        const url = `http://${config.get('Butler-SOS.influxdbConfig.host')}:${config.get(
+            'Butler-SOS.influxdbConfig.port'
+        )}`;
+        const token = config.get('Butler-SOS.influxdbConfig.v2Config.token');
 
-function initInfluxDB() {
-    const dbName = config.get('Butler-SOS.influxdbConfig.dbName');
+        try {
+            influx = new InfluxDB2({ url, token });
+        } catch (err) {
+            logger.error(`INFLUXDB2 INIT: Error creating InfluxDB 2 client: ${err}`);
+            logger.error(`INFLUXDB2 INIT: Exiting.`);
+        }
+    } else {
+        logger.error(
+            `CONFIG: Influxdb version ${config.get('Butler-SOS.influxdbConfig.version')} is not supported!`
+        );
+    }
+}
+
+async function initInfluxDB() {
     let enableInfluxdb = false;
 
-    if (
-        (config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
-            config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
-        (config.has('Butler-SOS.influxdbConfig.enable') &&
-            config.get('Butler-SOS.influxdbConfig.enable') === true)
-    ) {
-        enableInfluxdb = true;
-    }
+    // Handle InfluxDB v1
+    if (config.get('Butler-SOS.influxdbConfig.version') === 1) {
+        const dbName = config.get('Butler-SOS.influxdbConfig.v1Config.dbName');
 
-    if (enableInfluxdb) {
-        influx
-            .getDatabaseNames()
-            .then((names) => {
+        if (
+            influx &&
+            config.get('Butler-SOS.influxdbConfig.enable') === true &&
+            dbName?.length > 0
+        ) {
+            enableInfluxdb = true;
+        }
+
+        if (enableInfluxdb) {
+            try {
+                const names = await influx.getDatabaseNames();
                 if (!names.includes(dbName)) {
-                    influx
-                        .createDatabase(dbName)
-                        .then(() => {
-                            logger.info(`CONFIG: Created new InfluxDB database: ${dbName}`);
+                    try {
+                        const res = await influx.createDatabase(dbName);
+                        logger.info(`CONFIG: Created new InfluxDB v1 database: ${dbName}`);
 
-                            const newPolicy = config.get(
-                                'Butler-SOS.influxdbConfig.retentionPolicy'
+                        const newPolicy = config.get(
+                            'Butler-SOS.influxdbConfig.v1Config.retentionPolicy'
+                        );
+
+                        // Create new default retention policy
+                        try {
+                            const res2 = await influx.createRetentionPolicy(newPolicy.name, {
+                                database: dbName,
+                                duration: newPolicy.duration,
+                                replication: 1,
+                                isDefault: true,
+                            });
+
+                            logger.info(
+                                `CONFIG: Created new InfluxDB v1 retention policy: ${newPolicy.name}`
                             );
-
-                            // Create new default retention policy
-                            influx
-                                .createRetentionPolicy(newPolicy.name, {
-                                    database: dbName,
-                                    duration: newPolicy.duration,
-                                    replication: 1,
-                                    isDefault: true,
-                                })
-                                .then(() => {
-                                    logger.info(
-                                        `CONFIG: Created new InfluxDB retention policy: ${newPolicy.name}`
-                                    );
-                                })
-                                .catch((err) => {
-                                    logger.error(
-                                        `CONFIG: Error creating new InfluxDB retention policy "${newPolicy.name}"! ${err.stack}`
-                                    );
-                                });
-                        })
-                        .catch((err) => {
+                        } catch (err) {
                             logger.error(
-                                `CONFIG: Error creating new InfluxDB database "${dbName}"! ${err.stack}`
+                                `CONFIG: Error creating new InfluxDB v1 retention policy "${newPolicy.name}"! ${err.stack}`
                             );
-                        });
+                        }
+                    } catch (err) {
+                        logger.error(
+                            `CONFIG: Error creating new InfluxDB v1 database "${dbName}"! ${err.stack}`
+                        );
+                    }
                 } else {
-                    logger.info(`CONFIG: Found InfluxDB database: ${dbName}`);
+                    logger.info(`CONFIG: Found InfluxDB v1 database: ${dbName}`);
                 }
-            })
-            .catch((err) => {
-                logger.error(`CONFIG: Error getting list of InfluxDB databases! ${err.stack}`);
+            } catch (err) {
+                logger.error(`CONFIG: Error getting list of InfluxDB v1 databases. ${err.stack}`);
+            }
+        }
+    } else if (config.get('Butler-SOS.influxdbConfig.version') === 2) {
+        // Get config
+        const org = config.get('Butler-SOS.influxdbConfig.v2Config.org');
+        const bucketName = config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
+        const description = config.get('Butler-SOS.influxdbConfig.v2Config.description');
+        const token = config.get('Butler-SOS.influxdbConfig.v2Config.token');
+        const retentionDuration = config.get(
+            'Butler-SOS.influxdbConfig.v2Config.retentionDuration'
+        );
+
+        if (
+            influx &&
+            config.get('Butler-SOS.influxdbConfig.enable') === true &&
+            org?.length > 0 &&
+            bucketName?.length > 0 &&
+            token?.length > 0 &&
+            retentionDuration?.length > 0
+        ) {
+            enableInfluxdb = true;
+        }
+
+        if (enableInfluxdb) {
+            let orgID;
+
+            try {
+                // Get organisation by name
+                const orgsAPI = new OrgsAPI(influx);
+                const organizations = await orgsAPI.getOrgs({ org });
+                if (!organizations || !organizations.orgs || !organizations.orgs.length) {
+                    logger.error(`INFLUXDB2: No organization named "${org}" found!`);
+                }
+                orgID = organizations.orgs[0].id;
+                logger.info(`INFLUXDB2: Using organization "${org}" identified by "${orgID}"`);
+            } catch (err) {
+                logger.error(`INFLUXDB2: Error getting organisation: ${err}`);
+            }
+
+            try {
+                // Get buckets by name
+                const bucketsAPI = new BucketsAPI(influx);
+                try {
+                    const buckets = await bucketsAPI.getBuckets({ orgID, name: bucketName });
+                    if (buckets && buckets.buckets && buckets.buckets.length > 0) {
+                        const bucketID = buckets.buckets[0].id;
+                        logger.info(
+                            `INFLUXDB2: Bucket named "${bucketName}" already exists, bucket ID="${bucketID}"`
+                        );
+                    }
+                } catch (e) {
+                    if (e instanceof HttpError && e.statusCode === 404) {
+                        // Bucket not found. Let's create it
+                        logger.info(
+                            `INFLUXDB2: Bucket named "${bucketName}" not found, creating it...`
+                        );
+
+                        // creates a bucket, entity properties are specified in the "body" property
+                        const newBucket = await bucketsAPI.postBuckets({
+                            body: { orgID, name: bucketName, description, rp: retentionDuration },
+                        });
+
+                        logger.verbose(
+                            `INFLUXDB2: New bucket: ${JSON.stringify(
+                                newBucket,
+                                (key, value) => (key === 'links' ? undefined : value),
+                                2
+                            )}`
+                        );
+                    } else {
+                        throw e;
+                    }
+                }
+            } catch (err) {
+                logger.error(`INFLUXDB2: Error getting bucket: ${err}`);
+            }
+
+            // Get write API
+
+            // Create array of per-server writeAPI objects
+            // Each object has two properties: host and writeAPI, where host can be used as key later on
+            serverList.forEach((server) => {
+                // Get per-server tags
+                const tags = getServerTags(logger, server);
+
+                // advanced write options
+                const writeOptions = {
+                    /* the maximum points/lines to send in a single batch to InfluxDB server */
+                    // batchSize: flushBatchSize + 1, // don't let automatically flush data
+
+                    /* default tags to add to every point */
+                    defaultTags: tags,
+
+                    /* maximum time in millis to keep points in an unflushed batch, 0 means don't periodically flush */
+                    flushInterval: 1000,
+
+                    /* maximum size of the retry buffer - it contains items that could not be sent for the first time */
+                    // maxBufferLines: 30_000,
+
+                    /* the count of internally-scheduled retries upon write failure, the delays between write attempts follow an exponential backoff strategy if there is no Retry-After HTTP header */
+                    maxRetries: 2, // do not retry writes
+
+                    // ... there are more write options that can be customized, see
+                    // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeoptions.html and
+                    // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeretryoptions.html
+                };
+
+                try {
+                    const serverWriteApi = influx.getWriteApi(org, bucketName, 'ns', writeOptions);
+
+                    // Save to global variable, using hostNamre as key
+                    influxWriteApi.push({
+                        serverName: server.serverName,
+                        writeAPI: serverWriteApi,
+                    });
+                } catch (err) {
+                    logger.error(`INFLUXDB2: Error getting write API: ${err}`);
+                }
             });
+        }
     }
 }
 
@@ -539,10 +696,7 @@ function initInfluxDB() {
 // ------------------------------------
 let mqttClient;
 
-if (
-    config.has('Butler-SOS.mqttConfig.enable') &&
-    config.get('Butler-SOS.mqttConfig.enable') === true
-) {
+if (config.get('Butler-SOS.mqttConfig.enable') === true) {
     mqttClient = mqtt.connect({
         port: config.get('Butler-SOS.mqttConfig.brokerPort'),
         host: config.get('Butler-SOS.mqttConfig.brokerHost'),
@@ -627,6 +781,7 @@ module.exports = {
     logger,
     getLoggingLevel,
     influx,
+    influxWriteApi,
     pgPool,
     appVersion,
     serverList,

@@ -39,7 +39,7 @@
     <logger name="Service">
         <appender-ref ref="LogEvent" />
     </logger>
-    <logger name="System">
+    <logger name="System.Scheduler">
         <appender-ref ref="LogEvent" />
     </logger>
 </configuration>

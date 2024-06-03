@@ -27,142 +27,76 @@ const callRemoteURL = async function reportTelemetry() {
         let userSessionsEnable = false;
 
         // Gather info on what features are enabled/disabled
-        if (
-            (globals.config.has('Butler-SOS.heartbeat.enabled') &&
-                globals.config.get('Butler-SOS.heartbeat.enabled') === true) ||
-            (globals.config.has('Butler-SOS.heartbeat.enable') &&
-                globals.config.get('Butler-SOS.heartbeat.enable') === true)
-        ) {
+        if (globals.config.get('Butler-SOS.heartbeat.enable') === true) {
             heartbeat = true;
         }
 
-        if (
-            (globals.config.has('Butler-SOS.dockerHealthCheck.enabled') &&
-                globals.config.get('Butler-SOS.dockerHealthCheck.enabled') === true) ||
-            (globals.config.has('Butler-SOS.dockerHealthCheck.enable') &&
-                globals.config.get('Butler-SOS.dockerHealthCheck.enable') === true)
-        ) {
+        if (globals.config.get('Butler-SOS.dockerHealthCheck.enable') === true) {
             dockerHealthCheck = true;
         }
 
-        if (
-            (globals.config.has('Butler-SOS.uptimeMonitor.enabled') &&
-                globals.config.get('Butler-SOS.uptimeMonitor.enabled') === true) ||
-            (globals.config.has('Butler-SOS.uptimeMonitor.enable') &&
-                globals.config.get('Butler-SOS.uptimeMonitor.enable') === true)
-        ) {
+        if (globals.config.get('Butler-SOS.uptimeMonitor.enable') === true) {
             uptimeMonitor = true;
         }
 
-        if (
-            globals.config.has('Butler-SOS.userEvents.enable') &&
-            globals.config.get('Butler-SOS.userEvents.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.userEvents.enable') === true) {
             userEventsEnable = true;
         }
 
-        if (
-            globals.config.has('Butler-SOS.userEvents.sendToMQTT.enable') &&
-            globals.config.get('Butler-SOS.userEvents.sendToMQTT.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.userEvents.sendToMQTT.enable') === true) {
             userEventsMQTTEnable = true;
         }
 
-        if (
-            globals.config.has('Butler-SOS.userEvents.sendToInfluxdb.enable') &&
-            globals.config.get('Butler-SOS.userEvents.sendToInfluxdb.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.userEvents.sendToInfluxdb.enable') === true) {
             userEventsInfluxDBEnable = true;
         }
 
-        if (
-            globals.config.has('Butler-SOS.logEvents.source.proxy.enable') &&
-            globals.config.get('Butler-SOS.logEvents.source.proxy.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.logEvents.source.proxy.enable') === true) {
             logEventsProxyEnable = true;
         }
 
-        if (
-            globals.config.has('Butler-SOS.logEvents.source.scheduler.enable') &&
-            globals.config.get('Butler-SOS.logEvents.source.scheduler.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.logEvents.source.scheduler.enable') === true) {
             logEventsSchedulerEnable = true;
         }
 
-        if (
-            globals.config.has('Butler-SOS.logEvents.source.repository.enable') &&
-            globals.config.get('Butler-SOS.logEvents.source.repository.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.logEvents.source.repository.enable') === true) {
             logEventsRepositoryEnable = true;
         }
 
-        if (
-            globals.config.has('Butler-SOS.logEvents.sendToMQTT.enable') &&
-            globals.config.get('Butler-SOS.logEvents.sendToMQTT.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.logEvents.sendToMQTT.enable') === true) {
             logEventsMQTTEnable = true;
         }
 
-        if (
-            globals.config.has('Butler-SOS.logEvents.sendToInfluxdb.enable') &&
-            globals.config.get('Butler-SOS.logEvents.sendToInfluxdb.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.logEvents.sendToInfluxdb.enable') === true) {
             logEventsInfluxDBEnable = true;
         }
 
-        if (
-            (globals.config.has('Butler-SOS.logdb.enableLogDb') &&
-                globals.config.get('Butler-SOS.logdb.enableLogDb') === true) ||
-            (globals.config.has('Butler-SOS.logdb.enable') &&
-                globals.config.get('Butler-SOS.logdb.enable') === true)
-        ) {
+        if (globals.config.get('Butler-SOS.logdb.enable') === true) {
             logdbEnable = true;
         }
 
-        if (
-            (globals.config.has('Butler-SOS.mqttConfig.enableMQTT') &&
-                globals.config.get('Butler-SOS.mqttConfig.enableMQTT') === true) ||
-            (globals.config.has('Butler-SOS.mqttConfig.enable') &&
-                globals.config.get('Butler-SOS.mqttConfig.enable') === true)
-        ) {
+        if (globals.config.get('Butler-SOS.mqttConfig.enable') === true) {
             mqttEnable = true;
         }
 
         // Is New Relic enabled?
-        if (
-            globals.config.has('Butler-SOS.newRelic.enable') &&
-            globals.config.get('Butler-SOS.newRelic.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.newRelic.enable') === true) {
             newRelicEnable = true;
         }
 
-        if (
-            globals.config.has('Butler-SOS.prometheus.enable') &&
-            globals.config.get('Butler-SOS.prometheus.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.prometheus.enable') === true) {
             prometheusEnable = true;
         }
 
-        if (
-            (globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
-                globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
-            (globals.config.has('Butler-SOS.influxdbConfig.enable') &&
-                globals.config.get('Butler-SOS.influxdbConfig.enable') === true)
-        ) {
+        if (globals.config.get('Butler-SOS.influxdbConfig.enable') === true) {
             influxdbEnable = true;
         }
 
-        if (
-            globals.config.has('Butler-SOS.appNames.enableAppNameExtract') &&
-            globals.config.get('Butler-SOS.appNames.enableAppNameExtract') === true
-        ) {
+        if (globals.config.get('Butler-SOS.appNames.enableAppNameExtract') === true) {
             appNamesExtractEnable = true;
         }
 
-        if (
-            globals.config.has('Butler-SOS.userSessions.enableSessionExtract') &&
-            globals.config.get('Butler-SOS.userSessions.enableSessionExtract') === true
-        ) {
+        if (globals.config.get('Butler-SOS.userSessions.enableSessionExtract') === true) {
             userSessionsEnable = true;
         }
 
@@ -188,16 +122,10 @@ const callRemoteURL = async function reportTelemetry() {
                 feature_heartbeat: heartbeat,
                 feature_dockerHealthCheck: dockerHealthCheck,
                 feature_uptimeMonitor: uptimeMonitor,
-                feature_uptimeMonitor_storeInInfluxdb: globals.config.has(
+                feature_uptimeMonitor_storeInInfluxdb: globals.config.get(
                     'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
-                )
-                    ? globals.config.get(
-                          'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
-                      )
-                    : false,
-                feature_udpServer: globals.config.has('Butler-SOS.userEvents.enable')
-                    ? globals.config.get('Butler-SOS.userEvents.enable')
-                    : false,
+                ),
+                feature_udpServer: globals.config.get('Butler-SOS.userEvents.enable'),
                 feature_userEvents: userEventsEnable,
                 feature_userEventsMQTT: userEventsMQTTEnable,
                 feature_userEventsInfluxdb: userEventsInfluxDBEnable,
@@ -231,16 +159,10 @@ const callRemoteURL = async function reportTelemetry() {
                             heartbeat,
                             dockerHealthCheck,
                             uptimeMonitor,
-                            uptimeMonitor_storeInInfluxdb: globals.config.has(
+                            uptimeMonitor_storeInInfluxdb: globals.config.get(
                                 'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
-                            )
-                                ? globals.config.get(
-                                      'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
-                                  )
-                                : false,
-                            udpServer: globals.config.has('Butler-SOS.userEvents.enable')
-                                ? globals.config.get('Butler-SOS.userEvents.enable')
-                                : false,
+                            ),
+                            udpServer: globals.config.get('Butler-SOS.userEvents.enable'),
                             userEvents: userEventsEnable,
                             userEventsMQTT: userEventsMQTTEnable,
                             userEventsInfluxdb: userEventsInfluxDBEnable,

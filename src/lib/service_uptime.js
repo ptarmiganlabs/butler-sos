@@ -52,6 +52,8 @@ function serviceUptimeStart() {
         const uptimeMilliSec = Date.now() - startTime;
 
         const d = luxon.Duration.fromMillis(uptimeMilliSec).toFull().toObject();
+        // Round to whole seconds
+        d.seconds = Math.round(d.seconds);
         const uptimeString = `${d.months} months, ${d.days} days, ${d.hours} hours, ${d.minutes} minutes, ${d.seconds} seconds`;
 
         const { heapTotal } = process.memoryUsage();
@@ -81,12 +83,7 @@ function serviceUptimeStart() {
 
         let enableInfluxDB = false;
 
-        if (
-            (globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
-                globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
-            (globals.config.has('Butler-SOS.influxdbConfig.enable') &&
-                globals.config.get('Butler-SOS.influxdbConfig.enable') === true)
-        ) {
+        if (globals.config.get('Butler-SOS.influxdbConfig.enable') === true) {
             enableInfluxDB = true;
         }
 
@@ -105,10 +102,7 @@ function serviceUptimeStart() {
         }
 
         // Send to New Relic
-        if (
-            globals.config.has('Butler-SOS.uptimeMonitor.storeNewRelic.enable') &&
-            globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.enable') === true
-        ) {
+        if (globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.enable') === true) {
             postToNewRelic.postButlerSOSUptimeToNewRelic({
                 intervalMillisec,
                 heapUsed,

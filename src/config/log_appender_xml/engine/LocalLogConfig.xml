@@ -33,13 +33,13 @@
 
 
     <!-- Send UDP message to Butler SOS on warnings and errors -->
-    <logger name="Performance">
+    <logger name="Performance.Engine">
         <appender-ref ref="LogEvent" />
     </logger>
-    <logger name="System">
+    <logger name="System.Engine">
         <appender-ref ref="LogEvent" />
     </logger>
-    <logger name="Session">
+    <logger name="Session.Engine">
         <appender-ref ref="LogEvent" />
     </logger>
 </configuration>

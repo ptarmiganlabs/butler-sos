@@ -94,7 +94,6 @@ function udpInitUserActivityServer() {
             // Is user in blacklist?
             // If so skip this event
             if (
-                globals.config.has('Butler-SOS.userEvents.excludeUser') &&
                 globals.config.get('Butler-SOS.userEvents.excludeUser') !== null &&
                 globals.config.get('Butler-SOS.userEvents.excludeUser').length > 0
             ) {
@@ -158,10 +157,7 @@ function udpInitUserActivityServer() {
 
             // Post to MQTT
             if (
-                ((globals.config.has('Butler-SOS.mqttConfig.enableMQTT') &&
-                    globals.config.get('Butler-SOS.mqttConfig.enableMQTT') === true) ||
-                    (globals.config.has('Butler-SOS.mqttConfig.enable') &&
-                        globals.config.get('Butler-SOS.mqttConfig.enable') === true)) &&
+                globals.config.get('Butler-SOS.mqttConfig.enable') === true &&
                 globals.config.get('Butler-SOS.userEvents.sendToMQTT.enable')
             ) {
                 globals.logger.debug('USER EVENT: Calling user sessions MQTT posting method');
@@ -170,10 +166,7 @@ function udpInitUserActivityServer() {
 
             // Post to Influxdb
             if (
-                ((globals.config.has('Butler-SOS.influxdbConfig.enableInfluxdb') &&
-                    globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') === true) ||
-                    (globals.config.has('Butler-SOS.influxdbConfig.enable') &&
-                        globals.config.get('Butler-SOS.influxdbConfig.enable') === true)) &&
+                globals.config.get('Butler-SOS.influxdbConfig.enable') === true &&
                 globals.config.get('Butler-SOS.userEvents.sendToInfluxdb.enable')
             ) {
                 globals.logger.debug('USER EVENT: Calling user sessions Influxdb posting method');
@@ -182,7 +175,6 @@ function udpInitUserActivityServer() {
 
             // Post to New Relic
             if (
-                globals.config.has('Butler-SOS.newRelic.enable') &&
                 globals.config.get('Butler-SOS.newRelic.enable') === true &&
                 globals.config.get('Butler-SOS.userEvents.sendToNewRelic.enable')
             ) {
