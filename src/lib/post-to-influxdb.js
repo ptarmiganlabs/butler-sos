@@ -444,7 +444,7 @@ async function postHealthMetricsToInfluxdb(serverName, host, body, serverTags) {
                         : ''
                 )
                 .stringField(
-                    'in_memory_docs_names',
+                    'in_memory_session_docs_names',
                     globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
                         globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs')
                         ? sessionAppNamesInMemory.toString()
@@ -618,14 +618,6 @@ async function postButlerSOSMemoryUsageToInfluxdb(memory) {
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
         // TODO v2
 
-        // Only write to influuxdb if the global influxWriteApi object has been initialized
-        if (!globals.influxWriteApi) {
-            globals.logger.warn(
-                'MEMORY USAGE INFLUXDB: Influxdb write API object not initialized. Data will not be sent to InfluxDB'
-            );
-            return;
-        }
-
         // Create new write API object
         // This is in contrast to elsewhere in the code, where the write API object is created once and reused
         // The rationale for this is that the memory usage data is only sent infrequently and it's then ok with the extra overhead of creating the API object each time
@@ -695,90 +687,199 @@ async function postButlerSOSMemoryUsageToInfluxdb(memory) {
 async function postUserEventToInfluxdb(msg) {
     globals.logger.debug(`USER EVENT INFLUXDB: ${msg})`);
 
-    try {
-        // First prepare tags relating to the actual user event, then add tags defined in the config file
-        // The config file tags can for example be used to separate data from DEV/TEST/PROD environments
-        const tags = {
-            host: msg.host,
-            event_action: msg.command,
-            userFull: `${msg.user_directory}\\${msg.user_id}`,
-            userDirectory: msg.user_directory,
-            userId: msg.user_id,
-            origin: msg.origin,
+    // Only write to influuxdb if the global influx object has been initialized
+    if (!globals.influx) {
+        globals.logger.warn(
+            'USER EVENT INFLUXDB: Influxdb object not initialized. Data will not be sent to InfluxDB'
+        );
+        return;
+    }
+
+    let datapoint;
+
+    // InfluxDB 1.x
+    if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
+        // Build datapoint for InfluxDB v1
+        try {
+            // First prepare tags relating to the actual user event, then add tags defined in the config file
+            // The config file tags can for example be used to separate data from DEV/TEST/PROD environments
+            const tags = {
+                host: msg.host,
+                event_action: msg.command,
+                userFull: `${msg.user_directory}\\${msg.user_id}`,
+                userDirectory: msg.user_directory,
+                userId: msg.user_id,
+                origin: msg.origin,
+            };
+
+            // Add app id and name to tags if available
+            if (msg?.appId) tags.appId = msg.appId;
+            if (msg?.appName) tags.appName = msg.appName;
+
+            // Add user agent info to tags if available
+            if (msg?.ua?.browser?.name) tags.uaBrowserName = msg?.ua?.browser?.name;
+            if (msg?.ua?.browser?.major) tags.uaBrowserMajorVersion = msg?.ua?.browser?.major;
+            if (msg?.ua?.os?.name) tags.uaOsName = msg?.ua?.os?.name;
+            if (msg?.ua?.os?.version) tags.uaOsVersion = msg?.ua?.os?.version;
+
+            // Add custom tags from config file to payload
+            if (
+                globals.config.has('Butler-SOS.userEvents.tags') &&
+                globals.config.get('Butler-SOS.userEvents.tags') !== null &&
+                globals.config.get('Butler-SOS.userEvents.tags').length > 0
+            ) {
+                const configTags = globals.config.get('Butler-SOS.userEvents.tags');
+                // eslint-disable-next-line no-restricted-syntax
+                for (const item of configTags) {
+                    tags[item.tag] = item.value;
+                }
+            }
+
+            datapoint = [
+                {
+                    measurement: 'user_events',
+                    tags,
+                    fields: {
+                        userFull: tags.userFull,
+                        userId: tags.userId,
+                    },
+                },
+            ];
+
+            // Add app id and name to fields if available
+            if (msg?.appId) datapoint[0].fields.appId = msg.appId;
+            if (msg?.appName) datapoint[0].fields.appName = msg.appName;
+
+            globals.logger.silly(
+                `USER EVENT INFLUXDB: Influxdb datapoint for Butler SOS user event: ${JSON.stringify(
+                    datapoint,
+                    null,
+                    2
+                )}`
+            );
+        } catch (err) {
+            globals.logger.error(
+                `USER EVENT INFLUXDB: Error saving user event to InfluxDB! ${err}`
+            );
+        }
+
+        try {
+            const res = await globals.influx.writePoints(datapoint);
+        } catch (err) {
+            globals.logger.error(
+                `USER EVENT INFLUXDB: Error saving user event to InfluxDB! ${err}`
+            );
+        }
+
+        globals.logger.verbose('USER EVENT INFLUXDB: Sent Butler SOS user event data to InfluxDB');
+    } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
+        // TODO v2
+
+        // Create new write API object
+        // This is in contrast to elsewhere in the code, where the write API object is created once and reused
+        // The rationale for this is that the memory usage data is only sent infrequently and it's then ok with the extra overhead of creating the API object each time
+        // advanced write options
+        const writeOptions = {
+            /* the maximum points/lines to send in a single batch to InfluxDB server */
+            // batchSize: flushBatchSize + 1, // don't let automatically flush data
+
+            /* default tags to add to every point */
+            // defaultTags: {
+            //     butler_sos_instance: memory.instanceTag,
+            //     version: butlerVersion,
+            // },
+
+            /* maximum time in millis to keep points in an unflushed batch, 0 means don't periodically flush */
+            flushInterval: 1000,
+
+            /* maximum size of the retry buffer - it contains items that could not be sent for the first time */
+            // maxBufferLines: 30_000,
+
+            /* the count of internally-scheduled retries upon write failure, the delays between write attempts follow an exponential backoff strategy if there is no Retry-After HTTP header */
+            maxRetries: 2, // do not retry writes
+
+            // ... there are more write options that can be customized, see
+            // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeoptions.html and
+            // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeretryoptions.html
         };
 
-        // Add app id and name to tags if available
-        if (msg?.appId) tags.appId = msg.appId;
-        if (msg?.appName) tags.appName = msg.appName;
+        try {
+            const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
+            const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
 
-        // Add user agent info to tags if available
-        if (msg?.ua?.browser?.name) tags.uaBrowserName = msg?.ua?.browser?.name;
-        if (msg?.ua?.browser?.major) tags.uaBrowserMajorVersion = msg?.ua?.browser?.major;
-        if (msg?.ua?.os?.name) tags.uaOsName = msg?.ua?.os?.name;
-        if (msg?.ua?.os?.version) tags.uaOsVersion = msg?.ua?.os?.version;
+            const writeApi = globals.influx.getWriteApi(org, bucketName, 'ns', writeOptions);
 
-        // Add custom tags from config file to payload
-        if (
-            globals.config.has('Butler-SOS.userEvents.tags') &&
-            globals.config.get('Butler-SOS.userEvents.tags') !== null &&
-            globals.config.get('Butler-SOS.userEvents.tags').length > 0
-        ) {
-            const configTags = globals.config.get('Butler-SOS.userEvents.tags');
-            // eslint-disable-next-line no-restricted-syntax
-            for (const item of configTags) {
-                tags[item.tag] = item.value;
+            // Ensure that the writeApi object was found
+            if (!writeApi) {
+                globals.logger.warn(
+                    `USER EVENT INFLUXDB: Influxdb write API object not found. Data will not be sent to InfluxDB`
+                );
+                return;
             }
-        }
 
-        const datapoint = [
-            {
-                measurement: 'user_events',
-                tags,
-                fields: {
-                    userFull: tags.userFull,
-                    userId: tags.userId,
-                },
-            },
-        ];
+            // Create a new point with the data to be written to InfluxDB
+            const point = new Point('user_events')
+                .tag('host', msg.host)
+                .tag('event_action', msg.command)
+                .tag('userFull', `${msg.user_directory}\\${msg.user_id}`)
+                .tag('userDirectory', msg.user_directory)
+                .tag('userId', msg.user_id)
+                .tag('origin', msg.origin)
+                .stringField('userFull', `${msg.user_directory}\\${msg.user_id}`)
+                .stringField('userId', msg.user_id);
 
-        // Add app id and name to fields if available
-        if (msg?.appId) datapoint[0].fields.appId = msg.appId;
-        if (msg?.appName) datapoint[0].fields.appName = msg.appName;
+            // Add app id and name to tags if available
+            if (msg?.appId) point.tag('appId', msg.appId);
+            if (msg?.appName) point.tag('appName', msg.appName);
 
-        globals.logger.silly(
-            `USER EVENT INFLUXDB: Influxdb datapoint for Butler SOS user event: ${JSON.stringify(
-                datapoint,
-                null,
-                2
-            )}`
-        );
+            // Add user agent info to tags if available
+            if (msg?.ua?.browser?.name) point.tag('uaBrowserName', msg?.ua?.browser?.name);
+            if (msg?.ua?.browser?.major)
+                point.tag('uaBrowserMajorVersion', msg?.ua?.browser?.major);
+            if (msg?.ua?.os?.name) point.tag('uaOsName', msg?.ua?.os?.name);
+            if (msg?.ua?.os?.version) point.tag('uaOsVersion', msg?.ua?.os?.version);
 
-        // Only write to influuxdb if the global influx object has been initialized
-        if (!globals.influx) {
-            globals.logger.warn(
-                'USER EVENT INFLUXDB: Influxdb object not initialized. Data will not be sent to InfluxDB'
+            // Add custom tags from config file to payload
+            if (
+                globals.config.has('Butler-SOS.userEvents.tags') &&
+                globals.config.get('Butler-SOS.userEvents.tags') !== null &&
+                globals.config.get('Butler-SOS.userEvents.tags').length > 0
+            ) {
+                const configTags = globals.config.get('Butler-SOS.userEvents.tags');
+                // eslint-disable-next-line no-restricted-syntax
+                for (const item of configTags) {
+                    point.tag(item.tag, item.value);
+                }
+            }
+
+            // Add app id and name to fields if available
+            if (msg?.appId) point.stringField('appId', msg.appId);
+            if (msg?.appName) point.stringField('appName', msg.appName);
+
+            globals.logger.silly(
+                `USER EVENT INFLUXDB: Influxdb datapoint for Butler SOS user event: ${JSON.stringify(
+                    point,
+                    null,
+                    2
+                )}`
             );
-            return;
-        }
 
-        // InfluxDB 1.x
-        if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
+            // Write to InfluxDB
             try {
-                const res = await globals.influx.writePoints(datapoint);
+                const res = await writeApi.writePoint(point);
+                globals.logger.debug(`USER EVENT INFLUXDB: Wrote data to InfluxDB v2`);
             } catch (err) {
                 globals.logger.error(
-                    `USER EVENT INFLUXDB: Error saving user event to InfluxDB! ${err}`
+                    `USER EVENT INFLUXDB: Error saving health data to InfluxDB v2! ${err.stack}`
                 );
             }
 
             globals.logger.verbose(
                 'USER EVENT INFLUXDB: Sent Butler SOS user event data to InfluxDB'
             );
-        } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
-            // TODO v2
+        } catch (err) {
+            globals.logger.error(`USER EVENT INFLUXDB: Error getting write API: ${err}`);
         }
-    } catch (err) {
-        globals.logger.error(`USER EVENT INFLUXDB: Error saving user event to InfluxDB! ${err}`);
     }
 }
 

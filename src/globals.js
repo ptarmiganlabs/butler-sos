@@ -661,7 +661,7 @@ async function initInfluxDB() {
                     defaultTags: tags,
 
                     /* maximum time in millis to keep points in an unflushed batch, 0 means don't periodically flush */
-                    // flushInterval: 0,
+                    flushInterval: 1000,
 
                     /* maximum size of the retry buffer - it contains items that could not be sent for the first time */
                     // maxBufferLines: 30_000,
