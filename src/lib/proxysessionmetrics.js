@@ -40,11 +40,8 @@ function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
             // Build tags structure, adding tags for virtual proxy and host the session is associated with
             // Start with common/shared set of tags, then add user session specific tags
             userProxySessionsData.tags = { ...tags };
-            // Esnure the virtual proxy does not begin or end with a slash or backslash
-            userProxySessionsData.tags.user_session_virtual_proxy = virtualProxy.replace(
-                /^[/\\]+|[/\\]+$/g,
-                ''
-            );
+
+            userProxySessionsData.tags.user_session_virtual_proxy = virtualProxy;
             userProxySessionsData.tags.user_session_host = host;
 
             // Build comma separated list of all user IDs connected via the current virtual proxy
