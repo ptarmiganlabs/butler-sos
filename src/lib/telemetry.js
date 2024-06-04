@@ -10,14 +10,17 @@ const callRemoteURL = async function reportTelemetry() {
         let heartbeat = false;
         let dockerHealthCheck = false;
         let uptimeMonitor = false;
+        let uptimeMonitorNewRelic = false;
         let userEventsEnable = false;
         let userEventsMQTTEnable = false;
         let userEventsInfluxDBEnable = false;
+        let userEventsNewRelicEnable = false;
         let logEventsProxyEnable = false;
         let logEventsSchedulerEnable = false;
         let logEventsRepositoryEnable = false;
         let logEventsMQTTEnable = false;
         let logEventsInfluxDBEnable = false;
+        let logEventsNewRelicEnable = false;
         let logdbEnable = false;
         let mqttEnable = false;
         let newRelicEnable = false;
@@ -39,6 +42,10 @@ const callRemoteURL = async function reportTelemetry() {
             uptimeMonitor = true;
         }
 
+        if (globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.enable') === true) {
+            uptimeMonitorNewRelic = true;
+        }
+
         if (globals.config.get('Butler-SOS.userEvents.enable') === true) {
             userEventsEnable = true;
         }
@@ -49,6 +56,10 @@ const callRemoteURL = async function reportTelemetry() {
 
         if (globals.config.get('Butler-SOS.userEvents.sendToInfluxdb.enable') === true) {
             userEventsInfluxDBEnable = true;
+        }
+
+        if (globals.config.get('Butler-SOS.userEvents.sendToNewRelic.enable') === true) {
+            userEventsNewRelicEnable = true;
         }
 
         if (globals.config.get('Butler-SOS.logEvents.source.proxy.enable') === true) {
@@ -69,6 +80,10 @@ const callRemoteURL = async function reportTelemetry() {
 
         if (globals.config.get('Butler-SOS.logEvents.sendToInfluxdb.enable') === true) {
             logEventsInfluxDBEnable = true;
+        }
+
+        if (globals.config.get('Butler-SOS.logEvents.sendToNewRelic.enable') === true) {
+            logEventsNewRelicEnable = true;
         }
 
         if (globals.config.get('Butler-SOS.logdb.enable') === true) {
@@ -122,23 +137,24 @@ const callRemoteURL = async function reportTelemetry() {
                 feature_heartbeat: heartbeat,
                 feature_dockerHealthCheck: dockerHealthCheck,
                 feature_uptimeMonitor: uptimeMonitor,
-                feature_uptimeMonitor_storeInInfluxdb: globals.config.get(
-                    'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
-                ),
+                feature_uptimeMonitor_storeNewRelic: uptimeMonitorNewRelic,
                 feature_udpServer: globals.config.get('Butler-SOS.userEvents.enable'),
                 feature_userEvents: userEventsEnable,
                 feature_userEventsMQTT: userEventsMQTTEnable,
                 feature_userEventsInfluxdb: userEventsInfluxDBEnable,
+                feature_userEventsNewRelic: userEventsNewRelicEnable,
                 feature_logEventsProxy: logEventsProxyEnable,
                 feature_logEventsScheduler: logEventsSchedulerEnable,
                 feature_logEventsRepository: logEventsRepositoryEnable,
                 feature_logEventsMQTT: logEventsMQTTEnable,
                 feature_logEventsInfluxdb: logEventsInfluxDBEnable,
+                feature_logEventsNewRelic: logEventsNewRelicEnable,
                 feature_logdb: logdbEnable,
                 feature_mqtt: mqttEnable,
                 feature_newRelic: newRelicEnable,
                 feature_prometheus: prometheusEnable,
                 feature_influxdb: influxdbEnable,
+                feature_influxdb_version: globals.config.get('Butler-SOS.influxdbConfig.version'),
                 feature_appNames: appNamesExtractEnable,
                 feature_userSessions: userSessionsEnable,
 
@@ -159,23 +175,26 @@ const callRemoteURL = async function reportTelemetry() {
                             heartbeat,
                             dockerHealthCheck,
                             uptimeMonitor,
-                            uptimeMonitor_storeInInfluxdb: globals.config.get(
-                                'Butler-SOS.uptimeMonitor.storeInInfluxdb.butlerSOSMemoryUsage'
-                            ),
+                            uptimeMonitorNewRelic,
                             udpServer: globals.config.get('Butler-SOS.userEvents.enable'),
                             userEvents: userEventsEnable,
                             userEventsMQTT: userEventsMQTTEnable,
                             userEventsInfluxdb: userEventsInfluxDBEnable,
+                            userEventsNewRelic: userEventsNewRelicEnable,
                             logEventsProxy: logEventsProxyEnable,
                             logEventsScheduler: logEventsSchedulerEnable,
                             logEventsRepository: logEventsRepositoryEnable,
                             logEventsMQTT: logEventsMQTTEnable,
                             logEventsInfluxdb: logEventsInfluxDBEnable,
+                            logEventsNewRelic: logEventsNewRelicEnable,
                             logdb: logdbEnable,
                             mqtt: mqttEnable,
                             newRelic: newRelicEnable,
                             prometheus: prometheusEnable,
                             influxdb: influxdbEnable,
+                            influxdbVersion: globals.config.get(
+                                'Butler-SOS.influxdbConfig.version'
+                            ),
                             appNames: appNamesExtractEnable,
                             userSessions: userSessionsEnable,
                         },
