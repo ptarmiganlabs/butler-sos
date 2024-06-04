@@ -1,5 +1,19 @@
 # Changelog
 
+## [10.1.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v10.0.0...butler-sos-v10.1.0) (2024-06-04)
+
+
+### Features
+
+* **config:** Verify server tags when Butler SOS starts ([a30c34b](https://github.com/ptarmiganlabs/butler-sos/commit/a30c34b3e300eaf0d551d2c2afcf63f66e0b4edf)), closes [#815](https://github.com/ptarmiganlabs/butler-sos/issues/815)
+
+
+### Bug Fixes
+
+* **influxdb:** Flush data to InfluxDB v2 every 5 seconds ([2384b6c](https://github.com/ptarmiganlabs/butler-sos/commit/2384b6cb20325b0085335a5563dbaf8be22ffccd))
+* **influxdb:** Storing proxy session data in InfluxDB v1 works again ([45312d7](https://github.com/ptarmiganlabs/butler-sos/commit/45312d7e565c07381c7c149361c8a7c9d240085b)), closes [#816](https://github.com/ptarmiganlabs/butler-sos/issues/816)
+* **telemetry:** Update telemetry data to reflect current config options ([1ba4391](https://github.com/ptarmiganlabs/butler-sos/commit/1ba4391df5fca5d20aaed587adad7097c4beb143)), closes [#813](https://github.com/ptarmiganlabs/butler-sos/issues/813)
+
 ## [10.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v9.10.3...butler-sos-v10.0.0) (2024-06-03)
 
 
