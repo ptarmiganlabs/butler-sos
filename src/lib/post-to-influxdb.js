@@ -625,7 +625,7 @@ async function postButlerSOSMemoryUsageToInfluxdb(memory) {
             // },
 
             /* maximum time in millis to keep points in an unflushed batch, 0 means don't periodically flush */
-            flushInterval: 1000,
+            flushInterval: 5000,
 
             /* maximum size of the retry buffer - it contains items that could not be sent for the first time */
             // maxBufferLines: 30_000,
@@ -778,7 +778,7 @@ async function postUserEventToInfluxdb(msg) {
             // },
 
             /* maximum time in millis to keep points in an unflushed batch, 0 means don't periodically flush */
-            flushInterval: 1000,
+            flushInterval: 5000,
 
             /* maximum size of the retry buffer - it contains items that could not be sent for the first time */
             // maxBufferLines: 30_000,
@@ -1060,7 +1060,7 @@ async function postLogEventToInfluxdb(msg) {
                     // },
 
                     /* maximum time in millis to keep points in an unflushed batch, 0 means don't periodically flush */
-                    flushInterval: 1000,
+                    flushInterval: 5000,
 
                     /* maximum size of the retry buffer - it contains items that could not be sent for the first time */
                     // maxBufferLines: 30_000,

@@ -322,6 +322,11 @@ const tagValuesLogEventLogDb = tagValues.slice();
 tagValuesLogEventLogDb.push('source_process');
 tagValuesLogEventLogDb.push('log_level');
 
+// Create tags for user sessions
+const tagValuesUserProxySessions = tagValues.slice();
+tagValuesUserProxySessions.push('user_session_virtual_proxy');
+tagValuesUserProxySessions.push('user_session_host');
+
 // Show Influxdb config
 if (config.get('Butler-SOS.influxdbConfig.enable') === true) {
     logger.info(`CONFIG: Influxdb enabled: true`);
@@ -358,7 +363,7 @@ if (config.get('Butler-SOS.influxdbConfig.enable') === true) {
 
 // Set up Influxdb client
 let influx;
-let influxWriteApi = [];
+const influxWriteApi = [];
 if (config.get('Butler-SOS.influxdbConfig.enable') === true) {
     if (config.get('Butler-SOS.influxdbConfig.version') === 1) {
         // Set up Influxdb v1 client
@@ -482,6 +487,21 @@ if (config.get('Butler-SOS.influxdbConfig.enable') === true) {
                         process_memory: Influx.FieldType.FLOAT,
                     },
                     tags: ['butler_sos_instance', 'version'],
+                },
+                {
+                    measurement: 'user_session_summary',
+                    fields: {
+                        session_count: Influx.FieldType.INTEGER,
+                        session_user_id_list: Influx.FieldType.STRING,
+                    },
+                    tags: tagValuesUserProxySessions,
+                },
+                {
+                    measurement: 'user_session_list',
+                    fields: {
+                        session_user_id_list: Influx.FieldType.STRING,
+                    },
+                    tags: tagValuesUserProxySessions,
                 },
                 // {
                 //     measurement: 'user_events',
@@ -661,7 +681,7 @@ async function initInfluxDB() {
                     defaultTags: tags,
 
                     /* maximum time in millis to keep points in an unflushed batch, 0 means don't periodically flush */
-                    flushInterval: 1000,
+                    flushInterval: 5000,
 
                     /* maximum size of the retry buffer - it contains items that could not be sent for the first time */
                     // maxBufferLines: 30_000,
