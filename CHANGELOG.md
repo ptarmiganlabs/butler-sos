@@ -1,5 +1,18 @@
 # Changelog
 
+## [10.1.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v10.1.0...butler-sos-v10.1.1) (2024-08-15)
+
+
+### Bug Fixes
+
+* **influxdb:** Double quote app names in in-memory-apps-lists ([a7dbb05](https://github.com/ptarmiganlabs/butler-sos/commit/a7dbb05ab3fba852838e77e40ca6a46277cc1f8f)), closes [#843](https://github.com/ptarmiganlabs/butler-sos/issues/843)
+
+
+### Miscellaneous
+
+* **deps:** Update dependencies ([a32e32c](https://github.com/ptarmiganlabs/butler-sos/commit/a32e32c7cdd218215e8c2878e928d1a271d5d6f1))
+* **deps:** update docker/build-push-action action to v6 ([cbe758e](https://github.com/ptarmiganlabs/butler-sos/commit/cbe758e9ea2d0826225a53e3c413eb513f73379c))
+
 ## [10.1.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v10.0.0...butler-sos-v10.1.0) (2024-06-04)
 
 
