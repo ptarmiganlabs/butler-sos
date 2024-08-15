@@ -217,6 +217,8 @@ async function postHealthMetricsToInfluxdb(serverName, host, body, serverTags) {
     // InfluxDB 1.x
     if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
         try {
+            // Write data to InfluxDB
+            // Make sure to double quote app names before they are concatenated into a string
             const res = await globals.influx.writePoints([
                 {
                     measurement: 'sense_server',
@@ -252,12 +254,12 @@ async function postHealthMetricsToInfluxdb(serverName, host, body, serverTags) {
                         active_docs_names:
                             globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
                             globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
-                                ? appNamesActive.toString()
+                                ? appNamesActive.map((name) => `"${name}"`).join(',')
                                 : '',
                         active_session_docs_names:
                             globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
                             globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
-                                ? sessionAppNamesActive.toString()
+                                ? sessionAppNamesActive.map((name) => `"${name}"`).join(',')
                                 : '',
 
                         loaded_docs: globals.config.get(
@@ -268,12 +270,12 @@ async function postHealthMetricsToInfluxdb(serverName, host, body, serverTags) {
                         loaded_docs_names:
                             globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
                             globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
-                                ? appNamesLoaded.toString()
+                                ? appNamesLoaded.map((name) => `"${name}"`).join(',')
                                 : '',
                         loaded_session_docs_names:
                             globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
                             globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
-                                ? sessionAppNamesLoaded.toString()
+                                ? sessionAppNamesLoaded.map((name) => `"${name}"`).join(',')
                                 : '',
 
                         in_memory_docs: globals.config.get(
@@ -286,14 +288,14 @@ async function postHealthMetricsToInfluxdb(serverName, host, body, serverTags) {
                             globals.config.get(
                                 'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs'
                             )
-                                ? appNamesInMemory.toString()
+                                ? appNamesInMemory.map((name) => `"${name}"`).join(',')
                                 : '',
                         in_memory_session_docs_names:
                             globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
                             globals.config.get(
                                 'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs'
                             )
-                                ? sessionAppNamesInMemory.toString()
+                                ? sessionAppNamesInMemory.map((name) => `"${name}"`).join(',')
                                 : '',
                         calls: body.apps.calls,
                         selections: body.apps.selections,
