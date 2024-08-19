@@ -56,6 +56,22 @@ async function sleep(ms) {
 }
 
 async function mainScript() {
+    // Verify that the config file has the correct format
+    // Only do this if the command line option no-config-file-verify is NOT set
+    let configFileVerify = false
+    if (globals.options.skipConfigVerification) {
+        globals.logger.warn('MAIN: Skipping config file verification');
+    } else {
+        configFileVerify = await verifyConfigFile();
+    }
+    // If config file verification failed, the previous function would have returned false.
+    // In that case, we should exit the script.
+    if (!configFileVerify) {
+        globals.logger.error('MAIN: Config file verification failed. Exiting.');
+        process.exit(1);
+    }
+
+
     // Sleep 5 seconds to allow inits to complete
     globals.logger.info('MAIN: Waiting 5 seconds for initializations to complete...');
     globals.logger.info('5...');
@@ -73,14 +89,6 @@ async function mainScript() {
 
     if (globals.config.get('Butler-SOS.uptimeMonitor.enable') === true) {
         serviceUptime.serviceUptimeStart();
-    }
-
-    // Verify that the config file has the correct format
-    // Only do this if the command line option no-config-file-verify is NOT set
-    if (globals.options.skipConfigVerification) {
-        globals.logger.warn('MAIN: Skipping config file verification');
-    } else {
-        await verifyConfigFile();
     }
 
     // Load certificates to use when connecting to healthcheck API

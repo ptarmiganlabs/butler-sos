@@ -112,10 +112,11 @@ async function verifyConfigFile() {
 
         logger.info(`VERIFY CONFIG FILE: Your config file at ${configFile} is valid, good work!`);
 
-        return 'boolean';
+        return true;
     } catch (err) {
         logger.error(`VERIFY CONFIG FILE: ${err}`);
-        return [];
+
+        return false;
     }
 }
 
