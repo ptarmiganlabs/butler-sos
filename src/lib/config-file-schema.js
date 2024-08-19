@@ -136,6 +136,37 @@ const confifgFileSchema = {
                     enable: 'boolean',
                 },
             },
+            categorise: {
+                enable: 'boolean',
+                rules: [
+                    {
+                        description: 'string',
+                        logLevel: ['string'],
+                        action: 'string',
+                        category: [
+                            {
+                                name: 'string',
+                                value: 'string',
+                            },
+                        ],
+                        filter: [
+                            {
+                                type: 'string',
+                                value: 'string',
+                            },
+                        ],
+                    },
+                ],
+                ruleDefault: {
+                    enable: 'boolean',
+                    category: [
+                        {
+                            name: 'string',
+                            value: 'string',
+                        },
+                    ],
+                },
+            },
             sendToMQTT: {
                 enable: 'boolean',
                 baseTopic: 'string',

@@ -317,6 +317,31 @@ if (config.has('Butler-SOS.logEvents.tags') && config.get('Butler-SOS.logEvents.
     });
 }
 
+// Add tags for log events categories, if enabled and configured
+if (
+    config.has('Butler-SOS.logEvents.categorise.enable') &&
+    config.get('Butler-SOS.logEvents.categorise.enable') === true &&
+    config.has('Butler-SOS.logEvents.categorise.rules')
+) {
+    // Add tags from Butler-SOS.logEvents.categorise.rules[].category[], where each object has properties 'name' and 'value'
+    config.get('Butler-SOS.logEvents.categorise.rules').forEach((rule) => {
+        rule.category.forEach((category) => {
+            tagValuesLogEvent.push(category.name);
+        });
+    });
+
+    // Add default rule categories, if enabled
+    if (
+        config.has('Butler-SOS.logEvents.categorise.ruleDefault.enable') &&
+        config.get('Butler-SOS.logEvents.categorise.ruleDefault.enable') === true && 
+        config.has('Butler-SOS.logEvents.categorise.ruleDefault.category')
+    ) {
+        config.get('Butler-SOS.logEvents.categorise.ruleDefault.category').forEach((category) => {
+            tagValuesLogEvent.push(category.name);
+        });
+    }
+}
+
 // Create InfluxDB tags for data coming from log db
 const tagValuesLogEventLogDb = tagValues.slice();
 tagValuesLogEventLogDb.push('source_process');
