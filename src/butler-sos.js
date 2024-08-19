@@ -24,6 +24,7 @@ import { udpInitLogEventServer } from './lib/udp_handlers_log_events.js';
 import { setupAnonUsageReportTimer } from './lib/telemetry.js';
 import { setupPromClient } from './lib/prom-client.js';
 import { verifyConfigFile } from './lib/config-file-verify.js';
+import { setupConfigVisServer } from './lib/config-visualise.js';
 
 // Suppress experimental warnings
 // https://stackoverflow.com/questions/55778283/how-to-disable-warnings-when-node-is-launched-via-a-global-shell-script
@@ -278,6 +279,11 @@ async function mainScript() {
     // Set up extraction of app IDs and names
     if (globals.config.get('Butler-SOS.appNames.enableAppNameExtract') === true) {
         setupAppNamesExtractTimer();
+    }
+
+    // Set up config server, if enabled
+    if (globals.config.get('Butler-SOS.configVisualisation.enable') === true) {
+        await setupConfigVisServer();
     }
 }
 

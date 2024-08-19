@@ -10,6 +10,13 @@ Butler-SOS:
                           # More info on whata data is collected: https://butler-sos.ptarmiganlabs.com/docs/about/telemetry/
                           # Please consider leaving this at true - it really helps future development of Butler SOS!
 
+  # Should Butler SOS start a web server that serves an obfuscated view of the Butler SOS config file?
+  configVisualisation:
+    enable: false
+    host: localhost       # Hostname or IP address where the web server will listen. Should be localhost in most cases.
+    port: 3100            # Port where the web server will listen. Change if port 3100 is already in use.
+    obfuscate: true        # Should the config file shown in the web UI be obfuscated?
+
   # Heartbeats can be used to send "I'm alive" messages to some other tool, e.g. an infrastructure monitoring tool
   # The concept is simple: The remoteURL will be called at the specified frequency. The receiving tool will then know 
   # that Butler SOS is alive.
