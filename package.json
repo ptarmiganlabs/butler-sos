@@ -31,7 +31,7 @@
     "dependencies": {
         "@breejs/later": "^4.2.0",
         "@influxdata/influxdb-client": "^1.34.0",
-        "@influxdata/influxdb-client-apis": "^1.34.0",
+        "@influxdata/influxdb-client-apis": "^1.35.0",
         "axios": "^1.7.4",
         "commander": "^12.1.0",
         "config": "^3.3.12",
