@@ -63,7 +63,6 @@ async function verifyConfigFile() {
         // 2. The tags specified for each server in `SOS.serversToMonitor.servers[].serverTags` must be present in `Butler-SOS.serversToMonitor.serverTagsDefinition`
         // If either of the conditions above is false, an error should be logged and Butler SOS should not start.
         try {
-
             // Loop over all defined server tags
             const serverTagsDefinition = config.get(
                 'Butler-SOS.serversToMonitor.serverTagsDefinition'

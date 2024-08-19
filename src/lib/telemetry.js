@@ -1,6 +1,7 @@
 const { PostHog } = require('posthog-node');
 
 const globals = require('../globals');
+const { log } = require('winston');
 
 // Define variable to hold the PostHog client
 let posthogClient;
@@ -18,6 +19,9 @@ const callRemoteURL = async function reportTelemetry() {
         let logEventsProxyEnable = false;
         let logEventsSchedulerEnable = false;
         let logEventsRepositoryEnable = false;
+        let logEventCategoriseEnable = false;
+        let logEventCategoriseRuleCount = 0;
+        let logEventCategoriseRuleDefaultEnable = false;
         let logEventsMQTTEnable = false;
         let logEventsInfluxDBEnable = false;
         let logEventsNewRelicEnable = false;
@@ -86,6 +90,21 @@ const callRemoteURL = async function reportTelemetry() {
             logEventsNewRelicEnable = true;
         }
 
+        if (globals.config.get('Butler-SOS.logEvents.categorise.enable') === true) {
+            logEventCategoriseEnable = true;
+        }
+
+        // Get number of rules in the categorise rules array at Butler-SOS.logEvents.categorise.rules
+        if (globals.config.has('Butler-SOS.logEvents.categorise.rules')) {
+            logEventCategoriseRuleCount = globals.config.get(
+                'Butler-SOS.logEvents.categorise.rules'
+            ).length;
+        }
+
+        if (globals.config.get('Butler-SOS.logEvents.categorise.ruleDefault.enable') === true) {
+            logEventCategoriseRuleDefaultEnable = true;
+        }
+
         if (globals.config.get('Butler-SOS.logdb.enable') === true) {
             logdbEnable = true;
         }
@@ -146,6 +165,9 @@ const callRemoteURL = async function reportTelemetry() {
                 feature_logEventsProxy: logEventsProxyEnable,
                 feature_logEventsScheduler: logEventsSchedulerEnable,
                 feature_logEventsRepository: logEventsRepositoryEnable,
+                feature_logEventCategorise: logEventCategoriseEnable,
+                feature_logEventCategoriseRuleCount: logEventCategoriseRuleCount,
+                feature_logEventCategoriseRuleDefault: logEventCategoriseRuleDefaultEnable,
                 feature_logEventsMQTT: logEventsMQTTEnable,
                 feature_logEventsInfluxdb: logEventsInfluxDBEnable,
                 feature_logEventsNewRelic: logEventsNewRelicEnable,
@@ -184,6 +206,9 @@ const callRemoteURL = async function reportTelemetry() {
                             logEventsProxy: logEventsProxyEnable,
                             logEventsScheduler: logEventsSchedulerEnable,
                             logEventsRepository: logEventsRepositoryEnable,
+                            logEventCategorise: logEventCategoriseEnable,
+                            logEventCategoriseRuleCount,
+                            logEventCategoriseRuleDefault: logEventCategoriseRuleDefaultEnable,
                             logEventsMQTT: logEventsMQTTEnable,
                             logEventsInfluxdb: logEventsInfluxDBEnable,
                             logEventsNewRelic: logEventsNewRelicEnable,

@@ -117,8 +117,8 @@ Butler-SOS:
   # Log events are used to capture Sense warnings, errors and fatals in real time
   logEvents:
     udpServerConfig:
-      serverHost: <IP or FQDN>      # Host/IP where log event server will listen for events from Sense
-      portLogEvents: 9996           # Port on which log event server will listen for events from Sense
+      serverHost: <IP or FQDN>         # Host/IP where log event server will listen for events from Sense
+      portLogEvents: 9996              # Port on which log event server will listen for events from Sense
     tags:
       # - tag: env
       #   value: DEV
@@ -126,15 +126,80 @@ Butler-SOS:
       #   value: bar
     source:
       engine:
-        enable: false                   # Should log events from the engine service be handled?
+        enable: false                  # Should log events from the engine service be handled?
       proxy:
-        enable: false                   # Should log events from the proxy service be handled?
+        enable: false                  # Should log events from the proxy service be handled?
       repository:
-        enable: false                   # Should log events from the repository service be handled?
+        enable: false                  # Should log events from the repository service be handled?
       scheduler:
-        enable: false                   # Should log events from the scheduler service be handled?
-    sendToMQTT: 
-      enable: false                     # Should log events be sent as MQTT messages?
+        enable: false                  # Should log events from the scheduler service be handled?
+    categorise:                        # Take actions on log events based on their content
+      enable: true
+      rules:                           # Rules are used to match log events to filters
+        - description: Find access denied errors
+          logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
+            - WARN
+            - ERROR
+          action: categorise           # Action to take on matched log events. Possible values are categorise, drop
+          category:                    # Category to assign to matched log events. Name/value pairs. 
+                                       # Will be added to InfluxDB datapoints as tags.
+            - name: qs_log_category
+              value: access-denied
+          filter:                      # Filter used to match log events. Case sensitive.
+            - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+              value: "Access was denied for User:"
+            - type: so
+              value: was denied for User
+        - description: Find AD issues
+          logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
+            - ERROR
+            - WARN
+          action: categorise           # Action to take on matched log events. Possible values are categorise, drop
+          category:                    # Category to assign to matched log events. Name/value pairs. 
+                                       # Will be added to InfluxDB datapoints as tags.
+            - name: qs_log_category
+              value: user-directory
+          filter:                      # Filter used to match log events. Case sensitive.
+            - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+              value: Duplicate entity with userId
+        - description: Qlik Sense service down
+          logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
+            - WARN
+          action: categorise           # Action to take on matched log events. Possible values are categorise, drop
+          category:                    # Category to assign to matched log events. Name/value pairs. 
+                                       # Will be added to InfluxDB datapoints as tags.
+            - name: qs_log_category
+              value: qs-service
+          filter:                      # Filter used to match log events. Case sensitive.
+            - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+              value: Failed to request service alive response from
+            - type: so                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+              value: Unable to connect to the remote server
+        - description: Reload task failed
+          logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
+            - WARN
+            - ERROR
+          action: categorise           # Action to take on matched log events. Possible values are categorise, drop
+          category:                    # Category to assign to matched log events. Name/value pairs. 
+                                       # Will be added to InfluxDB datapoints as tags.
+            - name: qs_log_category
+              value: reload-failed
+          filter:                      # Filter used to match log events. Case sensitive.
+            - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+              value: Task finished with state FinishedFail
+            - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+              value: Task finished with state Error
+            - type: ew                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+              value: Reload failed in Engine. Check engine or script logs.
+            - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+              value: Reload sequence was not successful (Result=False, Finished=True, Aborted=False) for engine connection with handle
+      ruleDefault:                     # Default rule to use if no other rules match the log event
+        enable: true
+        category:
+          - name: qs_log_category
+            value: unknown
+    sendToMQTT:
+      enable: false                    # Should log events be sent as MQTT messages?
       baseTopic: qliksense/logevent    # What topic should log events be forwarded to? 
       postTo:
         baseTopic: true
@@ -148,25 +213,25 @@ Butler-SOS:
         # - Second NR account
       source:
         engine:
-          enable: true                   # Should log events from the engine service be handled?
+          enable: true                 # Should log events from the engine service be handled?
           logLevel: 
-            error: true                 # Should error level log events be handled by Butler SOS?
-            warn: true               # Should warning level log events be handled by Butler SOS?
+            error: true                # Should error level log events be handled by Butler SOS?
+            warn: true                 # Should warning level log events be handled by Butler SOS?
         proxy:
-          enable: true                   # Should log events from the proxy service be handled?
+          enable: true                 # Should log events from the proxy service be handled?
           logLevel: 
-            error: true                 # Should error level log events be handled by Butler SOS?
-            warn: true               # Should warning level log events be handled by Butler SOS?
+            error: true                # Should error level log events be handled by Butler SOS?
+            warn: true                 # Should warning level log events be handled by Butler SOS?
         repository:
-          enable: true                   # Should log events from the repository service be handled?
+          enable: true                 # Should log events from the repository service be handled?
           logLevel: 
-            error: true                 # Should error level log events be handled by Butler SOS?
-            warn: true               # Should warning level log events be handled by Butler SOS?
+            error: true                # Should error level log events be handled by Butler SOS?
+            warn: true                 # Should warning level log events be handled by Butler SOS?
         scheduler:
-          enable: true                   # Should log events from the scheduler service be handled?
+          enable: true                 # Should log events from the scheduler service be handled?
           logLevel: 
-            error: true                 # Should error level log events be handled by Butler SOS?
-            warn: true               # Should warning level log events be handled by Butler SOS?
+            error: true                # Should error level log events be handled by Butler SOS?
+            warn: true                 # Should warning level log events be handled by Butler SOS?
 
   # Qlik Sense logging db config parameters
   logdb:

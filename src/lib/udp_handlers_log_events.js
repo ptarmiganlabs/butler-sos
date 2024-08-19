@@ -6,6 +6,7 @@ const globals = require('../globals');
 const postToInfluxdb = require('./post-to-influxdb');
 const postToNewRelic = require('./post-to-new-relic');
 const postToMQTT = require('./post-to-mqtt');
+const { categoriseLogEvent } = require('./log-event-categorise');
 
 // --------------------------------------------------------
 // Set up UDP server for acting on Sense log events
@@ -89,6 +90,7 @@ function udpInitLogEventServer() {
                 `LOG EVENT: ${msg[0]}:${msg[5]}:${msg[4]}, ${msg[6]}: ${msg[8]}`
             );
 
+            // Check if any of the log event sources are enabled in the configuration
             if (
                 (globals.config.get('Butler-SOS.logEvents.source.engine.enable') === true &&
                     msg[0].toLowerCase() === '/qseow-engine/') ||
@@ -106,7 +108,7 @@ function udpInitLogEventServer() {
 
                 // Build object and convert to JSON
                 // Data types to be verified (set to empty string if not matching types below):
-                let msgObj;
+                let msgObj = {};
 
                 // Deifne a regex for ISO8601 date format
                 const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}\+\d{4}$/;
@@ -267,6 +269,21 @@ function udpInitLogEventServer() {
                     } else {
                         msgObj.user_full = '';
                     }
+                }
+
+                // If message parsing was done and categorisation is enabled, categorise the log event
+                if (
+                    Object.keys(msgObj).length !== 0 &&
+                    globals.config.get('Butler-SOS.logEvents.categorise.enable') === true
+                ) {
+                    // Categorise the log event based on the message content, according to rules in the config file
+                    const categoryResult = categoriseLogEvent(msgObj.level, msgObj.message);
+                    globals.logger.debug(
+                        `LOG EVENT: Categorised log event as ${JSON.stringify(categoryResult)}`
+                    );
+
+                    // Add the categories to the log event object
+                    msgObj.category = categoryResult.category;
                 }
 
                 globals.logger.debug(`LOG EVENT (json): ${JSON.stringify(msgObj, null, 2)}`);

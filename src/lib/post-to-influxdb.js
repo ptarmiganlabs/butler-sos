@@ -1002,6 +1002,15 @@ async function postLogEventToInfluxdb(msg) {
                     };
                 }
 
+                // Add log event categories to tags if available
+                // The msg.category array contains objects with properties 'name' and 'value'
+                if (msg?.category?.length > 0) {
+                    msg.category.forEach((category) => {
+                        tags[category.name] = category.value;
+                    });
+                }
+
+                // Add custom tags from config file to payload
                 if (
                     globals.config.has('Butler-SOS.logEvents.tags') &&
                     globals.config.get('Butler-SOS.logEvents.tags') !== null &&
@@ -1196,6 +1205,14 @@ async function postLogEventToInfluxdb(msg) {
                             point.tag('user_directory', msg.user_directory);
                         if (msg?.user_id?.length > 0) point.tag('user_id', msg.user_id);
                         if (msg?.result_code?.length > 0) point.tag('result_code', msg.result_code);
+                    }
+
+                    // Add log event categories to tags if available
+                    // The msg.category array contains objects with properties 'name' and 'value'
+                    if (msg?.category?.length > 0) {
+                        msg.category.forEach((category) => {
+                            point.tag(category.name, category.value);
+                        });
                     }
 
                     // Add custom tags from config file to payload
