@@ -74,7 +74,9 @@
     "pkg": {
         "assets": [
             "node_modules/axios/**/*",
-            "node_modules/open/xdg-open"
+            "node_modules/open/xdg-open",
+            "static/**/*",
+            "package.json"
         ],
         "scripts": [
             "node_modules/enigma.js/**/*.json",
