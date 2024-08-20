@@ -1,10 +1,10 @@
 /* eslint-disable prefer-destructuring */
 /* eslint-disable no-unused-vars */
 
-const crypto = require('crypto');
-const axios = require('axios');
+import crypto from 'crypto';
+import axios from 'axios';
 
-const globals = require('../globals');
+import globals from '../globals.js';
 
 // const sessionAppPrefix = 'SessionApp';
 
@@ -54,7 +54,7 @@ function getFormattedTime(serverStarted) {
  * @param {*} body
  * @param {*} tags
  */
-async function postHealthMetricsToNewRelic(_host, body, tags) {
+export async function postHealthMetricsToNewRelic(_host, body, tags) {
     // Calculate server uptime
     const formattedTime = getFormattedTime(body.started);
 
@@ -347,7 +347,7 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
  *
  * @param {*} userSessions
  */
-async function postProxySessionsToNewRelic(userSessions) {
+export async function postProxySessionsToNewRelic(userSessions) {
     globals.logger.debug(
         `PROXY SESSIONS NEW RELIC: User sessions: ${JSON.stringify(userSessions)}`
     );
@@ -494,7 +494,7 @@ async function postProxySessionsToNewRelic(userSessions) {
     }
 }
 
-async function postButlerSOSUptimeToNewRelic(fields) {
+export async function postButlerSOSUptimeToNewRelic(fields) {
     globals.logger.debug(
         `MEMORY USAGE NEW RELIC: Memory usage ${JSON.stringify(fields, null, 2)})`
     );
@@ -651,7 +651,7 @@ async function postButlerSOSUptimeToNewRelic(fields) {
     }
 }
 
-async function postUserEventToNewRelic(msg) {
+export async function postUserEventToNewRelic(msg) {
     globals.logger.debug(`USER EVENT NEW RELIC 1: ${JSON.stringify(msg, null, 2)})`);
 
     try {
@@ -912,7 +912,7 @@ function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
  *
  * @param {*} msg
  */
-async function postLogEventToNewRelic(msg) {
+export async function postLogEventToNewRelic(msg) {
     globals.logger.debug(`LOG EVENT NEW RELIC: ${msg})`);
 
     try {
@@ -1084,11 +1084,3 @@ async function postLogEventToNewRelic(msg) {
         globals.logger.error(`LOG EVENT NEW RELIC: Error saving event to New Relic! ${err}`);
     }
 }
-
-module.exports = {
-    postHealthMetricsToNewRelic,
-    postProxySessionsToNewRelic,
-    postButlerSOSUptimeToNewRelic,
-    postUserEventToNewRelic,
-    postLogEventToNewRelic,
-};

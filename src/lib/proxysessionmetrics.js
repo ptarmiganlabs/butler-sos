@@ -2,18 +2,18 @@
  * Get metrics from Sense repository service
  */
 
-const https = require('https');
-const fs = require('fs');
-const path = require('path');
-const axios = require('axios');
-const { Point } = require('@influxdata/influxdb-client');
+import https from 'https';
+import fs from 'fs';
+import path from 'path';
+import axios from 'axios';
+import { Point } from '@influxdata/influxdb-client';
 
-const globals = require('../globals');
-const postToInfluxdb = require('./post-to-influxdb');
-const postToNewRelic = require('./post-to-new-relic');
-const postToMQTT = require('./post-to-mqtt');
-const { getServerTags } = require('./servertags');
-const prometheus = require('./prom-client');
+import globals from '../globals.js';
+import { postProxySessionsToInfluxdb } from './post-to-influxdb.js';
+import { postProxySessionsToNewRelic } from './post-to-new-relic.js';
+import { postUserSessionsToMQTT } from './post-to-mqtt.js';
+import { getServerTags } from './servertags.js';
+import { saveUserSessionMetricsToPrometheus } from './prom-client.js';
 
 function getCertificates(options) {
     const certificate = {};
@@ -280,7 +280,7 @@ function getProxySessionStatsFromSense(serverName, host, virtualProxy, influxTag
                         'PROXY SESSIONS: Calling user sessions MQTT posting method'
                     );
 
-                    postToMQTT.postUserSessionsToMQTT(
+                    postUserSessionsToMQTT(
                         host.split(':')[0],
                         // response.request._headers.xvirtualproxy,
                         virtualProxy,
@@ -302,7 +302,7 @@ function getProxySessionStatsFromSense(serverName, host, virtualProxy, influxTag
                         'PROXY SESSIONS: Calling user sessions Influxdb posting method'
                     );
 
-                    postToInfluxdb.postProxySessionsToInfluxdb(userProxySessionsData);
+                    postProxySessionsToInfluxdb(userProxySessionsData);
                 }
 
                 // Post to New Relic
@@ -316,13 +316,13 @@ function getProxySessionStatsFromSense(serverName, host, virtualProxy, influxTag
                         'PROXY SESSIONS: Calling user sessions New Relic posting method'
                     );
 
-                    postToNewRelic.postProxySessionsToNewRelic(userProxySessionsData);
+                    postProxySessionsToNewRelic(userProxySessionsData);
                 }
 
                 // Save latest available data for Prometheus
                 if (globals.config.get('Butler-SOS.prometheus.enable') === true) {
                     globals.logger.debug('HEALTH: Calling SESSIONS metrics Prometheus method');
-                    prometheus.saveUserSessionMetrics(userProxySessionsData);
+                    saveUserSessionMetricsToPrometheus(userProxySessionsData);
                 }
             }
         })
@@ -332,7 +332,7 @@ function getProxySessionStatsFromSense(serverName, host, virtualProxy, influxTag
 }
 
 // Get info on what sessions currently exist
-function setupUserSessionsTimer() {
+export function setupUserSessionsTimer() {
     globals.logger.debug(
         `PROXY SESSIONS: Monitor user sessions for these servers/virtual proxies: ${JSON.stringify(
             globals.serverList,
@@ -366,7 +366,3 @@ function setupUserSessionsTimer() {
         });
     }, globals.config.get('Butler-SOS.userSessions.pollingInterval'));
 }
-
-module.exports = {
-    setupUserSessionsTimer,
-};

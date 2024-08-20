@@ -1,9 +1,9 @@
-const client = require('prom-client');
+import client from 'prom-client';
 // import { collectDefaultMetrics, register } from 'prom-client';
 
 // Load global variables and functions
-const globals = require('../globals');
-const { getServerTags } = require('./servertags');
+import globals from '../globals.js';
+import { getServerTags } from './servertags.js';
 
 let promLabels = null;
 
@@ -38,7 +38,7 @@ let promMetricUserSessionsTotal = null;
 
 // client.collectDefaultMetrics();
 
-async function setupPromClient(promServer, promPort, promHost) {
+export async function setupPromClient(promServer, promPort, promHost) {
     try {
         // Create array with all defined server tags that should be used as Prometheus labels
         globals.serverList.forEach((server) => {
@@ -210,7 +210,7 @@ async function setupPromClient(promServer, promPort, promHost) {
     }
 }
 
-function saveHealthMetrics(host, data, labels) {
+export function saveHealthMetricsToPrometheus(host, data, labels) {
     try {
         globals.logger.silly(`PROM: Health metrics (host): ${host}`);
         globals.logger.silly(`PROM: Health metrics (data): ${JSON.stringify(data)}`);
@@ -257,7 +257,7 @@ function saveHealthMetrics(host, data, labels) {
     }
 }
 
-function saveUserSessionMetrics(userSessionsData) {
+export function saveUserSessionMetricsToPrometheus(userSessionsData) {
     try {
         globals.logger.silly(`PROM: Session metrics (host): ${userSessionsData.host}`);
         globals.logger.silly(
@@ -279,9 +279,3 @@ function saveUserSessionMetrics(userSessionsData) {
         globals.logger.error(`PROM: Error saving health data for Prometheus! ${err.stack}`);
     }
 }
-
-module.exports = {
-    setupPromClient,
-    saveHealthMetrics,
-    saveUserSessionMetrics,
-};

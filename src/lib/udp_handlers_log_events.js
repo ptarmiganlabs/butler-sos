@@ -1,17 +1,16 @@
-/* eslint-disable prefer-destructuring */
 /* eslint-disable no-unused-vars */
 
 // Load global variables and functions
-const globals = require('../globals');
-const postToInfluxdb = require('./post-to-influxdb');
-const postToNewRelic = require('./post-to-new-relic');
-const postToMQTT = require('./post-to-mqtt');
-const { categoriseLogEvent } = require('./log-event-categorise');
+import globals from '../globals.js';
+import { postLogEventToInfluxdb } from './post-to-influxdb.js';
+import { postLogEventToNewRelic } from './post-to-new-relic.js';
+import { postLogEventToMQTT } from './post-to-mqtt.js';
+import { categoriseLogEvent } from './log-event-categorise.js';
 
 // --------------------------------------------------------
 // Set up UDP server for acting on Sense log events
 // --------------------------------------------------------
-function udpInitLogEventServer() {
+export function udpInitLogEventServer() {
     // Handler for UDP server startup event
     globals.udpServerLogEvents.socket.on('listening', (_message, _remote) => {
         const address = globals.udpServerLogEvents.socket.address();
@@ -294,7 +293,7 @@ function udpInitLogEventServer() {
                     globals.config.get('Butler-SOS.logEvents.sendToMQTT.enable')
                 ) {
                     globals.logger.debug('LOG EVENT: Calling log event MQTT posting method');
-                    postToMQTT.postLogEventToMQTT(msgObj);
+                    postLogEventToMQTT(msgObj);
                 }
 
                 // Post to Influxdb (if enabled)
@@ -303,7 +302,7 @@ function udpInitLogEventServer() {
                     globals.config.get('Butler-SOS.logEvents.sendToInfluxdb.enable')
                 ) {
                     globals.logger.debug('LOG EVENT: Calling log event Influxdb posting method');
-                    postToInfluxdb.postLogEventToInfluxdb(msgObj);
+                    postLogEventToInfluxdb(msgObj);
                 }
 
                 // Post to New Relic (if enabled)
@@ -312,7 +311,7 @@ function udpInitLogEventServer() {
                     globals.config.get('Butler-SOS.logEvents.sendToNewRelic.enable')
                 ) {
                     globals.logger.debug('LOG EVENT: Calling log event New Relic posting method');
-                    postToNewRelic.postLogEventToNewRelic(msgObj);
+                    postLogEventToNewRelic(msgObj);
                 }
             }
         } catch (err) {
@@ -320,7 +319,3 @@ function udpInitLogEventServer() {
         }
     });
 }
-
-module.exports = {
-    udpInitLogEventServer,
-};

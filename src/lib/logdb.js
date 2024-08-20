@@ -1,9 +1,9 @@
 /* eslint-disable no-unused-vars */
 
-const globals = require('../globals');
-const postToMQTT = require('./post-to-mqtt');
+import globals from '../globals.js';
+import { postLogDbToMQTT } from './post-to-mqtt.js';
 
-function setupLogDbTimer() {
+export function setupLogDbTimer() {
     // Get query period from config file.
     const queryPeriod = globals.config.get('Butler-SOS.logdb.queryPeriod');
 
@@ -155,7 +155,7 @@ function setupLogDbTimer() {
                                 // Post to MQTT (if enabled)
                                 if (globals.config.get('Butler-SOS.mqttConfig.enable') === true) {
                                     globals.logger.silly('LOGDB: Posting log db data to MQTT...');
-                                    postToMQTT.postLogDbToMQTT(
+                                    postLogDbToMQTT(
                                         row.process_host,
                                         row.process_name,
                                         row.entry_level,
@@ -181,7 +181,3 @@ function setupLogDbTimer() {
             });
     }, globals.config.get('Butler-SOS.logdb.pollingInterval'));
 }
-
-module.exports = {
-    setupLogDbTimer,
-};

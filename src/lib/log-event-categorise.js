@@ -1,4 +1,4 @@
-const { config, logger } = require('../globals');
+import globals from '../globals.js';
 
 // Function to categorise log events
 //
@@ -13,7 +13,7 @@ const { config, logger } = require('../globals');
 //     - name: The name of the category
 //     - value: The value of the category
 //   - actionTaken: The action taken for the log event. Possible values are 'categorised', 'dropped'
-function categoriseLogEvent(logLevel, logMessage) {
+export function categoriseLogEvent(logLevel, logMessage) {
     const logEventCategory = [];
 
     try {
@@ -21,7 +21,7 @@ function categoriseLogEvent(logLevel, logMessage) {
 
         // Loop over all rules in the config file
         // eslint-disable-next-line no-restricted-syntax
-        for (const rule of config.get('Butler-SOS.logEvents.categorise.rules')) {
+        for (const rule of globals.config.get('Butler-SOS.logEvents.categorise.rules')) {
             // Check if the log event matches any of the rule's log levels (which are found in the array 'logLevel' property)
             // Make the check case insensitive
             if (rule.logLevel.map((x) => x.toLowerCase()).includes(logLevel.toLowerCase())) {
@@ -73,7 +73,7 @@ function categoriseLogEvent(logLevel, logMessage) {
 
                     // Warn if the filter type is not recognised
                     if (!['sw', 'ew', 'so'].includes(filter.type)) {
-                        logger.warn(
+                        globals.logger.warn(
                             `LOG EVENT CATEGORISATION: Filter type '${filter.type}' is not recognised`
                         );
                     }
@@ -97,22 +97,18 @@ function categoriseLogEvent(logLevel, logMessage) {
         // If no rule matched, then use default rule (if enabled in the config file)
         if (
             match === false &&
-            config.get('Butler-SOS.logEvents.categorise.ruleDefault.enable') === true
+            globals.config.get('Butler-SOS.logEvents.categorise.ruleDefault.enable') === true
         ) {
             // Deep copy the categories from the default rule to the log event
             uniqueCategories.push(
-                ...config.get('Butler-SOS.logEvents.categorise.ruleDefault.category')
+                ...globals.config.get('Butler-SOS.logEvents.categorise.ruleDefault.category')
             );
         }
 
         // Return the log event category and the action taken
         return { category: uniqueCategories, actionTaken: 'categorised' };
     } catch (err) {
-        logger.error(`LOG EVENT CATEGORISATION: Error processing log event: ${err}`);
+        globals.logger.error(`LOG EVENT CATEGORISATION: Error processing log event: ${err}`);
         return null;
     }
 }
-
-module.exports = {
-    categoriseLogEvent,
-};

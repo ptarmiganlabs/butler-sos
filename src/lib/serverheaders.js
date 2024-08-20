@@ -1,6 +1,6 @@
-const globals = require('../globals');
+import globals from '../globals.js';
 
-function getServerHeaders(server) {
+export function getServerHeaders(server) {
     try {
         const headers = {};
 
@@ -25,7 +25,3 @@ function getServerHeaders(server) {
         return [];
     }
 }
-
-module.exports = {
-    getServerHeaders,
-};

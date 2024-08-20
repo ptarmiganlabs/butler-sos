@@ -1,18 +1,18 @@
 /* eslint-disable no-bitwise */
-const later = require('@breejs/later');
-const luxon = require('luxon');
+import later from '@breejs/later';
+import { Duration } from 'luxon';
 
-const globals = require('../globals');
-const postToInfluxdb = require('./post-to-influxdb');
-const postToNewRelic = require('./post-to-new-relic');
+import globals from '../globals.js';
+import { postButlerSOSMemoryUsageToInfluxdb } from './post-to-influxdb.js';
+import { postButlerSOSUptimeToNewRelic } from './post-to-new-relic.js';
 
 const fullUnits = ['years', 'months', 'days', 'hours', 'minutes', 'seconds'];
-luxon.Duration.prototype.toFull = function convToFull() {
+Duration.prototype.toFull = function convToFull() {
     // return this.shiftTo.apply(this, fullUnits);
     return this.shiftTo(...fullUnits); // Suggested bt GitHub Copilot
 };
 
-function serviceUptimeStart() {
+export function serviceUptimeStart() {
     const uptimeLogLevel = globals.config.get('Butler-SOS.uptimeMonitor.logLevel');
     const uptimeInterval = globals.config.get('Butler-SOS.uptimeMonitor.frequency');
 
@@ -51,7 +51,7 @@ function serviceUptimeStart() {
         startIterations += 1;
         const uptimeMilliSec = Date.now() - startTime;
 
-        const d = luxon.Duration.fromMillis(uptimeMilliSec).toFull().toObject();
+        const d = Duration.fromMillis(uptimeMilliSec).toFull().toObject();
         // Round to whole seconds
         d.seconds = Math.round(d.seconds);
         const uptimeString = `${d.months} months, ${d.days} days, ${d.hours} hours, ${d.minutes} minutes, ${d.seconds} seconds`;
@@ -92,7 +92,7 @@ function serviceUptimeStart() {
                 true &&
             enableInfluxDB === true
         ) {
-            postToInfluxdb.postButlerSOSMemoryUsageToInfluxdb({
+            postButlerSOSMemoryUsageToInfluxdb({
                 instanceTag: butlerSosMemoryInfluxTag,
                 heapUsedMByte,
                 heapTotalMByte,
@@ -103,7 +103,7 @@ function serviceUptimeStart() {
 
         // Send to New Relic
         if (globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.enable') === true) {
-            postToNewRelic.postButlerSOSUptimeToNewRelic({
+            postButlerSOSUptimeToNewRelic({
                 intervalMillisec,
                 heapUsed,
                 heapTotal,
@@ -116,7 +116,3 @@ function serviceUptimeStart() {
         }
     }, later.parse.text(uptimeInterval));
 }
-
-module.exports = {
-    serviceUptimeStart,
-};

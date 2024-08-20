@@ -28,6 +28,7 @@
         "url": "https://github.com/ptarmiganlabs/butler-sos/issues"
     },
     "homepage": "https://github.com/ptarmiganlabs/butler-sos#readme",
+    "type": "module",
     "dependencies": {
         "@breejs/later": "^4.2.0",
         "@influxdata/influxdb-client": "^1.35.0",
@@ -56,10 +57,13 @@
         "yaml-validator": "^5.0.1"
     },
     "devDependencies": {
+        "@eslint/js": "^9.9.0",
         "esbuild": "^0.23.1",
         "eslint": "^9.9.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-formatter-table": "^7.32.1",
+        "eslint-plugin-prettier": "^5.2.1",
+        "globals": "^15.9.0",
         "prettier": "^3.3.3",
         "snyk": "^1.1292.4"
     },

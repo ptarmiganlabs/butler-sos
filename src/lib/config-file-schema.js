@@ -1,4 +1,4 @@
-const confifgFileSchema = {
+export const confifgFileSchema = {
     'Butler-SOS': {
         logLevel: 'string',
         fileLogging: 'boolean',
@@ -408,8 +408,4 @@ const confifgFileSchema = {
             ],
         },
     },
-};
-
-module.exports = {
-    confifgFileSchema,
 };

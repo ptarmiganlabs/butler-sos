@@ -1,14 +1,9 @@
 // Get app names from the Qlik Repository Service (QRS) API
+import path from 'path';
+import qrsInteract from 'qrs-interact';
+import clonedeep from 'lodash.clonedeep';
 
-const path = require('path');
-
-const qrsInteract = require('qrs-interact');
-const clonedeep = require('lodash.clonedeep');
-const globals = require('../globals');
-
-const certPath = path.resolve(process.cwd(), globals.config.get('Butler-SOS.cert.clientCert'));
-const keyPath = path.resolve(process.cwd(), globals.config.get('Butler-SOS.cert.clientCertKey'));
-// caPath = path.resolve(process.cwd(), globals.config.get('Butler-SOS.cert.clientCertCA'));
+import globals from '../globals.js';
 
 function getAppNames() {
     globals.logger.verbose(`APP NAMES: Start getting app names from repository db`);
@@ -18,8 +13,8 @@ function getAppNames() {
         hostname: globals.config.get('Butler-SOS.appNames.hostIP'),
         portNumber: 4242,
         certificates: {
-            certFile: certPath,
-            keyFile: keyPath,
+            certFile: globals.certPath,
+            keyFile: globals.keyPath,
         },
     };
 
@@ -27,7 +22,6 @@ function getAppNames() {
         'X-Qlik-User': 'UserDirectory=Internal; UserId=sa_repository',
     };
 
-    // eslint-disable-next-line new-cap
     const qrsInteractInstance = new qrsInteract(configQRS);
 
     const appList = [];
@@ -61,7 +55,7 @@ function getAppNames() {
     }
 }
 
-function setupAppNamesExtractTimer() {
+export function setupAppNamesExtractTimer() {
     // Configure timer for getting app names data
     setInterval(() => {
         globals.logger.verbose('APP NAMES: Event started: Get app names');
@@ -69,8 +63,3 @@ function setupAppNamesExtractTimer() {
         getAppNames();
     }, globals.config.get('Butler-SOS.appNames.extractInterval'));
 }
-
-module.exports = {
-    setupAppNamesExtractTimer,
-    getAppNames,
-};

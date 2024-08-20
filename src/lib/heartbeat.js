@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
-const later = require('@breejs/later');
-const axios = require('axios');
+import later from '@breejs/later';
+import axios from 'axios';
 
 const callRemoteURL = function callRemoteURL(remoteURL, logger) {
     axios
@@ -15,7 +15,7 @@ const callRemoteURL = function callRemoteURL(remoteURL, logger) {
         });
 };
 
-function setupHeartbeatTimer(config, logger) {
+export function setupHeartbeatTimer(config, logger) {
     try {
         logger.debug(
             `HEARTBEAT: Setting up heartbeat to remote: ${config.get(
@@ -34,7 +34,3 @@ function setupHeartbeatTimer(config, logger) {
         logger.error(`HEARTBEAT: Error ${err}`);
     }
 }
-
-module.exports = {
-    setupHeartbeatTimer,
-};

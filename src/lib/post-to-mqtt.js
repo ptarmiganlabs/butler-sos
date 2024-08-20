@@ -1,9 +1,9 @@
 /* eslint-disable prefer-destructuring */
 /* eslint-disable no-unused-vars */
 
-const globals = require('../globals');
+import globals from '../globals.js';
 
-function postLogDbToMQTT(processHost, processName, entryLevel, message, _timestamp) {
+export function postLogDbToMQTT(processHost, processName, entryLevel, message, _timestamp) {
     // Get base MQTT topic
     const baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
 
@@ -11,7 +11,7 @@ function postLogDbToMQTT(processHost, processName, entryLevel, message, _timesta
     globals.mqttClient.publish(`${baseTopic + processHost}/${processName}/${entryLevel}`, message);
 }
 
-function postHealthToMQTT(_host, serverName, body) {
+export function postHealthToMQTT(_host, serverName, body) {
     // Get base MQTT topic
     const baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
 
@@ -93,7 +93,7 @@ function postHealthToMQTT(_host, serverName, body) {
     globals.mqttClient.publish(`${baseTopic + serverName}/saturated`, body.saturated.toString());
 }
 
-function postUserSessionsToMQTT(host, virtualProxy, body) {
+export function postUserSessionsToMQTT(host, virtualProxy, body) {
     // Get base MQTT topic
     const baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
 
@@ -101,7 +101,7 @@ function postUserSessionsToMQTT(host, virtualProxy, body) {
     globals.mqttClient.publish(`${baseTopic + host}/usersession${virtualProxy}`, body);
 }
 
-function postUserEventToMQTT(msg) {
+export function postUserEventToMQTT(msg) {
     try {
         // Create payload
         const payload = {
@@ -203,7 +203,7 @@ function postUserEventToMQTT(msg) {
     }
 }
 
-function postLogEventToMQTT(msg) {
+export function postLogEventToMQTT(msg) {
     try {
         // Get MQTT root topic
         let baseTopic = globals.config.get('Butler-SOS.logEvents.sendToMQTT.baseTopic');
@@ -252,11 +252,3 @@ function postLogEventToMQTT(msg) {
         globals.logger.error(`LOG EVENT MQTT: Failed posting message to MQTT ${err}.`);
     }
 }
-
-module.exports = {
-    postLogDbToMQTT,
-    postHealthToMQTT,
-    postUserSessionsToMQTT,
-    postUserEventToMQTT,
-    postLogEventToMQTT,
-};
