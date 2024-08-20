@@ -68,6 +68,7 @@ async function mainScript() {
     } else {
         configFileVerify = await verifyConfigFile();
     }
+
     // If config file verification failed, the previous function would have returned false.
     // In that case, we should exit the script.
     if (!configFileVerify) {
