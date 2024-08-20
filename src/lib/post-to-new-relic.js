@@ -505,12 +505,13 @@ export async function postButlerSOSUptimeToNewRelic(fields) {
         const attributes = {};
         const ts = new Date().getTime(); // Timestamp in millisec
 
-        // Add static fields to attributes
-        if (globals.config.has('Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static')) {
+        // Add static fields to attributes if they exist
+        if (globals.config.has('Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static') && globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static') !== null) {
             const staticAttributes = globals.config.get(
                 'Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static'
             );
 
+            // staticAttributes is an array of objects. Null 
             // eslint-disable-next-line no-restricted-syntax
             for (const item of staticAttributes) {
                 attributes[item.name] = item.value;
