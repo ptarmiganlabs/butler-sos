@@ -127,28 +127,29 @@ async function mainScript() {
         // Default is to use log level defined in config file
         globals.logger.info('--------------------------------------');
         globals.logger.info('Starting Butler SOS');
-        globals.logger.info(`Log level       : ${globals.getLoggingLevel()}`);
-        globals.logger.info(`App version     : ${globals.appVersion}`);
-        globals.logger.info(`Instance ID     : ${globals.hostInfo.id}`);
+        globals.logger.info(`Log level         : ${globals.getLoggingLevel()}`);
+        globals.logger.info(`App version       : ${globals.appVersion}`);
+        globals.logger.info(`Instance ID       : ${globals.hostInfo.id}`);
+        globals.logger.info(`Running in Docker : ${globals.hostInfo.isRunningInDocker}`);
         globals.logger.info('');
-        globals.logger.info(`Node version    : ${globals.hostInfo.node.nodeVersion}`);
-        globals.logger.info(`Architecture    : ${globals.hostInfo.si.os.arch}`);
-        globals.logger.info(`Platform        : ${globals.hostInfo.si.os.platform}`);
-        globals.logger.info(`Release         : ${globals.hostInfo.si.os.release}`);
-        globals.logger.info(`Distro          : ${globals.hostInfo.si.os.distro}`);
-        globals.logger.info(`Codename        : ${globals.hostInfo.si.os.codename}`);
-        globals.logger.info(`Virtual         : ${globals.hostInfo.si.system.virtual}`);
-        globals.logger.info(`Processors      : ${globals.hostInfo.si.cpu.processors}`);
-        globals.logger.info(`Physical cores  : ${globals.hostInfo.si.cpu.physicalCores}`);
-        globals.logger.info(`Cores           : ${globals.hostInfo.si.cpu.cores}`);
-        globals.logger.info(`Docker arch.    : ${globals.hostInfo.si.cpu.hypervizor}`);
-        globals.logger.info(`Total memory    : ${globals.hostInfo.si.memory.total}`);
-        globals.logger.info(`Standalone app  : ${globals.isPkg}`);
+        globals.logger.info(`Node version      : ${globals.hostInfo.node.nodeVersion}`);
+        globals.logger.info(`Architecture      : ${globals.hostInfo.si.os.arch}`);
+        globals.logger.info(`Platform          : ${globals.hostInfo.si.os.platform}`);
+        globals.logger.info(`Release           : ${globals.hostInfo.si.os.release}`);
+        globals.logger.info(`Distro            : ${globals.hostInfo.si.os.distro}`);
+        globals.logger.info(`Codename          : ${globals.hostInfo.si.os.codename}`);
+        globals.logger.info(`Virtual           : ${globals.hostInfo.si.system.virtual}`);
+        globals.logger.info(`Processors        : ${globals.hostInfo.si.cpu.processors}`);
+        globals.logger.info(`Physical cores    : ${globals.hostInfo.si.cpu.physicalCores}`);
+        globals.logger.info(`Cores             : ${globals.hostInfo.si.cpu.cores}`);
+        globals.logger.info(`Docker arch.      : ${globals.hostInfo.si.cpu.hypervizor}`);
+        globals.logger.info(`Total memory      : ${globals.hostInfo.si.memory.total}`);
+        globals.logger.info(`Standalone app    : ${globals.isPkg}`);
 
         // Log info about what Qlik Sense certificates are being used
-        globals.logger.info(`Client cert     : ${certFile}`);
-        globals.logger.info(`Client cert key : ${keyFile}`);
-        globals.logger.info(`CA cert         : ${caFile}`);
+        globals.logger.info(`Client cert       : ${certFile}`);
+        globals.logger.info(`Client cert key   : ${keyFile}`);
+        globals.logger.info(`CA cert           : ${caFile}`);
         globals.logger.info('--------------------------------------');
 
         // Set up anon usage reports, if enabled

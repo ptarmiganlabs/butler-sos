@@ -950,6 +950,7 @@ class Settings {
 
             const hostInfo = {
                 id,
+                isRunningInDocker: Settings.isRunningInDocker(),
                 node: {
                     nodeVersion: process.version,
                     versions: process.versions,

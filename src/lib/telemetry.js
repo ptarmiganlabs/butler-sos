@@ -149,7 +149,7 @@ const callRemoteURL = async function reportTelemetry() {
                 system_distro: globals.hostInfo.si.os.distro,
                 system_codename: globals.hostInfo.si.os.codename,
                 system_virtual: globals.hostInfo.si.system.virtual,
-                system_hypervisor: globals.hostInfo.si.os.hypervizor,
+                system_isRunningInDocker: globals.hostInfo.isRunningInDocker,
                 system_nodeVersion: globals.hostInfo.node.nodeVersion,
 
                 feature_heartbeat: heartbeat,
@@ -188,7 +188,7 @@ const callRemoteURL = async function reportTelemetry() {
                         distro: globals.hostInfo.si.os.distro,
                         codename: globals.hostInfo.si.os.codename,
                         virtual: globals.hostInfo.si.system.virtual,
-                        hypervisor: globals.hostInfo.si.os.hypervizor,
+                        isRunningInDocker: globals.hostInfo.isRunningInDocker,
                         nodeVersion: globals.hostInfo.node.nodeVersion,
                     },
                     enabledFeatures: {
