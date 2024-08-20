@@ -1,5 +1,28 @@
 # Changelog
 
+## [10.2.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v10.1.1...butler-sos-v10.2.0) (2024-08-20)
+
+
+### Features
+
+* **config:** Show info at startup whether Docker is used or not ([aff1855](https://github.com/ptarmiganlabs/butler-sos/commit/aff185589dd6a01b457c8db5328ced5386ae0daa)), closes [#861](https://github.com/ptarmiganlabs/butler-sos/issues/861)
+* **config:** Visualise obfuscated config file in Butler SOS hosted web page ([2b067c8](https://github.com/ptarmiganlabs/butler-sos/commit/2b067c8e4cdb858506c88710cb33200f39fec1b8)), closes [#858](https://github.com/ptarmiganlabs/butler-sos/issues/858)
+* **logs:** Add catgegorisation of Qlik Sense log events ([3fbdccf](https://github.com/ptarmiganlabs/butler-sos/commit/3fbdccff226d5a04806b4aa415f720249178687b)), closes [#849](https://github.com/ptarmiganlabs/butler-sos/issues/849)
+
+
+### Bug Fixes
+
+* **config:** Better config file verification (and exit app when incorrect) ([510a583](https://github.com/ptarmiganlabs/butler-sos/commit/510a583d7a2e38b0c236c44bdd3c3f950a32cad0)), closes [#857](https://github.com/ptarmiganlabs/butler-sos/issues/857)
+* **config:** More thorough verification of config file structure ([bb46e00](https://github.com/ptarmiganlabs/butler-sos/commit/bb46e0078f66b41f4d19bc34ba21614e7c56d990)), closes [#857](https://github.com/ptarmiganlabs/butler-sos/issues/857)
+* **new-relic:** Allow empty static uptime attributes w/o errors ([c2b1579](https://github.com/ptarmiganlabs/butler-sos/commit/c2b1579371bb2044d8dca593d0fc44abc757b962)), closes [#863](https://github.com/ptarmiganlabs/butler-sos/issues/863)
+* **new-relic:** Better error messages when there is no New Relic config, but NR features are enabled ([d937208](https://github.com/ptarmiganlabs/butler-sos/commit/d9372084cbf51eb7a5519d9c2d66d05b3cee5347)), closes [#863](https://github.com/ptarmiganlabs/butler-sos/issues/863)
+
+
+### Miscellaneous
+
+* **deps:** Update dependencies ([8ca9558](https://github.com/ptarmiganlabs/butler-sos/commit/8ca955894651c456dc7f651acdcee86c8c4a5ebf))
+* Major update - refactored entire code base from CJS &gt; ESM ([ae4083b](https://github.com/ptarmiganlabs/butler-sos/commit/ae4083b33e77303076f6a4b3e780d4e01a115afd)), closes [#859](https://github.com/ptarmiganlabs/butler-sos/issues/859)
+
 ## [10.1.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v10.1.0...butler-sos-v10.1.1) (2024-08-15)
 
 
