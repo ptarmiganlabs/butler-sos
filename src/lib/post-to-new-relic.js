@@ -291,7 +291,11 @@ export async function postHealthMetricsToNewRelic(_host, body, tags) {
         // Send data to all New Relic accounts that are enabled for this metric/event
         //
         // Get New Relic accounts
-        const nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        let nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        if (nrAccounts === null) {
+            nrAccounts = [];
+        }
+
         globals.logger.debug(
             `HEALTH METRICS NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
@@ -438,7 +442,10 @@ export async function postProxySessionsToNewRelic(userSessions) {
         // Send data to all New Relic accounts that are enabled for this metric/event
         //
         // Get New Relic accounts
-        const nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        let nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        if (nrAccounts === null) {
+            nrAccounts = [];
+        }
         globals.logger.debug(
             `PROXY SESSIONS NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
@@ -602,7 +609,10 @@ export async function postButlerSOSUptimeToNewRelic(fields) {
         // Send data to all New Relic accounts that are enabled for this metric/event
         //
         // Get New Relic accounts
-        const nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        let nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        if (nrAccounts === null) {
+            nrAccounts = [];
+        }
         globals.logger.debug(
             `UPTIME NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
@@ -748,7 +758,10 @@ export async function postUserEventToNewRelic(msg) {
         // Send data to all New Relic accounts that are enabled for this metric/event
         //
         // Get New Relic accounts
-        const nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        let nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        if (nrAccounts === null) {
+            nrAccounts = [];
+        }
         globals.logger.debug(
             `USER EVENT NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
@@ -1027,7 +1040,10 @@ export async function postLogEventToNewRelic(msg) {
             // Send data to all New Relic accounts that are enabled for this metric/event
             //
             // Get New Relic accounts
-            const nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+            let nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+            if (nrAccounts === null) {
+                nrAccounts = [];
+            }    
             globals.logger.debug(
                 `LOG EVENT NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
             );
