@@ -1,9 +1,15 @@
-const confifgFileSchema = {
+export const confifgFileSchema = {
     'Butler-SOS': {
         logLevel: 'string',
         fileLogging: 'boolean',
         logDirectory: 'string',
         anonTelemetry: 'boolean',
+        configVisualisation: {
+            enable: 'boolean',
+            host: 'string',
+            port: 'number',
+            obfuscate: 'boolean',
+        },
         heartbeat: {
             enable: 'boolean',
             remoteURL: 'string',
@@ -408,8 +414,4 @@ const confifgFileSchema = {
             ],
         },
     },
-};
-
-module.exports = {
-    confifgFileSchema,
 };

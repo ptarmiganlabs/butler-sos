@@ -1,4 +1,5 @@
-function getServerTags(logger, server) {
+// Get tag values from the server object
+export function getServerTags(logger, server) {
     try {
         let tags = {
             host: server.host.split(':')[0],
@@ -34,7 +35,3 @@ function getServerTags(logger, server) {
         return [];
     }
 }
-
-module.exports = {
-    getServerTags,
-};

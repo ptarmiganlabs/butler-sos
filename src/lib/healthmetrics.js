@@ -2,17 +2,18 @@
  * Get metrics from the Sense health check API
  */
 
-const path = require('path');
-const https = require('https');
-const fs = require('fs');
-const axios = require('axios');
-const globals = require('../globals');
-const postToInfluxdb = require('./post-to-influxdb');
-const postToNewRelic = require('./post-to-new-relic');
-const postToMQTT = require('./post-to-mqtt');
-const { getServerTags } = require('./servertags');
-const serverHeaders = require('./serverheaders');
-const prometheus = require('./prom-client');
+import path from 'path';
+import https from 'https';
+import fs from 'fs';
+import axios from 'axios';
+
+import globals from '../globals.js';
+import { postHealthMetricsToInfluxdb } from './post-to-influxdb.js';
+import { postHealthMetricsToNewRelic } from './post-to-new-relic.js';
+import { postHealthToMQTT } from './post-to-mqtt.js';
+import { getServerHeaders } from './serverheaders.js';
+import { getServerTags } from './servertags.js';
+import { saveHealthMetricsToPrometheus } from './prom-client.js';
 
 function getCertificates(options) {
     const certificate = {};
@@ -24,7 +25,7 @@ function getCertificates(options) {
     return certificate;
 }
 
-function getHealthStatsFromSense(serverName, host, tags, headers) {
+export function getHealthStatsFromSense(serverName, host, tags, headers) {
     globals.logger.debug(`HEALTH: URL=https://${host}/engine/healthcheck/`);
 
     const options = {};
@@ -98,30 +99,25 @@ function getHealthStatsFromSense(serverName, host, tags, headers) {
                 // Post to MQTT
                 if (globals.config.get('Butler-SOS.mqttConfig.enable') === true) {
                     globals.logger.debug('HEALTH: Calling HEALTH metrics MQTT posting method');
-                    postToMQTT.postHealthToMQTT(host, tags.host, response.data);
+                    postHealthToMQTT(host, tags.host, response.data);
                 }
 
                 // Post to Influxdb
                 if (globals.config.get('Butler-SOS.influxdbConfig.enable') === true) {
                     globals.logger.debug('HEALTH: Calling HEALTH metrics Influxdb posting method');
-                    postToInfluxdb.postHealthMetricsToInfluxdb(
-                        serverName,
-                        host,
-                        response.data,
-                        tags
-                    );
+                    postHealthMetricsToInfluxdb(serverName, host, response.data, tags);
                 }
 
                 // Post to New Relic
                 if (globals.config.get('Butler-SOS.newRelic.enable') === true) {
                     globals.logger.debug('HEALTH: Calling HEALTH metrics New Relic posting method');
-                    postToNewRelic.postHealthMetricsToNewRelic(host, response.data, tags);
+                    postHealthMetricsToNewRelic(host, response.data, tags);
                 }
 
                 // Save latest available data for Prometheus
                 if (globals.config.get('Butler-SOS.prometheus.enable') === true) {
                     globals.logger.debug('HEALTH: Calling HEALTH metrics Prometheus method');
-                    prometheus.saveHealthMetrics(host, response.data, tags);
+                    saveHealthMetricsToPrometheus(host, response.data, tags);
                 }
             }
         })
@@ -130,7 +126,7 @@ function getHealthStatsFromSense(serverName, host, tags, headers) {
         });
 }
 
-function setupHealthMetricsTimer() {
+export function setupHealthMetricsTimer() {
     // Configure timer for getting healthcheck data
     setInterval(() => {
         globals.logger.verbose('HEALTH: Event started: Statistics collection');
@@ -152,14 +148,9 @@ function setupHealthMetricsTimer() {
             // });
 
             // Get per-server headers
-            const headers = serverHeaders.getServerHeaders(server);
+            const headers = getServerHeaders(server);
 
             getHealthStatsFromSense(server.serverName, server.host, tags, headers);
         });
     }, globals.config.get('Butler-SOS.serversToMonitor.pollingInterval'));
 }
-
-module.exports = {
-    setupHealthMetricsTimer,
-    getHealthStatsFromSense,
-};

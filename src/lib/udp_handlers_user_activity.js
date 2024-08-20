@@ -1,17 +1,17 @@
 /* eslint-disable no-unused-vars */
-const { validate } = require('uuid');
-const parser = require('ua-parser-js');
+import { validate } from 'uuid';
+import parser from 'ua-parser-js';
 
 // Load global variables and functions
-const globals = require('../globals');
-const postToInfluxdb = require('./post-to-influxdb');
-const postToNewRelic = require('./post-to-new-relic');
-const postToMQTT = require('./post-to-mqtt');
+import globals from '../globals.js';
+import { postUserEventToInfluxdb } from './post-to-influxdb.js';
+import { postUserEventToNewRelic } from './post-to-new-relic.js';
+import { postUserEventToMQTT } from './post-to-mqtt.js';
 
 // --------------------------------------------------------
 // Set up UDP server for acting on Sense user activity events
 // --------------------------------------------------------
-function udpInitUserActivityServer() {
+export function udpInitUserActivityServer() {
     // Handler for UDP server startup event
     globals.udpServerUserActivity.socket.on('listening', (_message, _remote) => {
         const address = globals.udpServerUserActivity.socket.address();
@@ -161,7 +161,7 @@ function udpInitUserActivityServer() {
                 globals.config.get('Butler-SOS.userEvents.sendToMQTT.enable')
             ) {
                 globals.logger.debug('USER EVENT: Calling user sessions MQTT posting method');
-                postToMQTT.postUserEventToMQTT(msgObj);
+                postUserEventToMQTT(msgObj);
             }
 
             // Post to Influxdb
@@ -170,7 +170,7 @@ function udpInitUserActivityServer() {
                 globals.config.get('Butler-SOS.userEvents.sendToInfluxdb.enable')
             ) {
                 globals.logger.debug('USER EVENT: Calling user sessions Influxdb posting method');
-                postToInfluxdb.postUserEventToInfluxdb(msgObj);
+                postUserEventToInfluxdb(msgObj);
             }
 
             // Post to New Relic
@@ -179,14 +179,10 @@ function udpInitUserActivityServer() {
                 globals.config.get('Butler-SOS.userEvents.sendToNewRelic.enable')
             ) {
                 globals.logger.debug('USER EVENT: Calling user event New Relic posting method');
-                postToNewRelic.postUserEventToNewRelic(msgObj);
+                postUserEventToNewRelic(msgObj);
             }
         } catch (err) {
             globals.logger.error(`USER EVENT: Error processing user activity event: ${err}`);
         }
     });
 }
-
-module.exports = {
-    udpInitUserActivityServer,
-};

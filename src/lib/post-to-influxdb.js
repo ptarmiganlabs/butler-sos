@@ -1,9 +1,9 @@
 /* eslint-disable prefer-destructuring */
 /* eslint-disable no-unused-vars */
 
-const { Point } = require('@influxdata/influxdb-client');
+import { Point } from '@influxdata/influxdb-client';
 
-const globals = require('../globals');
+import globals from '../globals.js';
 
 const sessionAppPrefix = 'SessionApp';
 
@@ -42,7 +42,7 @@ function getFormattedTime(serverStarted) {
     return `${days} days, ${hours}h ${minutes.substr(-2)}m ${seconds.substr(-2)}s`;
 }
 
-async function postHealthMetricsToInfluxdb(serverName, host, body, serverTags) {
+export async function postHealthMetricsToInfluxdb(serverName, host, body, serverTags) {
     // Calculate server uptime
     const formattedTime = getFormattedTime(body.started);
 
@@ -485,7 +485,7 @@ async function postHealthMetricsToInfluxdb(serverName, host, body, serverTags) {
     }
 }
 
-async function postProxySessionsToInfluxdb(userSessions) {
+export async function postProxySessionsToInfluxdb(userSessions) {
     globals.logger.debug(`PROXY SESSIONS: User sessions: ${JSON.stringify(userSessions)}`);
 
     globals.logger.silly(
@@ -562,7 +562,7 @@ async function postProxySessionsToInfluxdb(userSessions) {
     }
 }
 
-async function postButlerSOSMemoryUsageToInfluxdb(memory) {
+export async function postButlerSOSMemoryUsageToInfluxdb(memory) {
     globals.logger.debug(`MEMORY USAGE: Memory usage ${JSON.stringify(memory, null, 2)})`);
 
     // Get Butler version
@@ -678,7 +678,7 @@ async function postButlerSOSMemoryUsageToInfluxdb(memory) {
     }
 }
 
-async function postUserEventToInfluxdb(msg) {
+export async function postUserEventToInfluxdb(msg) {
     globals.logger.debug(`USER EVENT INFLUXDB: ${msg})`);
 
     // Only write to influuxdb if the global influx object has been initialized
@@ -873,7 +873,7 @@ async function postUserEventToInfluxdb(msg) {
     }
 }
 
-async function postLogEventToInfluxdb(msg) {
+export async function postLogEventToInfluxdb(msg) {
     globals.logger.debug(`LOG EVENT INFLUXDB: ${msg})`);
 
     try {
@@ -1258,11 +1258,3 @@ async function postLogEventToInfluxdb(msg) {
         globals.logger.error(`LOG EVENT INFLUXDB 2: Error saving log event to InfluxDB! ${err}`);
     }
 }
-
-module.exports = {
-    postHealthMetricsToInfluxdb,
-    postProxySessionsToInfluxdb,
-    postButlerSOSMemoryUsageToInfluxdb,
-    postUserEventToInfluxdb,
-    postLogEventToInfluxdb,
-};

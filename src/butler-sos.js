@@ -1,30 +1,30 @@
 // Add dependencies
-const path = require('path');
-const FastifyHealthcheck = require('fastify-healthcheck');
-const Fastify = require('fastify');
+import path from 'path';
+import FastifyHealthcheck from 'fastify-healthcheck';
+import Fastify from 'fastify';
 
 const promServer = Fastify({ logger: false });
 const promFastifyMetricsServer = Fastify({ logger: false });
 const dockerHealthCheckServer = Fastify({ logger: false });
 
-const metricsPlugin = require('fastify-metrics');
+import metricsPlugin from 'fastify-metrics';
 
 promServer.server.keepAliveTimeout = 0;
 promFastifyMetricsServer.register(metricsPlugin, { endpoint: '/metrics' });
 
 // Load code from sub modules
-const globals = require('./globals');
-const healthMetrics = require('./lib/healthmetrics');
-const logDb = require('./lib/logdb');
-const proxySessionMetrics = require('./lib/proxysessionmetrics');
-const appNamesExtract = require('./lib/appnamesextract');
-const heartbeat = require('./lib/heartbeat');
-const serviceUptime = require('./lib/service_uptime');
-const udpUserActivity = require('./lib/udp_handlers_user_activity');
-const udpLogEvents = require('./lib/udp_handlers_log_events');
-const telemetry = require('./lib/telemetry');
-const promClient = require('./lib/prom-client');
-const { verifyConfigFile } = require('./lib/config-file-verify');
+import { setupHealthMetricsTimer } from './lib/healthmetrics.js';
+import { setupLogDbTimer } from './lib/logdb.js';
+import { setupUserSessionsTimer } from './lib/proxysessionmetrics.js';
+import { setupAppNamesExtractTimer } from './lib/appnamesextract.js';
+import { setupHeartbeatTimer } from './lib/heartbeat.js';
+import { serviceUptimeStart } from './lib/service_uptime.js';
+import { udpInitUserActivityServer } from './lib/udp_handlers_user_activity.js';
+import { udpInitLogEventServer } from './lib/udp_handlers_log_events.js';
+import { setupAnonUsageReportTimer } from './lib/telemetry.js';
+import { setupPromClient } from './lib/prom-client.js';
+import { verifyConfigFile } from './lib/config-file-verify.js';
+import { setupConfigVisServer } from './lib/config-visualise.js';
 
 // Suppress experimental warnings
 // https://stackoverflow.com/questions/55778283/how-to-disable-warnings-when-node-is-launched-via-a-global-shell-script
@@ -56,31 +56,53 @@ async function sleep(ms) {
 }
 
 async function mainScript() {
-    // Sleep 5 seconds to allow inits to complete
-    globals.logger.info('MAIN: Waiting 5 seconds for initializations to complete...');
-    globals.logger.info('5...');
-    await sleep(1000);
-    globals.logger.info('4...');
-    await sleep(1000);
-    globals.logger.info('3...');
-    await sleep(1000);
-    globals.logger.info('2...');
-    await sleep(1000);
-    globals.logger.info('1...');
-    await sleep(1000);
-
-    await globals.initInfluxDB();
-
-    if (globals.config.get('Butler-SOS.uptimeMonitor.enable') === true) {
-        serviceUptime.serviceUptimeStart();
-    }
+    // Load globals dynamically/async to ensure singleton pattern works
+    const settingsObj = (await import('./globals.js')).default;
+    const globals = await settingsObj.init();
+    globals.logger.verbose(`START: Globals init done: ${globals.initialised}`);
 
     // Verify that the config file has the correct format
     // Only do this if the command line option no-config-file-verify is NOT set
+    let configFileVerify = false;
     if (globals.options.skipConfigVerification) {
         globals.logger.warn('MAIN: Skipping config file verification');
     } else {
-        await verifyConfigFile();
+        configFileVerify = await verifyConfigFile();
+    }
+
+    // If config file verification failed, the previous function would have returned false.
+    // In that case, we should exit the script.
+    if (!configFileVerify) {
+        globals.logger.error('MAIN: Config file verification failed. Exiting.');
+        process.exit(1);
+    }
+
+    // Ensure that initialisation of globals is complete
+    // Sleep 5 seconds otherwise to llow globals to be initialised
+
+    function sleepLocal(ms) {
+        // eslint-disable-next-line no-promise-executor-return
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    if (!globals.initialised) {
+        globals.logger.info('START: Sleeping 5 seconds to allow globals to be initialised.');
+        globals.logger.info('5...');
+        await sleepLocal(1000);
+        globals.logger.info('4...');
+        await sleepLocal(1000);
+        globals.logger.info('3...');
+        await sleepLocal(1000);
+        globals.logger.info('2...');
+        await sleepLocal(1000);
+        globals.logger.info('1...');
+        await sleepLocal(1000);
+    } else {
+        globals.logger.info('START: Globals initialised - all good.');
+    }
+
+    if (globals.config.get('Butler-SOS.uptimeMonitor.enable') === true) {
+        serviceUptimeStart();
     }
 
     // Load certificates to use when connecting to healthcheck API
@@ -93,7 +115,7 @@ async function mainScript() {
 
     // Set up heartbeats, if enabled in the config file
     if (globals.config.get('Butler-SOS.heartbeat.enable') === true) {
-        heartbeat.setupHeartbeatTimer(globals.config, globals.logger);
+        setupHeartbeatTimer(globals.config, globals.logger);
     }
 
     try {
@@ -106,33 +128,34 @@ async function mainScript() {
         // Default is to use log level defined in config file
         globals.logger.info('--------------------------------------');
         globals.logger.info('Starting Butler SOS');
-        globals.logger.info(`Log level       : ${globals.getLoggingLevel()}`);
-        globals.logger.info(`App version     : ${globals.appVersion}`);
-        globals.logger.info(`Instance ID     : ${globals.hostInfo.id}`);
+        globals.logger.info(`Log level         : ${globals.getLoggingLevel()}`);
+        globals.logger.info(`App version       : ${globals.appVersion}`);
+        globals.logger.info(`Instance ID       : ${globals.hostInfo.id}`);
+        globals.logger.info(`Running in Docker : ${globals.hostInfo.isRunningInDocker}`);
         globals.logger.info('');
-        globals.logger.info(`Node version    : ${globals.hostInfo.node.nodeVersion}`);
-        globals.logger.info(`Architecture    : ${globals.hostInfo.si.os.arch}`);
-        globals.logger.info(`Platform        : ${globals.hostInfo.si.os.platform}`);
-        globals.logger.info(`Release         : ${globals.hostInfo.si.os.release}`);
-        globals.logger.info(`Distro          : ${globals.hostInfo.si.os.distro}`);
-        globals.logger.info(`Codename        : ${globals.hostInfo.si.os.codename}`);
-        globals.logger.info(`Virtual         : ${globals.hostInfo.si.system.virtual}`);
-        globals.logger.info(`Processors      : ${globals.hostInfo.si.cpu.processors}`);
-        globals.logger.info(`Physical cores  : ${globals.hostInfo.si.cpu.physicalCores}`);
-        globals.logger.info(`Cores           : ${globals.hostInfo.si.cpu.cores}`);
-        globals.logger.info(`Docker arch.    : ${globals.hostInfo.si.cpu.hypervizor}`);
-        globals.logger.info(`Total memory    : ${globals.hostInfo.si.memory.total}`);
-        globals.logger.info(`Standalone app  : ${globals.isPkg}`);
+        globals.logger.info(`Node version      : ${globals.hostInfo.node.nodeVersion}`);
+        globals.logger.info(`Architecture      : ${globals.hostInfo.si.os.arch}`);
+        globals.logger.info(`Platform          : ${globals.hostInfo.si.os.platform}`);
+        globals.logger.info(`Release           : ${globals.hostInfo.si.os.release}`);
+        globals.logger.info(`Distro            : ${globals.hostInfo.si.os.distro}`);
+        globals.logger.info(`Codename          : ${globals.hostInfo.si.os.codename}`);
+        globals.logger.info(`Virtual           : ${globals.hostInfo.si.system.virtual}`);
+        globals.logger.info(`Processors        : ${globals.hostInfo.si.cpu.processors}`);
+        globals.logger.info(`Physical cores    : ${globals.hostInfo.si.cpu.physicalCores}`);
+        globals.logger.info(`Cores             : ${globals.hostInfo.si.cpu.cores}`);
+        globals.logger.info(`Docker arch.      : ${globals.hostInfo.si.cpu.hypervizor}`);
+        globals.logger.info(`Total memory      : ${globals.hostInfo.si.memory.total}`);
+        globals.logger.info(`Standalone app    : ${globals.isPkg}`);
 
         // Log info about what Qlik Sense certificates are being used
-        globals.logger.info(`Client cert     : ${certFile}`);
-        globals.logger.info(`Client cert key : ${keyFile}`);
-        globals.logger.info(`CA cert         : ${caFile}`);
+        globals.logger.info(`Client cert       : ${certFile}`);
+        globals.logger.info(`Client cert key   : ${keyFile}`);
+        globals.logger.info(`CA cert           : ${caFile}`);
         globals.logger.info('--------------------------------------');
 
         // Set up anon usage reports, if enabled
         if (globals.config.get('Butler-SOS.anonTelemetry') === true) {
-            telemetry.setupAnonUsageReportTimer();
+            setupAnonUsageReportTimer();
             globals.logger.verbose('MAIN: Anonymous telemetry reporting has been set up.');
             globals.logger.verbose(
                 'MAIN: ❤️  Thank you for supporting Butler SOS by allowing telemetry! ❤️'
@@ -144,7 +167,7 @@ async function mainScript() {
 
     // Set up UDP handler for user activity/events
     if (globals.config.get('Butler-SOS.userEvents.enable')) {
-        udpUserActivity.udpInitUserActivityServer();
+        udpInitUserActivityServer();
 
         globals.logger.debug(
             `MAIN: Server for user activity/events UDP server: ${globals.udpServerUserActivity.host}`
@@ -163,7 +186,7 @@ async function mainScript() {
         globals.config.get('Butler-SOS.logEvents.source.scheduler.enable') ||
         globals.config.get('Butler-SOS.logEvents.source.proxy.enable')
     ) {
-        udpLogEvents.udpInitLogEventServer();
+        udpInitLogEventServer();
 
         globals.logger.debug(
             `MAIN: Server for user activity/events UDP server: ${globals.udpServerLogEvents.host}`
@@ -216,7 +239,7 @@ async function mainScript() {
             globals.logger.info(
                 `MAIN: Starting Prometheus Butler SOS endpoint on ${promHost}:${promPort}.`
             );
-            promClient.setupPromClient(promServer, promPort, promHost);
+            setupPromClient(promServer, promPort, promHost);
         } catch (err) {
             globals.logger.error(
                 `MAIN: Error while starting Prometheus Butler SOS endpoint on ${promHost}:${promPort}.`
@@ -242,20 +265,25 @@ async function mainScript() {
 
     // Set up extraction of data from log db
     if (globals.config.get('Butler-SOS.logdb.enable') === true) {
-        logDb.setupLogDbTimer();
+        setupLogDbTimer();
     }
 
     // Set up extraction of sessions data
     if (globals.config.get('Butler-SOS.userSessions.enableSessionExtract') === true) {
-        proxySessionMetrics.setupUserSessionsTimer();
+        setupUserSessionsTimer();
     }
 
     // Set up extraction on main metrics data (i.e. the Sense healthcheck API)
-    healthMetrics.setupHealthMetricsTimer();
+    setupHealthMetricsTimer();
 
     // Set up extraction of app IDs and names
     if (globals.config.get('Butler-SOS.appNames.enableAppNameExtract') === true) {
-        appNamesExtract.setupAppNamesExtractTimer();
+        setupAppNamesExtractTimer();
+    }
+
+    // Set up config server, if enabled
+    if (globals.config.get('Butler-SOS.configVisualisation.enable') === true) {
+        await setupConfigVisServer();
     }
 }
 

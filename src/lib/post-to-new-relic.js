@@ -1,10 +1,10 @@
 /* eslint-disable prefer-destructuring */
 /* eslint-disable no-unused-vars */
 
-const crypto = require('crypto');
-const axios = require('axios');
+import crypto from 'crypto';
+import axios from 'axios';
 
-const globals = require('../globals');
+import globals from '../globals.js';
 
 // const sessionAppPrefix = 'SessionApp';
 
@@ -54,7 +54,7 @@ function getFormattedTime(serverStarted) {
  * @param {*} body
  * @param {*} tags
  */
-async function postHealthMetricsToNewRelic(_host, body, tags) {
+export async function postHealthMetricsToNewRelic(_host, body, tags) {
     // Calculate server uptime
     const formattedTime = getFormattedTime(body.started);
 
@@ -291,7 +291,11 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
         // Send data to all New Relic accounts that are enabled for this metric/event
         //
         // Get New Relic accounts
-        const nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        let nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        if (nrAccounts === null) {
+            nrAccounts = [];
+        }
+
         globals.logger.debug(
             `HEALTH METRICS NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
@@ -347,7 +351,7 @@ async function postHealthMetricsToNewRelic(_host, body, tags) {
  *
  * @param {*} userSessions
  */
-async function postProxySessionsToNewRelic(userSessions) {
+export async function postProxySessionsToNewRelic(userSessions) {
     globals.logger.debug(
         `PROXY SESSIONS NEW RELIC: User sessions: ${JSON.stringify(userSessions)}`
     );
@@ -438,7 +442,10 @@ async function postProxySessionsToNewRelic(userSessions) {
         // Send data to all New Relic accounts that are enabled for this metric/event
         //
         // Get New Relic accounts
-        const nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        let nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        if (nrAccounts === null) {
+            nrAccounts = [];
+        }
         globals.logger.debug(
             `PROXY SESSIONS NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
@@ -494,7 +501,7 @@ async function postProxySessionsToNewRelic(userSessions) {
     }
 }
 
-async function postButlerSOSUptimeToNewRelic(fields) {
+export async function postButlerSOSUptimeToNewRelic(fields) {
     globals.logger.debug(
         `MEMORY USAGE NEW RELIC: Memory usage ${JSON.stringify(fields, null, 2)})`
     );
@@ -505,12 +512,13 @@ async function postButlerSOSUptimeToNewRelic(fields) {
         const attributes = {};
         const ts = new Date().getTime(); // Timestamp in millisec
 
-        // Add static fields to attributes
-        if (globals.config.has('Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static')) {
+        // Add static fields to attributes if they exist
+        if (globals.config.has('Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static') && globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static') !== null) {
             const staticAttributes = globals.config.get(
                 'Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static'
             );
 
+            // staticAttributes is an array of objects. Null 
             // eslint-disable-next-line no-restricted-syntax
             for (const item of staticAttributes) {
                 attributes[item.name] = item.value;
@@ -601,7 +609,10 @@ async function postButlerSOSUptimeToNewRelic(fields) {
         // Send data to all New Relic accounts that are enabled for this metric/event
         //
         // Get New Relic accounts
-        const nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        let nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        if (nrAccounts === null) {
+            nrAccounts = [];
+        }
         globals.logger.debug(
             `UPTIME NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
@@ -651,7 +662,7 @@ async function postButlerSOSUptimeToNewRelic(fields) {
     }
 }
 
-async function postUserEventToNewRelic(msg) {
+export async function postUserEventToNewRelic(msg) {
     globals.logger.debug(`USER EVENT NEW RELIC 1: ${JSON.stringify(msg, null, 2)})`);
 
     try {
@@ -747,7 +758,10 @@ async function postUserEventToNewRelic(msg) {
         // Send data to all New Relic accounts that are enabled for this metric/event
         //
         // Get New Relic accounts
-        const nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        let nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+        if (nrAccounts === null) {
+            nrAccounts = [];
+        }
         globals.logger.debug(
             `USER EVENT NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
@@ -912,7 +926,7 @@ function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
  *
  * @param {*} msg
  */
-async function postLogEventToNewRelic(msg) {
+export async function postLogEventToNewRelic(msg) {
     globals.logger.debug(`LOG EVENT NEW RELIC: ${msg})`);
 
     try {
@@ -1026,7 +1040,10 @@ async function postLogEventToNewRelic(msg) {
             // Send data to all New Relic accounts that are enabled for this metric/event
             //
             // Get New Relic accounts
-            const nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+            let nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
+            if (nrAccounts === null) {
+                nrAccounts = [];
+            }    
             globals.logger.debug(
                 `LOG EVENT NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
             );
@@ -1084,11 +1101,3 @@ async function postLogEventToNewRelic(msg) {
         globals.logger.error(`LOG EVENT NEW RELIC: Error saving event to New Relic! ${err}`);
     }
 }
-
-module.exports = {
-    postHealthMetricsToNewRelic,
-    postProxySessionsToNewRelic,
-    postButlerSOSUptimeToNewRelic,
-    postUserEventToNewRelic,
-    postLogEventToNewRelic,
-};
