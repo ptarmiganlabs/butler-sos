@@ -89,6 +89,24 @@ export function udpInitLogEventServer() {
                 `LOG EVENT: ${msg[0]}:${msg[5]}:${msg[4]}, ${msg[6]}: ${msg[8]}`
             );
 
+            // Check if the message is a log event message we recognise
+            // If not, log a warning and return
+            // Take into account that msg[0] may be undefined, so check for that first
+            if (
+                msg[0] === undefined ||
+                (msg[0].toLowerCase() !== '/qseow-engine/' &&
+                    msg[0].toLowerCase() !== '/qseow-proxy/' &&
+                    msg[0].toLowerCase() !== '/qseow-repository/' &&
+                    msg[0].toLowerCase() !== '/qseow-scheduler/')
+            ) {
+                // Show warning, include first 512 characters of the message
+                const msgShort = message.toString().substring(0, 512);
+                globals.logger.warn(
+                    `LOG EVENT: Received message that is not a recognised log event: ${msgShort}`
+                );
+                return;
+            }
+
             // Check if any of the log event sources are enabled in the configuration
             if (
                 (globals.config.get('Butler-SOS.logEvents.source.engine.enable') === true &&

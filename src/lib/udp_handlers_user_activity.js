@@ -64,6 +64,22 @@ export function udpInitUserActivityServer() {
             msg[0] = msg[0].toLowerCase().replace('/', '');
             msg[0] = msg[0].replace('/', '');
 
+            // Check if the message is a user event message we recognise
+            // If not, log a warning and return
+            // Take into account that msg[0] may be undefined, so check for that first
+            if (
+                msg[0] === undefined ||
+                (msg[0].toLowerCase() !== 'qseow-proxy-connection' &&
+                    msg[0].toLowerCase() !== 'qseow-proxy-session')
+            ) {
+                // Show warning, include first 512 characters of the message
+                const msgShort = message.toString().substring(0, 512);
+                globals.logger.warn(
+                    `USER EVENT: Received message that is not a recognised user event: ${msgShort}`
+                );
+                return;
+            }
+
             // Build object and convert to JSON
             let msgObj;
             if (msg[0] === 'qseow-proxy-connection' || msg[0] === 'qseow-proxy-session') {
