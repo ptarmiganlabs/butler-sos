@@ -2,7 +2,7 @@
 
 <html lang="en">
     <head>
-        <title>Ctrl-Q</title>
+        <title>Butler SOS</title>
 
         <link rel="stylesheet" href="jsontree.js.css" />
         <script src="jsontree.js"></script>
@@ -125,6 +125,8 @@
                 border-radius: 5px;
                 overflow: auto;
             }
+
+
         </style>
     </head>
 
@@ -139,7 +141,11 @@
                 <div id="pageTitle">
                     <h1>
                         Current Butler SOS configuration (docs
-                        <a href="https://butler-sos.ptarmiganlabs.com/docs/reference/config_file_format/" target="_blank">here</a>)
+                        <a
+                            href="https://butler-sos.ptarmiganlabs.com/docs/reference/config_file_format/"
+                            target="_blank"
+                            >here</a
+                        >)
                     </h1>
                 </div>
             </div>
@@ -149,7 +155,12 @@
                         <img
                             src="download-solid.svg"
                             alt="Download icon"
-                            style="vertical-align: middle; margin-right: 5px; height: 32px; width: 32px"
+                            style="
+                                vertical-align: middle;
+                                margin-right: 5px;
+                                height: 32px;
+                                width: 32px;
+                            "
                         />
                         Download obfuscated YAML
                     </button>
@@ -157,7 +168,9 @@
                 <!-- Tab links -->
                 <div class="tab">
                     <button class="tablinks" onclick="openTab(event, 'YAML')">YAML</button>
-                    <button class="tablinks" onclick="openTab(event, 'JSONTree')">JSON tree view</button>
+                    <button class="tablinks" onclick="openTab(event, 'JSONTree')">
+                        JSON tree view
+                    </button>
                 </div>
             </div>
         </div>
@@ -181,10 +194,73 @@
                 showCounts: true, 
                 sortPropertyNames: false, 
                 sortPropertyNamesInAlphabeticalOrder: false, 
-                data: {{butlerConfigJsonEncoded}} }"
-                style="width: 100%"
+                data: {{butlerSosConfigJsonEncoded}},
+                tooltip: {
+                    delay: 50,
+                    offset: 15
+                },
+                valueToolTips: {
+                    'Butler-SOS\\logLevel': 'Possible log levels are silly, debug, verbose, info, warn, error',
+                    'Butler-SOS\\fileLogging': 'true/false to enable/disable logging to disk file',
+                    'Butler-SOS\\logDirectory': 'Directory where log files are stored. Relative to Butler-SOS executable',
+                    'Butler-SOS\\anonTelemetry': 'Can Butler SOS send anonymous data about what computer it is running on? <br><br>More info on whata data is collected: https://butler-sos.ptarmiganlabs.com/docs/about/telemetry/',
+                    'Butler-SOS\\configVisualisation': 'Should Butler SOS start a web server that serves an obfuscated view of the Butler SOS config file?',
+                    'Butler-SOS\\configVisualisation\\enable': 'true/false to enable/disable the web UI for config file visualisation',
+                    'Butler-SOS\\configVisualisation\\host': 'Hostname or IP address where the web server will listen. Should be localhost in most cases.',
+                    'Butler-SOS\\configVisualisation\\port': 'Port where the web server will listen. Change if port 3100 is already in use.',
+                    'Butler-SOS\\configVisualisation\\obfuscate': 'Should the config file shown in the web UI be obfuscated? true/false',
+                    'Butler-SOS\\heartbeat': '',
+                    'Butler-SOS\\heartbeat\\enable': '',
+                    'Butler-SOS\\heartbeat\\remoteURL': '',
+                    'Butler-SOS\\heartbeat\\frequency': '',
+                    'Butler-SOS\\dockerHealthCheck': '',
+                    'Butler-SOS\\dockerHealthCheck\\enable': '',
+                    'Butler-SOS\\dockerHealthCheck\\port': '',
+                    'Butler-SOS\\uptimeMonitor': '',
+                    'Butler-SOS\\uptimeMonitor\\enable': '',
+                    'Butler-SOS\\uptimeMonitor\\frequency': '',
+                    'Butler-SOS\\uptimeMonitor\\logLevel': '',
+                    'Butler-SOS\\uptimeMonitor\\storeInInfluxdb\\butlerSOSMemoryUsage': '',
+                    'Butler-SOS\\uptimeMonitor\\storeInInfluxdb\\instanceTag': '',
+                    'Butler-SOS\\uptimeMonitor\\storeNewRelic': '',
+                    'Butler-SOS\\uptimeMonitor\\storeNewRelic\\enable': '',
+                    'Butler-SOS\\uptimeMonitor\\storeNewRelic\\destinationAccount': '',
+                    'Butler-SOS\\uptimeMonitor\\storeNewRelic\\metric': '',
+                    'Butler-SOS\\uptimeMonitor\\storeNewRelic\\metric\\dynamic': '',
+                    'Butler-SOS\\uptimeMonitor\\storeNewRelic\\metric\\dynamic\\butlerMemoryUsage.enable': '',
+                    'Butler-SOS\\uptimeMonitor\\storeNewRelic\\metric\\dynamic\\butlerUptime.enable': '',
+                    'Butler-SOS\\uptimeMonitor\\storeNewRelic\\attribute': '',
+                    '..\\..\\name': 'Name of New Relic attribute',
+                    'Butler-SOS\\uptimeMonitor\\storeNewRelic\\attribute\\dynamic.butlerVersion.enable': '',
+                    'Butler-SOS\\thirdPartyToolsCredentials': '',
+                    'Butler-SOS\\thirdPartyToolsCredentials\\newRelic': '',
+                    'Butler-SOS\\userEvents': '',
+                    'Butler-SOS\\userEvents\\enable': '',
+                    'Butler-SOS\\userEvents\\excludeUser': '',
+                    'Butler-SOS\\userEvents\\udpServerConfig': '',
+                    'Butler-SOS\\userEvents\\udpServerConfig\\serverHost': '',
+                    'Butler-SOS\\userEvents\\udpServerConfig\\portUserActivityEvents': '',
+                    'Butler-SOS\\userEvents\\tags': '',
+                    'Butler-SOS\\userEvents\\sendToMQTT\\enable': '',
+                    'Butler-SOS\\userEvents\\sendToMQTT\\postTo\\everythingTopic.enable': '',
+                    'Butler-SOS\\userEvents\\sendToMQTT\\postTo\\everythingTopic.topic': '',
+                    'Butler-SOS\\userEvents\\sendToMQTT\\postTo\\sessionStartTopic.enable': '',
+                    'Butler-SOS\\userEvents\\sendToMQTT\\postTo\\sessionStartTopic.topic': '',
+                    'Butler-SOS\\userEvents\\sendToMQTT\\postTo\\sessionStopTopic.enable': '',
+                    'Butler-SOS\\userEvents\\sendToMQTT\\postTo\\sessionStopTopic.topic': '',
+                    'Butler-SOS\\userEvents\\sendToMQTT\\postTo\\connectionOpenTopic.enable': '',
+                    'Butler-SOS\\userEvents\\sendToMQTT\\postTo\\connectionOpenTopic.topic': '',
+                    'Butler-SOS\\userEvents\\sendToMQTT\\postTo\\connectionCloseTopic.enable': '',
+                    'Butler-SOS\\userEvents\\sendToMQTT\\postTo\\connectionCloseTopic.topic': '',
+                    'Butler-SOS\\userEvents\\sendToInfluxdb\\enable': '',
+                    'Butler-SOS\\userEvents\\sendToNewRelic\\enable': '',
+                    'Butler-SOS\\userEvents\\sendToNewRelic\\destinationAccount': '',
+                    'Butler-SOS\\logEvents': '',
+                    'Butler-SOS\\logEvents\\udpServerConfig': '',
+                }
+                }"
+                style="width: 100%; max-width: 100%"
             >
-                Your HTML.
             </div>
         </div>
 
@@ -195,7 +271,10 @@
                     const yamlData = `{{butlerConfigYaml}}`;
                     return yamlData;
                 } catch (error) {
-                    console.error('There was a problem getting YAML config data from Handlebars template:', error);
+                    console.error(
+                        'There was a problem getting YAML config data from Handlebars template:',
+                        error
+                    );
                 }
             }
 

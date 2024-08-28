@@ -39,7 +39,7 @@ export async function setupConfigVisServer(logger, config) {
         configVisServer.setErrorHandler((error, request, reply) => {
             if (error.statusCode === 429) {
                 globals.logger.warn(
-                    `CONFIG VIS: Rate limit exceeded for source IP address ${request.ip}. Method=${request.method}, endpoint=${request.url}`,
+                    `CONFIG VIS: Rate limit exceeded for source IP address ${request.ip}. Method=${request.method}, endpoint=${request.url}`
                 );
             }
             reply.send(error);
@@ -57,8 +57,9 @@ export async function setupConfigVisServer(logger, config) {
 
         // Get directory contents of dirname
         const dirContents = fs.readdirSync(globals.appBasePath);
-        globals.logger.verbose(`CONFIG VIS: Directory contents of "${globals.appBasePath}": ${dirContents}`);
-
+        globals.logger.verbose(
+            `CONFIG VIS: Directory contents of "${globals.appBasePath}": ${dirContents}`
+        );
 
         const htmlDir = path.resolve(globals.appBasePath, 'static/configvis');
         globals.logger.info(`CONFIG VIS: Serving static files from ${htmlDir}`);
@@ -89,7 +90,7 @@ export async function setupConfigVisServer(logger, config) {
             // Read index.html from disk
             // dirname points to the directory where this file (app.js) is located, taking into account
             // if the app is running as a packaged app or as a Node.js app.
-            globals.logger.verbose(`----------------3: ${globals.appBasePath}`);
+            globals.logger.verbose(`----------------: ${globals.appBasePath}`);
             const filePath = path.resolve(globals.appBasePath, 'static/configvis', 'index.html');
             const template = fs.readFileSync(filePath, 'utf8');
 
@@ -97,10 +98,10 @@ export async function setupConfigVisServer(logger, config) {
             const compiledTemplate = handlebars.compile(template);
 
             // Get config as HTML encoded JSON string
-            const butlerConfigJsonEncoded = JSON.stringify(newConfig);
+            const butlerSosConfigJsonEncoded = JSON.stringify(newConfig);
 
             // Render the template
-            const renderedText = compiledTemplate({ butlerConfigJsonEncoded, butlerConfigYaml });
+            const renderedText = compiledTemplate({ butlerSosConfigJsonEncoded, butlerConfigYaml });
 
             globals.logger.debug(`CONFIG VIS: Rendered text: ${renderedText}`);
 
@@ -115,24 +116,29 @@ export async function setupConfigVisServer(logger, config) {
             },
             (err, address) => {
                 if (err) {
-                    globals.logger.error(`CONFIG VIS: Could not set up config visualisation server on ${address}`);
+                    globals.logger.error(
+                        `CONFIG VIS: Could not set up config visualisation server on ${address}`
+                    );
                     globals.logger.error(`CONFIG VIS: ${err.stack}`);
                     configVisServer.log.error(err);
                     process.exit(1);
                 }
-                globals.logger.info(`CONFIG VIS: Config visualisation server listening on ${address}`);
-    
+                globals.logger.info(
+                    `CONFIG VIS: Config visualisation server listening on ${address}`
+                );
+
                 configVisServer.ready((err2) => {
                     if (err2) throw err;
                 });
-            },
-        );        
+            }
+        );
     } catch (err) {
-        globals.logger.error(`CONFIG VIS: Error setting up config visualisation server: ${err.message}`);
+        globals.logger.error(
+            `CONFIG VIS: Error setting up config visualisation server: ${err.message}`
+        );
         if (err.stack) {
             globals.logger.error(`CONFIG VIS: ${err.stack}`);
         }
         throw err;
     }
 }
-
