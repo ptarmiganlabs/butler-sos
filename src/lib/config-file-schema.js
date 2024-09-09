@@ -173,6 +173,69 @@ export const confifgFileSchema = {
                     ],
                 },
             },
+            appPerformanceMonitor: {
+                enable: 'boolean',
+                appNameLookup: {
+                    enable: 'boolean',
+                },
+                monitorFilter: {
+                    allApps: {
+                        enable: 'boolean',
+                        'appExclude?': [
+                            {
+                                'appId?': 'string',
+                                'appName?': 'string',
+                            },
+                        ],
+                        objectType: {
+                            allObjectTypes: 'boolean',
+                            'allObjectTypesExclude?': [],
+                            'someObjectTypesInclude?': [],
+                        },
+                        method: {
+                            allMethods: 'boolean',
+                            'allMethodsExclude?': [],
+                            'someMethodsInclude?': [],
+                        },
+                    },
+                    appSpecific: {
+                        enable: 'boolean',
+                        app: [
+                            {
+                                'include?': [
+                                    {
+                                        'appId?': 'string',
+                                        'appName?': 'string',
+                                    },
+                                ],
+                                objectType: {
+                                    allObjectTypes: 'boolean',
+                                    'allObjectTypesExclude?': [],
+                                    'someObjectTypesInclude?': [],
+                                },
+                                appObject: {
+                                    allAppObjects: 'boolean',
+                                    'allAppObjectsExclude?': [
+                                        {
+                                            objectId: 'string',
+                                        },
+                                    ],
+                                    'someAppObjectsInclude?': [
+                                        {
+                                            objectId: 'string',
+                                        },
+                                    ],
+                                },
+                                method: {
+                                    allMethods: 'boolean',
+                                    'allMethodsExclude?': [],
+                                    'someMethodsInclude?': [],
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
             sendToMQTT: {
                 enable: 'boolean',
                 baseTopic: 'string',

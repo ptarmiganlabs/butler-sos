@@ -694,7 +694,6 @@ class Settings {
 
         this.logger.verbose('GLOBALS: Init done');
 
-        // eslint-disable-next-line no-constructor-return
         return instance;
     }
 

@@ -930,7 +930,7 @@ export async function postLogEventToNewRelic(msg) {
     globals.logger.debug(`LOG EVENT NEW RELIC: ${msg})`);
 
     try {
-        // Only send log events that are enabled in the confif file
+        // Only send log events that are enabled in the config file
         if (sendNRLogEventYesNo(msg.source, msg.level) === true) {
             // First prepare attributes relating to the actual log event, then add attributes defined in the config file
             // The config file attributes can for example be used to separate data from DEV/TEST/PROD environments

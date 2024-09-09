@@ -1,6 +1,3 @@
-/* eslint-disable prefer-destructuring */
-/* eslint-disable no-unused-vars */
-
 import { Point } from '@influxdata/influxdb-client';
 
 import globals from '../globals.js';
@@ -72,7 +69,6 @@ export async function postHealthMetricsToInfluxdb(serverName, host, body, server
     const sessionAppNamesActive = [];
 
     const storeActivedDoc = function storeActivedDoc(docID) {
-        // eslint-disable-next-line no-unused-vars
         return new Promise((resolve, _reject) => {
             if (docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix) {
                 // Session app
@@ -95,10 +91,8 @@ export async function postHealthMetricsToInfluxdb(serverName, host, body, server
         });
     };
 
-    // eslint-disable-next-line no-unused-vars
     const promisesActive = body.apps.active_docs.map(
         (docID, _idx) =>
-            // eslint-disable-next-line no-unused-vars
             new Promise(async (resolve, _reject) => {
                 await storeActivedDoc(docID);
 
@@ -117,7 +111,6 @@ export async function postHealthMetricsToInfluxdb(serverName, host, body, server
     const sessionAppNamesLoaded = [];
 
     const storeLoadedDoc = function storeLoadedDoc(docID) {
-        // eslint-disable-next-line no-unused-vars
         return new Promise((resolve, _reject) => {
             if (docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix) {
                 // Session app
@@ -140,10 +133,8 @@ export async function postHealthMetricsToInfluxdb(serverName, host, body, server
         });
     };
 
-    // eslint-disable-next-line no-unused-vars
     const promisesLoaded = body.apps.loaded_docs.map(
         (docID, _idx) =>
-            // eslint-disable-next-line no-unused-vars
             new Promise(async (resolve, _reject) => {
                 await storeLoadedDoc(docID);
 
@@ -162,7 +153,6 @@ export async function postHealthMetricsToInfluxdb(serverName, host, body, server
     const sessionAppNamesInMemory = [];
 
     const storeInMemoryDoc = function storeInMemoryDoc(docID) {
-        // eslint-disable-next-line no-unused-vars
         return new Promise((resolve, _reject) => {
             if (docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix) {
                 // Session app
@@ -189,10 +179,8 @@ export async function postHealthMetricsToInfluxdb(serverName, host, body, server
         });
     };
 
-    // eslint-disable-next-line no-unused-vars
     const promisesInMemory = body.apps.in_memory_docs.map(
         (docID, _idx) =>
-            // eslint-disable-next-line no-unused-vars
             new Promise(async (resolve, _reject) => {
                 await storeInMemoryDoc(docID);
 
@@ -723,7 +711,6 @@ export async function postUserEventToInfluxdb(msg) {
                 globals.config.get('Butler-SOS.userEvents.tags').length > 0
             ) {
                 const configTags = globals.config.get('Butler-SOS.userEvents.tags');
-                // eslint-disable-next-line no-restricted-syntax
                 for (const item of configTags) {
                     tags[item.tag] = item.value;
                 }
@@ -836,7 +823,6 @@ export async function postUserEventToInfluxdb(msg) {
                 globals.config.get('Butler-SOS.userEvents.tags').length > 0
             ) {
                 const configTags = globals.config.get('Butler-SOS.userEvents.tags');
-                // eslint-disable-next-line no-restricted-syntax
                 for (const item of configTags) {
                     point.tag(item.tag, item.value);
                 }
@@ -898,7 +884,8 @@ export async function postLogEventToInfluxdb(msg) {
                 msg.source === 'qseow-engine' ||
                 msg.source === 'qseow-proxy' ||
                 msg.source === 'qseow-scheduler' ||
-                msg.source === 'qseow-repository'
+                msg.source === 'qseow-repository' ||
+                msg.source === 'qseow-qix-perf'
             ) {
                 if (msg.source === 'qseow-engine') {
                     tags = {
@@ -908,6 +895,7 @@ export async function postLogEventToInfluxdb(msg) {
                         log_row: msg.log_row,
                         subsystem: msg.subsystem,
                     };
+
                     // Tags that are empty in some cases. Only add if they are non-empty
                     if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
                     if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
@@ -939,6 +927,7 @@ export async function postLogEventToInfluxdb(msg) {
                         log_row: msg.log_row,
                         subsystem: msg.subsystem,
                     };
+
                     // Tags that are empty in some cases. Only add if they are non-empty
                     if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
                     if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
@@ -962,6 +951,7 @@ export async function postLogEventToInfluxdb(msg) {
                         log_row: msg.log_row,
                         subsystem: msg.subsystem,
                     };
+
                     // Tags that are empty in some cases. Only add if they are non-empty
                     if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
                     if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
@@ -985,6 +975,7 @@ export async function postLogEventToInfluxdb(msg) {
                         log_row: msg.log_row,
                         subsystem: msg.subsystem,
                     };
+
                     // Tags that are empty in some cases. Only add if they are non-empty
                     if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
                     if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
@@ -998,6 +989,39 @@ export async function postLogEventToInfluxdb(msg) {
                         result_code: msg.result_code,
                         origin: msg.origin,
                         context: msg.context,
+                        raw_event: JSON.stringify(msg),
+                    };
+                } else if (msg.source === 'qseow-qix-perf') {
+                    tags = {
+                        host: msg.host,
+                        level: msg.level,
+                        source: msg.source,
+                        log_row: msg.log_row,
+                        subsystem: msg.subsystem,
+                        method: msg.method,
+                        object_type: msg.object_type,
+                        proxy_session_id: msg.proxy_session_id,
+                        session_id: msg.session_id,
+                    };
+
+                    // Tags that are empty in some cases. Only add if they are non-empty
+                    if (msg?.user_full?.length > 0) tags.user_full = msg.user_full;
+                    if (msg?.user_directory?.length > 0) tags.user_directory = msg.user_directory;
+                    if (msg?.user_id?.length > 0) tags.user_id = msg.user_id;
+                    if (msg?.app_id?.length > 0) tags.app_id = msg.app_id;
+                    if (msg?.app_name?.length > 0) tags.app_name = msg.app_name;
+                    if (msg?.object_id?.length > 0) tags.object_id = msg.object_id;
+
+                    fields = {
+                        app_id: msg.app_id,
+                        process_time: msg.process_time,
+                        work_time: msg.work_time,
+                        lock_time: msg.lock_time,
+                        validate_time: msg.validate_time,
+                        traverse_time: msg.traverse_time,
+                        handle: msg.handle,
+                        net_ram: msg.net_ram,
+                        peak_ram: msg.peak_ram,
                         raw_event: JSON.stringify(msg),
                     };
                 }
@@ -1017,7 +1041,6 @@ export async function postLogEventToInfluxdb(msg) {
                     globals.config.get('Butler-SOS.logEvents.tags').length > 0
                 ) {
                     const configTags = globals.config.get('Butler-SOS.logEvents.tags');
-                    // eslint-disable-next-line no-restricted-syntax
                     for (const item of configTags) {
                         tags[item.tag] = item.value;
                     }
@@ -1056,7 +1079,8 @@ export async function postLogEventToInfluxdb(msg) {
                 msg.source === 'qseow-engine' ||
                 msg.source === 'qseow-proxy' ||
                 msg.source === 'qseow-scheduler' ||
-                msg.source === 'qseow-repository'
+                msg.source === 'qseow-repository' ||
+                msg.source === 'qseow-qix-perf'
             ) {
                 // Create new write API object
                 // Advanced write options
@@ -1205,6 +1229,37 @@ export async function postLogEventToInfluxdb(msg) {
                             point.tag('user_directory', msg.user_directory);
                         if (msg?.user_id?.length > 0) point.tag('user_id', msg.user_id);
                         if (msg?.result_code?.length > 0) point.tag('result_code', msg.result_code);
+                    } else if (msg.source === 'qseow-qix-perf') {
+                        // Create a new point with the data to be written to InfluxDB
+                        point = new Point('log_event')
+                            .tag('host', msg.host)
+                            .tag('level', msg.level)
+                            .tag('source', msg.source)
+                            .tag('log_row', msg.log_row)
+                            .tag('subsystem', msg.subsystem)
+                            .tag('method', msg.method)
+                            .tag('object_type', msg.object_type)
+                            .tag('proxy_session_id', msg.proxy_session_id)
+                            .tag('session_id', msg.session_id)
+                            .stringField('app_id', msg.app_id)
+                            .floatField('process_time', parseFloat(msg.process_time))
+                            .floatField('work_time', parseFloat(msg.work_time))
+                            .floatField('lock_time', parseFloat(msg.lock_time))
+                            .floatField('validate_time', parseFloat(msg.validate_time))
+                            .floatField('traverse_time', parseFloat(msg.traverse_time))
+                            .stringField('handle', msg.handle)
+                            .intField('net_ram', parseInt(msg.net_ram))
+                            .intField('peak_ram', parseInt(msg.peak_ram))
+                            .stringField('raw_event', JSON.stringify(msg));
+
+                        // Tags that are empty in some cases. Only add if they are non-empty
+                        if (msg?.user_full?.length > 0) point.tag('user_full', msg.user_full);
+                        if (msg?.user_directory?.length > 0)
+                            point.tag('user_directory', msg.user_directory);
+                        if (msg?.user_id?.length > 0) point.tag('user_id', msg.user_id);
+                        if (msg?.app_id?.length > 0) point.tag('app_id', msg.app_id);
+                        if (msg?.app_name?.length > 0) point.tag('app_name', msg.app_name);
+                        if (msg?.object_id?.length > 0) point.tag('object_id', msg.object_id);
                     }
 
                     // Add log event categories to tags if available
@@ -1222,7 +1277,6 @@ export async function postLogEventToInfluxdb(msg) {
                         globals.config.get('Butler-SOS.logEvents.tags').length > 0
                     ) {
                         const configTags = globals.config.get('Butler-SOS.logEvents.tags');
-                        // eslint-disable-next-line no-restricted-syntax
                         for (const item of configTags) {
                             point.tag(item.tag, item.value);
                         }

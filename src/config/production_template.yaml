@@ -205,6 +205,88 @@ Butler-SOS:
         category:
           - name: qs_log_category
             value: unknown
+    appPerformanceMonitor:              # Detailed app performance data extraction from log events
+      enable: false                      # Should app performance data be extracted from log events?
+      appNameLookup:                    # Should app names be looked up based on app IDs?
+        enable: true
+      monitorFilter:                    # What objects should be monitored? Entire apps or just specific object(s) within some specific app(s)?
+                                        # Two kinds of monitoring can be done:
+                                        # 1) Monitor all apps, except those listed for exclusion. This is defined in the allApps section.
+                                        # 2) Monitor only specific apps. This is defined in the appSpecific section.
+                                        # An event will be accepted if it matches any of the rules in the allApps section OR any of the rules in the appSpecific section.
+        allApps:
+          enable: false                 # Should all apps be monitored?
+          appExclude:                   # What apps should be excluded from monitoring?
+                                        # If both appId and appName are specified, both must match the event's data for it to be considered a match.
+            - appId: 5b817efe-472d-43ce-8a31-6cce34af7de9
+            - appName: Sales forecast
+            - appId: f42d6b16-8faf-45ca-a783-59f9da47db6e
+              appName: Inventory analysis
+          objectType:
+            allObjectTypes: true        # Should all object types be monitored?
+            allObjectTypesExclude:      # If allObjectTypes is set to true, the object types in this array are excluded from monitoring. 
+                                        # someObjectTypesInclude (below) is ignored in that case.
+              - LoadModelList
+              - <Unknown>
+              - linechart
+              - map
+            someObjectTypesInclude:     # What object types should be included in monitoring?
+                                        # Only applicable if allObjectTypes is set to false.
+              - LoadModelList
+              - sheet
+              - barchart
+          method:
+            allMethods: true            # Should all methods be monitored?
+            allMethodsExclude:          # If allMethods is set to true, the methods in this array are excluded from monitoring.
+                                        # someMethodsInclude (below) is ignored in that case.
+              - Global::OpenApp
+              - Doc::GetAppLayout
+              - Doc::CreateSessionObject
+            someMethodsInclude:         # What methods should be included in monitoring?
+                                        # Only applicable if allMethods is set to false.
+              - GenericObject::GetLayout
+              - GenericObject::GetHyperCubeContinuousData
+        appSpecific:
+          enable: false                  # Should app specific monitoring be done?
+          app:
+            - include:                  # What apps should be monitored?
+                                        # If both appId and appName are specified, both must match the event's data for it to be considered a match.
+                - appId: d7cf16f9-6a95-462a-9ff1-a6d413326de4
+                - appName: Budget 2025
+                - appId: 6931136d-c234-4358-a40c-e37153aba7c9
+                  appName: Sales basket analysis
+              objectType:
+                allObjectTypes: true   # Should all object types be monitored?
+                allObjectTypesExclude:  # If allObjectTypes is set to true, the object types in this array are excluded from monitoring. 
+                                        # someObjectTypesInclude (below) is ignored in that case.
+                  - table
+                  - map
+                someObjectTypesInclude: # What object types should be included in monitoring?
+                                        # Only applicable if allObjectTypes is set to false.
+                  - sheet
+                  - barchart
+                  - linechart
+                  - map
+              appObject:
+                allAppObjects: true     # Should all app objects be monitored?
+                allAppObjectsExclude:   # If allAppObjects is set to true, the app objects in this array are excluded from monitoring.
+                                        # someAppObjectsInclude (below) is ignored in that case.
+                  - objectId: AaBbCc
+                  - objectId: DdEeFf
+                someAppObjectsInclude:  # What app objects should be included in monitoring?
+                                        # Only applicable if allAppObjects is set to false.
+                  - objectId: YJEpPT    
+              method: 
+                allMethods: true        # Should all methods be monitored?
+                allMethodsExclude:      # If allMethods is set to true, the methods in this array are excluded from monitoring.
+                                        # someMethodsInclude (below) is ignored in that case.
+                  - Global::OpenApp
+                  - Doc::GetAppLayout
+                  - Doc::CreateSessionObject
+                someMethodsInclude:     # What methods should be included in monitoring?
+                                        # Only applicable if allMethods is set to false.
+                  - GenericObject::GetLayout
+                  - GenericObject::GetHyperCubeContinuousData
     sendToMQTT:
       enable: false                    # Should log events be sent as MQTT messages?
       baseTopic: qliksense/logevent    # What topic should log events be forwarded to? 

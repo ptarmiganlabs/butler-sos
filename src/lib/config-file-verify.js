@@ -42,6 +42,7 @@ export async function verifyConfigFile() {
             process.exit(1);
         }
 
+        // ------------------------------
         // Verify values of specific config entries
 
         // If InfluxDB is enabled, check if the version is valid
