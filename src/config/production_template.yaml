@@ -77,6 +77,27 @@ Butler-SOS:
       #   insertApiKey: <API key 2 (with insert permissions) from New Relic> 
       #   accountId: <New Relic account ID 2>
 
+  # Shared settings for user and log events (see below)
+  qlikSenseEvents:                  # Shared settings for user and log events (see below)
+    influxdb:
+      enable: true                  # Should summary (counter) of user and log events be stored in InfluxDB?
+      writeFrequency: 20000         # How often (milliseconds) should rejected event count be written to InfluxDB?  
+    eventCount:                     # Track how many events are received from Sense.
+                                    # Some events are valid, some are not. Of the valid events, some are rejected by Butler SOS
+                                    # based on the configuration in this file. 
+      enable: true                  # Should event count be stored in InfluxDB?
+      influxdb:
+        measurementName: event_count # Name of the InfluxDB measurement where event count is stored
+        tags:                       # Tags are added to the data before it's stored in InfluxDB
+          # - tag: env
+          #   value: DEV
+          # - tag: foo
+          #   value: bar
+    rejectedEventCount:
+      enable: true                  # Should rejected events be counted and stored in InfluxDB?
+      influxdb:
+        measurementName: rejected_event_count # Name of the InfluxDB measurement where rejected event count is stored
+
   # Track individual users opening/closing apps and starting/stopping sessions. 
   # Requires log appender XML file(s) to be added to Sense server(s).
   userEvents:                       
@@ -205,10 +226,17 @@ Butler-SOS:
         category:
           - name: qs_log_category
             value: unknown
-    appPerformanceMonitor:              # Detailed app performance data extraction from log events
-      enable: false                      # Should app performance data be extracted from log events?
+    enginePerformanceMonitor:           # Detailed app performance data extraction from log events
+      enable: false                     # Should app performance data be extracted from log events?
       appNameLookup:                    # Should app names be looked up based on app IDs?
-        enable: true
+        enable: false
+      trackRejectedEvents: 
+        enable: false                   # Should events that are rejected by the app performance monitor be tracked?
+        tags:                           # Tags are added to the data before it's stored in InfluxDB
+          # - tag: env
+          #   value: DEV
+          # - tag: foo
+          #   value: bar
       monitorFilter:                    # What objects should be monitored? Entire apps or just specific object(s) within some specific app(s)?
                                         # Two kinds of monitoring can be done:
                                         # 1) Monitor all apps, except those listed for exclusion. This is defined in the allApps section.

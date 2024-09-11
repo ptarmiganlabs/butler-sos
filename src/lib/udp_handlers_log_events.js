@@ -127,7 +127,37 @@ export function udpInitLogEventServer() {
                 globals.logger.warn(
                     `LOG EVENT: Received message that is not a recognised log event: ${msgShort}`
                 );
+
+                // Is logging of event counts enabled?
+                if (globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.enable') === true) {
+                    // Increase counter for log events
+                    await globals.udpEvents.addLogEvent({
+                        eventName: 'Unknown',
+                        host: 'Unknown',
+                        subsystem: 'Unknown',
+                    });
+                }
+
                 return;
+            }
+
+            // Add counter for received log events
+            // Is logging of event counts enabled?
+            if (globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.enable') === true) {
+                globals.logger.debug(
+                    `LOG EVENT: Received message that is a recognised log event: ${msg[0]}`
+                );
+
+                // Increase counter for log events
+                // Make eventName lower case, also remove leading and trailing /
+                let eventName = msg[0].toLowerCase().replace('/', '');
+                eventName = eventName.replace('/', '');
+
+                await globals.udpEvents.addLogEvent({
+                    eventName,
+                    host: msg[5],
+                    subsystem: msg[6],
+                });
             }
 
             // Check if any of the log event sources are enabled in the configuration
@@ -334,8 +364,9 @@ export function udpInitLogEventServer() {
 
                     // Determine if the message should be handled, based on settings in the config file
                     if (
-                        globals.config.get('Butler-SOS.logEvents.appPerformanceMonitor.enable') ===
-                        false
+                        globals.config.get(
+                            'Butler-SOS.logEvents.enginePerformanceMonitor.enable'
+                        ) === false
                     ) {
                         globals.logger.debug(
                             'LOG EVENT: Qix performance monitoring is disabled in the configuration. Skipping event.'
@@ -354,7 +385,7 @@ export function udpInitLogEventServer() {
                     // Get the app performance monitor filter configuration from the config file,
                     // so we don't have to read it every time we need some part of it
                     const monitorFilterConfig = globals.config.get(
-                        'Butler-SOS.logEvents.appPerformanceMonitor.monitorFilter'
+                        'Butler-SOS.logEvents.enginePerformanceMonitor.monitorFilter'
                     );
 
                     let acceptEvent = false;
@@ -369,7 +400,7 @@ export function udpInitLogEventServer() {
                     // Should we get app name from the app ID?
                     if (
                         globals.config.get(
-                            'Butler-SOS.logEvents.appPerformanceMonitor.appNameLookup.enable'
+                            'Butler-SOS.logEvents.enginePerformanceMonitor.appNameLookup.enable'
                         ) === true
                     ) {
                         // Get app name from app ID
@@ -684,6 +715,27 @@ export function udpInitLogEventServer() {
                         globals.logger.debug(
                             'LOG EVENT: Qix performance event does not match filters in the configuration. Skipping event.'
                         );
+
+                        // Is logging of rejected performance log events enabled?
+                        if (
+                            globals.config.get(
+                                'Butler-SOS.logEvents.enginePerformanceMonitor.enable'
+                            ) === true &&
+                            globals.config.get(
+                                'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.enable'
+                            ) === true
+                        ) {
+                            // Increase counter for rejected performance log events
+                            await globals.rejectedEvents.addRejectedLogEvent({
+                                eventName: 'qseow-qix-perf',
+                                appId: eventAppId,
+                                appName: eventAppName,
+                                method: eventMethod,
+                                objectType: eventObjectType,
+                                processTime: parseFloat(msg[16]),
+                            });
+                        }
+
                         return;
                     } else {
                         acceptEvent = true;

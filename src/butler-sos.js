@@ -25,6 +25,7 @@ import { setupAnonUsageReportTimer } from './lib/telemetry.js';
 import { setupPromClient } from './lib/prom-client.js';
 import { verifyConfigFile } from './lib/config-file-verify.js';
 import { setupConfigVisServer } from './lib/config-visualise.js';
+import { setupUdpEventsStorage } from './lib/udp-event.js';
 
 // Suppress experimental warnings
 // https://stackoverflow.com/questions/55778283/how-to-disable-warnings-when-node-is-launched-via-a-global-shell-script
@@ -51,7 +52,6 @@ process.emit = function (name, data, ...args) {
 };
 
 async function sleep(ms) {
-    // eslint-disable-next-line no-promise-executor-return
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -81,7 +81,6 @@ async function mainScript() {
     // Sleep 5 seconds otherwise to llow globals to be initialised
 
     function sleepLocal(ms) {
-        // eslint-disable-next-line no-promise-executor-return
         return new Promise((resolve) => setTimeout(resolve, ms));
     }
 
@@ -284,6 +283,12 @@ async function mainScript() {
     // Set up config server, if enabled
     if (globals.config.get('Butler-SOS.configVisualisation.enable') === true) {
         await setupConfigVisServer();
+    }
+
+    // Set up rejected user/log events storage, if enabled
+    if (globals.config.get('Butler-SOS.qlikSenseEvents.rejectedEventCount.enable') === true) {
+        globals.logger.verbose('MAIN: Rejected events storage enabled');
+        await setupUdpEventsStorage();
     }
 }
 

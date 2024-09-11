@@ -65,6 +65,30 @@ export const confifgFileSchema = {
                 },
             ],
         },
+
+        qlikSenseEvents: {
+            influxdb: {
+                enable: 'boolean',
+                writeFrequency: 'number',
+            },
+            eventCount: {
+                enable: 'boolean',
+                influxdb: {
+                    measurementName: 'string',
+                    "tags?": [
+                        "tag": 'string',
+                        value: 'string',
+                    ],
+                },
+            },
+            rejectedEventCount: {
+                enable: 'boolean',
+                influxdb: {
+                    measurementName: 'string',
+                },
+            },
+        },
+
         userEvents: {
             enable: 'boolean',
             'excludeUser?': [
@@ -173,10 +197,19 @@ export const confifgFileSchema = {
                     ],
                 },
             },
-            appPerformanceMonitor: {
+            enginePerformanceMonitor: {
                 enable: 'boolean',
                 appNameLookup: {
                     enable: 'boolean',
+                },
+                trackRejectedEvents: {
+                    enable: 'boolean',
+                    "tags?": [
+                        {
+                            tag: 'string',
+                            value: 'string',
+                        },
+                    ],
                 },
                 monitorFilter: {
                     allApps: {

@@ -1312,3 +1312,416 @@ export async function postLogEventToInfluxdb(msg) {
         globals.logger.error(`LOG EVENT INFLUXDB 2: Error saving log event to InfluxDB! ${err}`);
     }
 }
+
+// Store event count for all kinds of events in InfluxDB
+export async function storeEventCountInfluxDB() {
+    // Get array of log events
+    const logEvents = await globals.udpEvents.getLogEvents();
+    const userEvents = await globals.udpEvents.getUserEvents();
+
+    // InfluxDB 1.x
+    if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
+        const points = [];
+
+        // Get measurement name to use for event counts
+        const measurementName = globals.config.get(
+            'Butler-SOS.qlikSenseEvents.eventCount.influxdb.measurementName'
+        );
+
+        // Loop through data in log events and create datapoints.
+        // Add the created data points to the points array
+        for (const event of logEvents) {
+            const point = {
+                measurement: measurementName,
+                tags: {
+                    event_type: 'log',
+                    event_name: event.eventName,
+                    host: event.host,
+                    subsystem: event.subsystem,
+                },
+                fields: {
+                    counter: event.counter,
+                },
+            };
+
+            // Add static tags from config file
+            if (
+                globals.config.has('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') &&
+                globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') !==
+                    null &&
+                globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags').length > 0
+            ) {
+                const configTags = globals.config.get(
+                    'Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags'
+                );
+                for (const item of configTags) {
+                    point.tags[item.tag] = item.value;
+                }
+            }
+
+            points.push(point);
+        }
+
+        // Loop through data in user events and create datapoints.
+        // Add the created data points to the points array
+        for (const event of userEvents) {
+            const point = {
+                measurement: measurementName,
+                tags: {
+                    event_type: 'user',
+                    event_name: event.eventName,
+                    host: event.host,
+                    subsystem: event.subsystem,
+                },
+                fields: {
+                    counter: event.counter,
+                },
+            };
+
+            // Add static tags from config file
+            if (
+                globals.config.has('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') &&
+                globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') !==
+                    null &&
+                globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags').length > 0
+            ) {
+                const configTags = globals.config.get(
+                    'Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags'
+                );
+                for (const item of configTags) {
+                    point.tags[item.tag] = item.value;
+                }
+            }
+
+            points.push(point);
+        }
+
+        try {
+            globals.influx.writePoints(points);
+        } catch (err) {
+            globals.logger.error(`EVENT COUNT INFLUXDB: Error saving data to InfluxDB v1! ${err}`);
+        }
+    } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
+        // Create new write API object
+        // Advanced write options
+        const writeOptions = {
+            /* the maximum points/lines to send in a single batch to InfluxDB server */
+            // batchSize: flushBatchSize + 1, // don't let automatically flush data
+
+            /* maximum time in millis to keep points in an unflushed batch, 0 means don't periodically flush */
+            flushInterval: 5000,
+
+            /* maximum size of the retry buffer - it contains items that could not be sent for the first time */
+            // maxBufferLines: 30_000,
+
+            /* the count of internally-scheduled retries upon write failure, the delays between write attempts follow an exponential backoff strategy if there is no Retry-After HTTP header */
+            maxRetries: 2, // do not retry writes
+
+            // ... there are more write options that can be customized, see
+            // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeoptions.html and
+            // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeretryoptions.html
+        };
+
+        // Create new datapoints object
+        const points = [];
+
+        try {
+            const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
+            const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
+
+            const writeApi = globals.influx.getWriteApi(org, bucketName, 'ns', writeOptions);
+
+            // Ensure that the writeApi object was found
+            if (!writeApi) {
+                globals.logger.warn(
+                    `EVENT COUNT INFLUXDB: Influxdb write API object not found. Data will not be sent to InfluxDB`
+                );
+                return;
+            }
+
+            // Get measurement name to use for event counts
+            const measurementName = globals.config.get(
+                'Butler-SOS.qlikSenseEvents.eventCount.influxdb.measurementName'
+            );
+
+            // Loop through data in log events and create datapoints.
+            // Add the created data points to the points array
+            for (const event of logEvents) {
+                const point = new Point(measurementName)
+                    .tag('event_type', 'log')
+                    .tag('event_name', event.eventName)
+                    .tag('host', event.host)
+                    .tag('subsystem', event.subsystem)
+                    .intField('counter', event.counter);
+
+                // Add static tags from config file
+                if (
+                    globals.config.has('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') &&
+                    globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') !==
+                        null &&
+                    globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags')
+                        .length > 0
+                ) {
+                    const configTags = globals.config.get(
+                        'Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags'
+                    );
+                    for (const item of configTags) {
+                        point.tag(item.tag, item.value);
+                    }
+                }
+
+                points.push(point);
+            }
+
+            // Loop through data in user events and create datapoints.
+            // Add the created data points to the points array
+            for (const event of userEvents) {
+                const point = new Point(measurementName)
+                    .tag('event_type', 'user')
+                    .tag('event_name', event.eventName)
+                    .tag('host', event.host)
+                    .tag('subsystem', event.subsystem)
+                    .intField('counter', event.counter);
+
+                // Add static tags from config file
+                if (
+                    globals.config.has('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') &&
+                    globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') !==
+                        null &&
+                    globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags')
+                        .length > 0
+                ) {
+                    const configTags = globals.config.get(
+                        'Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags'
+                    );
+                    for (const item of configTags) {
+                        point.tag(item.tag, item.value);
+                    }
+                }
+
+                points.push(point);
+            }
+
+            try {
+                const res = await writeApi.writePoints(points);
+                globals.logger.debug(`EVENT COUNT INFLUXDB: Wrote data to InfluxDB v2`);
+            } catch (err) {
+                globals.logger.error(
+                    `EVENT COUNT INFLUXDB: Error saving health data to InfluxDB v2! ${err.stack}`
+                );
+            }
+
+            globals.logger.verbose(
+                'EVENT COUNT INFLUXDB: Sent Butler SOS event count data to InfluxDB'
+            );
+        } catch (err) {
+            globals.logger.error(`EVENT COUNT INFLUXDB: Error getting write API: ${err}`);
+        }
+    }
+}
+
+// Store rejected event count in InfluxDB
+export async function storeRejectedEventCountInfluxDB() {
+    // Get array of rejected log events
+    const rejectedLogEvents = await globals.rejectedEvents.getRejectedLogEvents();
+
+    // InfluxDB 1.x
+    if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
+        const points = [];
+
+        // Get measurement name to use for rejected events
+        const measurementName = globals.config.get(
+            'Butler-SOS.qlikSenseEvents.rejectedEventCount.influxdb.measurementName'
+        );
+
+        // Loop through data in rejected log events and create datapoints.
+        // Add the created data points to the points array
+        //
+        // Use counter and process_time as fields
+        for (const event of rejectedLogEvents) {
+            if (event.eventName === 'qseow-qix-perf') {
+                // For each unique combination of eventName, appId, appName, .method and objectType,
+                // write the counter and processTime properties to InfluxDB
+                //
+                // Use eventName, appId,appName,  method and objectType as tags
+
+                const tags = {
+                    event_name: event.eventName,
+                    app_id: event.appId,
+                    method: event.method,
+                    object_type: event.objectType,
+                };
+
+                // Tags that are empty in some cases. Only add if they are non-empty
+                if (msg?.app_name?.length > 0) {
+                    tags.app_name = msg.app_name;
+                    tags.app_name_set = 'true';
+                } else {
+                    tags.app_name_set = 'false';
+                }
+
+                // Add static tags from config file
+                if (
+                    globals.config.has(
+                        'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.tags'
+                    ) &&
+                    globals.config.get(
+                        'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.tags'
+                    ) !== null &&
+                    globals.config.get(
+                        'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.tags'
+                    ).length > 0
+                ) {
+                    const configTags = globals.config.get(
+                        'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.tags'
+                    );
+                    for (const item of configTags) {
+                        tags[item.tag] = item.value;
+                    }
+                }
+
+                const fields = {
+                    counter: event.counter,
+                    process_time: event.processTime,
+                };
+
+                const point = {
+                    measurement: measurementName,
+                    tags,
+                    fields,
+                };
+
+                points.push(point);
+            } else {
+                const point = {
+                    measurement: measurementName,
+                    tags: {
+                        event_name: event.eventName,
+                    },
+                    fields: {
+                        counter: event.counter,
+                    },
+                };
+
+                points.push(point);
+            }
+        }
+
+        try {
+            globals.influx.writePoints(points);
+        } catch (err) {
+            globals.logger.error(
+                `REJECT LOG EVENT INFLUXDB: Error saving data to InfluxDB v1! ${err}`
+            );
+        }
+    } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
+        // Create new write API object
+        // Advanced write options
+        const writeOptions = {
+            /* the maximum points/lines to send in a single batch to InfluxDB server */
+            // batchSize: flushBatchSize + 1, // don't let automatically flush data
+
+            /* maximum time in millis to keep points in an unflushed batch, 0 means don't periodically flush */
+            flushInterval: 5000,
+
+            /* maximum size of the retry buffer - it contains items that could not be sent for the first time */
+            // maxBufferLines: 30_000,
+
+            /* the count of internally-scheduled retries upon write failure, the delays between write attempts follow an exponential backoff strategy if there is no Retry-After HTTP header */
+            maxRetries: 2, // do not retry writes
+
+            // ... there are more write options that can be customized, see
+            // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeoptions.html and
+            // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeretryoptions.html
+        };
+
+        // Create new datapoints object
+        const points = [];
+
+        try {
+            const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
+            const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
+
+            const writeApi = globals.influx.getWriteApi(org, bucketName, 'ns', writeOptions);
+
+            // Ensure that the writeApi object was found
+            if (!writeApi) {
+                globals.logger.warn(
+                    `LOG EVENT INFLUXDB: Influxdb write API object not found. Data will not be sent to InfluxDB`
+                );
+                return;
+            }
+
+            // Get measurement name to use for rejected events
+            const measurementName = globals.config.get(
+                'Butler-SOS.qlikSenseEvents.rejectedEventCount.influxdb.measurementName'
+            );
+
+            // Loop through data in rejected log events and create datapoints.
+            // Add the created data points to the points array
+            //
+            // Use counter and process_time as fields
+            for (const event of rejectedLogEvents) {
+                if (event.eventName === 'qseow-qix-perf') {
+                    // For each unique combination of eventName, appId, appName, .method and objectType,
+                    // write the counter and processTime properties to InfluxDB
+                    //
+                    // Use eventName, appId,appName,  method and objectType as tags
+                    let point = new Point(measurementName)
+                        .tag('event_name', event.eventName)
+                        .tag('app_id', event.appId)
+                        .tag('method', event.method)
+                        .tag('object_type', event.objectType)
+                        .intField('counter', event.counter)
+                        .floatField('process_time', event.processTime);
+
+                    if (event?.appName?.length > 0) {
+                        point.tag('app_name', event.appName).tag('app_name_set', 'true');
+                    } else {
+                        point.tag('app_name_set', 'false');
+                    }
+
+                    // Add static tags from config file
+                    if (
+                        globals.config.has(
+                            'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.tags'
+                        ) &&
+                        globals.config.get(
+                            'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.tags'
+                        ) !== null &&
+                        globals.config.get(
+                            'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.tags'
+                        ).length > 0
+                    ) {
+                        const configTags = globals.config.get(
+                            'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.tags'
+                        );
+                        for (const item of configTags) {
+                            point.tag(item.tag, item.value);
+                        }
+                    }
+
+                    points.push(point);
+                } else {
+                    let point = new Point(measurementName)
+                        .tag('event_name', event.eventName)
+                        .intField('counter', event.counter);
+
+                    points.push(point);
+                }
+            }
+
+            // Write to InfluxDB
+            try {
+                const res = await writeApi.writePoints(points);
+                globals.logger.debug(`REJECT LOG EVENT INFLUXDB: Wrote data to InfluxDB v2`);
+            } catch (err) {
+                globals.logger.error(
+                    `REJECTED LOG EVENT INFLUXDB: Error saving data to InfluxDB v2! ${err.stack}`
+                );
+            }
+        } catch (err) {
+            globals.logger.error(`REJECTED LOG EVENT INFLUXDB: Error getting write API: ${err}`);
+        }
+    }
+}
