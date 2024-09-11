@@ -65,6 +65,32 @@ export const confifgFileSchema = {
                 },
             ],
         },
+
+        qlikSenseEvents: {
+            influxdb: {
+                enable: 'boolean',
+                writeFrequency: 'number',
+            },
+            eventCount: {
+                enable: 'boolean',
+                influxdb: {
+                    measurementName: 'string',
+                    'tags?': [
+                        {
+                            name: 'string',
+                            value: 'string',
+                        },
+                    ],
+                },
+            },
+            rejectedEventCount: {
+                enable: 'boolean',
+                influxdb: {
+                    measurementName: 'string',
+                },
+            },
+        },
+
         userEvents: {
             enable: 'boolean',
             'excludeUser?': [
@@ -79,7 +105,7 @@ export const confifgFileSchema = {
             },
             'tags?': [
                 {
-                    tag: 'string',
+                    name: 'string',
                     value: 'string',
                 },
             ],
@@ -124,7 +150,7 @@ export const confifgFileSchema = {
             },
             'tags?': [
                 {
-                    tag: 'string',
+                    name: 'string',
                     value: 'string',
                 },
             ],
@@ -171,6 +197,78 @@ export const confifgFileSchema = {
                             value: 'string',
                         },
                     ],
+                },
+            },
+            enginePerformanceMonitor: {
+                enable: 'boolean',
+                appNameLookup: {
+                    enable: 'boolean',
+                },
+                trackRejectedEvents: {
+                    enable: 'boolean',
+                    'tags?': [
+                        {
+                            name: 'string',
+                            value: 'string',
+                        },
+                    ],
+                },
+                monitorFilter: {
+                    allApps: {
+                        enable: 'boolean',
+                        'appExclude?': [
+                            {
+                                'appId?': 'string',
+                                'appName?': 'string',
+                            },
+                        ],
+                        objectType: {
+                            allObjectTypes: 'boolean',
+                            'allObjectTypesExclude?': [],
+                            'someObjectTypesInclude?': [],
+                        },
+                        method: {
+                            allMethods: 'boolean',
+                            'allMethodsExclude?': [],
+                            'someMethodsInclude?': [],
+                        },
+                    },
+                    appSpecific: {
+                        enable: 'boolean',
+                        app: [
+                            {
+                                'include?': [
+                                    {
+                                        'appId?': 'string',
+                                        'appName?': 'string',
+                                    },
+                                ],
+                                objectType: {
+                                    allObjectTypes: 'boolean',
+                                    'allObjectTypesExclude?': [],
+                                    'someObjectTypesInclude?': [],
+                                },
+                                appObject: {
+                                    allAppObjects: 'boolean',
+                                    'allAppObjectsExclude?': [
+                                        {
+                                            objectId: 'string',
+                                        },
+                                    ],
+                                    'someAppObjectsInclude?': [
+                                        {
+                                            objectId: 'string',
+                                        },
+                                    ],
+                                },
+                                method: {
+                                    allMethods: 'boolean',
+                                    'allMethodsExclude?': [],
+                                    'someMethodsInclude?': [],
+                                },
+                            },
+                        ],
+                    },
                 },
             },
             sendToMQTT: {

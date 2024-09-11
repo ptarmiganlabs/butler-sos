@@ -1,6 +1,3 @@
-/* eslint-disable prefer-destructuring */
-/* eslint-disable no-unused-vars */
-
 import crypto from 'crypto';
 import axios from 'axios';
 
@@ -86,7 +83,6 @@ export async function postHealthMetricsToNewRelic(_host, body, tags) {
                 'Butler-SOS.newRelic.metric.attribute.static'
             );
 
-            // eslint-disable-next-line no-restricted-syntax
             for (const item of staticAttributes) {
                 attributes[item.name] = item.value;
             }
@@ -281,7 +277,6 @@ export async function postHealthMetricsToNewRelic(_host, body, tags) {
             globals.config.get('Butler-SOS.newRelic.metric.header').length > 0
         ) {
             const configHeaders = globals.config.get('Butler-SOS.newRelic.metric.header');
-            // eslint-disable-next-line no-restricted-syntax
             for (const header of configHeaders) {
                 headers[header.name] = header.value;
             }
@@ -300,7 +295,6 @@ export async function postHealthMetricsToNewRelic(_host, body, tags) {
             `HEALTH METRICS NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
 
-        // eslint-disable-next-line no-restricted-syntax
         for (const accountName of globals.config.get(
             'Butler-SOS.userEvents.sendToNewRelic.destinationAccount'
         )) {
@@ -323,7 +317,6 @@ export async function postHealthMetricsToNewRelic(_host, body, tags) {
             } else {
                 headers['Api-Key'] = newRelicConfig[0].insertApiKey;
 
-                // eslint-disable-next-line no-await-in-loop
                 const res = await axios.post(remoteUrl, payload, { headers, timeout: 10000 });
 
                 globals.logger.debug(
@@ -373,7 +366,6 @@ export async function postProxySessionsToNewRelic(userSessions) {
                 'Butler-SOS.newRelic.metric.attribute.static'
             );
 
-            // eslint-disable-next-line no-restricted-syntax
             for (const item of staticAttributes) {
                 attributes[item.name] = item.value;
             }
@@ -432,7 +424,6 @@ export async function postProxySessionsToNewRelic(userSessions) {
             globals.config.get('Butler-SOS.newRelic.metric.header').length > 0
         ) {
             const configHeaders = globals.config.get('Butler-SOS.newRelic.metric.header');
-            // eslint-disable-next-line no-restricted-syntax
             for (const header of configHeaders) {
                 headers[header.name] = header.value;
             }
@@ -450,7 +441,6 @@ export async function postProxySessionsToNewRelic(userSessions) {
             `PROXY SESSIONS NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
 
-        // eslint-disable-next-line no-restricted-syntax
         for (const accountName of globals.config.get(
             'Butler-SOS.userEvents.sendToNewRelic.destinationAccount'
         )) {
@@ -477,7 +467,6 @@ export async function postProxySessionsToNewRelic(userSessions) {
                     `PROXY SESSIONS NEW RELIC: Proxy session count for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}": ${userSessions.sessionCount}`
                 );
 
-                // eslint-disable-next-line no-await-in-loop
                 const res = await axios.post(remoteUrl, payload, { headers, timeout: 5000 });
 
                 globals.logger.debug(
@@ -513,13 +502,15 @@ export async function postButlerSOSUptimeToNewRelic(fields) {
         const ts = new Date().getTime(); // Timestamp in millisec
 
         // Add static fields to attributes if they exist
-        if (globals.config.has('Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static') && globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static') !== null) {
+        if (
+            globals.config.has('Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static') &&
+            globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static') !== null
+        ) {
             const staticAttributes = globals.config.get(
                 'Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static'
             );
 
-            // staticAttributes is an array of objects. Null 
-            // eslint-disable-next-line no-restricted-syntax
+            // staticAttributes is an array of objects. Null
             for (const item of staticAttributes) {
                 attributes[item.name] = item.value;
             }
@@ -600,7 +591,6 @@ export async function postButlerSOSUptimeToNewRelic(fields) {
             'Content-Type': 'application/json',
         };
 
-        // eslint-disable-next-line no-restricted-syntax
         for (const header of globals.config.get('Butler-SOS.newRelic.metric.header')) {
             headers[header.name] = header.value;
         }
@@ -617,7 +607,6 @@ export async function postButlerSOSUptimeToNewRelic(fields) {
             `UPTIME NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
 
-        // eslint-disable-next-line no-restricted-syntax
         for (const accountName of globals.config.get(
             'Butler-SOS.uptimeMonitor.storeNewRelic.destinationAccount'
         )) {
@@ -638,7 +627,6 @@ export async function postButlerSOSUptimeToNewRelic(fields) {
             } else {
                 headers['Api-Key'] = newRelicConfig[0].insertApiKey;
 
-                // eslint-disable-next-line no-await-in-loop
                 const res = await axios.post(remoteUrl, payload, { headers, timeout: 5000 });
 
                 globals.logger.debug(
@@ -719,9 +707,8 @@ export async function postUserEventToNewRelic(msg) {
             globals.config.get('Butler-SOS.userEvents.tags').length > 0
         ) {
             const configTags = globals.config.get('Butler-SOS.userEvents.tags');
-            // eslint-disable-next-line no-restricted-syntax
             for (const item of configTags) {
-                attributes[item.tag] = item.value;
+                attributes[item.name] = item.value;
             }
         }
 
@@ -748,7 +735,6 @@ export async function postUserEventToNewRelic(msg) {
             globals.config.get('Butler-SOS.newRelic.event.header').length > 0
         ) {
             const configHeaders = globals.config.get('Butler-SOS.newRelic.event.header');
-            // eslint-disable-next-line no-restricted-syntax
             for (const header of configHeaders) {
                 headers[header.name] = header.value;
             }
@@ -766,7 +752,6 @@ export async function postUserEventToNewRelic(msg) {
             `USER EVENT NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
 
-        // eslint-disable-next-line no-restricted-syntax
         for (const accountName of globals.config.get(
             'Butler-SOS.userEvents.sendToNewRelic.destinationAccount'
         )) {
@@ -792,7 +777,6 @@ export async function postUserEventToNewRelic(msg) {
                 // Add API key for this NR account as http header
                 headers['Api-Key'] = newRelicConfig[0].insertApiKey;
 
-                // eslint-disable-next-line no-await-in-loop
                 const res = await axios.post(eventUrl, payload, { headers, timeout: 10000 });
 
                 globals.logger.debug(
@@ -930,7 +914,7 @@ export async function postLogEventToNewRelic(msg) {
     globals.logger.debug(`LOG EVENT NEW RELIC: ${msg})`);
 
     try {
-        // Only send log events that are enabled in the confif file
+        // Only send log events that are enabled in the config file
         if (sendNRLogEventYesNo(msg.source, msg.level) === true) {
             // First prepare attributes relating to the actual log event, then add attributes defined in the config file
             // The config file attributes can for example be used to separate data from DEV/TEST/PROD environments
@@ -974,9 +958,8 @@ export async function postLogEventToNewRelic(msg) {
                 globals.config.get('Butler-SOS.logEvents.tags').length > 0
             ) {
                 const configTags = globals.config.get('Butler-SOS.logEvents.tags');
-                // eslint-disable-next-line no-restricted-syntax
                 for (const item of configTags) {
-                    attributes[item.tag] = item.value;
+                    attributes[item.name] = item.value;
                 }
             }
 
@@ -987,7 +970,6 @@ export async function postLogEventToNewRelic(msg) {
                 globals.config.get('Butler-SOS.newRelic.event.attribute.static').length > 0
             ) {
                 const configTags = globals.config.get('Butler-SOS.newRelic.event.attribute.static');
-                // eslint-disable-next-line no-restricted-syntax
                 for (const item of configTags) {
                     attributes[item.name] = item.value;
                 }
@@ -1030,7 +1012,6 @@ export async function postLogEventToNewRelic(msg) {
                 globals.config.get('Butler-SOS.newRelic.event.header').length > 0
             ) {
                 const configHeaders = globals.config.get('Butler-SOS.newRelic.event.header');
-                // eslint-disable-next-line no-restricted-syntax
                 for (const header of configHeaders) {
                     headers[header.name] = header.value;
                 }
@@ -1043,12 +1024,11 @@ export async function postLogEventToNewRelic(msg) {
             let nrAccounts = globals.config.get('Butler-SOS.thirdPartyToolsCredentials.newRelic');
             if (nrAccounts === null) {
                 nrAccounts = [];
-            }    
+            }
             globals.logger.debug(
                 `LOG EVENT NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
             );
 
-            // eslint-disable-next-line no-restricted-syntax
             for (const accountName of globals.config.get(
                 'Butler-SOS.logEvents.sendToNewRelic.destinationAccount'
             )) {
@@ -1078,7 +1058,6 @@ export async function postLogEventToNewRelic(msg) {
                     // Add API key for this NR account as http header
                     headers['Api-Key'] = newRelicConfig[0].insertApiKey;
 
-                    // eslint-disable-next-line no-await-in-loop
                     const res = await axios.post(eventUrl, payload, { headers, timeout: 10000 });
 
                     globals.logger.debug(

@@ -77,7 +77,37 @@ export function udpInitUserActivityServer() {
                 globals.logger.warn(
                     `USER EVENT: Received message that is not a recognised user event: ${msgShort}`
                 );
+
+                // Is logging of event counts enabled?
+                if (globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.enable') === true) {
+                    // Increase counter for log events
+                    await globals.udpEvents.addUserEvent({
+                        eventName: 'Unknown',
+                        host: 'Unknown',
+                        subsystem: 'Unknown',
+                    });
+                }
+
                 return;
+            }
+
+            // Add counter for received user events
+            // Is logging of event counts enabled?
+            if (globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.enable') === true) {
+                globals.logger.debug(
+                    `USER EVENT: Received message that is a recognised user event: ${msg[0]}`
+                );
+
+                // Increase counter for user events
+                // Make eventName lower case, also remove leading and trailing /
+                let eventName = msg[0].toLowerCase().replace('/', '');
+                eventName = eventName.replace('/', '');
+
+                await globals.udpEvents.addUserEvent({
+                    eventName,
+                    host: msg[1],
+                    subsystem: msg[5],
+                });
             }
 
             // Build object and convert to JSON

@@ -13,9 +13,10 @@ import Influx from 'influx';
 import { Command, Option } from 'commander';
 import { InfluxDB, HttpError, DEFAULT_WriteOptions } from '@influxdata/influxdb-client';
 import { OrgsAPI, BucketsAPI } from '@influxdata/influxdb-client-apis';
+import { fileURLToPath } from 'url';
 
 import { getServerTags } from './lib/servertags.js';
-import { fileURLToPath } from 'url';
+import { UdpEvents } from './lib/udp-event.js';
 
 let instance = null;
 
@@ -122,7 +123,6 @@ class Settings {
             configFileBasename = upath.basename(this.configFile, configFileExtension);
 
             if (configFileExtension.toLowerCase() !== '.yaml') {
-                // eslint-disable-next-line no-console
                 console.log('Error: Config file extension must be yaml');
                 process.exit(1);
             }
@@ -131,7 +131,6 @@ class Settings {
                 process.env.NODE_CONFIG_DIR = configFilePath;
                 process.env.NODE_ENV = configFileBasename;
             } else {
-                // eslint-disable-next-line no-console
                 console.log('Error: Specified config file does not exist');
                 process.exit(1);
             }
@@ -192,24 +191,19 @@ class Settings {
 
             // Are we in a packaged app?
             if (this.isPkg) {
-                // eslint-disable-next-line no-console
                 console.log(`Running in packaged app. Executable path: ${this.execPath}`);
             } else {
-                // eslint-disable-next-line no-console
                 console.log(
                     `Running in non-packaged environment. Executable path: ${this.execPath}`
                 );
             }
 
-            // eslint-disable-next-line no-console
             console.log(
                 `Log file directory: ${upath.join(this.execPath, this.config.get('Butler-SOS.logDirectory'))}`
             );
 
-            // eslint-disable-next-line no-console
             console.log(`upath.dirname(process.execPath): ${upath.dirname(process.execPath)}`);
 
-            // eslint-disable-next-line no-console
             console.log(`process.cwd(): ${process.cwd()}`);
         }
 
@@ -339,6 +333,22 @@ class Settings {
         }
 
         // ------------------------------------
+        // Track user events and log events
+        if (this.config.get('Butler-SOS.qlikSenseEvents.eventCount.enable') === true) {
+            this.udpEvents = new UdpEvents(this.logger);
+        } else {
+            this.udpEvents = null;
+        }
+
+        // ------------------------------------
+        // Track rejected user and log events
+        if (this.config.get('Butler-SOS.qlikSenseEvents.rejectedEventCount.enable') === true) {
+            this.rejectedEvents = new UdpEvents(this.logger);
+        } else {
+            this.rejectedEvents = null;
+        }
+
+        // ------------------------------------
         // Get info on what servers to monitor
         this.serverList = this.config.get('Butler-SOS.serversToMonitor.servers');
 
@@ -358,7 +368,6 @@ class Settings {
 
             // the pool will emit an error on behalf of any idle clients
             // it contains if a backend error or network partition happens
-            // eslint-disable-next-line no-unused-vars
             this.pgPool.on('error', (err, client) => {
                 this.logger.error(`CONFIG: Unexpected error on idle client: ${err}`);
                 // process.exit(-1);
@@ -413,7 +422,7 @@ class Settings {
                     )}`
                 );
 
-                tagValuesLogEvent.push(entry.tag);
+                tagValuesLogEvent.push(entry.name);
             });
         }
 
@@ -694,7 +703,6 @@ class Settings {
 
         this.logger.verbose('GLOBALS: Init done');
 
-        // eslint-disable-next-line no-constructor-return
         return instance;
     }
 
@@ -711,7 +719,6 @@ class Settings {
 
     // Static sleep function
     static sleep(ms) {
-        // eslint-disable-next-line no-promise-executor-return
         return new Promise((resolve) => setTimeout(resolve, ms));
     }
 
