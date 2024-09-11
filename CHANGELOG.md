@@ -1,5 +1,19 @@
 # Changelog
 
+## [10.2.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v10.2.0...butler-sos-v10.2.1) (2024-08-28)
+
+
+### Bug Fixes
+
+* **config-vis:** Obfuscate host name of config visualisation server ([f76db6b](https://github.com/ptarmiganlabs/butler-sos/commit/f76db6bd34363e9a476119532757b25586ebb49f)), closes [#869](https://github.com/ptarmiganlabs/butler-sos/issues/869)
+* **sense-events:** Better handling of unknown UDP messages ([d122863](https://github.com/ptarmiganlabs/butler-sos/commit/d122863cac529f5c7cc2865b766f7c4a33f468ee)), closes [#880](https://github.com/ptarmiganlabs/butler-sos/issues/880)
+
+
+### Miscellaneous
+
+* **deps:** Update config vis library to latest version ([ae49d81](https://github.com/ptarmiganlabs/butler-sos/commit/ae49d81032b40bb8606494920c84be57813175f9))
+* **deps:** Update dependencies ([adffeda](https://github.com/ptarmiganlabs/butler-sos/commit/adffedab62ce05d02d876844e1ace163b99f9e20))
+
 ## [10.2.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v10.1.1...butler-sos-v10.2.0) (2024-08-20)
 
 
