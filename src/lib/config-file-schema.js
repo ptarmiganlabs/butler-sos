@@ -75,9 +75,11 @@ export const confifgFileSchema = {
                 enable: 'boolean',
                 influxdb: {
                     measurementName: 'string',
-                    "tags?": [
-                        "tag": 'string',
-                        value: 'string',
+                    'tags?': [
+                        {
+                            tag: 'string',
+                            value: 'string',
+                        },
                     ],
                 },
             },
@@ -204,7 +206,7 @@ export const confifgFileSchema = {
                 },
                 trackRejectedEvents: {
                     enable: 'boolean',
-                    "tags?": [
+                    'tags?': [
                         {
                             tag: 'string',
                             value: 'string',

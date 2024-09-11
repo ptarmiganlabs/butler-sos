@@ -374,6 +374,28 @@ export function udpInitLogEventServer() {
                         return;
                     }
 
+                    // Get source of event activity.
+                    //
+                    // The source is either user activity of some kind (e.g. opening an app, making a selection), or
+                    // the result of some automated process (e.g. a scheduled app reload).
+                    //
+                    // The proxy session ID is used to determine the source of the event.
+                    // If the proxy session ID is '0', the event is considered to be non-user activity, for example a scheduled reload.
+                    // Otherwise, the event is considered to be the result of an action by a user, for example opening an app, making a selection, etc.
+                    let eventActivitySource;
+                    console.log(msg[15] + '---' + msg[8] + ': ' + msg[8]?.length);
+                    if (msg[8] === '0') {
+                        // Event is the result of an automated process
+                        globals.logger.debug(
+                            'LOG EVENT: Qix performance event is non-user activity.'
+                        );
+                        eventActivitySource = 'non-user';
+                    } else {
+                        // Event is user activity
+                        globals.logger.debug('LOG EVENT: Qix performance event is user activity.');
+                        eventActivitySource = 'user';
+                    }
+
                     // Does event match filters in the config file?
                     //
                     // There are two types of filters:
@@ -784,6 +806,7 @@ export function udpInitLogEventServer() {
                                 ? parseInt(msg[24], 10)
                                 : -1,
                         object_type: msg[25],
+                        event_activity_source: eventActivitySource,
                     };
 
                     // Different log events deliver QSEoW user directory/user differently.

@@ -1002,6 +1002,7 @@ export async function postLogEventToInfluxdb(msg) {
                         object_type: msg.object_type,
                         proxy_session_id: msg.proxy_session_id,
                         session_id: msg.session_id,
+                        event_activity_source: msg.event_activity_source,
                     };
 
                     // Tags that are empty in some cases. Only add if they are non-empty
@@ -1241,6 +1242,7 @@ export async function postLogEventToInfluxdb(msg) {
                             .tag('object_type', msg.object_type)
                             .tag('proxy_session_id', msg.proxy_session_id)
                             .tag('session_id', msg.session_id)
+                            .tag('event_activity_source', msg.event_activity_source)
                             .stringField('app_id', msg.app_id)
                             .floatField('process_time', parseFloat(msg.process_time))
                             .floatField('work_time', parseFloat(msg.work_time))
