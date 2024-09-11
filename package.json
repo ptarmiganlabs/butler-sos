@@ -37,7 +37,7 @@
         "@influxdata/influxdb-client": "^1.35.0",
         "@influxdata/influxdb-client-apis": "^1.35.0",
         "async-mutex": "^0.5.0",
-        "axios": "^1.7.5",
+        "axios": "^1.7.7",
         "commander": "^12.1.0",
         "config": "^3.3.12",
         "fastify": "^4.28.1",
@@ -62,15 +62,15 @@
         "yaml-validator": "^5.0.1"
     },
     "devDependencies": {
-        "@eslint/js": "^9.9.1",
+        "@eslint/js": "^9.10.0",
         "esbuild": "^0.23.1",
-        "eslint": "^9.9.1",
+        "eslint": "^9.10.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-formatter-table": "^7.32.1",
         "eslint-plugin-prettier": "^5.2.1",
         "globals": "^15.9.0",
         "prettier": "^3.3.3",
-        "snyk": "^1.1293.0"
+        "snyk": "^1.1293.1"
     },
     "pkg": {
         "assets": [
