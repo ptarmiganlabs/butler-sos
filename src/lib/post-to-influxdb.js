@@ -712,7 +712,7 @@ export async function postUserEventToInfluxdb(msg) {
             ) {
                 const configTags = globals.config.get('Butler-SOS.userEvents.tags');
                 for (const item of configTags) {
-                    tags[item.tag] = item.value;
+                    tags[item.name] = item.value;
                 }
             }
 
@@ -824,7 +824,7 @@ export async function postUserEventToInfluxdb(msg) {
             ) {
                 const configTags = globals.config.get('Butler-SOS.userEvents.tags');
                 for (const item of configTags) {
-                    point.tag(item.tag, item.value);
+                    point.tag(item.name, item.value);
                 }
             }
 
@@ -1043,7 +1043,7 @@ export async function postLogEventToInfluxdb(msg) {
                 ) {
                     const configTags = globals.config.get('Butler-SOS.logEvents.tags');
                     for (const item of configTags) {
-                        tags[item.tag] = item.value;
+                        tags[item.name] = item.value;
                     }
                 }
 
@@ -1280,7 +1280,7 @@ export async function postLogEventToInfluxdb(msg) {
                     ) {
                         const configTags = globals.config.get('Butler-SOS.logEvents.tags');
                         for (const item of configTags) {
-                            point.tag(item.tag, item.value);
+                            point.tag(item.name, item.value);
                         }
                     }
 
@@ -1357,7 +1357,7 @@ export async function storeEventCountInfluxDB() {
                     'Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags'
                 );
                 for (const item of configTags) {
-                    point.tags[item.tag] = item.value;
+                    point.tags[item.name] = item.value;
                 }
             }
 
@@ -1391,7 +1391,7 @@ export async function storeEventCountInfluxDB() {
                     'Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags'
                 );
                 for (const item of configTags) {
-                    point.tags[item.tag] = item.value;
+                    point.tags[item.name] = item.value;
                 }
             }
 
@@ -1468,7 +1468,7 @@ export async function storeEventCountInfluxDB() {
                         'Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags'
                     );
                     for (const item of configTags) {
-                        point.tag(item.tag, item.value);
+                        point.tag(item.name, item.value);
                     }
                 }
 
@@ -1497,7 +1497,7 @@ export async function storeEventCountInfluxDB() {
                         'Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags'
                     );
                     for (const item of configTags) {
-                        point.tag(item.tag, item.value);
+                        point.tag(item.name, item.value);
                     }
                 }
 
@@ -1578,7 +1578,7 @@ export async function storeRejectedEventCountInfluxDB() {
                         'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.tags'
                     );
                     for (const item of configTags) {
-                        tags[item.tag] = item.value;
+                        tags[item.name] = item.value;
                     }
                 }
 
@@ -1699,7 +1699,7 @@ export async function storeRejectedEventCountInfluxDB() {
                             'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.tags'
                         );
                         for (const item of configTags) {
-                            point.tag(item.tag, item.value);
+                            point.tag(item.name, item.value);
                         }
                     }
 

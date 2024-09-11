@@ -422,7 +422,7 @@ class Settings {
                     )}`
                 );
 
-                tagValuesLogEvent.push(entry.tag);
+                tagValuesLogEvent.push(entry.name);
             });
         }
 

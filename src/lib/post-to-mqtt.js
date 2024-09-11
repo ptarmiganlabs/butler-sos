@@ -135,7 +135,7 @@ export function postUserEventToMQTT(msg) {
             const configTags = globals.config.get('Butler-SOS.userEvents.tags');
             // eslint-disable-next-line no-restricted-syntax
             for (const item of configTags) {
-                payload.tags[item.tag] = item.value;
+                payload.tags[item.name] = item.value;
             }
         }
 
@@ -221,7 +221,7 @@ export function postLogEventToMQTT(msg) {
             const configTags = globals.config.get('Butler-SOS.logEvents.tags');
             // eslint-disable-next-line no-restricted-syntax
             for (const item of configTags) {
-                payload.tags[item.tag] = item.value;
+                payload.tags[item.name] = item.value;
             }
         }
 

@@ -68,11 +68,9 @@ export async function verifyConfigFile() {
             const serverTagsDefinition = globals.config.get(
                 'Butler-SOS.serversToMonitor.serverTagsDefinition'
             );
-            // eslint-disable-next-line no-restricted-syntax
             for (const tag of serverTagsDefinition) {
                 // Check that all servers have this tag
                 const servers = globals.config.get('Butler-SOS.serversToMonitor.servers');
-                // eslint-disable-next-line no-restricted-syntax
                 for (const server of servers) {
                     // Check if server.serverTags.tag is defined
                     if (server?.serverTags === null || !server?.serverTags[tag]) {
@@ -90,9 +88,7 @@ export async function verifyConfigFile() {
 
             // Now ensure that the tags defined for each server are valid and that there are no extra tags there
             const servers = globals.config.get('Butler-SOS.serversToMonitor.servers');
-            // eslint-disable-next-line no-restricted-syntax
             for (const server of servers) {
-                // eslint-disable-next-line no-restricted-syntax
                 for (const tag in server.serverTags) {
                     if (!serverTagsDefinition.includes(tag)) {
                         globals.logger.error(

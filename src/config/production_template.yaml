@@ -89,9 +89,9 @@ Butler-SOS:
       influxdb:
         measurementName: event_count # Name of the InfluxDB measurement where event count is stored
         tags:                       # Tags are added to the data before it's stored in InfluxDB
-          # - tag: env
+          # - name: env
           #   value: DEV
-          # - tag: foo
+          # - name: foo
           #   value: bar
     rejectedEventCount:
       enable: true                  # Should rejected events be counted and stored in InfluxDB?
@@ -111,9 +111,9 @@ Butler-SOS:
       serverHost: <IP or FQDN>      # Host/IP where user event server will listen for events from Sense
       portUserActivityEvents: 9997  # Port on which user event server will listen for events from Sense
     tags:                           # Tags are added to the data before it's stored in InfluxDB
-      # - tag: env
+      # - name: env
       #   value: DEV
-      # - tag: foo
+      # - name: foo
       #   value: bar
     sendToMQTT: 
       enable: false                 # Set to true if user events should be forwarded as MQTT messages
@@ -148,9 +148,9 @@ Butler-SOS:
       serverHost: <IP or FQDN>         # Host/IP where log event server will listen for events from Sense
       portLogEvents: 9996              # Port on which log event server will listen for events from Sense
     tags:
-      # - tag: env
+      # - name: env
       #   value: DEV
-      # - tag: foo
+      # - name: foo
       #   value: bar
     source:
       engine:
@@ -233,9 +233,9 @@ Butler-SOS:
       trackRejectedEvents: 
         enable: false                   # Should events that are rejected by the app performance monitor be tracked?
         tags:                           # Tags are added to the data before it's stored in InfluxDB
-          # - tag: env
+          # - name: env
           #   value: DEV
-          # - tag: foo
+          # - name: foo
           #   value: bar
       monitorFilter:                    # What objects should be monitored? Entire apps or just specific object(s) within some specific app(s)?
                                         # Two kinds of monitoring can be done:

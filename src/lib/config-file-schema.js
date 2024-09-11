@@ -77,7 +77,7 @@ export const confifgFileSchema = {
                     measurementName: 'string',
                     'tags?': [
                         {
-                            tag: 'string',
+                            name: 'string',
                             value: 'string',
                         },
                     ],
@@ -105,7 +105,7 @@ export const confifgFileSchema = {
             },
             'tags?': [
                 {
-                    tag: 'string',
+                    name: 'string',
                     value: 'string',
                 },
             ],
@@ -150,7 +150,7 @@ export const confifgFileSchema = {
             },
             'tags?': [
                 {
-                    tag: 'string',
+                    name: 'string',
                     value: 'string',
                 },
             ],
@@ -208,7 +208,7 @@ export const confifgFileSchema = {
                     enable: 'boolean',
                     'tags?': [
                         {
-                            tag: 'string',
+                            name: 'string',
                             value: 'string',
                         },
                     ],
