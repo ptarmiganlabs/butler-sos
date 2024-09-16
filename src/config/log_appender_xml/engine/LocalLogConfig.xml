@@ -1,5 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+    <!-- Appender to capture Qix performance metrics, then send it to Butler SOS -->
+    <appender name="QixPerf" type="log4net.Appender.UdpAppender">
+        <param name="threshold" value="info" />
+        <param name="remoteAddress" value="FQDN or IP of server where Butler SOS is running" />
+        <param name="remotePort" value="9996" />
+        <param name="encoding" value="utf-8" />
+        <layout type="log4net.Layout.PatternLayout">
+            <converter>
+                <param name="name" value="rownum" />
+                <param name="type" value="Qlik.Sense.Logging.log4net.Layout.Pattern.CounterPatternConverter" /> 
+            </converter> 
+            <converter>
+                <param name="name" value="hostname" />
+                <param name="type" value="Qlik.Sense.Logging.log4net.Layout.Pattern.HostNamePatternConverter" />
+            </converter>
+            <converter>
+                  <param name="name" value="longIso8601date" /> 
+                  <param name="type" value="Qlik.Sense.Logging.log4net.Layout.Pattern.Iso8601TimeOffsetPatternConverter" /> 
+            </converter>
+            <converter> 
+                  <param name="name" value="user" /> 
+                  <param name="type" value="Qlik.Sense.Logging.log4net.Layout.Pattern.ServiceUserNameCachedPatternConverter" /> 
+            </converter> 
+            <param name="conversionpattern" value="/qseow-qix-perf/;%rownum{9999};%longIso8601date;%date;%level;%hostname;%logger;%user;%property{ProxySessionId};%property{ActiveUserDirectory};%property{ActiveUserId};%property{EngineTimestamp};%property{SessionId};%property{DocId};%property{RequestId};%property{Method};%property{ProcessTime};%property{WorkTime};%property{LockTime};%property{ValidateTime};%property{TraverseTime};%property{Handle};%property{ObjectId};%property{NetRAM};%property{PeakRAM};%property{ObjectType}" />
+        </layout>
+    </appender>
+
     <!-- Generic appender for detecting warnings and errors -->
     <appender name="LogEvent" type="log4net.Appender.UdpAppender">
         <param name="threshold" value="warn" />
@@ -31,6 +58,11 @@
         </layout>
     </appender>
 
+
+    <!-- Send Qix performance info to Butler SOS -->
+    <logger name="QixPerformance.Engine.Engine">
+        <appender-ref ref="QixPerf" />
+    </logger>
 
     <!-- Send UDP message to Butler SOS on warnings and errors -->
     <logger name="Performance.Engine">

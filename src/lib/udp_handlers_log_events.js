@@ -132,7 +132,7 @@ export function udpInitLogEventServer() {
                 if (globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.enable') === true) {
                     // Increase counter for log events
                     await globals.udpEvents.addLogEvent({
-                        eventName: 'Unknown',
+                        source: 'Unknown',
                         host: 'Unknown',
                         subsystem: 'Unknown',
                     });
@@ -149,12 +149,12 @@ export function udpInitLogEventServer() {
                 );
 
                 // Increase counter for log events
-                // Make eventName lower case, also remove leading and trailing /
-                let eventName = msg[0].toLowerCase().replace('/', '');
-                eventName = eventName.replace('/', '');
+                // Make source lower case, also remove leading and trailing /
+                let source = msg[0].toLowerCase().replace('/', '');
+                source = source.replace('/', '');
 
                 await globals.udpEvents.addLogEvent({
-                    eventName,
+                    source,
                     host: msg[5],
                     subsystem: msg[6],
                 });
@@ -383,7 +383,6 @@ export function udpInitLogEventServer() {
                     // If the proxy session ID is '0', the event is considered to be non-user activity, for example a scheduled reload.
                     // Otherwise, the event is considered to be the result of an action by a user, for example opening an app, making a selection, etc.
                     let eventActivitySource;
-                    console.log(msg[15] + '---' + msg[8] + ': ' + msg[8]?.length);
                     if (msg[8] === '0') {
                         // Event is the result of an automated process
                         globals.logger.debug(
@@ -749,7 +748,7 @@ export function udpInitLogEventServer() {
                         ) {
                             // Increase counter for rejected performance log events
                             await globals.rejectedEvents.addRejectedLogEvent({
-                                eventName: 'qseow-qix-perf',
+                                source: 'qseow-qix-perf',
                                 appId: eventAppId,
                                 appName: eventAppName,
                                 method: eventMethod,

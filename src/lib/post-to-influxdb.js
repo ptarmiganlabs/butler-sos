@@ -1337,7 +1337,7 @@ export async function storeEventCountInfluxDB() {
                 measurement: measurementName,
                 tags: {
                     event_type: 'log',
-                    event_name: event.eventName,
+                    source: event.source,
                     host: event.host,
                     subsystem: event.subsystem,
                 },
@@ -1371,7 +1371,7 @@ export async function storeEventCountInfluxDB() {
                 measurement: measurementName,
                 tags: {
                     event_type: 'user',
-                    event_name: event.eventName,
+                    source: event.source,
                     host: event.host,
                     subsystem: event.subsystem,
                 },
@@ -1451,7 +1451,7 @@ export async function storeEventCountInfluxDB() {
             for (const event of logEvents) {
                 const point = new Point(measurementName)
                     .tag('event_type', 'log')
-                    .tag('event_name', event.eventName)
+                    .tag('source', event.source)
                     .tag('host', event.host)
                     .tag('subsystem', event.subsystem)
                     .intField('counter', event.counter);
@@ -1480,7 +1480,7 @@ export async function storeEventCountInfluxDB() {
             for (const event of userEvents) {
                 const point = new Point(measurementName)
                     .tag('event_type', 'user')
-                    .tag('event_name', event.eventName)
+                    .tag('source', event.source)
                     .tag('host', event.host)
                     .tag('subsystem', event.subsystem)
                     .intField('counter', event.counter);
@@ -1541,14 +1541,14 @@ export async function storeRejectedEventCountInfluxDB() {
         //
         // Use counter and process_time as fields
         for (const event of rejectedLogEvents) {
-            if (event.eventName === 'qseow-qix-perf') {
-                // For each unique combination of eventName, appId, appName, .method and objectType,
+            if (event.source === 'qseow-qix-perf') {
+                // For each unique combination of source, appId, appName, .method and objectType,
                 // write the counter and processTime properties to InfluxDB
                 //
-                // Use eventName, appId,appName,  method and objectType as tags
+                // Use source, appId,appName,  method and objectType as tags
 
                 const tags = {
-                    event_name: event.eventName,
+                    source: event.source,
                     app_id: event.appId,
                     method: event.method,
                     object_type: event.objectType,
@@ -1598,7 +1598,7 @@ export async function storeRejectedEventCountInfluxDB() {
                 const point = {
                     measurement: measurementName,
                     tags: {
-                        event_name: event.eventName,
+                        source: event.source,
                     },
                     fields: {
                         counter: event.counter,
@@ -1664,13 +1664,13 @@ export async function storeRejectedEventCountInfluxDB() {
             //
             // Use counter and process_time as fields
             for (const event of rejectedLogEvents) {
-                if (event.eventName === 'qseow-qix-perf') {
-                    // For each unique combination of eventName, appId, appName, .method and objectType,
+                if (event.source === 'qseow-qix-perf') {
+                    // For each unique combination of source, appId, appName, .method and objectType,
                     // write the counter and processTime properties to InfluxDB
                     //
-                    // Use eventName, appId,appName,  method and objectType as tags
+                    // Use source, appId,appName,  method and objectType as tags
                     let point = new Point(measurementName)
-                        .tag('event_name', event.eventName)
+                        .tag('source', event.source)
                         .tag('app_id', event.appId)
                         .tag('method', event.method)
                         .tag('object_type', event.objectType)
@@ -1706,7 +1706,7 @@ export async function storeRejectedEventCountInfluxDB() {
                     points.push(point);
                 } else {
                     let point = new Point(measurementName)
-                        .tag('event_name', event.eventName)
+                        .tag('source', event.source)
                         .intField('counter', event.counter);
 
                     points.push(point);

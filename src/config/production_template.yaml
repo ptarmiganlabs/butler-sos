@@ -80,12 +80,12 @@ Butler-SOS:
   # Shared settings for user and log events (see below)
   qlikSenseEvents:                  # Shared settings for user and log events (see below)
     influxdb:
-      enable: true                  # Should summary (counter) of user and log events be stored in InfluxDB?
+      enable: false                 # Should summary (counter) of user/log events, and rejected events be stored in InfluxDB?
       writeFrequency: 20000         # How often (milliseconds) should rejected event count be written to InfluxDB?  
     eventCount:                     # Track how many events are received from Sense.
                                     # Some events are valid, some are not. Of the valid events, some are rejected by Butler SOS
                                     # based on the configuration in this file. 
-      enable: true                  # Should event count be stored in InfluxDB?
+      enable: false                 # Should event count be stored in InfluxDB?
       influxdb:
         measurementName: event_count # Name of the InfluxDB measurement where event count is stored
         tags:                       # Tags are added to the data before it's stored in InfluxDB
@@ -93,8 +93,10 @@ Butler-SOS:
           #   value: DEV
           # - name: foo
           #   value: bar
-    rejectedEventCount:
-      enable: true                  # Should rejected events be counted and stored in InfluxDB?
+    rejectedEventCount:             # Rejected events are events that are received from Sense, that are correctly formatted, 
+                                    # but that are rejected by Butler SOS based on the configuration in this file. 
+                                    # An example of a rejected event is a performance log event that is filtered out by Butler SOS.
+      enable: false                 # Should rejected events be counted and stored in InfluxDB?
       influxdb:
         measurementName: rejected_event_count # Name of the InfluxDB measurement where rejected event count is stored
 
@@ -162,65 +164,65 @@ Butler-SOS:
       scheduler:
         enable: false                  # Should log events from the scheduler service be handled?
     categorise:                        # Take actions on log events based on their content
-      enable: true
+      enable: false
       rules:                           # Rules are used to match log events to filters
-        - description: Find access denied errors
-          logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
-            - WARN
-            - ERROR
-          action: categorise           # Action to take on matched log events. Possible values are categorise, drop
-          category:                    # Category to assign to matched log events. Name/value pairs. 
-                                       # Will be added to InfluxDB datapoints as tags.
-            - name: qs_log_category
-              value: access-denied
-          filter:                      # Filter used to match log events. Case sensitive.
-            - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-              value: "Access was denied for User:"
-            - type: so
-              value: was denied for User
-        - description: Find AD issues
-          logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
-            - ERROR
-            - WARN
-          action: categorise           # Action to take on matched log events. Possible values are categorise, drop
-          category:                    # Category to assign to matched log events. Name/value pairs. 
-                                       # Will be added to InfluxDB datapoints as tags.
-            - name: qs_log_category
-              value: user-directory
-          filter:                      # Filter used to match log events. Case sensitive.
-            - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-              value: Duplicate entity with userId
-        - description: Qlik Sense service down
-          logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
-            - WARN
-          action: categorise           # Action to take on matched log events. Possible values are categorise, drop
-          category:                    # Category to assign to matched log events. Name/value pairs. 
-                                       # Will be added to InfluxDB datapoints as tags.
-            - name: qs_log_category
-              value: qs-service
-          filter:                      # Filter used to match log events. Case sensitive.
-            - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-              value: Failed to request service alive response from
-            - type: so                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-              value: Unable to connect to the remote server
-        - description: Reload task failed
-          logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
-            - WARN
-            - ERROR
-          action: categorise           # Action to take on matched log events. Possible values are categorise, drop
-          category:                    # Category to assign to matched log events. Name/value pairs. 
-                                       # Will be added to InfluxDB datapoints as tags.
-            - name: qs_log_category
-              value: reload-failed
-          filter:                      # Filter used to match log events. Case sensitive.
-            - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-              value: Task finished with state FinishedFail
-            - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-              value: Task finished with state Error
-            - type: ew                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-              value: Reload failed in Engine. Check engine or script logs.
-            - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-              value: Reload sequence was not successful (Result=False, Finished=True, Aborted=False) for engine connection with handle
+        # - description: Find access denied errors
+        #   logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
+        #     - WARN
+        #     - ERROR
+        #   action: categorise           # Action to take on matched log events. Possible values are categorise, drop
+        #   category:                    # Category to assign to matched log events. Name/value pairs. 
+        #                                # Will be added to InfluxDB datapoints as tags.
+        #     - name: qs_log_category
+        #       value: access-denied
+        #   filter:                      # Filter used to match log events. Case sensitive.
+        #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+        #       value: "Access was denied for User:"
+        #     - type: so
+        #       value: was denied for User
+        # - description: Find AD issues
+        #   logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
+        #     - ERROR
+        #     - WARN
+        #   action: categorise           # Action to take on matched log events. Possible values are categorise, drop
+        #   category:                    # Category to assign to matched log events. Name/value pairs. 
+        #                                # Will be added to InfluxDB datapoints as tags.
+        #     - name: qs_log_category
+        #       value: user-directory
+        #   filter:                      # Filter used to match log events. Case sensitive.
+        #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+        #       value: Duplicate entity with userId
+        # - description: Qlik Sense service down
+        #   logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
+        #     - WARN
+        #   action: categorise           # Action to take on matched log events. Possible values are categorise, drop
+        #   category:                    # Category to assign to matched log events. Name/value pairs. 
+        #                                # Will be added to InfluxDB datapoints as tags.
+        #     - name: qs_log_category
+        #       value: qs-service
+        #   filter:                      # Filter used to match log events. Case sensitive.
+        #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+        #       value: Failed to request service alive response from
+        #     - type: so                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+        #       value: Unable to connect to the remote server
+        # - description: Reload task failed
+        #   logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
+        #     - WARN
+        #     - ERROR
+        #   action: categorise           # Action to take on matched log events. Possible values are categorise, drop
+        #   category:                    # Category to assign to matched log events. Name/value pairs. 
+        #                                # Will be added to InfluxDB datapoints as tags.
+        #     - name: qs_log_category
+        #       value: reload-failed
+        #   filter:                      # Filter used to match log events. Case sensitive.
+        #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+        #       value: Task finished with state FinishedFail
+        #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+        #       value: Task finished with state Error
+        #     - type: ew                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+        #       value: Reload failed in Engine. Check engine or script logs.
+        #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+        #       value: Reload sequence was not successful (Result=False, Finished=True, Aborted=False) for engine connection with handle
       ruleDefault:                     # Default rule to use if no other rules match the log event
         enable: true
         category:
@@ -246,75 +248,75 @@ Butler-SOS:
           enable: false                 # Should all apps be monitored?
           appExclude:                   # What apps should be excluded from monitoring?
                                         # If both appId and appName are specified, both must match the event's data for it to be considered a match.
-            - appId: 5b817efe-472d-43ce-8a31-6cce34af7de9
-            - appName: Sales forecast
-            - appId: f42d6b16-8faf-45ca-a783-59f9da47db6e
-              appName: Inventory analysis
+            # - appId: 5b817efe-472d-43ce-8a31-6cce34af7de9
+            # - appName: Sales forecast
+            # - appId: f42d6b16-8faf-45ca-a783-59f9da47db6e
+            #   appName: Inventory analysis
           objectType:
             allObjectTypes: true        # Should all object types be monitored?
             allObjectTypesExclude:      # If allObjectTypes is set to true, the object types in this array are excluded from monitoring. 
                                         # someObjectTypesInclude (below) is ignored in that case.
-              - LoadModelList
-              - <Unknown>
-              - linechart
-              - map
+              # - LoadModelList
+              # - <Unknown>
+              # - linechart
+              # - map
             someObjectTypesInclude:     # What object types should be included in monitoring?
                                         # Only applicable if allObjectTypes is set to false.
-              - LoadModelList
-              - sheet
-              - barchart
+              # - LoadModelList
+              # - sheet
+              # - barchart
           method:
             allMethods: true            # Should all methods be monitored?
             allMethodsExclude:          # If allMethods is set to true, the methods in this array are excluded from monitoring.
                                         # someMethodsInclude (below) is ignored in that case.
-              - Global::OpenApp
-              - Doc::GetAppLayout
-              - Doc::CreateSessionObject
+              # - Global::OpenApp
+              # - Doc::GetAppLayout
+              # - Doc::CreateSessionObject
             someMethodsInclude:         # What methods should be included in monitoring?
                                         # Only applicable if allMethods is set to false.
-              - GenericObject::GetLayout
-              - GenericObject::GetHyperCubeContinuousData
+              # - GenericObject::GetLayout
+              # - GenericObject::GetHyperCubeContinuousData
         appSpecific:
-          enable: false                  # Should app specific monitoring be done?
+          enable: false                 # Should app specific monitoring be done?
           app:
             - include:                  # What apps should be monitored?
                                         # If both appId and appName are specified, both must match the event's data for it to be considered a match.
-                - appId: d7cf16f9-6a95-462a-9ff1-a6d413326de4
-                - appName: Budget 2025
-                - appId: 6931136d-c234-4358-a40c-e37153aba7c9
-                  appName: Sales basket analysis
+                # - appId: d7cf16f9-6a95-462a-9ff1-a6d413326de4
+                # - appName: Budget 2025
+                # - appId: 6931136d-c234-4358-a40c-e37153aba7c9
+                #   appName: Sales basket analysis
               objectType:
-                allObjectTypes: true   # Should all object types be monitored?
+                allObjectTypes: true    # Should all object types be monitored?
                 allObjectTypesExclude:  # If allObjectTypes is set to true, the object types in this array are excluded from monitoring. 
                                         # someObjectTypesInclude (below) is ignored in that case.
-                  - table
-                  - map
+                  # - table
+                  # - map
                 someObjectTypesInclude: # What object types should be included in monitoring?
                                         # Only applicable if allObjectTypes is set to false.
-                  - sheet
-                  - barchart
-                  - linechart
-                  - map
+                  # - sheet
+                  # - barchart
+                  # - linechart
+                  # - map
               appObject:
                 allAppObjects: true     # Should all app objects be monitored?
                 allAppObjectsExclude:   # If allAppObjects is set to true, the app objects in this array are excluded from monitoring.
                                         # someAppObjectsInclude (below) is ignored in that case.
-                  - objectId: AaBbCc
-                  - objectId: DdEeFf
+                  # - objectId: AaBbCc
+                  # - objectId: DdEeFf
                 someAppObjectsInclude:  # What app objects should be included in monitoring?
                                         # Only applicable if allAppObjects is set to false.
-                  - objectId: YJEpPT    
+                  # - objectId: YJEpPT    
               method: 
                 allMethods: true        # Should all methods be monitored?
                 allMethodsExclude:      # If allMethods is set to true, the methods in this array are excluded from monitoring.
                                         # someMethodsInclude (below) is ignored in that case.
-                  - Global::OpenApp
-                  - Doc::GetAppLayout
-                  - Doc::CreateSessionObject
+                  # - Global::OpenApp
+                  # - Doc::GetAppLayout
+                  # - Doc::CreateSessionObject
                 someMethodsInclude:     # What methods should be included in monitoring?
                                         # Only applicable if allMethods is set to false.
-                  - GenericObject::GetLayout
-                  - GenericObject::GetHyperCubeContinuousData
+                  # - GenericObject::GetLayout
+                  # - GenericObject::GetHyperCubeContinuousData
     sendToMQTT:
       enable: false                    # Should log events be sent as MQTT messages?
       baseTopic: qliksense/logevent    # What topic should log events be forwarded to? 

@@ -10,14 +10,14 @@ export class UdpEvents {
 
         // Array of objects with log events
         // Each object has properties:
-        // - eventName: string
+        // - source: string
         // - subsystem: string
         // - counter: integer
         this.logEvents = [];
 
         // Array of objects with user events
         // Each object has properties:
-        // - eventName: string
+        // - source: string
         // - counter: integer
         this.userEvents = [];
 
@@ -34,12 +34,12 @@ export class UdpEvents {
     // Add a log event of any type
     async addLogEvent(event) {
         // Ensure the passed event is an object with properties:
-        // - eventName: string
+        // - source: string
         // - host: string
         // - subsystem: string
-        if (!event.eventName || !event.subsystem || !event.host) {
+        if (!event.source || !event.subsystem || !event.host) {
             this.logger.error(
-                `LOG EVENT TRACKER: Log event object must have properties "eventName", "subsystem" and "host": ${JSON.stringify(
+                `LOG EVENT TRACKER: Log event object must have properties "source", "subsystem" and "host": ${JSON.stringify(
                     event
                 )}`
             );
@@ -51,7 +51,7 @@ export class UdpEvents {
         try {
             const found = this.logEvents.find((element) => {
                 return (
-                    element.eventName === event.eventName &&
+                    element.source === event.source &&
                     element.subsystem === event.subsystem &&
                     element.host === event.host
                 );
@@ -68,7 +68,7 @@ export class UdpEvents {
                 );
 
                 this.logEvents.push({
-                    eventName: event.eventName,
+                    source: event.source,
                     host: event.host,
                     subsystem: event.subsystem,
                     counter: 1,
@@ -82,12 +82,12 @@ export class UdpEvents {
     // Add a user event
     async addUserEvent(event) {
         // Ensure the passed event is an object with properties:
-        // - eventName: string
+        // - source: string
         // - host: string
         // - subsystem: string
-        if (!event.eventName || !event.subsystem || !event.host) {
+        if (!event.source || !event.subsystem || !event.host) {
             this.logger.error(
-                `USER EVENT TRACKER: User event object must have properties "eventName", "subsystem" and "host": ${JSON.stringify(
+                `USER EVENT TRACKER: User event object must have properties "source", "subsystem" and "host": ${JSON.stringify(
                     event
                 )}`
             );
@@ -99,7 +99,7 @@ export class UdpEvents {
         try {
             const found = this.userEvents.find((element) => {
                 return (
-                    element.eventName === event.eventName &&
+                    element.source === event.source &&
                     element.subsystem === event.subsystem &&
                     element.host === event.host
                 );
@@ -116,7 +116,7 @@ export class UdpEvents {
                 );
 
                 this.userEvents.push({
-                    eventName: event.eventName,
+                    source: event.source,
                     host: event.host,
                     subsystem: event.subsystem,
                     counter: 1,
@@ -154,16 +154,16 @@ export class UdpEvents {
     // Butler SOS due to some reason, e.g. matching the exclude filter criteria in the config file.
     async addRejectedLogEvent(event) {
         // Ensure the passed event is an object with properties:
-        // - eventName: string
+        // - source: string
         //
         // Pertformance log events also have these properties:
         // - appId: string
         // - method: string)
         // - objectType: string)
         // - processTime: float)
-        if (!event.eventName) {
+        if (!event.source) {
             this.logger.error(
-                `REJECTED EVENT: Log event object must have property "eventName": ${JSON.stringify(
+                `REJECTED EVENT: Log event object must have property "source": ${JSON.stringify(
                     event
                 )}`
             );
@@ -172,11 +172,11 @@ export class UdpEvents {
 
         const release = await this.rejectedLogMutex.acquire();
         // Is this a performance log event?
-        if (event.eventName === 'qseow-qix-perf') {
+        if (event.source === 'qseow-qix-perf') {
             try {
                 const found = this.rejectedLogEvents.find((element) => {
                     return (
-                        element.eventName === event.eventName &&
+                        element.source === event.source &&
                         element.appId === event.appId &&
                         element.appName === event.appName &&
                         element.method === event.method &&
@@ -196,7 +196,7 @@ export class UdpEvents {
                     );
 
                     this.rejectedLogEvents.push({
-                        eventName: event.eventName,
+                        source: event.source,
                         appId: event.appId,
                         appName: event.appName,
                         method: event.method,
@@ -211,7 +211,7 @@ export class UdpEvents {
         } else {
             try {
                 const found = this.rejectedLogEvents.find((element) => {
-                    return element.eventName === event.eventName;
+                    return element.source === event.source;
                 });
 
                 if (found) {
@@ -225,7 +225,7 @@ export class UdpEvents {
                     );
 
                     this.rejectedLogEvents.push({
-                        eventName: event.eventName,
+                        source: event.source,
                         counter: 1,
                     });
                 }

@@ -333,7 +333,7 @@ class Settings {
         }
 
         // ------------------------------------
-        // Track user events and log events
+        // Track user events and log event counts
         if (this.config.get('Butler-SOS.qlikSenseEvents.eventCount.enable') === true) {
             this.udpEvents = new UdpEvents(this.logger);
         } else {
