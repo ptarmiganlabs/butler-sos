@@ -79,6 +79,45 @@ export class UdpEvents {
         }
     }
 
+    // Clear log events
+    async clearLogEvents() {
+        const release = await this.logMutex.acquire();
+
+        try {
+            this.logEvents = [];
+
+            this.logger.debug('LOG EVENT TRACKER: Cleared all log events');
+        } finally {
+            release();
+        }
+    }
+
+    // Clear rejected events
+    async clearRejectedEvents() {
+        const release = await this.rejectedLogMutex.acquire();
+
+        try {
+            this.rejectedLogEvents = [];
+
+            this.logger.debug('REJECTED EVENT: Cleared all rejected events');
+        } finally {
+            release();
+        }
+    }
+
+    // Clear user events
+    async clearUserEvents() {
+        const release = await this.userMutex.acquire();
+
+        try {
+            this.userEvents = [];
+
+            this.logger.debug('USER EVENT TRACKER: Cleared all user events');
+        } finally {
+            release();
+        }
+    }
+
     // Add a user event
     async addUserEvent(event) {
         // Ensure the passed event is an object with properties:
@@ -133,6 +172,16 @@ export class UdpEvents {
 
         try {
             return this.logEvents;
+        } finally {
+            release();
+        }
+    }
+
+    // Get rejected log events
+    async getRejectedLogEvents() {
+        const release = await this.rejectedLogMutex.acquire();
+        try {
+            return this.rejectedLogEvents;
         } finally {
             release();
         }
@@ -234,29 +283,6 @@ export class UdpEvents {
             }
         }
     }
-
-    // Get rejected log events
-    async getRejectedLogEvents() {
-        const release = await this.rejectedLogMutex.acquire();
-        try {
-            return this.rejectedLogEvents;
-        } finally {
-            release();
-        }
-    }
-
-    // Clear rejected events
-    async clearRejectedEvents() {
-        const releaseLog = await this.rejectedLogMutex.acquire();
-
-        try {
-            this.rejectedLogEvents = [];
-
-            this.logger.debug('REJECTED EVENT: Cleared all rejected events');
-        } finally {
-            releaseLog();
-        }
-    }
 }
 
 export function setupUdpEventsStorage() {
@@ -268,13 +294,22 @@ export function setupUdpEventsStorage() {
         return;
     } else {
         // Configure timer for storing event counts to InfluxDB
-        setInterval(() => {
+        setInterval(async () => {
             globals.logger.verbose(
                 'EVENT COUNTS: Timer for storing event counts to InfluxDB triggered'
             );
 
-            storeRejectedEventCountInfluxDB();
-            storeEventCountInfluxDB();
+            // Store log and user event counts
+            await storeEventCountInfluxDB();
+
+            // Store rejected event counts
+            await storeRejectedEventCountInfluxDB();
+
+            // Clear event counts
+            globals.logger.debug('clearing event counters');
+            await globals.rejectedEvents.clearRejectedEvents();
+            await globals.udpEvents.clearLogEvents();
+            await globals.udpEvents.clearUserEvents();
         }, globals.config.get('Butler-SOS.qlikSenseEvents.influxdb.writeFrequency'));
     }
 }
