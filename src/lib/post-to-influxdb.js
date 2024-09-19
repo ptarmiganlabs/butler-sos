@@ -993,16 +993,16 @@ export async function postLogEventToInfluxdb(msg) {
                     };
                 } else if (msg.source === 'qseow-qix-perf') {
                     tags = {
-                        host: msg.host,
-                        level: msg.level,
-                        source: msg.source,
-                        log_row: msg.log_row,
-                        subsystem: msg.subsystem,
-                        method: msg.method,
-                        object_type: msg.object_type,
-                        proxy_session_id: msg.proxy_session_id,
-                        session_id: msg.session_id,
-                        event_activity_source: msg.event_activity_source,
+                        host: msg.host?.length > 0 ? msg.host : '<Unknown>',
+                        level: msg.level?.length > 0 ? msg.level : '<Unknown>',
+                        source: msg.source?.length > 0 ? msg.source : '<Unknown>',
+                        log_row: msg.log_row?.length > 0 ? msg.log_row : '-1',
+                        subsystem: msg.subsystem?.length > 0 ? msg.subsystem : '<Unknown>',
+                        method: msg.method?.length > 0 ? msg.method : '<Unknown>',
+                        object_type: msg.object_type?.length > 0 ? msg.object_type : '<Unknown>',
+                        proxy_session_id: msg.proxy_session_id?.length > 0 ? msg.proxy_session_id : '-1',
+                        session_id: msg.session_id?.length > 0 ? msg.session_id : '-1',
+                        event_activity_source: msg.event_activity_source?.length > 0 ? msg.event_activity_source : '<Unknown>',
                     };
 
                     // Tags that are empty in some cases. Only add if they are non-empty
@@ -1321,6 +1321,13 @@ export async function storeEventCountInfluxDB() {
     const logEvents = await globals.udpEvents.getLogEvents();
     const userEvents = await globals.udpEvents.getUserEvents();
 
+    // Debug
+    globals.logger.debug(`EVENT COUNT INFLUXDB: Log events: ${JSON.stringify(logEvents, null, 2)}`);
+
+    globals.logger.debug(
+        `EVENT COUNT INFLUXDB: User events: ${JSON.stringify(userEvents, null, 2)}`
+    );
+
     // InfluxDB 1.x
     if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
         const points = [];
@@ -1527,6 +1534,15 @@ export async function storeRejectedEventCountInfluxDB() {
     // Get array of rejected log events
     const rejectedLogEvents = await globals.rejectedEvents.getRejectedLogEvents();
 
+    // Debug
+    globals.logger.debug(
+        `REJECTED EVENT COUNT INFLUXDB: Rejected log events: ${JSON.stringify(
+            rejectedLogEvents,
+            null,
+            2
+        )}`
+    );
+
     // InfluxDB 1.x
     if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
         const points = [];
@@ -1555,8 +1571,8 @@ export async function storeRejectedEventCountInfluxDB() {
                 };
 
                 // Tags that are empty in some cases. Only add if they are non-empty
-                if (msg?.app_name?.length > 0) {
-                    tags.app_name = msg.app_name;
+                if (event?.appName?.length > 0) {
+                    tags.app_name = event.appName;
                     tags.app_name_set = 'true';
                 } else {
                     tags.app_name_set = 'false';
