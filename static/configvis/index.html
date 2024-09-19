@@ -35,22 +35,29 @@
                 text-align: right;
             }
             #logo,
-            #pageTitle,
+            /* #pageTitle, */
             #buttons {
                 display: flex;
                 align-items: center; /* Center align the contents of logo and buttons */
             }
             #logo {
                 /* Ensure there's no right margin or padding that could push the title to the right */
+                margin-top: 10px;
                 margin-right: 0;
                 padding-right: 0;
             }
-            #pageTitle h1 {
+            #pageTitle h1, #pageTitle h2 {
+                display: block; /* Display as block element */ 
                 text-align: left; /* Align the title to the left */
                 margin: 0; /* Remove default margin */
                 padding-left: 20px; /* Add some space between the logo and the title */
-                font-size: 32px; /* Adjust font size as needed */
                 font-family: Arial, sans-serif; /* Use Arial font */
+            }
+            #pageTitle h1 {
+                font-size: 32px; /* Adjust font size as needed */
+            }
+            #pageTitle h2 {
+                font-size: 20px; /* Adjust font size as needed */
             }
             #buttons {
                 justify-content: flex-end;
@@ -77,9 +84,8 @@
             }
 
             body {
-                padding-top: 100px; /* Add padding to the top of the body to prevent content from being hidden behind the fixed header */
+                padding-top: 90px; /* Add padding to the top of the body to prevent content from being hidden behind the fixed header */
             }
-
             /* Style the tab */
             .tab {
                 overflow: hidden;
@@ -140,13 +146,15 @@
                 </div>
                 <div id="pageTitle">
                     <h1>
-                        Current Butler SOS configuration (docs
-                        <a
-                            href="https://butler-sos.ptarmiganlabs.com/docs/reference/config_file_format/"
-                            target="_blank"
-                            >here</a
-                        >)
+                        Current Butler SOS configuration
                     </h1>
+                    <h2>
+                        Config file docs 
+                        <a
+                        href="https://butler-sos.ptarmiganlabs.com/docs/reference/config_file_format/"
+                        target="_blank"
+                        >here</a>
+                    </h2>
                 </div>
             </div>
             <div id="headerRight">
@@ -162,7 +170,7 @@
                                 width: 32px;
                             "
                         />
-                        Download obfuscated YAML
+                        Download YAML
                     </button>
                 </div>
                 <!-- Tab links -->

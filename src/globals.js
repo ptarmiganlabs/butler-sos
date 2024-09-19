@@ -333,7 +333,7 @@ class Settings {
         }
 
         // ------------------------------------
-        // Track user events and log events
+        // Track user events and log event counts
         if (this.config.get('Butler-SOS.qlikSenseEvents.eventCount.enable') === true) {
             this.udpEvents = new UdpEvents(this.logger);
         } else {
@@ -409,6 +409,14 @@ class Settings {
         tagValuesLogEvent.push('result_code');
         tagValuesLogEvent.push('windows_user');
         tagValuesLogEvent.push('engine_exe_version');
+
+        // Performance log event tags
+        tagValuesLogEvent.push('method');
+        tagValuesLogEvent.push('object_type');
+        tagValuesLogEvent.push('proxy_session_id');
+        tagValuesLogEvent.push('session_id');
+        tagValuesLogEvent.push('event_activity_source');
+        tagValuesLogEvent.push('object_id');
 
         // Check if there are any extra log event tags in the config file
         if (
@@ -615,6 +623,16 @@ class Settings {
                                 context: Influx.FieldType.STRING,
                                 session_id: Influx.FieldType.STRING,
                                 raw_event: Influx.FieldType.STRING,
+
+                                // engine performance fields
+                                process_time: Influx.FieldType.FLOAT,
+                                work_time: Influx.FieldType.FLOAT,
+                                lock_time: Influx.FieldType.FLOAT,
+                                validate_time: Influx.FieldType.FLOAT,
+                                traverse_time: Influx.FieldType.FLOAT,
+                                handle: Influx.FieldType.INTEGER,
+                                net_ram: Influx.FieldType.INTEGER,
+                                peak_ram: Influx.FieldType.INTEGER,
                             },
                             tags: tagValuesLogEvent,
                         },
@@ -740,7 +758,7 @@ class Settings {
             const dbName = this.config.get('Butler-SOS.influxdbConfig.v1Config.dbName');
 
             if (
-                influx &&
+                this.influx &&
                 this.config.get('Butler-SOS.influxdbConfig.enable') === true &&
                 dbName?.length > 0
             ) {

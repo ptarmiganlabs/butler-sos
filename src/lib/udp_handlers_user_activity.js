@@ -82,7 +82,7 @@ export function udpInitUserActivityServer() {
                 if (globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.enable') === true) {
                     // Increase counter for log events
                     await globals.udpEvents.addUserEvent({
-                        eventName: 'Unknown',
+                        source: 'Unknown',
                         host: 'Unknown',
                         subsystem: 'Unknown',
                     });
@@ -99,12 +99,12 @@ export function udpInitUserActivityServer() {
                 );
 
                 // Increase counter for user events
-                // Make eventName lower case, also remove leading and trailing /
-                let eventName = msg[0].toLowerCase().replace('/', '');
-                eventName = eventName.replace('/', '');
+                // Make source lower case, also remove leading and trailing /
+                let source = msg[0].toLowerCase().replace('/', '');
+                source = source.replace('/', '');
 
                 await globals.udpEvents.addUserEvent({
-                    eventName,
+                    source,
                     host: msg[1],
                     subsystem: msg[5],
                 });

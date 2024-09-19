@@ -22,10 +22,30 @@ function configObfuscate(config) {
             accountId: element.accountId.toString().substring(0, 3) + '*'.repeat(10),
         }));
 
-        // Obfuscate Butler-SOS.iuserEvents.udpServerConfig.serverHost, keep first 3 chars, mask the rest with *
+        // Obfuscate Butler-SOS.userEvents.udpServerConfig.serverHost, keep first 3 chars, mask the rest with *
         obfuscatedConfig['Butler-SOS'].userEvents.udpServerConfig.serverHost =
             obfuscatedConfig['Butler-SOS'].userEvents.udpServerConfig.serverHost.substring(0, 3) +
             '*'.repeat(10);
+
+        // Obfuscate Butler-SOS.logEvents.enginePerformanceMonitor.monitorFilter.appSpecific.app[].include[], which is an array of objects, each with the following properties:
+        // - appId: keep first 5 chars, mask the rest with *
+        // - appName: keep first 5 chars, mask the rest with *
+        obfuscatedConfig[
+            'Butler-SOS'
+        ].logEvents.enginePerformanceMonitor.monitorFilter.appSpecific.app.forEach((element) => {
+            element.include = element.include.map((includeElement) => {
+                if (includeElement.appId) {
+                    includeElement.appId = includeElement.appId.substring(0, 5) + '*'.repeat(10);
+                }
+
+                if (includeElement.appName) {
+                    includeElement.appName =
+                        includeElement.appName.substring(0, 5) + '*'.repeat(10);
+                }
+
+                return includeElement;
+            });
+        });
 
         // Obfuscate Butler-SOS.iuserEvents.sendToMQTT.postTo.everythingTopic.topic, keep first 10 chars, mask the rest with *
         obfuscatedConfig['Butler-SOS'].userEvents.sendToMQTT.postTo.everythingTopic.topic =

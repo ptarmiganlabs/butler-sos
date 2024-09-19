@@ -11,6 +11,8 @@ const callRemoteURL = async function reportTelemetry() {
         let dockerHealthCheck = false;
         let uptimeMonitor = false;
         let uptimeMonitorNewRelic = false;
+        let eventCountEnable = false;
+        let rejectedEventCountEnable = false;
         let userEventsEnable = false;
         let userEventsMQTTEnable = false;
         let userEventsInfluxDBEnable = false;
@@ -21,6 +23,9 @@ const callRemoteURL = async function reportTelemetry() {
         let logEventCategoriseEnable = false;
         let logEventCategoriseRuleCount = 0;
         let logEventCategoriseRuleDefaultEnable = false;
+        let logEventEnginePerformanceMonitorEnable = false;
+        let logEventEnginePerformanceMonitorNameLookupEnable = false;
+        let logEventEnginePerformanceMonitorTrackRejectedEnable = false;
         let logEventsMQTTEnable = false;
         let logEventsInfluxDBEnable = false;
         let logEventsNewRelicEnable = false;
@@ -47,6 +52,14 @@ const callRemoteURL = async function reportTelemetry() {
 
         if (globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.enable') === true) {
             uptimeMonitorNewRelic = true;
+        }
+
+        if (globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.enable') === true) {
+            eventCountEnable = true;
+        }
+
+        if (globals.config.get('Butler-SOS.qlikSenseEvents.rejectedEventCount.enable') === true) {
+            rejectedEventCountEnable = true;
         }
 
         if (globals.config.get('Butler-SOS.userEvents.enable') === true) {
@@ -104,6 +117,26 @@ const callRemoteURL = async function reportTelemetry() {
             logEventCategoriseRuleDefaultEnable = true;
         }
 
+        if (globals.config.get('Butler-SOS.logEvents.enginePerformanceMonitor.enable') === true) {
+            logEventEnginePerformanceMonitorEnable = true;
+        }
+
+        if (
+            globals.config.get(
+                'Butler-SOS.logEvents.enginePerformanceMonitor.appNameLookup.enable'
+            ) === true
+        ) {
+            logEventEnginePerformanceMonitorNameLookupEnable = true;
+        }
+
+        if (
+            globals.config.get(
+                'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.enable'
+            ) === true
+        ) {
+            logEventEnginePerformanceMonitorTrackRejectedEnable = true;
+        }
+
         if (globals.config.get('Butler-SOS.logdb.enable') === true) {
             logdbEnable = true;
         }
@@ -157,19 +190,30 @@ const callRemoteURL = async function reportTelemetry() {
                 feature_uptimeMonitor: uptimeMonitor,
                 feature_uptimeMonitor_storeNewRelic: uptimeMonitorNewRelic,
                 feature_udpServer: globals.config.get('Butler-SOS.userEvents.enable'),
+
+                feature_eventCount: eventCountEnable,
+                feature_rejectedEventCount: rejectedEventCountEnable,
+
                 feature_userEvents: userEventsEnable,
                 feature_userEventsMQTT: userEventsMQTTEnable,
                 feature_userEventsInfluxdb: userEventsInfluxDBEnable,
                 feature_userEventsNewRelic: userEventsNewRelicEnable,
+
                 feature_logEventsProxy: logEventsProxyEnable,
                 feature_logEventsScheduler: logEventsSchedulerEnable,
                 feature_logEventsRepository: logEventsRepositoryEnable,
                 feature_logEventCategorise: logEventCategoriseEnable,
                 feature_logEventCategoriseRuleCount: logEventCategoriseRuleCount,
                 feature_logEventCategoriseRuleDefault: logEventCategoriseRuleDefaultEnable,
+                feature_logEventEnginePerformanceMonitor: logEventEnginePerformanceMonitorEnable,
+                feature_logEventEnginePerformanceMonitorNameLookup:
+                    logEventEnginePerformanceMonitorNameLookupEnable,
+                feature_logEventEnginePerformanceMonitorTrackRejected:
+                    logEventEnginePerformanceMonitorTrackRejectedEnable,
                 feature_logEventsMQTT: logEventsMQTTEnable,
                 feature_logEventsInfluxdb: logEventsInfluxDBEnable,
                 feature_logEventsNewRelic: logEventsNewRelicEnable,
+
                 feature_logdb: logdbEnable,
                 feature_mqtt: mqttEnable,
                 feature_newRelic: newRelicEnable,
@@ -198,6 +242,8 @@ const callRemoteURL = async function reportTelemetry() {
                             uptimeMonitor,
                             uptimeMonitorNewRelic,
                             udpServer: globals.config.get('Butler-SOS.userEvents.enable'),
+                            eventCount: eventCountEnable,
+                            rejectedEventCount: rejectedEventCountEnable,
                             userEvents: userEventsEnable,
                             userEventsMQTT: userEventsMQTTEnable,
                             userEventsInfluxdb: userEventsInfluxDBEnable,
@@ -208,6 +254,12 @@ const callRemoteURL = async function reportTelemetry() {
                             logEventCategorise: logEventCategoriseEnable,
                             logEventCategoriseRuleCount,
                             logEventCategoriseRuleDefault: logEventCategoriseRuleDefaultEnable,
+                            logEventEnginePerformanceMonitor:
+                                logEventEnginePerformanceMonitorEnable,
+                            logEventEnginePerformanceMonitorNameLookup:
+                                logEventEnginePerformanceMonitorNameLookupEnable,
+                            logEventEnginePerformanceMonitorTrackRejected:
+                                logEventEnginePerformanceMonitorTrackRejectedEnable,
                             logEventsMQTT: logEventsMQTTEnable,
                             logEventsInfluxdb: logEventsInfluxDBEnable,
                             logEventsNewRelic: logEventsNewRelicEnable,
@@ -246,7 +298,9 @@ const callRemoteURL = async function reportTelemetry() {
         );
         globals.logger.error('❤️  Thank you for supporting Butler SOS by allowing telemetry! ❤️');
         globals.logger.error('');
-        globals.logger.error(JSON.stringify(err, null, 2));
+        if (err.message) {
+            globals.logger.error(`TELEMETRY: ${err.message}`);
+        }
     }
 };
 

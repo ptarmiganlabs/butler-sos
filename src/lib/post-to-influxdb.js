@@ -993,16 +993,16 @@ export async function postLogEventToInfluxdb(msg) {
                     };
                 } else if (msg.source === 'qseow-qix-perf') {
                     tags = {
-                        host: msg.host,
-                        level: msg.level,
-                        source: msg.source,
-                        log_row: msg.log_row,
-                        subsystem: msg.subsystem,
-                        method: msg.method,
-                        object_type: msg.object_type,
-                        proxy_session_id: msg.proxy_session_id,
-                        session_id: msg.session_id,
-                        event_activity_source: msg.event_activity_source,
+                        host: msg.host?.length > 0 ? msg.host : '<Unknown>',
+                        level: msg.level?.length > 0 ? msg.level : '<Unknown>',
+                        source: msg.source?.length > 0 ? msg.source : '<Unknown>',
+                        log_row: msg.log_row?.length > 0 ? msg.log_row : '-1',
+                        subsystem: msg.subsystem?.length > 0 ? msg.subsystem : '<Unknown>',
+                        method: msg.method?.length > 0 ? msg.method : '<Unknown>',
+                        object_type: msg.object_type?.length > 0 ? msg.object_type : '<Unknown>',
+                        proxy_session_id: msg.proxy_session_id?.length > 0 ? msg.proxy_session_id : '-1',
+                        session_id: msg.session_id?.length > 0 ? msg.session_id : '-1',
+                        event_activity_source: msg.event_activity_source?.length > 0 ? msg.event_activity_source : '<Unknown>',
                     };
 
                     // Tags that are empty in some cases. Only add if they are non-empty
@@ -1321,6 +1321,13 @@ export async function storeEventCountInfluxDB() {
     const logEvents = await globals.udpEvents.getLogEvents();
     const userEvents = await globals.udpEvents.getUserEvents();
 
+    // Debug
+    globals.logger.debug(`EVENT COUNT INFLUXDB: Log events: ${JSON.stringify(logEvents, null, 2)}`);
+
+    globals.logger.debug(
+        `EVENT COUNT INFLUXDB: User events: ${JSON.stringify(userEvents, null, 2)}`
+    );
+
     // InfluxDB 1.x
     if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
         const points = [];
@@ -1337,7 +1344,7 @@ export async function storeEventCountInfluxDB() {
                 measurement: measurementName,
                 tags: {
                     event_type: 'log',
-                    event_name: event.eventName,
+                    source: event.source,
                     host: event.host,
                     subsystem: event.subsystem,
                 },
@@ -1371,7 +1378,7 @@ export async function storeEventCountInfluxDB() {
                 measurement: measurementName,
                 tags: {
                     event_type: 'user',
-                    event_name: event.eventName,
+                    source: event.source,
                     host: event.host,
                     subsystem: event.subsystem,
                 },
@@ -1451,7 +1458,7 @@ export async function storeEventCountInfluxDB() {
             for (const event of logEvents) {
                 const point = new Point(measurementName)
                     .tag('event_type', 'log')
-                    .tag('event_name', event.eventName)
+                    .tag('source', event.source)
                     .tag('host', event.host)
                     .tag('subsystem', event.subsystem)
                     .intField('counter', event.counter);
@@ -1480,7 +1487,7 @@ export async function storeEventCountInfluxDB() {
             for (const event of userEvents) {
                 const point = new Point(measurementName)
                     .tag('event_type', 'user')
-                    .tag('event_name', event.eventName)
+                    .tag('source', event.source)
                     .tag('host', event.host)
                     .tag('subsystem', event.subsystem)
                     .intField('counter', event.counter);
@@ -1527,6 +1534,15 @@ export async function storeRejectedEventCountInfluxDB() {
     // Get array of rejected log events
     const rejectedLogEvents = await globals.rejectedEvents.getRejectedLogEvents();
 
+    // Debug
+    globals.logger.debug(
+        `REJECTED EVENT COUNT INFLUXDB: Rejected log events: ${JSON.stringify(
+            rejectedLogEvents,
+            null,
+            2
+        )}`
+    );
+
     // InfluxDB 1.x
     if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
         const points = [];
@@ -1541,22 +1557,22 @@ export async function storeRejectedEventCountInfluxDB() {
         //
         // Use counter and process_time as fields
         for (const event of rejectedLogEvents) {
-            if (event.eventName === 'qseow-qix-perf') {
-                // For each unique combination of eventName, appId, appName, .method and objectType,
+            if (event.source === 'qseow-qix-perf') {
+                // For each unique combination of source, appId, appName, .method and objectType,
                 // write the counter and processTime properties to InfluxDB
                 //
-                // Use eventName, appId,appName,  method and objectType as tags
+                // Use source, appId,appName,  method and objectType as tags
 
                 const tags = {
-                    event_name: event.eventName,
+                    source: event.source,
                     app_id: event.appId,
                     method: event.method,
                     object_type: event.objectType,
                 };
 
                 // Tags that are empty in some cases. Only add if they are non-empty
-                if (msg?.app_name?.length > 0) {
-                    tags.app_name = msg.app_name;
+                if (event?.appName?.length > 0) {
+                    tags.app_name = event.appName;
                     tags.app_name_set = 'true';
                 } else {
                     tags.app_name_set = 'false';
@@ -1598,7 +1614,7 @@ export async function storeRejectedEventCountInfluxDB() {
                 const point = {
                     measurement: measurementName,
                     tags: {
-                        event_name: event.eventName,
+                        source: event.source,
                     },
                     fields: {
                         counter: event.counter,
@@ -1664,13 +1680,13 @@ export async function storeRejectedEventCountInfluxDB() {
             //
             // Use counter and process_time as fields
             for (const event of rejectedLogEvents) {
-                if (event.eventName === 'qseow-qix-perf') {
-                    // For each unique combination of eventName, appId, appName, .method and objectType,
+                if (event.source === 'qseow-qix-perf') {
+                    // For each unique combination of source, appId, appName, .method and objectType,
                     // write the counter and processTime properties to InfluxDB
                     //
-                    // Use eventName, appId,appName,  method and objectType as tags
+                    // Use source, appId,appName,  method and objectType as tags
                     let point = new Point(measurementName)
-                        .tag('event_name', event.eventName)
+                        .tag('source', event.source)
                         .tag('app_id', event.appId)
                         .tag('method', event.method)
                         .tag('object_type', event.objectType)
@@ -1706,7 +1722,7 @@ export async function storeRejectedEventCountInfluxDB() {
                     points.push(point);
                 } else {
                     let point = new Point(measurementName)
-                        .tag('event_name', event.eventName)
+                        .tag('source', event.source)
                         .intField('counter', event.counter);
 
                     points.push(point);
