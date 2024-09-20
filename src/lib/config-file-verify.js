@@ -1,43 +1,61 @@
+import { load } from 'js-yaml';
+import fs from 'fs/promises';
+import { default as Ajv } from 'ajv';
+
 import globals from '../globals.js';
 import { confifgFileSchema } from './config-file-schema.js';
 
 // Function to verify that the config file has the correct format
 // Use yaml-validator to validate the config file
 export async function verifyConfigFile() {
-    //
     try {
-        // Dynamically load yaml-validator
-        const YamlValidator = (await import('yaml-validator')).default;
+        const ajv = new Ajv({
+            strict: true,
+            async: true,
+            allErrors: true,
+        });
 
-        // Options for yaml-validator
-        const verifyOptions = {
-            onWarning(error, filepath) {
-                globals.logger.warn(`${filepath} has error: ${error}`);
-            },
-            log: false,
-            structure: confifgFileSchema,
-            writeJson: false,
-        };
+        // Dynamically import ajv-keywords
+        const ajvKeywords = await import('ajv-keywords');
 
-        // Create a new instance of yaml-validator
-        const validator = new YamlValidator(verifyOptions);
+        // Add keywords to ajv instance
+        ajvKeywords.default(ajv);
 
-        // File names to validate in array
-        const files = [globals.configFile];
+        // Dynamically import ajv-formats
+        const ajvFormats = await import('ajv-formats');
 
-        // Verify the config file
-        validator.validate(files);
+        // Add formats to ajv instance
+        ajvFormats.default(ajv);
 
-        // Exit app if there are errors in the config file's structure
-        if (validator.logs.length > 0) {
-            globals.logger.verbose(`VERIFY CONFIG FILE: Logs length: ${validator.logs.length}`);
-            globals.logger.verbose(validator.logs);
+        // Load the YAML schema file, identified by globals.configFile, from file
+        const fileContent = await fs.readFile(globals.configFile, 'utf8');
 
-            globals.logger.error(`VERIFY CONFIG FILE: Errors found in config file. Exiting.`);
-            globals.logger.error(
-                `Tip: Start Butler SOS with --no-config-file-verify option to skip this check and start with provided config file. `
-            );
-            globals.logger.error(`${validator.logs}`);
+        // Parse the YAML file
+        let parsedFileContent;
+        try {
+            parsedFileContent = load(fileContent);
+        } catch (err) {
+            throw new Error(`VERIFY CONFIG FILE: Error parsing YAML file: ${err}`);
+        }
+
+        // Validate the parsed YAML file against the schema
+        const validate = ajv.compile(confifgFileSchema);
+        const valid = await validate(parsedFileContent);
+
+        if (!valid) {
+            // Log the errors in validate.errors[] and exit
+            // Each object in the error array has the following properties:
+            // - instancePath: Textual path to the part of the data that triggered the error
+            // - schemaPath: A JSON Pointer to the part of the schema that triggered the error
+            // - keyword: The validation keyword that failed
+            // - params: The parameters for the keyword
+            // - message: The error message
+
+            for (const error of validate.errors) {
+                globals.logger.error(
+                    `VERIFY CONFIG FILE: ${error.instancePath} : ${error.message}`
+                );
+            }
 
             process.exit(1);
         }

@@ -352,28 +352,6 @@ class Settings {
         // Get info on what servers to monitor
         this.serverList = this.config.get('Butler-SOS.serversToMonitor.servers');
 
-        // Only set up connection pool for accessing Qlik Sense log db if that feature is enabled
-        this.pgPool;
-        if (this.config.get('Butler-SOS.logdb.enable') === true) {
-            const { Pool } = pg;
-
-            // Set up connection pool for accessing Qlik Sense log db
-            this.pgPool = new Pool({
-                host: this.config.get('Butler-SOS.logdb.host'),
-                database: 'QLogs',
-                user: this.config.get('Butler-SOS.logdb.qlogsReaderUser'),
-                password: this.config.get('Butler-SOS.logdb.qlogsReaderPwd'),
-                port: this.config.get('Butler-SOS.logdb.port'),
-            });
-
-            // the pool will emit an error on behalf of any idle clients
-            // it contains if a backend error or network partition happens
-            this.pgPool.on('error', (err, client) => {
-                this.logger.error(`CONFIG: Unexpected error on idle client: ${err}`);
-                // process.exit(-1);
-            });
-        }
-
         // Get list of standard and user configurable tags
         // ..begin with standard tags
         const tagValues = ['host', 'server_name', 'server_description'];
@@ -460,11 +438,6 @@ class Settings {
                     });
             }
         }
-
-        // Create InfluxDB tags for data coming from log db
-        const tagValuesLogEventLogDb = tagValues.slice();
-        tagValuesLogEventLogDb.push('source_process');
-        tagValuesLogEventLogDb.push('log_level');
 
         // Create tags for user sessions
         const tagValuesUserProxySessions = tagValues.slice();
@@ -601,13 +574,6 @@ class Settings {
                                 bytes_added: Influx.FieldType.INTEGER,
                             },
                             tags: tagValues,
-                        },
-                        {
-                            measurement: 'log_event_logdb',
-                            fields: {
-                                message: Influx.FieldType.STRING,
-                            },
-                            tags: tagValuesLogEventLogDb,
                         },
                         {
                             measurement: 'log_event',
@@ -961,11 +927,7 @@ class Settings {
                 (item) => item.iface === defaultNetworkInterface
             );
 
-            const idSrc =
-                networkInterface[0].mac +
-                networkInterface[0].ip4 +
-                this.config.get('Butler-SOS.logdb.host') +
-                siSystem.uuid;
+            const idSrc = networkInterface[0].mac + networkInterface[0].ip4 + siSystem.uuid;
             const salt = networkInterface[0].mac;
             const hash = crypto.createHmac('sha256', salt);
             hash.update(idSrc);

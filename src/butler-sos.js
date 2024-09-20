@@ -14,7 +14,6 @@ promFastifyMetricsServer.register(metricsPlugin, { endpoint: '/metrics' });
 
 // Load code from sub modules
 import { setupHealthMetricsTimer } from './lib/healthmetrics.js';
-import { setupLogDbTimer } from './lib/logdb.js';
 import { setupUserSessionsTimer } from './lib/proxysessionmetrics.js';
 import { setupAppNamesExtractTimer } from './lib/appnamesextract.js';
 import { setupHeartbeatTimer } from './lib/heartbeat.js';
@@ -260,11 +259,6 @@ async function mainScript() {
             promFastifyMetricsServer.log.error(err);
             process.exit(1);
         }
-    }
-
-    // Set up extraction of data from log db
-    if (globals.config.get('Butler-SOS.logdb.enable') === true) {
-        setupLogDbTimer();
     }
 
     // Set up extraction of sessions data

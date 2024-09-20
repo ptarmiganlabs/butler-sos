@@ -352,22 +352,6 @@ Butler-SOS:
             error: true                # Should error level log events be handled by Butler SOS?
             warn: true                 # Should warning level log events be handled by Butler SOS?
 
-  # Qlik Sense logging db config parameters
-  logdb:
-    enable: false
-    # Items below are mandatory if logdb.enable=true
-    pollingInterval: 60000            # How often (milliseconds) should Postgres log db be queried for warnings and errors?
-    queryPeriod: 5 minutes            # How far back should Butler SOS query for log entries?
-    host: <IP or FQDN of Qlik Sense logging db>   # E.g. 10.5.23.7 or sense.mycompany.com
-    port: 4432                        # 4432 if using default Sense setup
-    qlogsReaderUser: qlogs_reader
-    qlogsReaderPwd: <pwd>
-    extractErrors: true               # Should error level entries be extracted from log db into Influxdb?
-    extractWarnings: true             # Should warn level entries be extracted from log db into Influxdb?
-    extractInfo: false                # Should info level entries be extracted from log db into Influxdb? 
-                                      # Warning! Seting this to true will result in LOTS of log messages 
-                                      # being retrrieved by Butler SOS!
-
   # Certificates to use when connecting to Sense. Get these from the Certificate Export in QMC.
   cert:
     clientCert: <path/to/cert/client.pem>
@@ -549,7 +533,6 @@ Butler-SOS:
       - host: <server1.my.domain>:4747        # Example: 10.34.3.45:4747
         serverName: <server1>
         serverDescription: <description>
-        logDbHost: <host name as used in QLogs db>
         userSessions:
           enable: true
           # Items below are mandatory if userSessions.enable=true
@@ -569,7 +552,6 @@ Butler-SOS:
       - host: <server2.my.domain>:4747        # Example: 10.34.3.46:4747
         serverName: <server2>
         serverDescription: <description>
-        logDbHost: <host name as used in QLogs db>
         userSessions:
           enable: true
           # Items below are mandatory if userSessions.enable=true
