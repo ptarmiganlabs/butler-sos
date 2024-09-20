@@ -16,7 +16,10 @@ export const confifgFileSchema = {
                     type: 'object',
                     properties: {
                         enable: { type: 'boolean' },
-                        host: { type: 'string' },
+                        host: {
+                            type: 'string',
+                            format: 'hostname',
+                        },
                         port: { type: 'number' },
                         obfuscate: { type: 'boolean' },
                     },
@@ -27,7 +30,10 @@ export const confifgFileSchema = {
                     type: 'object',
                     properties: {
                         enable: { type: 'boolean' },
-                        remoteURL: { type: 'string' },
+                        remoteURL: {
+                            type: 'string',
+                            format: 'uri',
+                        },
                         frequency: { type: 'string' },
                     },
                     required: ['enable', 'remoteURL', 'frequency'],
@@ -246,7 +252,10 @@ export const confifgFileSchema = {
                         udpServerConfig: {
                             type: 'object',
                             properties: {
-                                serverHost: { type: 'string' },
+                                serverHost: {
+                                    type: 'string',
+                                    format: 'hostname',
+                                },
                                 portUserActivityEvents: { type: 'number' },
                             },
                             required: ['serverHost', 'portUserActivityEvents'],
@@ -363,7 +372,10 @@ export const confifgFileSchema = {
                         udpServerConfig: {
                             type: 'object',
                             properties: {
-                                serverHost: { type: 'string' },
+                                serverHost: {
+                                    type: 'string',
+                                    format: 'hostname',
+                                },
                                 portLogEvents: { type: 'number' },
                             },
                             required: ['serverHost', 'portLogEvents'],
@@ -868,6 +880,7 @@ export const confifgFileSchema = {
                         clientCertCA: { type: 'string' },
                         clientCertPassphrase: {
                             type: ['string', 'null'],
+                            format: 'password',
                         },
                     },
                     required: ['clientCert', 'clientCertKey', 'clientCertCA'],
@@ -877,7 +890,10 @@ export const confifgFileSchema = {
                     type: 'object',
                     properties: {
                         enable: { type: 'boolean' },
-                        brokerHost: { type: 'string' },
+                        brokerHost: {
+                            type: 'string',
+                            format: 'hostname',
+                        },
                         brokerPort: { type: 'number' },
                         baseTopic: { type: 'string' },
                     },
@@ -891,7 +907,10 @@ export const confifgFileSchema = {
                         event: {
                             type: 'object',
                             properties: {
-                                url: { type: 'string' },
+                                url: {
+                                    type: 'string',
+                                    format: 'uri',
+                                },
                                 header: {
                                     type: ['array', 'null'],
                                     items: {
@@ -950,7 +969,10 @@ export const confifgFileSchema = {
                                         type: 'string',
                                     },
                                 },
-                                url: { type: 'string' },
+                                url: {
+                                    type: 'string',
+                                    format: 'uri',
+                                },
                                 header: {
                                     type: ['array', 'null'],
                                     items: {
@@ -1166,7 +1188,10 @@ export const confifgFileSchema = {
                     type: 'object',
                     properties: {
                         enable: { type: 'boolean' },
-                        host: { type: 'string' },
+                        host: {
+                            type: 'string',
+                            format: 'hostname',
+                        },
                         port: { type: 'number' },
                     },
                     required: ['enable', 'port'],
@@ -1176,7 +1201,10 @@ export const confifgFileSchema = {
                     type: 'object',
                     properties: {
                         enable: { type: 'boolean' },
-                        host: { type: 'string' },
+                        host: {
+                            type: 'string',
+                            format: 'hostname',
+                        },
                         port: { type: 'number' },
                         version: { type: 'number' },
                         v2Config: {
@@ -1205,7 +1233,10 @@ export const confifgFileSchema = {
                                     properties: {
                                         enable: { type: 'boolean' },
                                         username: { type: 'string' },
-                                        password: { type: 'string' },
+                                        password: {
+                                            type: 'string',
+                                            format: 'password',
+                                        },
                                     },
                                     required: ['enable', 'username', 'password'],
                                     additionalProperties: false,
@@ -1251,7 +1282,10 @@ export const confifgFileSchema = {
                     properties: {
                         enableAppNameExtract: { type: 'boolean' },
                         extractInterval: { type: 'number' },
-                        hostIP: { type: 'string' },
+                        hostIP: {
+                            type: 'string',
+                            format: 'hostname',
+                        },
                     },
                     required: ['enableAppNameExtract', 'extractInterval', 'hostIP'],
                     additionalProperties: false,

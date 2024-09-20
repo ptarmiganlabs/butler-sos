@@ -21,6 +21,12 @@ export async function verifyConfigFile() {
         // Add keywords to ajv instance
         ajvKeywords.default(ajv);
 
+        // Dynamically import ajv-formats
+        const ajvFormats = await import('ajv-formats');
+
+        // Add formats to ajv instance
+        ajvFormats.default(ajv);
+
         // Load the YAML schema file, identified by globals.configFile, from file
         const fileContent = await fs.readFile(globals.configFile, 'utf8');
 
