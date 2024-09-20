@@ -1,5 +1,22 @@
 # Changelog
 
+## [11.0.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v11.0.0...butler-sos-v11.0.1) (2024-09-20)
+
+
+### Bug Fixes
+
+* Remove leftover references to Postgress log db in the code ([1c3fbcc](https://github.com/ptarmiganlabs/butler-sos/commit/1c3fbcc147d1eef3e72a778d3783a99dca582a6e))
+
+
+### Miscellaneous
+
+* Remove Postgress dependency, as log db support has been discontinued ([94aea42](https://github.com/ptarmiganlabs/butler-sos/commit/94aea424416039afba0b6b3eb25f5d07aabc5543))
+
+
+### Documentation
+
+* Update README file badges ([0eb42c1](https://github.com/ptarmiganlabs/butler-sos/commit/0eb42c14f73e3d7778f62d24b55e95f9d4eb954e))
+
 ## [11.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v10.2.1...butler-sos-v11.0.0) (2024-09-20)
 
 
