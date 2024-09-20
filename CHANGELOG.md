@@ -1,5 +1,43 @@
 # Changelog
 
+## [11.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v10.2.1...butler-sos-v11.0.0) (2024-09-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* **log-db:** Remove support for getting logs from Sense log db
+* **config:** Make naming of InfluxDB tags consistent across entire config file
+
+### Features
+
+* **qix performance:** Add fine-grained performance monitoring for app objects ([818c702](https://github.com/ptarmiganlabs/butler-sos/commit/818c702a791f983506eb7d2c038e2f930b0b6299)), closes [#320](https://github.com/ptarmiganlabs/butler-sos/issues/320)
+* **qs-event:** Categorise events from Qlik Sense as user created or automated ([9c1bb5b](https://github.com/ptarmiganlabs/butler-sos/commit/9c1bb5bf2ec9f34a03c2ba80025ec408c6a856a0)), closes [#889](https://github.com/ptarmiganlabs/butler-sos/issues/889)
+* **qs-events:** Add counters for incoming Qlik Sense events ([e8d8a13](https://github.com/ptarmiganlabs/butler-sos/commit/e8d8a13e37ecafe3aa9a72b369619a62c3e26e40)), closes [#884](https://github.com/ptarmiganlabs/butler-sos/issues/884)
+
+
+### Bug Fixes
+
+* **config-vis:** Cosmetic changes to config visualisation web page ([5285967](https://github.com/ptarmiganlabs/butler-sos/commit/52859670d4f2a7e8827f321f856b442aa15a2d2f))
+* **config:** Make naming of InfluxDB tags consistent across entire config file ([0ed25d5](https://github.com/ptarmiganlabs/butler-sos/commit/0ed25d576cc19dc9368999a8a9ec170d3b7fb62a)), closes [#890](https://github.com/ptarmiganlabs/butler-sos/issues/890)
+* **config:** Validate hostname, url and pasword fields in config file. ([4a7671e](https://github.com/ptarmiganlabs/butler-sos/commit/4a7671e0cc97e123531f8c5fb515c8727b1a3e2f))
+* **docker:** Update sample docker-compose file wrt Butler SOS 11.0 ([7336fb7](https://github.com/ptarmiganlabs/butler-sos/commit/7336fb7881b2016ab8ec1c26b00ed3018c797191))
+
+
+### Miscellaneous
+
+* **deps:** Update dependencies ([6c4e02f](https://github.com/ptarmiganlabs/butler-sos/commit/6c4e02f0cc86e1010ef065b5cd40a01135ee9cef))
+
+
+### Refactoring
+
+* **log-db:** Remove support for getting logs from Sense log db ([6e7043b](https://github.com/ptarmiganlabs/butler-sos/commit/6e7043b7696744be61c1cfc5e774d9f3f2765e55)), closes [#860](https://github.com/ptarmiganlabs/butler-sos/issues/860)
+* Make config file verification more robust ([9be5d8a](https://github.com/ptarmiganlabs/butler-sos/commit/9be5d8a56028c8884f4cec384e5703c43509651e)), closes [#902](https://github.com/ptarmiganlabs/butler-sos/issues/902)
+
+
+### Documentation
+
+* Minor tweak ([2c1ffd3](https://github.com/ptarmiganlabs/butler-sos/commit/2c1ffd3d6aa4782f47a0a21783ff90a5957a5257))
+
 ## [10.2.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v10.2.0...butler-sos-v10.2.1) (2024-08-28)
 
 
