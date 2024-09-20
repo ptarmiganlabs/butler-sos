@@ -62,9 +62,9 @@
         "winston-daily-rotate-file": "^5.0.0"
     },
     "devDependencies": {
-        "@eslint/js": "^9.10.0",
+        "@eslint/js": "^9.11.0",
         "esbuild": "^0.23.1",
-        "eslint": "^9.10.0",
+        "eslint": "^9.11.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-formatter-table": "^7.32.1",
         "eslint-plugin-prettier": "^5.2.1",
