@@ -7,7 +7,6 @@ import fs from 'fs-extra';
 import winston from 'winston';
 import 'winston-daily-rotate-file';
 import si from 'systeminformation';
-import pg from 'pg';
 import { readFileSync } from 'fs';
 import Influx from 'influx';
 import { Command, Option } from 'commander';
