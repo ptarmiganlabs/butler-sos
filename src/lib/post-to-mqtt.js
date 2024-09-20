@@ -3,14 +3,6 @@
 
 import globals from '../globals.js';
 
-export function postLogDbToMQTT(processHost, processName, entryLevel, message, _timestamp) {
-    // Get base MQTT topic
-    const baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
-
-    // Send to MQTT
-    globals.mqttClient.publish(`${baseTopic + processHost}/${processName}/${entryLevel}`, message);
-}
-
 export function postHealthToMQTT(_host, serverName, body) {
     // Get base MQTT topic
     const baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');

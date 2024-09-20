@@ -90,21 +90,6 @@ function configObfuscate(config) {
             obfuscatedConfig['Butler-SOS'].logEvents.sendToMQTT.baseTopic.substring(0, 10) +
             '*'.repeat(10);
 
-        // Log db - may not be present in the config in future versions of Butler SOS
-        if (obfuscatedConfig['Butler-SOS'].logdb) {
-            // Obfuscate Butler-SOS.logdb.host, keep first 3 chars, mask the rest with *
-            obfuscatedConfig['Butler-SOS'].logdb.host =
-                obfuscatedConfig['Butler-SOS'].logdb.host.substring(0, 3) + '*'.repeat(10);
-
-            // Obfuscate Butler-SOS.logdb.qlogsReaderUser, keep first 3 chars, mask the rest with *
-            obfuscatedConfig['Butler-SOS'].logdb.qlogsReaderUser =
-                obfuscatedConfig['Butler-SOS'].logdb.qlogsReaderUser.substring(0, 3) +
-                '*'.repeat(10);
-
-            // Obfuscate Butler-SOS.logdb.qlogsReaderPwdd, keep first 0 chars, mask the rest with *
-            obfuscatedConfig['Butler-SOS'].logdb.qlogsReaderPwdd = '*'.repeat(10);
-        }
-
         // Obfuscate Butler-SOS.cert.clientCert, keep first 10 chars, mask the rest with *
         obfuscatedConfig['Butler-SOS'].cert.clientCert =
             obfuscatedConfig['Butler-SOS'].cert.clientCert.substring(0, 10) + '*'.repeat(10);
@@ -163,14 +148,6 @@ function configObfuscate(config) {
         ].serversToMonitor.servers?.map((element) => ({
             ...element,
             host: element.host.substring(0, 3) + '*'.repeat(10),
-        }));
-
-        // Obfuscate Butler-SOS.serversToMonitor.servers[].logDbHost, keep first 3 chars, mask the rest with *
-        obfuscatedConfig['Butler-SOS'].serversToMonitor.servers = obfuscatedConfig[
-            'Butler-SOS'
-        ].serversToMonitor.servers?.map((element) => ({
-            ...element,
-            logDbHost: element.logDbHost.substring(0, 3) + '*'.repeat(10),
         }));
 
         // Obfuscate Butler-SOS.serversToMonitor.servers[].userSessions.host, keep first 3 chars, mask the rest with *

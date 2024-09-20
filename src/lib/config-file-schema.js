@@ -1296,7 +1296,6 @@ export const confifgFileSchema = {
                                     host: { type: 'string' },
                                     serverName: { type: 'string' },
                                     serverDescription: { type: 'string' },
-                                    logDbHost: { type: 'string' },
                                     userSessions: {
                                         type: 'object',
                                         properties: {
@@ -1335,7 +1334,6 @@ export const confifgFileSchema = {
                                     'host',
                                     'serverName',
                                     'serverDescription',
-                                    'logDbHost',
                                     'userSessions',
                                     'serverTags',
                                     'headers',
