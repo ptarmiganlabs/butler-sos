@@ -63,7 +63,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.11.0",
-        "esbuild": "^0.23.1",
+        "esbuild": "^0.24.0",
         "eslint": "^9.11.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-formatter-table": "^7.32.1",
