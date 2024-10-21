@@ -22,7 +22,6 @@ import { udpInitUserActivityServer } from './lib/udp_handlers_user_activity.js';
 import { udpInitLogEventServer } from './lib/udp_handlers_log_events.js';
 import { setupAnonUsageReportTimer } from './lib/telemetry.js';
 import { setupPromClient } from './lib/prom-client.js';
-import { verifyConfigFile } from './lib/config-file-verify.js';
 import { setupConfigVisServer } from './lib/config-visualise.js';
 import { setupUdpEventsStorage } from './lib/udp-event.js';
 
@@ -60,25 +59,8 @@ async function mainScript() {
     const globals = await settingsObj.init();
     globals.logger.verbose(`START: Globals init done: ${globals.initialised}`);
 
-    // Verify that the config file has the correct format
-    // Only do this if the command line option no-config-file-verify is NOT set
-    let configFileVerify = false;
-    if (globals.options.skipConfigVerification) {
-        globals.logger.warn('MAIN: Skipping config file verification');
-    } else {
-        configFileVerify = await verifyConfigFile();
-    }
-
-    // If config file verification failed, the previous function would have returned false.
-    // In that case, we should exit the script.
-    if (!configFileVerify) {
-        globals.logger.error('MAIN: Config file verification failed. Exiting.');
-        process.exit(1);
-    }
-
     // Ensure that initialisation of globals is complete
-    // Sleep 5 seconds otherwise to llow globals to be initialised
-
+    // Sleep 5 seconds otherwise to allow globals to be initialised
     function sleepLocal(ms) {
         return new Promise((resolve) => setTimeout(resolve, ms));
     }

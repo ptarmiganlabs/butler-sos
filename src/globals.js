@@ -16,6 +16,7 @@ import { fileURLToPath } from 'url';
 
 import { getServerTags } from './lib/servertags.js';
 import { UdpEvents } from './lib/udp-event.js';
+import { verifyConfigFileSchema, verifyAppConfig } from './lib/config-file-verify.js';
 
 let instance = null;
 
@@ -134,6 +135,7 @@ class Settings {
                 process.exit(1);
             }
         } else {
+            // No config file specified on command line.
             // Get value of env variable NODE_ENV
             const env = process.env.NODE_ENV;
 
@@ -143,7 +145,38 @@ class Settings {
             this.configFile = upath.resolve(dirname, `./config/${env}.yaml`);
         }
 
+        // Full path to config file in this.configFile
+        // Verify schema of config file
+        // Only do this if the command line option no-config-file-verify is NOT set
+        if (this.options.skipConfigVerification) {
+            console.warn('MAIN: Skipping config file verification');
+        } else {
+            let configFileVerify = await verifyConfigFileSchema(this.configFile);
+
+            // If config file verification failed, the previous function would have returned false.
+            // In that case, we should exit the script.
+            if (!configFileVerify) {
+                console.error('MAIN: Config file verification failed. Exiting.');
+                process.exit(1);
+            }
+        }
+
+        // Load config file
         this.config = (await import('config')).default;
+
+        // Verify application specific settings and relationships between settings
+        if (this.options.skipConfigVerification) {
+            console.warn('MAIN: Skipping application specific config verification');
+        } else {
+            let appConfigVerify = await verifyAppConfig(this.config);
+
+            // If application specific config verification failed, the previous function would have returned false.
+            // In that case, we should exit the script.
+            if (!appConfigVerify) {
+                console.error('MAIN: Application specific config verification failed. Exiting.');
+                process.exit(1);
+            }
+        }
 
         this.execPath = this.isPkg ? upath.dirname(process.execPath) : process.cwd();
 
