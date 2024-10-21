@@ -1,5 +1,18 @@
 # Changelog
 
+## [11.0.2](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v11.0.1...butler-sos-v11.0.2) (2024-10-21)
+
+
+### Bug Fixes
+
+* **build:** Pre-build binaries no longer crash in some conditions during startup ([dbaece8](https://github.com/ptarmiganlabs/butler-sos/commit/dbaece8bdd05aed20ba44e28e74915e33463e5d1)), closes [#924](https://github.com/ptarmiganlabs/butler-sos/issues/924)
+* **startup:** Better detection of invalid config file structure and content ([befc5ee](https://github.com/ptarmiganlabs/butler-sos/commit/befc5ee49d763b3cf4ab539b764cda589e40bd49)), closes [#925](https://github.com/ptarmiganlabs/butler-sos/issues/925)
+
+
+### Miscellaneous
+
+* **deps:** Update dependencies ([6b6c965](https://github.com/ptarmiganlabs/butler-sos/commit/6b6c965e49732e03d1e42eb8da87801e2b3517bc))
+
 ## [11.0.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v11.0.0...butler-sos-v11.0.1) (2024-09-20)
 
 
