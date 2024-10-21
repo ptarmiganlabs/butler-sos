@@ -7,7 +7,7 @@ export const confifgFileSchema = {
                 logLevel: {
                     type: 'string',
                     enum: ['error', 'warn', 'info', 'verbose', 'debug', 'silly'],
-                    transform: ['trim', 'toLowerCase'],
+                    transform: ['trim'],
                 },
                 fileLogging: { type: 'boolean' },
                 logDirectory: { type: 'string' },

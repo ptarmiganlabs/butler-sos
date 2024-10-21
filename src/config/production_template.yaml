@@ -3,7 +3,7 @@ Butler-SOS:
   # All configuration items are mandatory, unless otherwise noted.
 
   # Logging configuration
-  logLevel: info          # Log level. Possible log levels are silly, debug, verbose, info, warn, error
+  logLevel: info          # Log level. Possible log levels are silly, debug, verbose, info, warn, error. Case sensitive.
   fileLogging: true       # true/false to enable/disable logging to disk file
   logDirectory: log       # Subdirectory where log files are stored
   anonTelemetry: true     # Can Butler SOS send anonymous data about what computer it is running on? 
@@ -81,7 +81,7 @@ Butler-SOS:
   qlikSenseEvents:                  # Shared settings for user and log events (see below)
     influxdb:
       enable: false                 # Should summary (counter) of user/log events, and rejected events be stored in InfluxDB?
-      writeFrequency: 20000         # How often (milliseconds) should rejected event count be written to InfluxDB?  
+      writeFrequency: 20000         # How often (milliseconds) should event counts be written to InfluxDB?  
     eventCount:                     # Track how many events are received from Sense.
                                     # Some events are valid, some are not. Of the valid events, some are rejected by Butler SOS
                                     # based on the configuration in this file. 
