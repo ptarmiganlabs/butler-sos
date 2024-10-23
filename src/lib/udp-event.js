@@ -287,8 +287,11 @@ export class UdpEvents {
 
 export function setupUdpEventsStorage() {
     // Is storing event counts to InfluxDB enabled?
-    if (globals.config.get('Butler-SOS.qlikSenseEvents.influxdb.enable') !== true) {
-        globals.logger.verbose(
+    if (
+        globals.config.get('Butler-SOS.influxdbConfig.enable') !== true ||
+        globals.config.get('Butler-SOS.qlikSenseEvents.influxdb.enable') !== true
+    ) {
+        globals.logger.info(
             'EVENT COUNTS: Feature is disabled in config file. Skipping setup of timer for storing event counts to InfluxDB'
         );
         return;

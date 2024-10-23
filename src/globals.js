@@ -659,14 +659,6 @@ class Settings {
                             },
                             tags: tagValuesUserProxySessions,
                         },
-                        // {
-                        //     measurement: 'user_events',
-                        //     fields: {
-                        //         userFull: Influx.FieldType.STRING,
-                        //         userId: Influx.FieldType.STRING
-                        //     },
-                        //     tags: ['host', 'event_action', 'userFull', 'userDirectory', 'userId', 'origin']
-                        // },
                     ],
                 });
             } else if (this.config.get('Butler-SOS.influxdbConfig.version') === 2) {
@@ -687,10 +679,13 @@ class Settings {
                     `CONFIG: Influxdb version ${this.config.get('Butler-SOS.influxdbConfig.version')} is not supported!`
                 );
             }
+
+            // Now initialise InfluxDB
+            await this.initInfluxDB();
+        } else {
+            this.logger.info(`CONFIG: Influxdb not enabled, skipping setup of db.`);
         }
 
-        // Now initialise InfluxDB
-        await this.initInfluxDB();
 
         // ------------------------------------
         // Create MQTT client object and connect to MQTT broker
