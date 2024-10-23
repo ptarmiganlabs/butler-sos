@@ -72,7 +72,7 @@ export const confifgFileSchema = {
                             properties: {
                                 enable: { type: 'boolean' },
                                 destinationAccount: {
-                                    type: 'array',
+                                    type: ['array', 'null'],
                                     minItems: 0,
                                     items: {
                                         type: 'string',

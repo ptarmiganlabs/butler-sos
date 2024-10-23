@@ -163,6 +163,8 @@ Butler-SOS:
         enable: false                  # Should log events from the repository service be handled?
       scheduler:
         enable: false                  # Should log events from the scheduler service be handled?
+      qixPerf:
+        enable: true                   # Should log events relating to QIX performance be handled?
     categorise:                        # Take actions on log events based on their content
       enable: false
       rules:                           # Rules are used to match log events to filters

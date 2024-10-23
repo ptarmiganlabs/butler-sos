@@ -54,6 +54,9 @@ async function sleep(ms) {
 }
 
 async function mainScript() {
+    // Set env variable to indicate that it is ok to change config settings
+    process.env.ALLOW_CONFIG_MUTATIONS = 'true';
+
     // Load globals dynamically/async to ensure singleton pattern works
     const settingsObj = (await import('./globals.js')).default;
     const globals = await settingsObj.init();
