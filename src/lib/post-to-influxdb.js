@@ -454,9 +454,9 @@ export async function postHealthMetricsToInfluxdb(serverName, host, body, server
             new Point('cache')
                 .uintField('hits', body.cache.hits)
                 .uintField('lookups', body.cache.lookups)
-                .uintField('added', body.cache.added)
-                .uintField('replaced', body.cache.replaced)
-                .uintField('bytes_added', body.cache.bytes_added),
+                .intField('added', body.cache.added)
+                .intField('replaced', body.cache.replaced)
+                .intField('bytes_added', body.cache.bytes_added),
 
             new Point('saturated').booleanField('saturated', body.saturated),
         ];
