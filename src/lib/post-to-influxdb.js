@@ -1000,9 +1000,13 @@ export async function postLogEventToInfluxdb(msg) {
                         subsystem: msg.subsystem?.length > 0 ? msg.subsystem : '<Unknown>',
                         method: msg.method?.length > 0 ? msg.method : '<Unknown>',
                         object_type: msg.object_type?.length > 0 ? msg.object_type : '<Unknown>',
-                        proxy_session_id: msg.proxy_session_id?.length > 0 ? msg.proxy_session_id : '-1',
+                        proxy_session_id:
+                            msg.proxy_session_id?.length > 0 ? msg.proxy_session_id : '-1',
                         session_id: msg.session_id?.length > 0 ? msg.session_id : '-1',
-                        event_activity_source: msg.event_activity_source?.length > 0 ? msg.event_activity_source : '<Unknown>',
+                        event_activity_source:
+                            msg.event_activity_source?.length > 0
+                                ? msg.event_activity_source
+                                : '<Unknown>',
                     };
 
                     // Tags that are empty in some cases. Only add if they are non-empty

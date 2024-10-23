@@ -686,7 +686,6 @@ class Settings {
             this.logger.info(`CONFIG: Influxdb not enabled, skipping setup of db.`);
         }
 
-
         // ------------------------------------
         // Create MQTT client object and connect to MQTT broker
         // Only do this if MQTT is enabled
