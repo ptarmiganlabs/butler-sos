@@ -1,5 +1,131 @@
 # Changelog
 
+## [9.9.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v11.0.3...butler-sos-v9.9.0) (2024-10-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **log-db:** Remove support for getting logs from Sense log db
+* **config:** Make naming of InfluxDB tags consistent across entire config file
+* Added support for InfluxDB v2, config file format has changed
+
+### Features
+
+* **config:** Show info at startup whether Docker is used or not ([aff1855](https://github.com/ptarmiganlabs/butler-sos/commit/aff185589dd6a01b457c8db5328ced5386ae0daa)), closes [#861](https://github.com/ptarmiganlabs/butler-sos/issues/861)
+* Configurable headers when getting health data from Sense ([a4a27dd](https://github.com/ptarmiganlabs/butler-sos/commit/a4a27ddc3698242153f4e0072aa91022932a7366)), closes [#720](https://github.com/ptarmiganlabs/butler-sos/issues/720)
+* **config:** Verify server tags when Butler SOS starts ([a30c34b](https://github.com/ptarmiganlabs/butler-sos/commit/a30c34b3e300eaf0d551d2c2afcf63f66e0b4edf)), closes [#815](https://github.com/ptarmiganlabs/butler-sos/issues/815)
+* **config:** Visualise obfuscated config file in Butler SOS hosted web page ([2b067c8](https://github.com/ptarmiganlabs/butler-sos/commit/2b067c8e4cdb858506c88710cb33200f39fec1b8)), closes [#858](https://github.com/ptarmiganlabs/butler-sos/issues/858)
+* **logs:** Add catgegorisation of Qlik Sense log events ([3fbdccf](https://github.com/ptarmiganlabs/butler-sos/commit/3fbdccff226d5a04806b4aa415f720249178687b)), closes [#849](https://github.com/ptarmiganlabs/butler-sos/issues/849)
+* **qix performance:** Add fine-grained performance monitoring for app objects ([818c702](https://github.com/ptarmiganlabs/butler-sos/commit/818c702a791f983506eb7d2c038e2f930b0b6299)), closes [#320](https://github.com/ptarmiganlabs/butler-sos/issues/320)
+* **qs-event:** Categorise events from Qlik Sense as user created or automated ([9c1bb5b](https://github.com/ptarmiganlabs/butler-sos/commit/9c1bb5bf2ec9f34a03c2ba80025ec408c6a856a0)), closes [#889](https://github.com/ptarmiganlabs/butler-sos/issues/889)
+* **qs-events:** Add counters for incoming Qlik Sense events ([e8d8a13](https://github.com/ptarmiganlabs/butler-sos/commit/e8d8a13e37ecafe3aa9a72b369619a62c3e26e40)), closes [#884](https://github.com/ptarmiganlabs/butler-sos/issues/884)
+
+
+### Bug Fixes
+
+* **build:** Pre-build binaries no longer crash in some conditions during startup ([dbaece8](https://github.com/ptarmiganlabs/butler-sos/commit/dbaece8bdd05aed20ba44e28e74915e33463e5d1)), closes [#924](https://github.com/ptarmiganlabs/butler-sos/issues/924)
+* **config-vis:** Cosmetic changes to config visualisation web page ([5285967](https://github.com/ptarmiganlabs/butler-sos/commit/52859670d4f2a7e8827f321f856b442aa15a2d2f))
+* **config-vis:** Obfuscate host name of config visualisation server ([f76db6b](https://github.com/ptarmiganlabs/butler-sos/commit/f76db6bd34363e9a476119532757b25586ebb49f)), closes [#869](https://github.com/ptarmiganlabs/butler-sos/issues/869)
+* **config:** Add missing property in sample config file ([51b64b3](https://github.com/ptarmiganlabs/butler-sos/commit/51b64b3f5d577815a2dd83c396b1385f095f32bf)), closes [#930](https://github.com/ptarmiganlabs/butler-sos/issues/930)
+* **config:** Allow empty arrays in config file ([df98478](https://github.com/ptarmiganlabs/butler-sos/commit/df984789331ec86a0bba158df60ae68717ab0509))
+* **config:** Allow empty New Relic destination array in config file ([9601a9c](https://github.com/ptarmiganlabs/butler-sos/commit/9601a9caa9cce0c8a0a8752579f1751b841a0a26)), closes [#929](https://github.com/ptarmiganlabs/butler-sos/issues/929)
+* **config:** Better config file verification (and exit app when incorrect) ([510a583](https://github.com/ptarmiganlabs/butler-sos/commit/510a583d7a2e38b0c236c44bdd3c3f950a32cad0)), closes [#857](https://github.com/ptarmiganlabs/butler-sos/issues/857)
+* **config:** Make naming of InfluxDB tags consistent across entire config file ([0ed25d5](https://github.com/ptarmiganlabs/butler-sos/commit/0ed25d576cc19dc9368999a8a9ec170d3b7fb62a)), closes [#890](https://github.com/ptarmiganlabs/butler-sos/issues/890)
+* **config:** Make template YAML config file easier to get started with by commenting out all optional array values ([a26d0f0](https://github.com/ptarmiganlabs/butler-sos/commit/a26d0f01ef9e276d29bbb918ae182d62f4743c88)), closes [#808](https://github.com/ptarmiganlabs/butler-sos/issues/808)
+* **config:** More thorough verification of config file structure ([bb46e00](https://github.com/ptarmiganlabs/butler-sos/commit/bb46e0078f66b41f4d19bc34ba21614e7c56d990)), closes [#857](https://github.com/ptarmiganlabs/butler-sos/issues/857)
+* **config:** Validate hostname, url and pasword fields in config file. ([4a7671e](https://github.com/ptarmiganlabs/butler-sos/commit/4a7671e0cc97e123531f8c5fb515c8727b1a3e2f))
+* Debugging release-please ([03759e5](https://github.com/ptarmiganlabs/butler-sos/commit/03759e5cd0971ffaddf72cb52308f148ae359d84))
+* **docker:** Update sample docker-compose file wrt Butler SOS 11.0 ([7336fb7](https://github.com/ptarmiganlabs/butler-sos/commit/7336fb7881b2016ab8ec1c26b00ed3018c797191))
+* Fix broken Docker image build ([2c3a291](https://github.com/ptarmiganlabs/butler-sos/commit/2c3a291bf7c2d812ac296e8de5c461c4cb90db0a))
+* Fix broken Linux build ([8a8e160](https://github.com/ptarmiganlabs/butler-sos/commit/8a8e160be3beb14b8d6513abba1e5ab153bd914c))
+* Fix incorrect zip file names for pre-compiled binaries ([f506ce1](https://github.com/ptarmiganlabs/butler-sos/commit/f506ce1e5fc254411ce9bff184fe634328b89b18))
+* **influxdb2:** Allow pos/neg engine cache values ([f9d8ecb](https://github.com/ptarmiganlabs/butler-sos/commit/f9d8ecb66f2ae51a63bfc1a340171efef3ab3e85)), closes [#933](https://github.com/ptarmiganlabs/butler-sos/issues/933)
+* **influxdb:** Double quote app names in in-memory-apps-lists ([a7dbb05](https://github.com/ptarmiganlabs/butler-sos/commit/a7dbb05ab3fba852838e77e40ca6a46277cc1f8f)), closes [#843](https://github.com/ptarmiganlabs/butler-sos/issues/843)
+* **influxdb:** Flush data to InfluxDB v2 every 5 seconds ([2384b6c](https://github.com/ptarmiganlabs/butler-sos/commit/2384b6cb20325b0085335a5563dbaf8be22ffccd))
+* **influxdb:** Storing proxy session data in InfluxDB v1 works again ([45312d7](https://github.com/ptarmiganlabs/butler-sos/commit/45312d7e565c07381c7c149361c8a7c9d240085b)), closes [#816](https://github.com/ptarmiganlabs/butler-sos/issues/816)
+* **log-event:** Make handling of log and user events sent from QS server more robust ([45822c5](https://github.com/ptarmiganlabs/butler-sos/commit/45822c5a330c312b831605e06a3839ff5794be80)), closes [#806](https://github.com/ptarmiganlabs/butler-sos/issues/806)
+* **log-events:** Ensure only QS engine messages are forwarded as qseow-engine messages to Butler SOS ([9dcc328](https://github.com/ptarmiganlabs/butler-sos/commit/9dcc3287cbfd08d315124357b6244d4043eff6dd)), closes [#805](https://github.com/ptarmiganlabs/butler-sos/issues/805)
+* **logdb:** Don't set up log db data structures if that feature is disabled in config file ([153ad9d](https://github.com/ptarmiganlabs/butler-sos/commit/153ad9dc2ab3febee3623e4bdc678ec53754f120))
+* **new-relic:** Allow empty static uptime attributes w/o errors ([c2b1579](https://github.com/ptarmiganlabs/butler-sos/commit/c2b1579371bb2044d8dca593d0fc44abc757b962)), closes [#863](https://github.com/ptarmiganlabs/butler-sos/issues/863)
+* **new-relic:** Better error messages when there is no New Relic config, but NR features are enabled ([d937208](https://github.com/ptarmiganlabs/butler-sos/commit/d9372084cbf51eb7a5519d9c2d66d05b3cee5347)), closes [#863](https://github.com/ptarmiganlabs/butler-sos/issues/863)
+* Remove leftover references to Postgress log db in the code ([1c3fbcc](https://github.com/ptarmiganlabs/butler-sos/commit/1c3fbcc147d1eef3e72a778d3783a99dca582a6e))
+* **sense-events:** Better handling of unknown UDP messages ([d122863](https://github.com/ptarmiganlabs/butler-sos/commit/d122863cac529f5c7cc2865b766f7c4a33f468ee)), closes [#880](https://github.com/ptarmiganlabs/butler-sos/issues/880)
+* **startup:** Add 5 second delay during startup to make that phase more robust ([4e75727](https://github.com/ptarmiganlabs/butler-sos/commit/4e757273885b575bc93c0db9f088074e3aef9122))
+* **startup:** Better detection of invalid config file structure and content ([befc5ee](https://github.com/ptarmiganlabs/butler-sos/commit/befc5ee49d763b3cf4ab539b764cda589e40bd49)), closes [#925](https://github.com/ptarmiganlabs/butler-sos/issues/925)
+* **startup:** Make indentation of startup info consistent ([0d70f52](https://github.com/ptarmiganlabs/butler-sos/commit/0d70f52d4b5e76882aa4dd9d629d59b29038202e)), closes [#761](https://github.com/ptarmiganlabs/butler-sos/issues/761)
+* **startup:** Make sure log level can be set via command line ([45733c9](https://github.com/ptarmiganlabs/butler-sos/commit/45733c93131aaec4191f10a10ac12d0385ea5dba)), closes [#932](https://github.com/ptarmiganlabs/butler-sos/issues/932)
+* **startup:** Make sure no attempts to access InfluxDB if it is disabled in config file ([4010a1c](https://github.com/ptarmiganlabs/butler-sos/commit/4010a1c6c2bd2e98eaa5182b342b16225b76b18e)), closes [#931](https://github.com/ptarmiganlabs/butler-sos/issues/931)
+* Supress experimental/deprecated warnings on startup ([e2090a7](https://github.com/ptarmiganlabs/butler-sos/commit/e2090a76ff9426cc32ca0b139cda5808b2ef48ae)), closes [#762](https://github.com/ptarmiganlabs/butler-sos/issues/762)
+* **telemetry:** Update telemetry data to reflect current config options ([1ba4391](https://github.com/ptarmiganlabs/butler-sos/commit/1ba4391df5fca5d20aaed587adad7097c4beb143)), closes [#813](https://github.com/ptarmiganlabs/butler-sos/issues/813)
+* **uptime:** Round uptime seconds value to whole seconds ([16097a0](https://github.com/ptarmiganlabs/butler-sos/commit/16097a0cae9ed5f2bb99da25999d5c2284cf9bc1)), closes [#807](https://github.com/ptarmiganlabs/butler-sos/issues/807)
+* Version debuggig ([6c0b6ea](https://github.com/ptarmiganlabs/butler-sos/commit/6c0b6ea0dbde02a090ad6fccf62ed39b09f8f540))
+
+
+### Miscellaneous
+
+* Add defender-for-devops code scanning ([cfd29f3](https://github.com/ptarmiganlabs/butler-sos/commit/cfd29f307f9634b213f2bfaf7dde36afa7168b03))
+* Configure scheduled Snaky code scanning ([518bffd](https://github.com/ptarmiganlabs/butler-sos/commit/518bffd70613a0032cab4d47a299b2b898d6b0fd))
+* Debug MS Defender code scanning ([179a1df](https://github.com/ptarmiganlabs/butler-sos/commit/179a1df593e9d13cc6233ccd4b36f3423e73168e))
+* Debugging release-please ([ba8b1ec](https://github.com/ptarmiganlabs/butler-sos/commit/ba8b1ec1b64bec9f2bc4ae24d6a76984858bd567))
+* Debugging release-please... ([493dd3a](https://github.com/ptarmiganlabs/butler-sos/commit/493dd3a5086186c63279c166d02f8f8f8142bb76))
+* Debugging versioning ([879cad1](https://github.com/ptarmiganlabs/butler-sos/commit/879cad144da17282d5372e7fc19acfecc70e7f11))
+* **deps:** Update config vis library to latest version ([ae49d81](https://github.com/ptarmiganlabs/butler-sos/commit/ae49d81032b40bb8606494920c84be57813175f9))
+* **deps:** Update dependencies ([6b6c965](https://github.com/ptarmiganlabs/butler-sos/commit/6b6c965e49732e03d1e42eb8da87801e2b3517bc))
+* **deps:** Update dependencies ([6c4e02f](https://github.com/ptarmiganlabs/butler-sos/commit/6c4e02f0cc86e1010ef065b5cd40a01135ee9cef))
+* **deps:** Update dependencies ([adffeda](https://github.com/ptarmiganlabs/butler-sos/commit/adffedab62ce05d02d876844e1ace163b99f9e20))
+* **deps:** Update dependencies ([8ca9558](https://github.com/ptarmiganlabs/butler-sos/commit/8ca955894651c456dc7f651acdcee86c8c4a5ebf))
+* **deps:** Update dependencies ([a32e32c](https://github.com/ptarmiganlabs/butler-sos/commit/a32e32c7cdd218215e8c2878e928d1a271d5d6f1))
+* **deps:** Update dependencies ([95be9a0](https://github.com/ptarmiganlabs/butler-sos/commit/95be9a0f0ad3c1df138c494d5f1b6674a504d2d7))
+* **deps:** Update dependencies ([a56f5a7](https://github.com/ptarmiganlabs/butler-sos/commit/a56f5a79b8359499f075c8b0d18c3f688cadb2bb))
+* **deps:** Update dependencies ([03b8118](https://github.com/ptarmiganlabs/butler-sos/commit/03b811800cc6b26f1075552f812acf4fba14a3a3))
+* **deps:** Update dependencies ([5fc193e](https://github.com/ptarmiganlabs/butler-sos/commit/5fc193e511cc1050cbbe5568697d8544b5a6c950))
+* **deps:** Update dependencies ([44b77a9](https://github.com/ptarmiganlabs/butler-sos/commit/44b77a9430af4a4e712098843b9fd8122e41817f))
+* **deps:** Update dependencies to stay safe and secure ([e7ba150](https://github.com/ptarmiganlabs/butler-sos/commit/e7ba150c0c79e6df9f055297cc6a5c139d88b142))
+* **deps:** update docker/build-push-action action to v6 ([cbe758e](https://github.com/ptarmiganlabs/butler-sos/commit/cbe758e9ea2d0826225a53e3c413eb513f73379c))
+* Disable MS Defender for DevOps action due to Node 16 no longer supported by GHA ([9cbe018](https://github.com/ptarmiganlabs/butler-sos/commit/9cbe018ac5d6cee30b88f09a68a99fad39cf8f94))
+* Fix GH Actions triggers ([1e0d0d6](https://github.com/ptarmiganlabs/butler-sos/commit/1e0d0d690f260f03d4720ffdb8ea28d93a344505))
+* Major update - refactored entire code base from CJS &gt; ESM ([ae4083b](https://github.com/ptarmiganlabs/butler-sos/commit/ae4083b33e77303076f6a4b3e780d4e01a115afd)), closes [#859](https://github.com/ptarmiganlabs/butler-sos/issues/859)
+* Make insiders build more robust ([890962c](https://github.com/ptarmiganlabs/butler-sos/commit/890962c2c7388b0ceae0082d1ee18338848a9245))
+* **master:** release 9.10.0 ([061986b](https://github.com/ptarmiganlabs/butler-sos/commit/061986b7f1d1b1ab92a5d79a3974ae2fecc56046))
+* **master:** release 9.9.0 ([c3387b1](https://github.com/ptarmiganlabs/butler-sos/commit/c3387b1ae9d32a5c62092dc4c85c9859a8686d82))
+* **master:** release 9.9.1 ([c723baf](https://github.com/ptarmiganlabs/butler-sos/commit/c723bafcb361d0b472eb7c683ed61c555bd18398))
+* **master:** release butler-sos 10.0.0 ([e2f21f2](https://github.com/ptarmiganlabs/butler-sos/commit/e2f21f2ed79db34768c4ba2211c02f129b439e4c))
+* **master:** release butler-sos 10.1.0 ([d4d7b6d](https://github.com/ptarmiganlabs/butler-sos/commit/d4d7b6d0c5372ca52386fd29cf8265dc60d34436))
+* **master:** release butler-sos 10.1.1 ([3180d5d](https://github.com/ptarmiganlabs/butler-sos/commit/3180d5d100905837f19c83a38be7987be47e47b0))
+* **master:** release butler-sos 10.2.0 ([9c90a5a](https://github.com/ptarmiganlabs/butler-sos/commit/9c90a5aecabb9ce8a8320d384319a2765f5fa304))
+* **master:** release butler-sos 10.2.1 ([48962c1](https://github.com/ptarmiganlabs/butler-sos/commit/48962c1556179a7de369f2a24ea870963f95a400))
+* **master:** release butler-sos 11.0.0 ([14abc3d](https://github.com/ptarmiganlabs/butler-sos/commit/14abc3d012929444b0c1d7c34144ab605a56c03e))
+* **master:** release butler-sos 11.0.1 ([c97fbc1](https://github.com/ptarmiganlabs/butler-sos/commit/c97fbc18a9249f1e7bc815e36653bed7af631bb5))
+* **master:** release butler-sos 11.0.2 ([298a475](https://github.com/ptarmiganlabs/butler-sos/commit/298a4751f16316944ead8829f98bb938aa2d37c5))
+* **master:** release butler-sos 11.0.3 ([92e4201](https://github.com/ptarmiganlabs/butler-sos/commit/92e4201c3f7b5ecf2eebe14b35ee544015adfb8e))
+* **master:** release butler-sos 9.10.1 ([6c7b297](https://github.com/ptarmiganlabs/butler-sos/commit/6c7b297c9456994c75485ac0e2813287086c8a66))
+* **master:** release butler-sos 9.10.1 ([40d759a](https://github.com/ptarmiganlabs/butler-sos/commit/40d759ac3a3f1103ea33e4c8995fb7a2195d9ba0))
+* **master:** release butler-sos 9.10.2 ([33fd9cb](https://github.com/ptarmiganlabs/butler-sos/commit/33fd9cb0be68ac21f7c00ec2cfe1f04ae5d2cb0b))
+* **master:** release butler-sos 9.10.3 ([b4234b2](https://github.com/ptarmiganlabs/butler-sos/commit/b4234b21850fd2ecc5ad5129c449d301676f97b1))
+* release 9.9.0 ([96fbbc9](https://github.com/ptarmiganlabs/butler-sos/commit/96fbbc9ae811c59e8d593f310502373773349dec))
+* Remove Postgress dependency, as log db support has been discontinued ([94aea42](https://github.com/ptarmiganlabs/butler-sos/commit/94aea424416039afba0b6b3eb25f5d07aabc5543))
+* Rename code quality GH action ([e8dc094](https://github.com/ptarmiganlabs/butler-sos/commit/e8dc094fab6d734ed4c15d26f29fee712bcc78e5))
+* Reset to automatic version numbering ([a62e2d3](https://github.com/ptarmiganlabs/butler-sos/commit/a62e2d32d2a5094c4e90899e3301c3bbc5b40335))
+* Update insiders-build.yaml ([106fa9d](https://github.com/ptarmiganlabs/butler-sos/commit/106fa9d7ec54daa3a166afc00247f14c449f1d19))
+* Update MS Defender code scanning GH Action ([c80f239](https://github.com/ptarmiganlabs/butler-sos/commit/c80f239a433fe6f8a56255004c2a110e4c175704))
+* Update Snyk config ([ed36d1d](https://github.com/ptarmiganlabs/butler-sos/commit/ed36d1d2e615002a1efce22b3a77a3eefe877fc8))
+
+
+### Refactoring
+
+* **config:** Remove support for old config file formats now that all config file settings are mandatory ([350f57c](https://github.com/ptarmiganlabs/butler-sos/commit/350f57ca8d1b5d12d3b5c262fe819f44cdfa9b0b))
+* **log-db:** Remove support for getting logs from Sense log db ([6e7043b](https://github.com/ptarmiganlabs/butler-sos/commit/6e7043b7696744be61c1cfc5e774d9f3f2765e55)), closes [#860](https://github.com/ptarmiganlabs/butler-sos/issues/860)
+* Make config file verification more robust ([9be5d8a](https://github.com/ptarmiganlabs/butler-sos/commit/9be5d8a56028c8884f4cec384e5703c43509651e)), closes [#902](https://github.com/ptarmiganlabs/butler-sos/issues/902)
+* Remove support for old, long deprecated config file formats ([1d6989e](https://github.com/ptarmiganlabs/butler-sos/commit/1d6989e221e9b51eafe4e989eddab349e313e4c3))
+
+
+### Documentation
+
+* Added support for InfluxDB v2, config file format has changed ([97e5faa](https://github.com/ptarmiganlabs/butler-sos/commit/97e5faae2f0d9cec86364702f03be7ad153e9db3))
+* Minor tweak ([2c1ffd3](https://github.com/ptarmiganlabs/butler-sos/commit/2c1ffd3d6aa4782f47a0a21783ff90a5957a5257))
+* Update README file badges ([0eb42c1](https://github.com/ptarmiganlabs/butler-sos/commit/0eb42c14f73e3d7778f62d24b55e95f9d4eb954e))
+* Update README.md ([6e25e92](https://github.com/ptarmiganlabs/butler-sos/commit/6e25e92c795a9a7118be80d444c5c29662fa0f7f))
+
 ## [11.0.3](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v11.0.2...butler-sos-v11.0.3) (2024-10-23)
 
 
