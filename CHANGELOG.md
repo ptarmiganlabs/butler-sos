@@ -1,5 +1,16 @@
 # Changelog
 
+## [11.0.3](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v11.0.2...butler-sos-v11.0.3) (2024-10-23)
+
+
+### Bug Fixes
+
+* **config:** Add missing property in sample config file ([51b64b3](https://github.com/ptarmiganlabs/butler-sos/commit/51b64b3f5d577815a2dd83c396b1385f095f32bf)), closes [#930](https://github.com/ptarmiganlabs/butler-sos/issues/930)
+* **config:** Allow empty New Relic destination array in config file ([9601a9c](https://github.com/ptarmiganlabs/butler-sos/commit/9601a9caa9cce0c8a0a8752579f1751b841a0a26)), closes [#929](https://github.com/ptarmiganlabs/butler-sos/issues/929)
+* **influxdb2:** Allow pos/neg engine cache values ([f9d8ecb](https://github.com/ptarmiganlabs/butler-sos/commit/f9d8ecb66f2ae51a63bfc1a340171efef3ab3e85)), closes [#933](https://github.com/ptarmiganlabs/butler-sos/issues/933)
+* **startup:** Make sure log level can be set via command line ([45733c9](https://github.com/ptarmiganlabs/butler-sos/commit/45733c93131aaec4191f10a10ac12d0385ea5dba)), closes [#932](https://github.com/ptarmiganlabs/butler-sos/issues/932)
+* **startup:** Make sure no attempts to access InfluxDB if it is disabled in config file ([4010a1c](https://github.com/ptarmiganlabs/butler-sos/commit/4010a1c6c2bd2e98eaa5182b342b16225b76b18e)), closes [#931](https://github.com/ptarmiganlabs/butler-sos/issues/931)
+
 ## [11.0.2](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v11.0.1...butler-sos-v11.0.2) (2024-10-21)
 
 
