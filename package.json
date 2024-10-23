@@ -32,7 +32,7 @@
     "dependencies": {
         "@breejs/later": "^4.2.0",
         "@fastify/rate-limit": "^9.1.0",
-        "@fastify/sensible": "^5.6.0",
+        "@fastify/sensible": "^6.0.0",
         "@fastify/static": "^7.0.4",
         "@influxdata/influxdb-client": "^1.35.0",
         "@influxdata/influxdb-client-apis": "^1.35.0",
