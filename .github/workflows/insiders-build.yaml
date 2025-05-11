@@ -99,7 +99,8 @@ jobs:
                       build: |
                           # Inject git SHA into package.json
                           GIT_SHA=$(git rev-parse --short HEAD)
-                          sed -i '' "s/\"version\": \".*\"/\"version\": \"4.4.0-$GIT_SHA\"/" package.json
+                          VERSION=$(grep -o '"version": "[^"]*"' package.json | cut -d'"' -f4)
+                          sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION-$GIT_SHA\"/" package.json
 
                           # Create a single JS file using esbuild
                           ./node_modules/.bin/esbuild src/bundle.js  --bundle --outfile=build.cjs --format=cjs --platform=node --target=node23 --inject:./src/lib/import-meta-url.js --define:import.meta.url=import_meta_url
@@ -175,7 +176,8 @@ jobs:
                       build: |
                           # Inject git SHA into package.json
                           GIT_SHA=$(git rev-parse --short HEAD)
-                          sed -i "s/\"version\": \".*\"/\"version\": \"4.4.0-$GIT_SHA\"/" package.json
+                          VERSION=$(grep -o '"version": "[^"]*"' package.json | cut -d'"' -f4)
+                          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION-$GIT_SHA\"/" package.json
 
                           ./node_modules/.bin/esbuild src/bundle.js  --bundle --outfile=build.cjs --format=cjs --platform=node --target=node23 --inject:./src/lib/import-meta-url.js --define:import.meta.url=import_meta_url
                           node --experimental-sea-config src/sea-config.json
@@ -185,8 +187,11 @@ jobs:
                           npx postject ${DIST_FILE_NAME} NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
 
                           # Compress insider's build
-                          tar -czf "${DIST_FILE_NAME}--linux-x64--${{ github.sha }}.tgz" "${DIST_FILE_NAME}"
                           ls -la
+                          zip -9 -r ./${DIST_FILE_NAME}--linux-x64--${{ github.sha }}.zip ${DIST_FILE_NAME}
+
+                          cd src
+                          zip -9 -u -r "../${DIST_FILE_NAME}--linux-x64--${{ github.sha }}.zip" "./config/production_template.yaml" "./config/log_appender_xml"
 
                           # -------------------
                           # Clean up
