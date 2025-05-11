@@ -43,14 +43,17 @@ let instance = null;
  * @property {object} rejectedEvents - The UDP events instance for tracking rejected user and log events.
  * @property {object} serverList - The list of servers to monitor.
  * @property {object} mqttClient - The MQTT client instance for connecting to the MQTT broker.
- * @property {object} certPath - The path to the client certificate.
- * @property {object} keyPath - The path to the client certificate key.
- * @property {object} caPath - The path to the client certificate CA.
+ * @property {string} certPath - The path to the client certificate.
+ * @property {string} keyPath - The path to the client certificate key.
+ * @property {string} caPath - The path to the client certificate CA.
  * @property {object} influx - The InfluxDB client instance.
- * @property {object} influxWriteApi - The InfluxDB write API instance.
- * @property {object} influxWriteOptions - The InfluxDB write options.
- * @property {object} influxWriteOptionsV2 - The InfluxDB v2 write options.
- * @property {object} influxWriteOptionsV1 - The InfluxDB v1 write options.
+ * @property {Array} influxWriteApi - The array of InfluxDB write API instances.
+ * @property {object} appNames - Array for storing app IDs and names.
+ * @property {Function} checkFileExistsSync - Utility function to check if a file exists.
+ * @property {Function} sleep - Utility function to create a delay.
+ * @property {Function} getLoggingLevel - Function to get the current logging level.
+ * @property {boolean} initialised - Flag to track initialization status of globals object.
+ * @property {object} hostInfo - Information about the host system where Butler SOS is running.
  */
 class Settings {
     /**
