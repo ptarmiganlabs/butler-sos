@@ -79,17 +79,5 @@
         "jsdoc-to-markdown": "^9.1.1",
         "prettier": "^3.5.3",
         "snyk": "^1.1296.2"
-    },
-    "pkg": {
-        "assets": [
-            "node_modules/axios/**/*",
-            "node_modules/open/xdg-open",
-            "static/**/*",
-            "package.json"
-        ],
-        "scripts": [
-            "node_modules/enigma.js/**/*.json",
-            "node_modules/js-yaml/**/*.js"
-        ]
     }
 }

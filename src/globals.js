@@ -13,6 +13,7 @@ import { Command, Option } from 'commander';
 import { InfluxDB, HttpError, DEFAULT_WriteOptions } from '@influxdata/influxdb-client';
 import { OrgsAPI, BucketsAPI } from '@influxdata/influxdb-client-apis';
 import { fileURLToPath } from 'url';
+import sea from 'node:sea';
 
 import { getServerTags } from './lib/servertags.js';
 import { UdpEvents } from './lib/udp-event.js';
@@ -20,6 +21,24 @@ import { verifyConfigFileSchema, verifyAppConfig } from './lib/config-file-verif
 
 let instance = null;
 
+/**
+ * Utility class for managing global application settings and configurations.
+ *
+ * Implements the singleton pattern to ensure only one instance exists.
+ * Provides methods for initializing settings, logging, and managing application state.
+ *
+ * @class Settings
+ * @property {string} appVersion - The version of the application.
+ * @property {string} configFile - The path to the configuration file.
+ * @property {object} config - The loaded configuration object.
+ * @property {boolean} isSea - Indicates if the application is running as a standalone executable.
+ * @property {string} execPath - The execution path of the application.
+ * @property {object} influx - The InfluxDB client instance.
+ * @property {object} influxWriteApi - The InfluxDB write API instance.
+ * @property {object} influxWriteOptions - The InfluxDB write options.
+ * @property {object} influxWriteOptionsV2 - The InfluxDB v2 write options.
+ * @property {object} influxWriteOptionsV1 - The InfluxDB v1 write options.
+ */
 class Settings {
     /**
      * Creates a new Settings instance or returns the existing singleton instance.
@@ -40,7 +59,7 @@ class Settings {
      * Initializes the Settings object with configuration from the environment and config files.
      * Sets up logging, database connections, MQTT clients, and other application services.
      *
-     * @returns {Object} The singleton instance of the Settings class after initialization
+     * @returns {object} The singleton instance of the Settings class after initialization
      */
     async init() {
         // Get app version from package.json file
@@ -48,19 +67,15 @@ class Settings {
         let a;
         let b;
         let c;
+        let appVersion;
+
         // Are we running as a packaged app?
-        if (process.pkg) {
-            // Get path to JS file
-            a = process.pkg.defaultEntrypoint;
+        if (sea.isSea()) {
+            // Get contents of package.json file
+            packageJson = sea.getAsset('package.json', 'utf8');
+            const version = JSON.parse(packageJson).version;
 
-            // Strip off the filename
-            b = upath.dirname(a);
-
-            // Add path to package.json file
-            c = upath.join(b, filenamePackage);
-
-            // Set base path of the executable
-            this.appBasePath = upath.join(b);
+            appVersion = version;
         } else {
             // Get path to JS file
             a = fileURLToPath(import.meta.url);
@@ -71,12 +86,15 @@ class Settings {
             // Add path to package.json file
             c = upath.join(b, '..', filenamePackage);
 
+            const { version } = JSON.parse(readFileSync(c));
+            appVersion = version;
+
             // Set base path of the executable
             this.appBasePath = upath.join(b, '..');
         }
 
         const { version } = JSON.parse(readFileSync(c));
-        this.appVersion = version;
+        this.appVersion = appVersion;
 
         // Make copy of influxdb client
         const InfluxDB2 = InfluxDB;
@@ -188,11 +206,11 @@ class Settings {
             }
         }
 
-        this.execPath = this.isPkg ? upath.dirname(process.execPath) : process.cwd();
-
         // Are we running as standalone app or not?
-        this.isPkg = typeof process.pkg !== 'undefined';
-        if (this.isPkg && configFileOption === undefined) {
+        this.isSea = sea.isSea();
+        this.execPath = this.isSea ? upath.dirname(process.execPath) : process.cwd();
+
+        if (this.isSea && configFileOption === undefined) {
             // Show help if running as standalone app and mandatory options (e.g. config file) are not specified
             program.help({ error: true });
         }
@@ -232,7 +250,7 @@ class Settings {
             // We don't have a logging object yet, so use plain console.log
 
             // Are we in a packaged app?
-            if (this.isPkg) {
+            if (this.isSea) {
                 console.log(`Running in packaged app. Executable path: ${this.execPath}`);
             } else {
                 console.log(
@@ -276,7 +294,15 @@ class Settings {
         // Output config file name and path to log
         this.logger.info(`Using config file: ${this.configFile}`);
 
-        // Function to get current logging level
+        //
+
+        /**
+         * Returns the current logging level.
+         *
+         * @function getLoggingLevel
+         *
+         * @returns {string} The current logging level.
+         */
         this.getLoggingLevel = () =>
             this.logTransports.find((transport) => transport.name === 'console').level;
 
@@ -929,7 +955,7 @@ class Settings {
      * Gathers and returns information about the host system where Butler SOS is running.
      * Includes OS details, network info, hardware details, and a unique ID.
      *
-     * @returns {Object|null} Object containing host information or null if an error occurs
+     * @returns {object | null} Object containing host information or null if an error occurs
      */
     async initHostInfo() {
         try {

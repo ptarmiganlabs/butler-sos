@@ -28,6 +28,22 @@ import { setupUdpEventsStorage } from './lib/udp-event.js';
 // Suppress experimental warnings
 // https://stackoverflow.com/questions/55778283/how-to-disable-warnings-when-node-is-launched-via-a-global-shell-script
 const originalEmit = process.emit;
+
+/**
+ * Custom implementation of the `process.emit` function to suppress specific Node.js warnings.
+ *
+ * This function intercepts emitted events and checks if the event name is `warning` and the
+ * warning is of type `ExperimentalWarning` related to the Fetch API. If so, it suppresses
+ * the warning by returning `false`. Otherwise, it delegates the event emission to the original
+ * `process.emit` function.
+ *
+ * @param {string} name - The name of the event being emitted.
+ * @param {object} data - The data associated with the event. Expected to be an object containing
+ *                        warning details when the event name is `warning`.
+ * @param {...*} args - Additional arguments passed to the event handler.
+ * @returns {boolean} `false` if the warning is suppressed; otherwise, the result of the original
+ *                    `process.emit` function.
+ */
 process.emit = function (name, data, ...args) {
     // console.log(`Got a Node.js event: ${name}`);
     // console.log(`Type of data: ${typeof data}`);
@@ -148,7 +164,7 @@ async function mainScript() {
         globals.logger.info(`Cores             : ${globals.hostInfo.si.cpu.cores}`);
         globals.logger.info(`Docker arch.      : ${globals.hostInfo.si.cpu.hypervizor}`);
         globals.logger.info(`Total memory      : ${globals.hostInfo.si.memory.total}`);
-        globals.logger.info(`Standalone app    : ${globals.isPkg}`);
+        globals.logger.info(`Standalone app    : ${globals.isSea}`);
 
         // Log info about what Qlik Sense certificates are being used
         globals.logger.info(`Client cert       : ${certFile}`);
