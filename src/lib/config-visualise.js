@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 import handlebars from 'handlebars';
+import sea from 'node:sea';
 
 import globals from '../globals.js';
 import configObfuscate from './config-obfuscate.js';
