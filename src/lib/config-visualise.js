@@ -10,6 +10,50 @@ import globals from '../globals.js';
 import configObfuscate from './config-obfuscate.js';
 
 /**
+ * Serves the custom 404 error page
+ *
+ * @param {object} request - The Fastify request object
+ * @param {object} reply - The Fastify reply object
+ * @returns {void}
+ */
+async function serve404Page(request, reply) {
+    try {
+        let template404;
+        const host = globals.config.get('Butler-SOS.configVisualisation.host');
+        const port = globals.config.get('Butler-SOS.configVisualisation.port');
+
+        if (globals.isSea) {
+            // In SEA mode, get the 404 template via sea.getAsset
+            globals.logger.verbose(`CONFIG VIS: Getting 404.html template via sea.getAsset`);
+            template404 = sea.getAsset('/404.html', 'utf8');
+            if (!template404) {
+                globals.logger.error(`CONFIG VIS: Could not find 404.html template in SEA assets`);
+                reply.code(404).send({ error: 'Page not found' });
+                return;
+            }
+        } else {
+            // In Node.js mode, read from filesystem
+            const filePath = path.resolve(globals.appBasePath, 'static', '404.html');
+            globals.logger.verbose(`CONFIG VIS: Reading 404.html template from ${filePath}`);
+            template404 = fs.readFileSync(filePath, 'utf8');
+        }
+
+        // Compile handlebars template and replace variables
+        const compiledTemplate = handlebars.compile(template404);
+        const renderedHtml = compiledTemplate({
+            visTaskHost: host,
+            visTaskPort: port,
+        });
+
+        // Send 404 response with custom page
+        reply.code(404).header('Content-Type', 'text/html; charset=utf-8').send(renderedHtml);
+    } catch (err) {
+        globals.logger.error(`CONFIG VIS: Error serving 404 page: ${err.message}`);
+        reply.code(404).send({ error: 'Page not found' });
+    }
+}
+
+/**
  * Sets up and starts a web server for visualizing Butler SOS configuration.
  *
  * This function creates a Fastify server that serves a web interface where users can
@@ -107,7 +151,8 @@ export async function setupConfigVisServer(logger, config) {
                     );
 
                     if (!content) {
-                        reply.code(404).send({ error: 'File not found' });
+                        // File not found - serve custom 404 page
+                        await serve404Page(request, reply);
                         return;
                     }
 
@@ -115,6 +160,29 @@ export async function setupConfigVisServer(logger, config) {
                 } catch (err) {
                     globals.logger.error(
                         `CONFIG VIS: Error serving static file in SEA mode: ${err.message}`
+                    );
+                    await serve404Page(request, reply);
+                }
+            });
+
+            // Add specific handler for the butler-sos.png file at the root path
+            configVisServer.get('/butler-sos.png', async (request, reply) => {
+                try {
+                    // Get the asset from SEA
+                    const logoContent = sea.getAsset('/butler-sos.png');
+
+                    if (!logoContent) {
+                        globals.logger.error(
+                            `CONFIG VIS: Could not find butler-sos.png in SEA assets`
+                        );
+                        reply.code(404).send({ error: 'Logo not found' });
+                        return;
+                    }
+
+                    reply.code(200).header('Content-Type', 'image/png').send(logoContent);
+                } catch (err) {
+                    globals.logger.error(
+                        `CONFIG VIS: Error serving logo in SEA mode: ${err.message}`
                     );
                     reply.code(500).send({ error: 'Internal server error' });
                 }
@@ -146,6 +214,9 @@ export async function setupConfigVisServer(logger, config) {
                 redirect: true, // Redirect to trailing '/' when the pathname is a dir
             });
         }
+
+        // Set up a global 404 handler for both running modes
+        configVisServer.setNotFoundHandler(serve404Page);
 
         configVisServer.get('/', async (request, reply) => {
             // Obfuscate the config object before sending it to the client
