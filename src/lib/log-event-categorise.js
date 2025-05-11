@@ -1,18 +1,29 @@
 import globals from '../globals.js';
 
-// Function to categorise log events
-//
-//
-// Parameters:
-// - logLevel: The log level of the log event
-// - logMessage: The message of the log event
-//
-// Output:
-// - logEventCategory: The category of the log event. This is an object with the following properties:
-//   - category: The category of the log event. Array of objects with the following properties:
-//     - name: The name of the category
-//     - value: The value of the category
-//   - actionTaken: The action taken for the log event. Possible values are 'categorised', 'dropped'
+/**
+ * Categorizes log events based on configured rules.
+ *
+ * This function analyzes log events from Qlik Sense services and categorizes them
+ * based on matching rules defined in the configuration. Rules can match on log level
+ * and message content using different filters (starts with, ends with, contains).
+ * Rules can also specify if a matched log event should be dropped.
+ *
+ * The function returns an object with two properties:
+ * - category: An array of objects, each representing a category.
+ *   Each category object has two properties: name and value.
+ * - actionTaken: A string indicating the action taken on the log event.
+ *   Possible values are 'categorised' and 'dropped'.
+ *
+ * If no rule matches, then the function uses the default category
+ * (if enabled in the config file) and sets actionTaken to 'categorised'.
+ *
+ * If an error occurs while processing the log event, then the function
+ * logs an error message and returns null.
+ *
+ * @param {string} logLevel - The log level of the log event
+ * @param {string} logMessage - The log message of the log event
+ * @returns {object} An object with category and actionTaken properties
+ */
 export function categoriseLogEvent(logLevel, logMessage) {
     const logEventCategory = [];
 
@@ -20,7 +31,7 @@ export function categoriseLogEvent(logLevel, logMessage) {
         let match = false;
 
         // Loop over all rules in the config file
-        // eslint-disable-next-line no-restricted-syntax
+
         for (const rule of globals.config.get('Butler-SOS.logEvents.categorise.rules')) {
             // Check if the log event matches any of the rule's log levels (which are found in the array 'logLevel' property)
             // Make the check case insensitive
@@ -31,7 +42,6 @@ export function categoriseLogEvent(logLevel, logMessage) {
                 // - value: The value of the filter
                 // Make the check case sensitive
 
-                // eslint-disable-next-line no-restricted-syntax
                 for (const filter of rule.filter) {
                     // More than one filter may match
                     if (filter.type === 'sw') {

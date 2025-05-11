@@ -4,8 +4,13 @@ import { default as Ajv } from 'ajv';
 
 import { confifgFileSchema } from './config-file-schema.js';
 
-// Function to verify that the config file has the correct format
-// Use yaml-validator to validate the config file
+/**
+ * Verifies that the config file has the correct format.
+ * Use yaml-validator to validate the config file
+ *
+ * @param {string} configFile path to the config file to verify
+ * @returns {Promise<boolean>} true if the config file is valid, false otherwise
+ */
 export async function verifyConfigFileSchema(configFile) {
     try {
         const ajv = new Ajv({
@@ -34,7 +39,8 @@ export async function verifyConfigFileSchema(configFile) {
         try {
             parsedFileContent = load(fileContent);
         } catch (err) {
-            throw new Error(`VERIFY CONFIG FILE: Error parsing YAML file: ${err}`);
+            console.error(`VERIFY CONFIG FILE: Error parsing YAML file: ${err}`);
+            return false;
         }
 
         // Validate the parsed YAML file against the schema
@@ -70,6 +76,18 @@ export async function verifyConfigFileSchema(configFile) {
 }
 
 // Function to do verification of app specific settings and relationships between settings
+/**
+ * Verifies application-specific settings and relationships between configuration settings.
+ *
+ * This function performs validation beyond simple schema validation, checking:
+ * 1. If InfluxDB is enabled, verifies that version is valid (must be 1 or 2)
+ * 2. Validates server tag configuration:
+ *    - All tags defined in serverTagsDefinition must be set for each server
+ *    - All tags specified for each server must be present in serverTagsDefinition
+ *
+ * @param {object} cfg - The configuration object to verify
+ * @returns {Promise<boolean>} A promise that resolves to true if all checks pass, false otherwise
+ */
 export async function verifyAppConfig(cfg) {
     // Verify values of specific config entries
 

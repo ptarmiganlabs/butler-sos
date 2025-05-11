@@ -1,7 +1,13 @@
-/* eslint-disable no-unused-vars */
 import later from '@breejs/later';
 import axios from 'axios';
 
+/**
+ * Sends a heartbeat GET request to a remote URL.
+ *
+ * @param {string} remoteURL - The URL to send the heartbeat request to
+ * @param {object} logger - Logger object for logging success or errors
+ * @returns {void}
+ */
 const callRemoteURL = function callRemoteURL(remoteURL, logger) {
     axios
         .get(remoteURL)
@@ -15,6 +21,16 @@ const callRemoteURL = function callRemoteURL(remoteURL, logger) {
         });
 };
 
+/**
+ * Sets up a scheduled timer for sending heartbeat requests to a remote URL.
+ *
+ * This function configures a scheduled timer based on the frequency specified in the
+ * configuration. It also performs an initial heartbeat request immediately.
+ *
+ * @param {object} config - Configuration object with heartbeat settings
+ * @param {object} logger - Logger object for logging debug info and errors
+ * @returns {void}
+ */
 export function setupHeartbeatTimer(config, logger) {
     try {
         logger.debug(

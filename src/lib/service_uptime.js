@@ -1,4 +1,3 @@
-/* eslint-disable no-bitwise */
 import later from '@breejs/later';
 import { Duration } from 'luxon';
 
@@ -7,11 +6,35 @@ import { postButlerSOSMemoryUsageToInfluxdb } from './post-to-influxdb.js';
 import { postButlerSOSUptimeToNewRelic } from './post-to-new-relic.js';
 
 const fullUnits = ['years', 'months', 'days', 'hours', 'minutes', 'seconds'];
+
+/**
+ * Extends Luxon's Duration prototype to add a toFull method.
+ *
+ * This method shifts the duration to include all time units from years to seconds,
+ * providing a complete representation of the duration.
+ *
+ * @returns {Duration} A new Duration object with time shifted to all units
+ */
 Duration.prototype.toFull = function convToFull() {
     // return this.shiftTo.apply(this, fullUnits);
     return this.shiftTo(...fullUnits); // Suggested bt GitHub Copilot
 };
 
+/**
+ * Starts monitoring and reporting of Butler SOS service uptime and memory usage.
+ *
+ * This function sets up a timer to periodically log Butler SOS uptime and memory usage statistics.
+ * It also optionally sends this data to InfluxDB and/or New Relic for long-term storage and analysis.
+ * The function uses the frequency and log level settings from the Butler SOS config file.
+ *
+ * Data tracked includes:
+ * - Uptime duration (formatted as months, days, hours, minutes, seconds)
+ * - Heap memory usage (used and total)
+ * - External (off-heap) memory
+ * - Total process memory allocation
+ *
+ * @returns {void}
+ */
 export function serviceUptimeStart() {
     const uptimeLogLevel = globals.config.get('Butler-SOS.uptimeMonitor.logLevel');
     const uptimeInterval = globals.config.get('Butler-SOS.uptimeMonitor.frequency');
@@ -20,7 +43,16 @@ export function serviceUptimeStart() {
     const formatter = new Intl.NumberFormat('en-US');
 
     // Log uptime to console
-    // eslint-disable-next-line no-extend-native
+    /**
+     * Extends Number prototype to add a toTime method.
+     *
+     * This method converts a number representing milliseconds (or seconds if isSec is true)
+     * into a formatted time string. For durations less than 24 hours, it returns the time
+     * in HH:MM:SS format. For longer durations, it includes the days in the hours part.
+     *
+     * @param {boolean} isSec - If true, treat the number as seconds instead of milliseconds
+     * @returns {string} A formatted time string
+     */
     Number.prototype.toTime = function convToTime(isSec) {
         const ms = isSec ? this * 1e3 : this;
         const lm = ~(4 * !!isSec);

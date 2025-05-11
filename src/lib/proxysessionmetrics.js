@@ -15,6 +15,15 @@ import { postUserSessionsToMQTT } from './post-to-mqtt.js';
 import { getServerTags } from './servertags.js';
 import { saveUserSessionMetricsToPrometheus } from './prom-client.js';
 
+/**
+ * Loads TLS certificates from the filesystem based on the provided options.
+ *
+ * @param {object} options - Certificate options
+ * @param {string} options.Certificate - Path to the client certificate file
+ * @param {string} options.CertificateKey - Path to the client certificate key file
+ * @param {string} options.CertificateCA - Path to the certificate authority file
+ * @returns {object} Object containing cert, key, and ca properties with certificate contents
+ */
 function getCertificates(options) {
     const certificate = {};
 
@@ -25,7 +34,19 @@ function getCertificates(options) {
     return certificate;
 }
 
-// Prepare user session metrics data pointfor posting to InfluxDB v1
+/**
+ * Prepares user session metrics data for storage/forwarding to various destinations.
+ *
+ * This function processes raw session data from Qlik Sense and formats it into
+ * structures suitable for InfluxDB, Prometheus, and New Relic.
+ *
+ * @param {string} serverName - Name of the server
+ * @param {string} host - Host name or IP of the server
+ * @param {string} virtualProxy - Virtual proxy prefix
+ * @param {Array} body - Array of session objects from Qlik Sense
+ * @param {object} tags - Tags to associate with the metrics
+ * @returns {Promise<object>} Promise resolving to an object containing formatted metrics data
+ */
 function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
     return new Promise((resolve, reject) => {
         try {
@@ -115,7 +136,6 @@ function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
             // Add details for each session
             // Discussion about forEach vs for...of: https://github.com/airbnb/javascript/issues/1271
             // https://gist.github.com/ljharb/58faf1cfcb4e6808f74aae4ef7944cff
-            // eslint-disable-next-line no-restricted-syntax
             for (const bodyItem of body) {
                 // Is user in blacklist?
                 // If so just skip this user's session
@@ -197,7 +217,20 @@ function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
     });
 }
 
-function getProxySessionStatsFromSense(serverName, host, virtualProxy, influxTags) {
+/**
+ * Retrieves user session statistics from Qlik Sense Proxy Service.
+ *
+ * This function makes an API call to the Qlik Sense Proxy API to get information about
+ * active user sessions. It then processes this data and sends it to configured destinations
+ * (MQTT, InfluxDB, New Relic, Prometheus).
+ *
+ * @param {string} serverName - Name of the Qlik Sense server
+ * @param {string} host - Host name or IP of the Qlik Sense server
+ * @param {string} virtualProxy - Virtual proxy prefix
+ * @param {object} influxTags - Tags to associate with metrics in InfluxDB
+ * @returns {Promise<void>} Promise that resolves when the operation is complete
+ */
+export async function getProxySessionStatsFromSense(serverName, host, virtualProxy, influxTags) {
     // Current user sessions are retrived using this API:
     // https://help.qlik.com/en-US/sense-developer/February2021/Subsystems/ProxyServiceAPI/Content/Sense_ProxyServiceAPI/ProxyServiceAPI-Proxy-API.htm
 
@@ -258,80 +291,82 @@ function getProxySessionStatsFromSense(serverName, host, virtualProxy, influxTag
 
     globals.logger.debug(`PROXY SESSIONS: Querying user sessions from ${requestSettings.url}`);
 
-    axios
-        .request(requestSettings)
-        .then(async (response) => {
+    try {
+        const response = await axios.request(requestSettings);
+
+        globals.logger.debug(`PROXY SESSIONS: User session response from: ${response.config.url}`);
+
+        if (response.status === 200) {
             globals.logger.debug(
-                `PROXY SESSIONS: User session response from: ${response.config.url}`
+                `PROXY SESSIONS: Body from ${response.config.url}: ${JSON.stringify(
+                    response.data,
+                    null,
+                    2
+                )}`
             );
 
-            if (response.status === 200) {
-                globals.logger.debug(
-                    `PROXY SESSIONS: Body from ${response.config.url}: ${JSON.stringify(
-                        response.data,
-                        null,
-                        2
-                    )}`
-                );
+            // Post to MQTT
+            if (globals.config.get('Butler-SOS.mqttConfig.enable') === true) {
+                globals.logger.debug('PROXY SESSIONS: Calling user sessions MQTT posting method');
 
-                // Post to MQTT
-                if (globals.config.get('Butler-SOS.mqttConfig.enable') === true) {
-                    globals.logger.debug(
-                        'PROXY SESSIONS: Calling user sessions MQTT posting method'
-                    );
-
-                    postUserSessionsToMQTT(
-                        host.split(':')[0],
-                        // response.request._headers.xvirtualproxy,
-                        virtualProxy,
-                        JSON.stringify(response.data, null, 2)
-                    );
-                }
-
-                const userProxySessionsData = await prepUserSessionMetrics(
-                    serverName,
-                    host,
+                postUserSessionsToMQTT(
+                    host.split(':')[0],
+                    // response.request._headers.xvirtualproxy,
                     virtualProxy,
-                    response.data,
-                    influxTags
+                    JSON.stringify(response.data, null, 2)
+                );
+            }
+
+            const userProxySessionsData = await prepUserSessionMetrics(
+                serverName,
+                host,
+                virtualProxy,
+                response.data,
+                influxTags
+            );
+
+            // Post to Influxdb
+            if (globals.config.get('Butler-SOS.influxdbConfig.enable') === true) {
+                globals.logger.debug(
+                    'PROXY SESSIONS: Calling user sessions Influxdb posting method'
                 );
 
-                // Post to Influxdb
-                if (globals.config.get('Butler-SOS.influxdbConfig.enable') === true) {
-                    globals.logger.debug(
-                        'PROXY SESSIONS: Calling user sessions Influxdb posting method'
-                    );
-
-                    postProxySessionsToInfluxdb(userProxySessionsData);
-                }
-
-                // Post to New Relic
-                if (
-                    globals.config.get('Butler-SOS.newRelic.enable') === true &&
-                    globals.config.get(
-                        'Butler-SOS.newRelic.metric.dynamic.proxy.sessions.enable'
-                    ) === true
-                ) {
-                    globals.logger.debug(
-                        'PROXY SESSIONS: Calling user sessions New Relic posting method'
-                    );
-
-                    postProxySessionsToNewRelic(userProxySessionsData);
-                }
-
-                // Save latest available data for Prometheus
-                if (globals.config.get('Butler-SOS.prometheus.enable') === true) {
-                    globals.logger.debug('HEALTH: Calling SESSIONS metrics Prometheus method');
-                    saveUserSessionMetricsToPrometheus(userProxySessionsData);
-                }
+                postProxySessionsToInfluxdb(userProxySessionsData);
             }
-        })
-        .catch((err) => {
-            globals.logger.error(`PROXY SESSIONS: Error when calling proxy session API: ${err}`);
-        });
+
+            // Post to New Relic
+            if (
+                globals.config.get('Butler-SOS.newRelic.enable') === true &&
+                globals.config.get('Butler-SOS.newRelic.metric.dynamic.proxy.sessions.enable') ===
+                    true
+            ) {
+                globals.logger.debug(
+                    'PROXY SESSIONS: Calling user sessions New Relic posting method'
+                );
+
+                postProxySessionsToNewRelic(userProxySessionsData);
+            }
+
+            // Save latest available data for Prometheus
+            if (globals.config.get('Butler-SOS.prometheus.enable') === true) {
+                globals.logger.debug('HEALTH: Calling SESSIONS metrics Prometheus method');
+                saveUserSessionMetricsToPrometheus(userProxySessionsData);
+            }
+        }
+    } catch (err) {
+        globals.logger.error(`PROXY SESSIONS: Error when calling proxy session API: ${err}`);
+    }
 }
 
-// Get info on what sessions currently exist
+/**
+ * Sets up a timer to periodically retrieve user session information from Qlik Sense.
+ *
+ * This function configures a periodic task that polls all configured Sense servers
+ * and their virtual proxies for user session information. The gathered data is then
+ * processed and sent to the configured destinations.
+ *
+ * @returns {void}
+ */
 export function setupUserSessionsTimer() {
     globals.logger.debug(
         `PROXY SESSIONS: Monitor user sessions for these servers/virtual proxies: ${JSON.stringify(
@@ -342,27 +377,34 @@ export function setupUserSessionsTimer() {
     );
 
     // Configure timer for getting user session data from Sense proxy API
-    setInterval(() => {
+    setInterval(async () => {
         globals.logger.verbose('PROXY SESSIONS: Event started: Poll user sessions');
 
-        globals.serverList.forEach((server) => {
+        // Process servers sequentially to avoid overwhelming the Sense servers
+        for (const server of globals.serverList) {
             if (server.userSessions.enable) {
                 const tags = getServerTags(globals.logger, server);
-                server.userSessions.virtualProxies.forEach((virtualProxy) => {
+
+                // Process virtual proxies sequentially
+                for (const virtualProxy of server.userSessions.virtualProxies) {
                     globals.logger.debug(
                         `PROXY SESSIONS: Getting user sessions for host=${
                             server.userSessions.host
                         }, virtual proxy=${JSON.stringify(virtualProxy, null, 2)}`
                     );
 
-                    getProxySessionStatsFromSense(
-                        server.serverName,
-                        server.userSessions.host,
-                        virtualProxy.virtualProxy,
-                        tags
-                    );
-                });
+                    try {
+                        await getProxySessionStatsFromSense(
+                            server.serverName,
+                            server.userSessions.host,
+                            virtualProxy.virtualProxy,
+                            tags
+                        );
+                    } catch (err) {
+                        globals.logger.error(`PROXY SESSIONS: Error getting session stats: ${err}`);
+                    }
+                }
             }
-        });
+        }
     }, globals.config.get('Butler-SOS.userSessions.pollingInterval'));
 }

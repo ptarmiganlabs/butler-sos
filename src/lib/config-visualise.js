@@ -1,14 +1,29 @@
 import Fastify from 'fastify';
 import FastifyRateLimit from '@fastify/rate-limit';
 import FastifyStatic from '@fastify/static';
-import fs from 'fs';
-import path from 'path';
-import yaml from 'js-yaml';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as yaml from 'js-yaml';
 import handlebars from 'handlebars';
 
 import globals from '../globals.js';
 import configObfuscate from './config-obfuscate.js';
 
+/**
+ * Sets up and starts a web server for visualizing Butler SOS configuration.
+ *
+ * This function creates a Fastify server that serves a web interface where users can
+ * view the current Butler SOS configuration in a more readable format. It includes:
+ * - Rate limiting to prevent abuse
+ * - Optional obfuscation of sensitive configuration values
+ * - Serving static files for the web interface
+ * - Rendering the configuration as both JSON and YAML
+ *
+ * @param {object} [logger] - Optional logger object (not used in this function)
+ * @param {object} [config] - Optional configuration object (not used in this function)
+ * @returns {Promise<void>} A promise that resolves when the server is set up
+ * @throws {Error} If there's an error setting up the server
+ */
 export async function setupConfigVisServer(logger, config) {
     try {
         // Register rate limit for API
@@ -51,24 +66,86 @@ export async function setupConfigVisServer(logger, config) {
         await configVisServer.register(import('../plugins/support.js'), { options: {} });
 
         // Create absolute path to the html directory
-        // dirname points to the directory where this file (app.js) is located, taking into account
+        // appBasePath points to the directory where this file (app.js) is located, taking into account
         // if the app is running as a packaged app or as a Node.js app.
         globals.logger.verbose(`----------------2: ${globals.appBasePath}`);
 
-        // Get directory contents of dirname
-        const dirContents = fs.readdirSync(globals.appBasePath);
-        globals.logger.verbose(
-            `CONFIG VIS: Directory contents of "${globals.appBasePath}": ${dirContents}`
-        );
+        // Handle static files differently depending on whether we're running in SEA mode or not
+        if (globals.isSea) {
+            // Running as standalone SEA app
+            // In SEA mode, we need to manually handle each static file route
+            // since files don't exist on disk
+            globals.logger.info(
+                `CONFIG VIS: Running in SEA mode, setting up custom static file handlers`
+            );
 
-        const htmlDir = path.resolve(globals.appBasePath, 'static/configvis');
-        globals.logger.info(`CONFIG VIS: Serving static files from ${htmlDir}`);
+            // Define MIME types for different file extensions
+            const mimeTypes = {
+                '.html': 'text/html; charset=utf-8',
+                '.css': 'text/css',
+                '.js': 'application/javascript',
+                '.png': 'image/png',
+                '.jpg': 'image/jpeg',
+                '.gif': 'image/gif',
+                '.svg': 'image/svg+xml',
+                '.map': 'application/json',
+                '.ico': 'image/x-icon',
+            };
 
-        await configVisServer.register(FastifyStatic, {
-            root: htmlDir,
-            constraints: {}, // optional: default {}. Example: { host: 'example.com' }
-            redirect: true, // Redirect to trailing '/' when the pathname is a dir
-        });
+            // Set up routes for the static files listed in sea-config.json
+            configVisServer.get('/:filename', async (request, reply) => {
+                try {
+                    const filename = request.params.filename;
+                    const assetPath = `/configvis/${filename}`;
+                    const fileExtension = path.extname(filename);
+                    const contentType = mimeTypes[fileExtension] || 'application/octet-stream';
+
+                    // Get the asset from SEA
+                    const content = sea.getAsset(
+                        assetPath,
+                        fileExtension === '.png' || fileExtension === '.ico' ? null : 'utf8'
+                    );
+
+                    if (!content) {
+                        reply.code(404).send({ error: 'File not found' });
+                        return;
+                    }
+
+                    reply.code(200).header('Content-Type', contentType).send(content);
+                } catch (err) {
+                    globals.logger.error(
+                        `CONFIG VIS: Error serving static file in SEA mode: ${err.message}`
+                    );
+                    reply.code(500).send({ error: 'Internal server error' });
+                }
+            });
+
+            globals.logger.info(`CONFIG VIS: Custom static file handlers set up for SEA mode`);
+        } else {
+            // Running Node.js script
+            const STATIC_PATH = path.join(globals.appBasePath, './static');
+
+            // Get directory contents of static directory (for debugging)
+            try {
+                const dirContents = fs.readdirSync(STATIC_PATH);
+                globals.logger.verbose(
+                    `CONFIG VIS: Directory contents of "${STATIC_PATH}": ${dirContents}`
+                );
+            } catch (err) {
+                globals.logger.error(`CONFIG VIS: Error reading static directory: ${err.message}`);
+            }
+
+            const htmlDir = path.resolve(STATIC_PATH, 'configvis');
+            globals.logger.info(`CONFIG VIS: Serving static files from ${htmlDir}`);
+
+            // Use FastifyStatic plugin to serve static files in Node.js mode
+            await configVisServer.register(FastifyStatic, {
+                root: htmlDir,
+                // prefix: '/configvis/',
+                constraints: {}, // optional: default {}. Example: { host: 'example.com' }
+                redirect: true, // Redirect to trailing '/' when the pathname is a dir
+            });
+        }
 
         configVisServer.get('/', async (request, reply) => {
             // Obfuscate the config object before sending it to the client
@@ -87,12 +164,33 @@ export async function setupConfigVisServer(logger, config) {
             // Convert the (potentially obfuscated) config object to YAML format (=string)
             const butlerConfigYaml = yaml.dump(newConfig);
 
-            // Read index.html from disk
+            // Read index.html - depending on whether we're in SEA mode or not
             // dirname points to the directory where this file (app.js) is located, taking into account
             // if the app is running as a packaged app or as a Node.js app.
             globals.logger.verbose(`----------------: ${globals.appBasePath}`);
-            const filePath = path.resolve(globals.appBasePath, 'static/configvis', 'index.html');
-            const template = fs.readFileSync(filePath, 'utf8');
+
+            let template;
+            if (globals.isSea) {
+                // In SEA mode, get the template via sea.getAsset
+                globals.logger.verbose(`CONFIG VIS: Getting index.html template via sea.getAsset`);
+                template = sea.getAsset('/configvis/index.html', 'utf8');
+                if (!template) {
+                    globals.logger.error(
+                        `CONFIG VIS: Could not find index.html template in SEA assets`
+                    );
+                    reply.code(500).send({ error: 'Internal server error: Template not found' });
+                    return;
+                }
+            } else {
+                // In Node.js mode, read from filesystem
+                const filePath = path.resolve(
+                    globals.appBasePath,
+                    'static/configvis',
+                    'index.html'
+                );
+                globals.logger.verbose(`CONFIG VIS: Reading index.html template from ${filePath}`);
+                template = fs.readFileSync(filePath, 'utf8');
+            }
 
             // Compile handlebars template
             const compiledTemplate = handlebars.compile(template);

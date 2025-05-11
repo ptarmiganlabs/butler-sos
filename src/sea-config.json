@@ -1,0 +1,27 @@
+{
+    "main": "build.cjs",
+    "output": "sea-prep.blob",
+    "disableExperimentalSEAWarning": true,
+    "assets": {
+        "package.json": "./package.json",
+        "/404.html": "./src/static/404.html",
+        "/android-chrome-192x192.png": "./src/static/android-chrome-192x192.png",
+        "/android-chrome-512x512.png": "./src/static/android-chrome-512x512.png",
+        "/apple-touch-icon.png": "./src/static/apple-touch-icon.png",
+        "/butler-sos.png": "./src/static/ctrl-q.png",
+        "/favicon-16x16.png": "./src/static/favicon-16x16.png",
+        "/favicon-32x32.png": "./src/static/favicon-32x32.png",
+        "/favicon.ico": "./src/static/favicon.ico",
+        "/index.html": "./src/static/index.html",
+        "/logo.svg": "./static/logo.svg",
+        "/configvis/butler-sos.png": "./static/configvis/butler-sos.png",
+        "/configvis/download-solid.svg": "./static/configvis/download-solid.svg",
+        "/configvis/index.html": "./static/configvis/index.html",
+        "/configvis/jsontree.js": "./static/configvis/jsontree.js",
+        "/configvis/jsontree.js.css": "./static/configvis/jsontree.js.css",
+        "/configvis/jsontree.js.css.map": "./static/configvis/jsontree.js.css.map",
+        "/configvis/jsontree.js.map": "./static/configvis/jsontree.js.map",
+        "/configvis/prism.css": "./static/configvis/prism.css",
+        "/configvis/prism.js": "./static/configvis/prism.js"
+    }
+}

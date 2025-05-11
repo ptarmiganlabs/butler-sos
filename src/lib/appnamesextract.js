@@ -1,11 +1,20 @@
 // Get app names from the Qlik Repository Service (QRS) API
-import path from 'path';
 import qrsInteract from 'qrs-interact';
 import clonedeep from 'lodash.clonedeep';
 
 import globals from '../globals.js';
 
-function getAppNames() {
+/**
+ * Retrieves application names from the Qlik Repository Service (QRS) API.
+ *
+ * This function connects to the Qlik Sense repository database and fetches
+ * information about all available applications. It stores the app information
+ * (id, name, description) in the global appNames variable for use throughout
+ * the Butler SOS application.
+ *
+ * @returns {void}
+ */
+export function getAppNames() {
     globals.logger.verbose(`APP NAMES: Start getting app names from repository db`);
 
     // Set up Sense repository service configuration
@@ -55,6 +64,16 @@ function getAppNames() {
     }
 }
 
+/**
+ * Sets up a timer for periodically retrieving app names from the Qlik Repository Service.
+ *
+ * This function initializes a timer that calls getAppNames() at regular intervals
+ * specified by the Butler-SOS.appNames.extractInterval configuration setting.
+ * This ensures that the Butler SOS application always has up-to-date information
+ * about Qlik Sense applications.
+ *
+ * @returns {void}
+ */
 export function setupAppNamesExtractTimer() {
     // Configure timer for getting app names data
     setInterval(() => {

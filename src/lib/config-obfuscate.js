@@ -1,5 +1,27 @@
 import globals from '../globals.js';
 
+/**
+ * Obfuscates sensitive information in the Butler SOS configuration object.
+ *
+ * This function creates a copy of the configuration object and replaces sensitive
+ * information with masked strings to prevent leaking sensitive data when displaying
+ * the configuration through the web interface. It typically keeps a small prefix
+ * of the original value (e.g., first 3-10 characters) and replaces the rest with
+ * asterisks.
+ *
+ * Obfuscated fields include:
+ * - Server hostnames and IP addresses
+ * - API keys and passwords
+ * - Certificate paths and passphrases
+ * - MQTT topics
+ * - InfluxDB credentials and parameters
+ * - Headers containing authentication information
+ * - Application IDs and names
+ *
+ * @param {object} config - The original configuration object to obfuscate
+ * @returns {object} A new configuration object with sensitive information masked
+ * @throws {Error} If there's an error during the obfuscation process
+ */
 function configObfuscate(config) {
     try {
         const obfuscatedConfig = { ...config };

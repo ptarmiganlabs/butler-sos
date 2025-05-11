@@ -15,6 +15,16 @@ import { getServerHeaders } from './serverheaders.js';
 import { getServerTags } from './servertags.js';
 import { saveHealthMetricsToPrometheus } from './prom-client.js';
 
+/**
+ * Loads TLS certificates from the filesystem based on the provided options.
+ *
+ * @param {object} options - Certificate options
+ * @param {string} options.Certificate - Path to the client certificate file
+ * @param {string} options.CertificateKey - Path to the client certificate key file
+ * @param {string} options.CertificateCA - Path to the certificate authority file
+ * @param {string} [options.CertificatePassphrase] - Optional passphrase for the certificate
+ * @returns {object} Object containing cert, key, and ca properties with certificate contents
+ */
 function getCertificates(options) {
     const certificate = {};
 
@@ -25,6 +35,18 @@ function getCertificates(options) {
     return certificate;
 }
 
+/**
+ * Retrieves health statistics from Qlik Sense server via the engine healthcheck API.
+ *
+ * This function makes an HTTPS request to the Sense engine healthcheck API and
+ * distributes the data to configured destinations (MQTT, InfluxDB, New Relic, Prometheus).
+ *
+ * @param {string} serverName - The name of the server as defined in the config.
+ * @param {string} host - The hostname or IP address of the Sense server.
+ * @param {object} tags - Tags/metadata to associate with the server metrics.
+ * @param {object|null} headers - Additional headers to include in the request.
+ * @returns {void}
+ */
 export function getHealthStatsFromSense(serverName, host, tags, headers) {
     globals.logger.debug(`HEALTH: URL=https://${host}/engine/healthcheck/`);
 
@@ -126,6 +148,14 @@ export function getHealthStatsFromSense(serverName, host, tags, headers) {
         });
 }
 
+/**
+ * Sets up a timer that periodically collects health metrics from all configured Sense servers.
+ *
+ * This function creates an interval that runs every pollingInterval milliseconds (as defined in config)
+ * and calls getHealthStatsFromSense for each server in the serverList global variable.
+ *
+ * @returns {void}
+ */
 export function setupHealthMetricsTimer() {
     // Configure timer for getting healthcheck data
     setInterval(() => {

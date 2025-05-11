@@ -1,5 +1,17 @@
 import globals from '../globals.js';
 
+/**
+ * Extracts HTTP headers from a server configuration object.
+ *
+ * This function processes a server configuration object and extracts any custom HTTP headers
+ * defined in the server's headers property. These headers can be used when making API requests
+ * to the server.
+ *
+ * @param {object} server - Server configuration object
+ * @param {string} server.serverName - Name of the server
+ * @param {object} [server.headers] - Optional HTTP headers to use with this server
+ * @returns {object | Array} Object with all headers if successful, empty array on error
+ */
 export function getServerHeaders(server) {
     try {
         const headers = {};

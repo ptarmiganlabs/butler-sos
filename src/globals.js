@@ -13,6 +13,7 @@ import { Command, Option } from 'commander';
 import { InfluxDB, HttpError, DEFAULT_WriteOptions } from '@influxdata/influxdb-client';
 import { OrgsAPI, BucketsAPI } from '@influxdata/influxdb-client-apis';
 import { fileURLToPath } from 'url';
+import sea from 'node:sea';
 
 import { getServerTags } from './lib/servertags.js';
 import { UdpEvents } from './lib/udp-event.js';
@@ -20,7 +21,45 @@ import { verifyConfigFileSchema, verifyAppConfig } from './lib/config-file-verif
 
 let instance = null;
 
+/**
+ * Utility class for managing global application settings and configurations.
+ *
+ * Implements the singleton pattern to ensure only one instance exists.
+ * Provides methods for initializing settings, logging, and managing application state.
+ *
+ * @class Settings
+ * @property {string} appVersion - The version of the application.
+ * @property {string} configFile - The path to the configuration file.
+ * @property {object} config - The loaded configuration object.
+ * @property {boolean} isSea - Indicates if the application is running as a standalone executable.
+ * @property {string} execPath - The execution path of the application.
+ * @property {string} appBasePath - The base path of the application.
+ * @property {object} logger - The logger instance for logging messages.
+ * @property {object} logTransports - The array of log transports for the logger.
+ * @property {object} options - The command line options parsed from the command line arguments.
+ * @property {object} udpServerUserActivity - The UDP server for user activity events.
+ * @property {object} udpServerLogEvents - The UDP server for log events.
+ * @property {object} udpEvents - The UDP events instance for tracking user activity.
+ * @property {object} rejectedEvents - The UDP events instance for tracking rejected user and log events.
+ * @property {object} serverList - The list of servers to monitor.
+ * @property {object} mqttClient - The MQTT client instance for connecting to the MQTT broker.
+ * @property {string} certPath - The path to the client certificate.
+ * @property {string} keyPath - The path to the client certificate key.
+ * @property {string} caPath - The path to the client certificate CA.
+ * @property {object} influx - The InfluxDB client instance.
+ * @property {Array} influxWriteApi - The array of InfluxDB write API instances.
+ * @property {object} appNames - Array for storing app IDs and names.
+ * @property {Function} checkFileExistsSync - Utility function to check if a file exists.
+ * @property {Function} sleep - Utility function to create a delay.
+ * @property {Function} getLoggingLevel - Function to get the current logging level.
+ * @property {boolean} initialised - Flag to track initialization status of globals object.
+ * @property {object} hostInfo - Information about the host system where Butler SOS is running.
+ */
 class Settings {
+    /**
+     * Creates a new Settings instance or returns the existing singleton instance.
+     * Implements the singleton pattern for global application settings.
+     */
     constructor() {
         if (!instance) {
             instance = this;
@@ -32,25 +71,27 @@ class Settings {
         return instance;
     }
 
+    /**
+     * Initializes the Settings object with configuration from the environment and config files.
+     * Sets up logging, database connections, MQTT clients, and other application services.
+     *
+     * @returns {object} The singleton instance of the Settings class after initialization
+     */
     async init() {
         // Get app version from package.json file
         const filenamePackage = `./package.json`;
         let a;
         let b;
         let c;
+        let appVersion;
+
         // Are we running as a packaged app?
-        if (process.pkg) {
-            // Get path to JS file
-            a = process.pkg.defaultEntrypoint;
+        if (sea.isSea()) {
+            // Get contents of package.json file
+            packageJson = sea.getAsset('package.json', 'utf8');
+            const version = JSON.parse(packageJson).version;
 
-            // Strip off the filename
-            b = upath.dirname(a);
-
-            // Add path to package.json file
-            c = upath.join(b, filenamePackage);
-
-            // Set base path of the executable
-            this.appBasePath = upath.join(b);
+            appVersion = version;
         } else {
             // Get path to JS file
             a = fileURLToPath(import.meta.url);
@@ -61,12 +102,15 @@ class Settings {
             // Add path to package.json file
             c = upath.join(b, '..', filenamePackage);
 
+            const { version } = JSON.parse(readFileSync(c));
+            appVersion = version;
+
             // Set base path of the executable
             this.appBasePath = upath.join(b, '..');
         }
 
         const { version } = JSON.parse(readFileSync(c));
-        this.appVersion = version;
+        this.appVersion = appVersion;
 
         // Make copy of influxdb client
         const InfluxDB2 = InfluxDB;
@@ -178,11 +222,11 @@ class Settings {
             }
         }
 
-        this.execPath = this.isPkg ? upath.dirname(process.execPath) : process.cwd();
-
         // Are we running as standalone app or not?
-        this.isPkg = typeof process.pkg !== 'undefined';
-        if (this.isPkg && configFileOption === undefined) {
+        this.isSea = sea.isSea();
+        this.execPath = this.isSea ? upath.dirname(process.execPath) : process.cwd();
+
+        if (this.isSea && configFileOption === undefined) {
             // Show help if running as standalone app and mandatory options (e.g. config file) are not specified
             program.help({ error: true });
         }
@@ -222,7 +266,7 @@ class Settings {
             // We don't have a logging object yet, so use plain console.log
 
             // Are we in a packaged app?
-            if (this.isPkg) {
+            if (this.isSea) {
                 console.log(`Running in packaged app. Executable path: ${this.execPath}`);
             } else {
                 console.log(
@@ -266,7 +310,15 @@ class Settings {
         // Output config file name and path to log
         this.logger.info(`Using config file: ${this.configFile}`);
 
-        // Function to get current logging level
+        //
+
+        /**
+         * Returns the current logging level.
+         *
+         * @function getLoggingLevel
+         *
+         * @returns {string} The current logging level.
+         */
         this.getLoggingLevel = () =>
             this.logTransports.find((transport) => transport.name === 'console').level;
 
@@ -716,32 +768,10 @@ class Settings {
         return instance;
     }
 
-    // Static function to check if a file exists
-    static checkFileExistsSync(filepath) {
-        let flag = true;
-        try {
-            fs.accessSync(filepath, fs.constants.F_OK);
-        } catch (e) {
-            flag = false;
-        }
-        return flag;
-    }
-
-    // Static sleep function
-    static sleep(ms) {
-        return new Promise((resolve) => setTimeout(resolve, ms));
-    }
-
-    // Static function to check if Butler is running in a Docker container
-    static isRunningInDocker() {
-        try {
-            fs.accessSync('/.dockerenv');
-            return true;
-        } catch (_) {
-            return false;
-        }
-    }
-
+    /**
+     * Initializes the InfluxDB connection based on configuration settings.
+     * Sets up databases, retention policies, and write APIs depending on InfluxDB version.
+     */
     async initInfluxDB() {
         let enableInfluxdb = false;
 
@@ -937,6 +967,12 @@ class Settings {
         }
     }
 
+    /**
+     * Gathers and returns information about the host system where Butler SOS is running.
+     * Includes OS details, network info, hardware details, and a unique ID.
+     *
+     * @returns {object | null} Object containing host information or null if an error occurs
+     */
     async initHostInfo() {
         try {
             const siCPU = await si.cpu();
@@ -994,6 +1030,49 @@ class Settings {
         } catch (err) {
             this.logger.error(`CONFIG: Getting host info: ${err}`);
             return null;
+        }
+    }
+
+    /**
+     * Checks if a file exists at the specified file path.
+     *
+     * @param {string} filepath - Path to the file to check
+     *
+     * @returns {boolean} True if the file exists, false otherwise
+     */
+    static checkFileExistsSync(filepath) {
+        let flag = true;
+        try {
+            fs.accessSync(filepath, fs.constants.F_OK);
+        } catch (e) {
+            flag = false;
+        }
+        return flag;
+    }
+
+    /**
+     * Creates a Promise that resolves after a specified time in milliseconds.
+     * Used for implementing delays in asynchronous code.
+     *
+     * @param {number} ms - The number of milliseconds to sleep
+     *
+     * @returns {Promise} A promise that resolves after the specified delay
+     */
+    static sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Detects if Butler SOS is running inside a Docker container.
+     *
+     * @returns {boolean} True if running in Docker, false otherwise
+     */
+    static isRunningInDocker() {
+        try {
+            fs.accessSync('/.dockerenv');
+            return true;
+        } catch (_) {
+            return false;
         }
     }
 }

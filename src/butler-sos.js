@@ -28,6 +28,22 @@ import { setupUdpEventsStorage } from './lib/udp-event.js';
 // Suppress experimental warnings
 // https://stackoverflow.com/questions/55778283/how-to-disable-warnings-when-node-is-launched-via-a-global-shell-script
 const originalEmit = process.emit;
+
+/**
+ * Custom implementation of the `process.emit` function to suppress specific Node.js warnings.
+ *
+ * This function intercepts emitted events and checks if the event name is `warning` and the
+ * warning is of type `ExperimentalWarning` related to the Fetch API. If so, it suppresses
+ * the warning by returning `false`. Otherwise, it delegates the event emission to the original
+ * `process.emit` function.
+ *
+ * @param {string} name - The name of the event being emitted.
+ * @param {object} data - The data associated with the event. Expected to be an object containing
+ *                        warning details when the event name is `warning`.
+ * @param {...*} args - Additional arguments passed to the event handler.
+ * @returns {boolean} `false` if the warning is suppressed; otherwise, the result of the original
+ *                    `process.emit` function.
+ */
 process.emit = function (name, data, ...args) {
     // console.log(`Got a Node.js event: ${name}`);
     // console.log(`Type of data: ${typeof data}`);
@@ -49,10 +65,24 @@ process.emit = function (name, data, ...args) {
     return originalEmit.apply(process, arguments);
 };
 
+/**
+ * Delays execution for the specified amount of time.
+ *
+ * @param {number} ms - The number of milliseconds to sleep.
+ * @returns {Promise<void>} A promise that resolves after the specified time has elapsed.
+ */
 async function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Main application entry point that initializes and starts all Butler SOS services.
+ *
+ * This function initializes globals, sets up logging, starts UDP servers for user events
+ * and log events, and initializes various metrics collection services based on configuration.
+ *
+ * @returns {Promise<void>} A promise that resolves when initialization is complete.
+ */
 async function mainScript() {
     // Set env variable to indicate that it is ok to change config settings
     process.env.ALLOW_CONFIG_MUTATIONS = 'true';
@@ -64,6 +94,12 @@ async function mainScript() {
 
     // Ensure that initialisation of globals is complete
     // Sleep 5 seconds otherwise to allow globals to be initialised
+    /**
+     * Helper function for sleeping/delaying within the mainScript function.
+     *
+     * @param {number} ms - The number of milliseconds to sleep.
+     * @returns {Promise<void>} A promise that resolves after the specified time has elapsed.
+     */
     function sleepLocal(ms) {
         return new Promise((resolve) => setTimeout(resolve, ms));
     }
@@ -128,7 +164,7 @@ async function mainScript() {
         globals.logger.info(`Cores             : ${globals.hostInfo.si.cpu.cores}`);
         globals.logger.info(`Docker arch.      : ${globals.hostInfo.si.cpu.hypervizor}`);
         globals.logger.info(`Total memory      : ${globals.hostInfo.si.memory.total}`);
-        globals.logger.info(`Standalone app    : ${globals.isPkg}`);
+        globals.logger.info(`Standalone app    : ${globals.isSea}`);
 
         // Log info about what Qlik Sense certificates are being used
         globals.logger.info(`Client cert       : ${certFile}`);

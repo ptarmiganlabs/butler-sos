@@ -4,6 +4,15 @@ import globals from '../globals.js';
 
 const sessionAppPrefix = 'SessionApp';
 
+/**
+ * Calculates and formats the uptime of a Qlik Sense engine.
+ *
+ * This function takes the server start time from the engine healthcheck API
+ * and calculates how long the server has been running, returning a formatted string.
+ *
+ * @param {string} serverStarted - The server start time in format "YYYYMMDDThhmmss"
+ * @returns {string} A formatted string representing uptime (e.g. "5 days, 3h 45m 12s")
+ */
 function getFormattedTime(serverStarted) {
     const dateTime = Date.now();
     const timestamp = Math.floor(dateTime);
@@ -39,6 +48,24 @@ function getFormattedTime(serverStarted) {
     return `${days} days, ${hours}h ${minutes.substr(-2)}m ${seconds.substr(-2)}s`;
 }
 
+/**
+ * Posts health metrics data from Qlik Sense to InfluxDB.
+ *
+ * This function processes health data from the Sense engine's healthcheck API and
+ * formats it for storage in InfluxDB. It handles various metrics including:
+ * - CPU usage
+ * - Memory usage
+ * - Cache metrics
+ * - Active/loaded/in-memory apps
+ * - Session counts
+ * - User counts
+ *
+ * @param {string} serverName - The name of the Qlik Sense server
+ * @param {string} host - The hostname or IP of the Qlik Sense server
+ * @param {object} body - The health metrics data from Sense engine healthcheck API
+ * @param {object} serverTags - Tags to associate with the metrics
+ * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
+ */
 export async function postHealthMetricsToInfluxdb(serverName, host, body, serverTags) {
     // Calculate server uptime
     const formattedTime = getFormattedTime(body.started);
@@ -68,6 +95,12 @@ export async function postHealthMetricsToInfluxdb(serverName, host, body, server
     const appNamesActive = [];
     const sessionAppNamesActive = [];
 
+    /**
+     * Stores a document ID in either the sessionAppNamesActive or appNamesActive arrays
+     *
+     * @param {string} docID - The ID of the document
+     * @returns {Promise<void>} Promise that resolves when the document ID has been processed
+     */
     const storeActivedDoc = function storeActivedDoc(docID) {
         return new Promise((resolve, _reject) => {
             if (docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix) {
@@ -110,6 +143,13 @@ export async function postHealthMetricsToInfluxdb(serverName, host, body, server
     const appNamesLoaded = [];
     const sessionAppNamesLoaded = [];
 
+    /**
+     * Stores a loaded app name in memory.
+     *
+     * @function storeLoadedDoc
+     * @param {string} docID - The ID of the app to store.
+     * @returns {Promise} - Resolves when the docID has been stored.
+     */
     const storeLoadedDoc = function storeLoadedDoc(docID) {
         return new Promise((resolve, _reject) => {
             if (docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix) {
@@ -152,6 +192,13 @@ export async function postHealthMetricsToInfluxdb(serverName, host, body, server
     const appNamesInMemory = [];
     const sessionAppNamesInMemory = [];
 
+    /**
+     * Stores a document ID in either the sessionAppNamesInMemory or appNamesInMemory arrays.
+     *
+     * @function storeInMemoryDoc
+     * @param {string} docID - The ID of the document to store.
+     * @returns {Promise<void>} Promise that resolves when the document ID has been processed.
+     */
     const storeInMemoryDoc = function storeInMemoryDoc(docID) {
         return new Promise((resolve, _reject) => {
             if (docID.substring(0, sessionAppPrefix.length) === sessionAppPrefix) {
@@ -473,6 +520,22 @@ export async function postHealthMetricsToInfluxdb(serverName, host, body, server
     }
 }
 
+/**
+ * Posts proxy sessions data to InfluxDB.
+ *
+ * This function takes user session data from Qlik Sense proxy and formats it for storage
+ * in InfluxDB. It handles different versions of InfluxDB (1.x and 2.x) and includes
+ * error handling with detailed logging.
+ *
+ * @param {object} userSessions - User session data containing information about active sessions
+ * @param {string} userSessions.host - The hostname of the server
+ * @param {string} userSessions.virtualProxy - The virtual proxy name
+ * @param {object[]} userSessions.datapointInfluxdb - Data points formatted for InfluxDB
+ * @param {string} [userSessions.serverName] - Server name (for InfluxDB v2)
+ * @param {number} [userSessions.sessionCount] - Number of sessions
+ * @param {string[]} [userSessions.uniqueUserList] - List of unique users
+ * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
+ */
 export async function postProxySessionsToInfluxdb(userSessions) {
     globals.logger.debug(`PROXY SESSIONS: User sessions: ${JSON.stringify(userSessions)}`);
 
@@ -550,6 +613,20 @@ export async function postProxySessionsToInfluxdb(userSessions) {
     }
 }
 
+/**
+ * Posts Butler SOS memory usage metrics to InfluxDB.
+ *
+ * This function captures memory usage metrics from the Butler SOS process itself
+ * and stores them in InfluxDB. It handles both InfluxDB v1 and v2 formats.
+ *
+ * @param {object} memory - Memory usage data object
+ * @param {string} memory.instanceTag - Instance identifier tag
+ * @param {number} memory.heapUsedMByte - Heap used in MB
+ * @param {number} memory.heapTotalMByte - Total heap size in MB
+ * @param {number} memory.externalMemoryMByte - External memory usage in MB
+ * @param {number} memory.processMemoryMByte - Process memory usage in MB
+ * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
+ */
 export async function postButlerSOSMemoryUsageToInfluxdb(memory) {
     globals.logger.debug(`MEMORY USAGE: Memory usage ${JSON.stringify(memory, null, 2)})`);
 
@@ -666,6 +743,26 @@ export async function postButlerSOSMemoryUsageToInfluxdb(memory) {
     }
 }
 
+/**
+ * Posts a user event to InfluxDB.
+ *
+ * @param {object} msg - The event to be posted to InfluxDB. The object should contain the following properties:
+ *   - host: The hostname of the Qlik Sense server that the user event originated from.
+ *   - command: The command (e.g. OpenApp, CreateApp, etc.) that the user event corresponds to.
+ *   - user_directory: The user directory of the user who triggered the event.
+ *   - user_id: The user ID of the user who triggered the event.
+ *   - origin: The origin of the event (e.g. Qlik Sense, QlikView, etc.).
+ *   - appId: The ID of the app that the event corresponds to (if applicable).
+ *   - appName: The name of the app that the event corresponds to (if applicable).
+ *   - ua: An object containing user agent information (if available). The object should contain the following properties:
+ *     - browser: An object containing information about the user's browser (if available). The object should contain the following properties:
+ *       - name: The name of the browser.
+ *       - major: The major version of the browser.
+ *     - os: An object containing information about the user's OS (if available). The object should contain the following properties:
+ *       - name: The name of the OS.
+ *       - version: The version of the OS.
+ * @returns {Promise<void>} - A promise that resolves when the event has been posted to InfluxDB.
+ */
 export async function postUserEventToInfluxdb(msg) {
     globals.logger.debug(`USER EVENT INFLUXDB: ${msg})`);
 
@@ -859,6 +956,11 @@ export async function postUserEventToInfluxdb(msg) {
     }
 }
 
+/**
+ * Posts a log event to InfluxDB
+ *
+ * @param {object} msg - Log event from Butler SOS
+ */
 export async function postLogEventToInfluxdb(msg) {
     globals.logger.debug(`LOG EVENT INFLUXDB: ${msg})`);
 
@@ -1319,7 +1421,19 @@ export async function postLogEventToInfluxdb(msg) {
     }
 }
 
-// Store event count for all kinds of events in InfluxDB
+/**
+ * Stores event counts (log and user events) in InfluxDB.
+ *
+ * @description
+ * This function retrieves arrays of log and user events, and stores the data in InfluxDB.
+ * If the InfluxDB version is 1.x, it uses the v1 API to write data points for each event.
+ * If the InfluxDB version is 2.x, it uses the v2 API to write data points for each event.
+ * Static tags from the configuration file are added to each data point.
+ * The function logs messages at various stages to provide debugging and status information.
+ * No data is stored if there are no events present.
+ *
+ * @throws {Error} Logs an error message if unable to write data to InfluxDB.
+ */
 export async function storeEventCountInfluxDB() {
     // Get array of log events
     const logEvents = await globals.udpEvents.getLogEvents();
@@ -1327,10 +1441,15 @@ export async function storeEventCountInfluxDB() {
 
     // Debug
     globals.logger.debug(`EVENT COUNT INFLUXDB: Log events: ${JSON.stringify(logEvents, null, 2)}`);
-
     globals.logger.debug(
         `EVENT COUNT INFLUXDB: User events: ${JSON.stringify(userEvents, null, 2)}`
     );
+
+    // Are there any events to store?
+    if (logEvents.length === 0 && userEvents.length === 0) {
+        globals.logger.verbose('EVENT COUNT INFLUXDB: No events to store in InfluxDB');
+        return;
+    }
 
     // InfluxDB 1.x
     if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
@@ -1413,7 +1532,12 @@ export async function storeEventCountInfluxDB() {
             globals.influx.writePoints(points);
         } catch (err) {
             globals.logger.error(`EVENT COUNT INFLUXDB: Error saving data to InfluxDB v1! ${err}`);
+            return;
         }
+
+        globals.logger.verbose(
+            'EVENT COUNT INFLUXDB: Sent Butler SOS event count data to InfluxDB'
+        );
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
         // Create new write API object
         // Advanced write options
@@ -1520,8 +1644,9 @@ export async function storeEventCountInfluxDB() {
                 globals.logger.debug(`EVENT COUNT INFLUXDB: Wrote data to InfluxDB v2`);
             } catch (err) {
                 globals.logger.error(
-                    `EVENT COUNT INFLUXDB: Error saving health data to InfluxDB v2! ${err.stack}`
+                    `EVENT COUNT INFLUXDB: Error saving health data to InfluxDB v2! ${err}`
                 );
+                return;
             }
 
             globals.logger.verbose(
@@ -1533,7 +1658,18 @@ export async function storeEventCountInfluxDB() {
     }
 }
 
-// Store rejected event count in InfluxDB
+/**
+ * Store rejected event count in InfluxDB
+ *
+ * @description
+ * This function reads an array of rejected log events from the `rejectedEvents` object,
+ * and stores the data in InfluxDB. The data is written to a measurement named after
+ * the `Butler-SOS.qlikSenseEvents.rejectedEventCount.influxdb.measurementName` config setting.
+ * The function uses the InfluxDB v1 or v2 API depending on the `Butler-SOS.influxdbConfig.version`
+ * config setting.
+ *
+ * @throws {Error} Error if unable to get write API or write data to InfluxDB
+ */
 export async function storeRejectedEventCountInfluxDB() {
     // Get array of rejected log events
     const rejectedLogEvents = await globals.rejectedEvents.getRejectedLogEvents();
@@ -1546,6 +1682,12 @@ export async function storeRejectedEventCountInfluxDB() {
             2
         )}`
     );
+
+    // Are there any events to store?
+    if (rejectedLogEvents.length === 0) {
+        globals.logger.verbose('REJECTED EVENT COUNT INFLUXDB: No events to store in InfluxDB');
+        return;
+    }
 
     // InfluxDB 1.x
     if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
@@ -1635,7 +1777,12 @@ export async function storeRejectedEventCountInfluxDB() {
             globals.logger.error(
                 `REJECT LOG EVENT INFLUXDB: Error saving data to InfluxDB v1! ${err}`
             );
+            return;
         }
+
+        globals.logger.verbose(
+            'REJECT LOG EVENT INFLUXDB: Sent Butler SOS rejected event count data to InfluxDB'
+        );
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
         // Create new write API object
         // Advanced write options
@@ -1739,9 +1886,14 @@ export async function storeRejectedEventCountInfluxDB() {
                 globals.logger.debug(`REJECT LOG EVENT INFLUXDB: Wrote data to InfluxDB v2`);
             } catch (err) {
                 globals.logger.error(
-                    `REJECTED LOG EVENT INFLUXDB: Error saving data to InfluxDB v2! ${err.stack}`
+                    `REJECTED LOG EVENT INFLUXDB: Error saving data to InfluxDB v2! ${err}`
                 );
+                return;
             }
+
+            globals.logger.verbose(
+                'REJECT LOG EVENT INFLUXDB: Sent Butler SOS rejected event count data to InfluxDB'
+            );
         } catch (err) {
             globals.logger.error(`REJECTED LOG EVENT INFLUXDB: Error getting write API: ${err}`);
         }

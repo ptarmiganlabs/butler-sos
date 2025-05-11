@@ -1,4 +1,20 @@
 // Get tag values from the server object
+/**
+ * Extracts tag values from a server configuration object.
+ *
+ * This function processes a server configuration object and extracts tags that can be
+ * used to tag metrics in time series databases or monitoring systems. It always includes
+ * host, server_name, and server_description tags, plus any custom tags defined in the
+ * server's serverTags property.
+ *
+ * @param {object} logger - Logger object for logging debug and error information
+ * @param {object} server - Server configuration object
+ * @param {string} server.host - Hostname of the server (may include port)
+ * @param {string} server.serverName - Name of the server
+ * @param {string} server.serverDescription - Description of the server
+ * @param {object} [server.serverTags] - Optional additional tags for the server
+ * @returns {object | Array} Object with all tags if successful, empty array on error
+ */
 export function getServerTags(logger, server) {
     try {
         let tags = {
