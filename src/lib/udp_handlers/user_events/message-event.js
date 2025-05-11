@@ -1,5 +1,5 @@
 import { validate } from 'uuid';
-import parser from 'ua-parser-js';
+import { UAParser } from 'ua-parser-js';
 
 // Load global variables and functions
 import globals from '../../../globals.js';
@@ -180,7 +180,7 @@ export async function messageEventHandler(message, _remote) {
             userAgent = userAgent.replace(/'/g, '');
 
             // Parse the user agent string
-            const ua = parser(userAgent);
+            const ua = UAParser(userAgent);
 
             msgObj.ua = {};
             msgObj.ua.browser = ua.browser;

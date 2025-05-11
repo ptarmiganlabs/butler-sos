@@ -5,7 +5,7 @@ import globals from '../globals.js';
 // Define variable to hold the PostHog client
 let posthogClient;
 
-export const callRemoteURL = async function reportTelemetry() {
+export const callRemoteURL = function reportTelemetry() {
     try {
         let heartbeat = false;
         let dockerHealthCheck = false;

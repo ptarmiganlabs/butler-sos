@@ -44,7 +44,7 @@ jest.unstable_mockModule('../../globals.js', () => ({
 const globals = (await import('../../globals.js')).default;
 
 // Import the module under test
-const { setupAnonUsageReportTimer } = await import('../telemetry.js');
+const { setupAnonUsageReportTimer, callRemoteURL } = await import('../telemetry.js');
 
 describe('telemetry', () => {
     beforeEach(() => {
@@ -92,12 +92,15 @@ describe('telemetry', () => {
             if (path === 'Butler-SOS.logEvents.categorise.rules') return true;
         });
 
+        // Store the original mock implementation
+        const originalGetMock = globals.config.get.getMockImplementation();
+
         // Mock the rules array
         globals.config.get.mockImplementation((path) => {
             if (path === 'Butler-SOS.logEvents.categorise.rules') {
                 return [{}, {}, {}]; // Array with 3 mock rules
             }
-            return globals.config.get.getMockImplementation()(path);
+            return originalGetMock(path);
         });
 
         // Mock setInterval to execute the callback immediately
@@ -196,5 +199,246 @@ describe('telemetry', () => {
         // Since the error is caught in callRemoteURL which is called inside setupAnonUsageReportTimer,
         // we won't see the error here. Instead, we're verifying that the function completes without crashing.
         expect(PostHog).toHaveBeenCalled();
+    });
+
+    test('should directly call callRemoteURL and send telemetry', () => {
+        // Create a fresh mock instance for the test
+        const mockPostHogInstance = {
+            capture: jest.fn(),
+        };
+        PostHog.mockImplementationOnce(() => mockPostHogInstance);
+
+        // Setup PostHog client by calling setupAnonUsageReportTimer first
+        setupAnonUsageReportTimer(globals.logger, globals.hostInfo);
+
+        // Reset the mock to track only the calls from our direct callRemoteURL invocation
+        mockPostHogInstance.capture.mockClear();
+
+        // Now call callRemoteURL directly
+        callRemoteURL();
+
+        // Verify that capture was called
+        expect(mockPostHogInstance.capture).toHaveBeenCalledTimes(1);
+
+        // Verify the structure of the telemetry data
+        const captureData = mockPostHogInstance.capture.mock.calls[0][0];
+
+        // Check top-level properties
+        expect(captureData).toHaveProperty('distinctId', 'mock-host-id');
+        expect(captureData).toHaveProperty('event', 'telemetry sent');
+        expect(captureData).toHaveProperty('properties');
+
+        // Check properties object
+        const properties = captureData.properties;
+        expect(properties).toHaveProperty('service', 'butler-sos');
+        expect(properties).toHaveProperty('serviceVersion', '11.0.3');
+
+        // System info
+        expect(properties).toHaveProperty('system_id', 'mock-host-id');
+        expect(properties).toHaveProperty('system_arch', 'x64');
+        expect(properties).toHaveProperty('system_platform', 'linux');
+        expect(properties).toHaveProperty('system_release', '20.04');
+        expect(properties).toHaveProperty('system_distro', 'Ubuntu');
+        expect(properties).toHaveProperty('system_codename', 'focal');
+
+        // Feature flags - check a few based on our mock setup
+        expect(properties).toHaveProperty('feature_heartbeat', true);
+        expect(properties).toHaveProperty('feature_dockerHealthCheck', false);
+        expect(properties).toHaveProperty('feature_uptimeMonitor', true);
+        expect(properties).toHaveProperty('feature_logEventsMQTT', true);
+        expect(properties).toHaveProperty('feature_logEventsInfluxdb', true);
+
+        // Telemetry JSON
+        expect(properties).toHaveProperty('telemetry_json');
+        expect(properties.telemetry_json).toHaveProperty('system');
+        expect(properties.telemetry_json).toHaveProperty('enabledFeatures');
+    });
+
+    test('should handle configuration with all features enabled', () => {
+        // Setup mock config where all relevant features are enabled
+        globals.config.get.mockImplementation((path) => {
+            // Return true for all feature paths to simulate all features being enabled
+            if (path.includes('.enable')) return true;
+            if (path === 'Butler-SOS.influxdbConfig.version') return 'v2';
+
+            // Handle the rules array
+            if (path === 'Butler-SOS.logEvents.categorise.rules') {
+                return [{}, {}, {}, {}, {}]; // Array with 5 mock rules
+            }
+
+            return 'mock-value';
+        });
+
+        // Create a fresh mock instance
+        const mockPostHogInstance = {
+            capture: jest.fn(),
+        };
+        PostHog.mockImplementationOnce(() => mockPostHogInstance);
+
+        // Setup PostHog client
+        setupAnonUsageReportTimer(globals.logger, globals.hostInfo);
+
+        // Verify that capture was called with all features enabled
+        const captureData = mockPostHogInstance.capture.mock.calls[0][0];
+        const properties = captureData.properties;
+
+        // Verify that key features are enabled
+        expect(properties.feature_heartbeat).toBe(true);
+        expect(properties.feature_dockerHealthCheck).toBe(true);
+        expect(properties.feature_uptimeMonitor).toBe(true);
+        expect(properties.feature_uptimeMonitor_storeNewRelic).toBe(true);
+        expect(properties.feature_eventCount).toBe(true);
+        expect(properties.feature_rejectedEventCount).toBe(true);
+        expect(properties.feature_userEvents).toBe(true);
+        expect(properties.feature_userEventsMQTT).toBe(true);
+        expect(properties.feature_userEventsInfluxdb).toBe(true);
+        expect(properties.feature_userEventsNewRelic).toBe(true);
+        expect(properties.feature_mqtt).toBe(true);
+        expect(properties.feature_newRelic).toBe(true);
+        expect(properties.feature_prometheus).toBe(true);
+        expect(properties.feature_influxdb).toBe(true);
+
+        // Verify rule count
+        expect(properties.feature_logEventCategoriseRuleCount).toBe(5);
+    });
+
+    test('should handle configuration with all features disabled', () => {
+        // Setup mock config where all relevant features are disabled
+        globals.config.get.mockImplementation((path) => {
+            // Return false for all feature paths to simulate all features being disabled
+            if (path.includes('.enable')) return false;
+            if (path === 'Butler-SOS.influxdbConfig.version') return 'v2';
+
+            // Handle the rules array
+            if (path === 'Butler-SOS.logEvents.categorise.rules') {
+                return []; // Empty array, no rules
+            }
+
+            return 'mock-value';
+        });
+
+        // Create a fresh mock instance
+        const mockPostHogInstance = {
+            capture: jest.fn(),
+        };
+        PostHog.mockImplementationOnce(() => mockPostHogInstance);
+
+        // Setup PostHog client
+        setupAnonUsageReportTimer(globals.logger, globals.hostInfo);
+
+        // Verify that capture was called with all features disabled
+        const captureData = mockPostHogInstance.capture.mock.calls[0][0];
+        const properties = captureData.properties;
+
+        // Verify that key features are disabled
+        expect(properties.feature_heartbeat).toBe(false);
+        expect(properties.feature_dockerHealthCheck).toBe(false);
+        expect(properties.feature_uptimeMonitor).toBe(false);
+        expect(properties.feature_uptimeMonitor_storeNewRelic).toBe(false);
+        expect(properties.feature_eventCount).toBe(false);
+        expect(properties.feature_rejectedEventCount).toBe(false);
+        expect(properties.feature_userEvents).toBe(false);
+        expect(properties.feature_userEventsMQTT).toBe(false);
+        expect(properties.feature_userEventsInfluxdb).toBe(false);
+        expect(properties.feature_userEventsNewRelic).toBe(false);
+        expect(properties.feature_mqtt).toBe(false);
+        expect(properties.feature_newRelic).toBe(false);
+        expect(properties.feature_prometheus).toBe(false);
+        expect(properties.feature_influxdb).toBe(false);
+
+        // Verify rule count
+        expect(properties.feature_logEventCategoriseRuleCount).toBe(0);
+    });
+
+    test('should handle configuration where rules do not exist', () => {
+        // Setup mock config where the rules path does not exist
+        globals.config.has.mockImplementation((path) => {
+            if (path === 'Butler-SOS.logEvents.categorise.rules') return false;
+            return true;
+        });
+
+        // Create a fresh mock instance
+        const mockPostHogInstance = {
+            capture: jest.fn(),
+        };
+        PostHog.mockImplementationOnce(() => mockPostHogInstance);
+
+        // Setup PostHog client
+        setupAnonUsageReportTimer(globals.logger, globals.hostInfo);
+
+        // Verify that capture was called with rules not existing
+        const captureData = mockPostHogInstance.capture.mock.calls[0][0];
+        const properties = captureData.properties;
+
+        // Verify rule count is zero
+        expect(properties.feature_logEventCategoriseRuleCount).toBe(0);
+    });
+
+    test('should handle errors with missing hostInfo properties', () => {
+        // Save the original hostInfo
+        const originalHostInfo = globals.hostInfo;
+
+        // Replace the globals.hostInfo with an incomplete one
+        globals.hostInfo = {
+            id: 'test-host',
+            // Missing si property
+            isRunningInDocker: false,
+            node: {
+                nodeVersion: '16.14.0',
+            },
+        };
+
+        // Mock logger to capture errors
+        const mockLogger = {
+            debug: jest.fn(),
+            error: jest.fn(),
+        };
+
+        // Create a fresh mock instance
+        const mockPostHogInstance = {
+            capture: jest.fn(),
+        };
+        PostHog.mockImplementationOnce(() => mockPostHogInstance);
+
+        try {
+            // Setup with incomplete hostInfo in globals
+            // setupAnonUsageReportTimer(mockLogger, globals.hostInfo);
+
+            // Now call callRemoteURL directly to trigger the error
+            callRemoteURL();
+
+            // posthogClient.capture should NOT be called due to the error
+            expect(mockPostHogInstance.capture).not.toHaveBeenCalled();
+
+            // Verify error logging in case of property access errors
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('TELEMETRY: Could not send anonymous telemetry.')
+            );
+        } finally {
+            // Restore the original hostInfo
+            globals.hostInfo = originalHostInfo;
+        }
+    });
+
+    test('should log an appropriate message when telemetry is successfully sent', () => {
+        // Mock logger with spy functions
+        const mockLogger = {
+            debug: jest.fn(),
+            error: jest.fn(),
+        };
+
+        // Create a fresh mock instance that succeeds
+        const mockPostHogInstance = {
+            capture: jest.fn().mockImplementation(() => Promise.resolve()),
+        };
+        PostHog.mockImplementationOnce(() => mockPostHogInstance);
+
+        // Setup with our mock logger
+        setupAnonUsageReportTimer(mockLogger, globals.hostInfo);
+
+        // Verify success message was logged
+        expect(globals.logger.debug).toHaveBeenCalledWith(
+            expect.stringContaining('TELEMETRY: Sent anonymous telemetry. ')
+        );
     });
 });
