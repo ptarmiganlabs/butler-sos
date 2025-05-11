@@ -109,7 +109,6 @@ class Settings {
             this.appBasePath = upath.join(b, '..');
         }
 
-        const { version } = JSON.parse(readFileSync(c));
         this.appVersion = appVersion;
 
         // Make copy of influxdb client
