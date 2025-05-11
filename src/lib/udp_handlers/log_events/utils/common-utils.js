@@ -2,15 +2,34 @@
  * Common utility functions for log event handlers
  */
 
-// Define a regex for ISO8601 date format
+/**
+ * Regular expression that matches ISO8601 date format strings.
+ * Matches patterns like "2021-11-09T15:37:26.028+0200".
+ *
+ * @type {RegExp}
+ */
 const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}\+\d{4}$/;
 
-// Define a regex for UUId format
+/**
+ * Regular expression that matches UUID format strings.
+ * Matches standard UUID patterns like "550e8400-e29b-41d4-a716-446655440000".
+ *
+ * @type {RegExp}
+ */
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /**
- * Formats user directory and user id fields
- * @param {Object} msgObj - The message object to update
+ * Formats and normalizes user directory and user ID fields in log events.
+ *
+ * This function ensures consistent representation of user information across different
+ * log event sources by either combining separate user directory and ID fields into a
+ * full user name, or splitting a full user name into its component parts.
+ *
+ * @param {object} msgObj - The message object to update
+ * @param {string} [msgObj.user_directory] - The user directory component
+ * @param {string} [msgObj.user_id] - The user ID component
+ * @param {string} [msgObj.user_full] - The combined user name in "directory\id" format
+ * @returns {void} - The function updates the provided object directly
  */
 export function formatUserFields(msgObj) {
     // Different log events deliver QSEoW user directory/user differently.

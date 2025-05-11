@@ -5,6 +5,15 @@ import { listeningEventHandler, messageEventHandler } from './udp_handlers/log_e
 // --------------------------------------------------------
 // Set up UDP server for acting on Sense log events
 // --------------------------------------------------------
+/**
+ * Initializes the UDP server for handling Qlik Sense log events.
+ *
+ * This function sets up event handlers for the UDP server that listens for
+ * log events from Qlik Sense services (such as engine, proxy, repository,
+ * and scheduler services).
+ *
+ * @returns {void}
+ */
 export function udpInitLogEventServer() {
     // Handler for UDP server startup event
     globals.udpServerLogEvents.socket.on('listening', listeningEventHandler);

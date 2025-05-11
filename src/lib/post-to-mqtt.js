@@ -1,8 +1,16 @@
-/* eslint-disable prefer-destructuring */
-/* eslint-disable no-unused-vars */
-
 import globals from '../globals.js';
 
+/**
+ * Posts health metrics from Qlik Sense engine healthcheck API to MQTT.
+ *
+ * This function publishes various metrics (memory usage, CPU usage, sessions, cache, etc.)
+ * to MQTT topics based on the configuration in Butler-SOS.mqttConfig.
+ *
+ * @param {string} _host - The host name or IP (not used)
+ * @param {string} serverName - The name of the server, used in MQTT topic path
+ * @param {object} body - The health metrics data from Sense engine healthcheck API
+ * @returns {void}
+ */
 export function postHealthToMQTT(_host, serverName, body) {
     // Get base MQTT topic
     const baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
@@ -85,6 +93,17 @@ export function postHealthToMQTT(_host, serverName, body) {
     globals.mqttClient.publish(`${baseTopic + serverName}/saturated`, body.saturated.toString());
 }
 
+/**
+ * Posts user session information to MQTT.
+ *
+ * This function publishes information about user sessions to MQTT topics
+ * based on the configuration in Butler-SOS.mqttConfig.
+ *
+ * @param {string} host - The host name of the Qlik Sense server
+ * @param {string} virtualProxy - The virtual proxy prefix
+ * @param {string} body - JSON string containing user session information
+ * @returns {void}
+ */
 export function postUserSessionsToMQTT(host, virtualProxy, body) {
     // Get base MQTT topic
     const baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
@@ -93,6 +112,27 @@ export function postUserSessionsToMQTT(host, virtualProxy, body) {
     globals.mqttClient.publish(`${baseTopic + host}/usersession${virtualProxy}`, body);
 }
 
+/**
+ * Posts user events from Qlik Sense to MQTT.
+ *
+ * This function processes user events (session start/stop, connection open/close)
+ * and publishes them to configured MQTT topics. It supports both general event topics
+ * and specific topics for different event types.
+ *
+ * @param {object} msg - The user event message object
+ * @param {string} msg.messageType - The type of message
+ * @param {string} msg.host - The host name of the Qlik Sense server
+ * @param {string} msg.command - The command (Start session, Stop session, etc.)
+ * @param {string} msg.user_directory - The user directory
+ * @param {string} msg.user_id - The user ID
+ * @param {string} msg.origin - The origin of the event
+ * @param {string} msg.context - The context of the event
+ * @param {string} msg.message - The message content
+ * @param {string} [msg.appId] - Optional app ID
+ * @param {string} [msg.appName] - Optional app name
+ * @param {object} [msg.ua] - Optional user agent information
+ * @returns {void}
+ */
 export function postUserEventToMQTT(msg) {
     try {
         // Create payload
@@ -125,7 +165,7 @@ export function postUserEventToMQTT(msg) {
             globals.config.get('Butler-SOS.userEvents.tags').length > 0
         ) {
             const configTags = globals.config.get('Butler-SOS.userEvents.tags');
-            // eslint-disable-next-line no-restricted-syntax
+
             for (const item of configTags) {
                 payload.tags[item.name] = item.value;
             }
@@ -195,6 +235,21 @@ export function postUserEventToMQTT(msg) {
     }
 }
 
+/**
+ * Posts log events from Qlik Sense to MQTT.
+ *
+ * This function processes log events from various Qlik Sense services
+ * and publishes them to configured MQTT topics. It supports both generic
+ * topics and specific topics for different log levels.
+ *
+ * @param {object} msg - The log event message object
+ * @param {string} msg.source - The source of the log event
+ * @param {string} msg.level - The log level (e.g., ERROR, WARN, FATAL)
+ * @param {string} msg.message - The log message content
+ * @param {string} [msg.timestamp] - The timestamp of the log event
+ * @param {string} [msg.hostname] - The hostname where the log event occurred
+ * @returns {void}
+ */
 export function postLogEventToMQTT(msg) {
     try {
         // Get MQTT root topic
@@ -211,7 +266,7 @@ export function postLogEventToMQTT(msg) {
             globals.config.get('Butler-SOS.logEvents.tags').length > 0
         ) {
             const configTags = globals.config.get('Butler-SOS.logEvents.tags');
-            // eslint-disable-next-line no-restricted-syntax
+
             for (const item of configTags) {
                 payload.tags[item.name] = item.value;
             }

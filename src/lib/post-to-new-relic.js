@@ -6,9 +6,13 @@ import globals from '../globals.js';
 // const sessionAppPrefix = 'SessionApp';
 
 /**
+ * Calculates and formats the uptime of a Qlik Sense engine.
  *
- * @param {*} serverStarted
- * @returns
+ * This function takes the server start time from the engine healthcheck API
+ * and calculates how long the server has been running, returning a formatted string.
+ *
+ * @param {string} serverStarted - The server start time in format "YYYYMMDDThhmmss"
+ * @returns {string} A formatted string representing uptime (e.g. "5 days, 3h 45m 12s")
  */
 function getFormattedTime(serverStarted) {
     const dateTime = Date.now();
@@ -46,10 +50,21 @@ function getFormattedTime(serverStarted) {
 }
 
 /**
+ * Posts health metrics data from Qlik Sense to New Relic.
  *
- * @param {*} _host
- * @param {*} body
- * @param {*} tags
+ * This function processes health data from the Sense engine's healthcheck API and
+ * formats it for posting to New Relic. It handles various metrics including:
+ * - CPU usage
+ * - Memory usage
+ * - Cache metrics
+ * - Active/loaded/in-memory apps
+ * - Session counts
+ * - User counts
+ *
+ * @param {string} _host - The hostname or IP of the Qlik Sense server (unused parameter)
+ * @param {object} body - The health metrics data from Sense engine healthcheck API
+ * @param {object} tags - Tags to associate with the metrics
+ * @returns {Promise<void>} Promise that resolves when data has been posted to New Relic
  */
 export async function postHealthMetricsToNewRelic(_host, body, tags) {
     // Calculate server uptime
@@ -341,8 +356,19 @@ export async function postHealthMetricsToNewRelic(_host, body, tags) {
 }
 
 /**
+ * Posts user session metrics data from Qlik Sense to New Relic.
  *
- * @param {*} userSessions
+ * This function processes user session data from the Sense Proxy API and
+ * formats it for posting to New Relic. It includes session counts and
+ * attributes such as virtual proxy and host information.
+ *
+ * @param {object} userSessions - Object containing user session metrics data
+ * @param {string} userSessions.serverName - Name of the server
+ * @param {string} userSessions.host - Hostname of the server
+ * @param {string} userSessions.virtualProxy - Virtual proxy prefix
+ * @param {object} userSessions.datapointNewRelic - Data formatted for New Relic
+ * @param {object} userSessions.tags - Tags associated with the metrics
+ * @returns {Promise<void>} Promise that resolves when data has been posted to New Relic
  */
 export async function postProxySessionsToNewRelic(userSessions) {
     globals.logger.debug(
@@ -490,6 +516,21 @@ export async function postProxySessionsToNewRelic(userSessions) {
     }
 }
 
+/**
+ * Posts Butler SOS uptime data to New Relic.
+ *
+ * This function processes memory usage data from Butler SOS and
+ * formats it for posting to New Relic.
+ *
+ * @param {object} fields - Fields to post to New Relic
+ * @param {number} fields.intervalMillisec - Interval in milliseconds between posting data to New Relic
+ * @param {number} fields.heapUsed - Used heap memory in bytes
+ * @param {number} fields.heapTotal - Total heap memory in bytes
+ * @param {number} fields.externalMemory - External memory usage in bytes
+ * @param {number} fields.processMemory - Process memory usage in bytes
+ * @param {number} fields.uptimeMilliSec - Uptime of Butler SOS in milliseconds
+ * @returns {Promise<void>} Promise that resolves when data has been posted to New Relic
+ */
 export async function postButlerSOSUptimeToNewRelic(fields) {
     globals.logger.debug(
         `MEMORY USAGE NEW RELIC: Memory usage ${JSON.stringify(fields, null, 2)})`
@@ -650,6 +691,12 @@ export async function postButlerSOSUptimeToNewRelic(fields) {
     }
 }
 
+/**
+ * Posts a user event to New Relic.
+ *
+ * @param {object} msg - User event from Qlik Sense, Butler-SOS or other sources.
+ * @returns {Promise<void>} Promise that resolves when data has been posted to New Relic
+ */
 export async function postUserEventToNewRelic(msg) {
     globals.logger.debug(`USER EVENT NEW RELIC 1: ${JSON.stringify(msg, null, 2)})`);
 
@@ -800,9 +847,15 @@ export async function postUserEventToNewRelic(msg) {
 }
 
 /**
+ * Checks if a log event from a given Qlik Sense service should be sent to New Relic.
  *
- * @param {*} sourceService
- * @param {*} sourcelogLevel
+ * This function checks the Butler SOS configuration to determine if a log event
+ * from a given Qlik Sense service should be sent to New Relic based on the log level
+ * and the service name.
+ *
+ * @param {string} sourceService - The name of the Qlik Sense service that generated the log event
+ * @param {string} sourceLogLevel - The log level of the log event
+ * @returns {boolean} True if the log event should be sent to New Relic, false otherwise
  */
 function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
     // Engine log event
@@ -907,8 +960,10 @@ function sendNRLogEventYesNo(sourceService, sourceLogLevel) {
 }
 
 /**
+ * Posts a log event to New Relic.
  *
- * @param {*} msg
+ * @param {object} msg - Log event from Qlik Sense, Butler-SOS or other sources.
+ * @returns {Promise<void>}
  */
 export async function postLogEventToNewRelic(msg) {
     globals.logger.debug(`LOG EVENT NEW RELIC: ${msg})`);

@@ -21,6 +21,10 @@ import { verifyConfigFileSchema, verifyAppConfig } from './lib/config-file-verif
 let instance = null;
 
 class Settings {
+    /**
+     * Creates a new Settings instance or returns the existing singleton instance.
+     * Implements the singleton pattern for global application settings.
+     */
     constructor() {
         if (!instance) {
             instance = this;
@@ -32,6 +36,12 @@ class Settings {
         return instance;
     }
 
+    /**
+     * Initializes the Settings object with configuration from the environment and config files.
+     * Sets up logging, database connections, MQTT clients, and other application services.
+     *
+     * @returns {Object} The singleton instance of the Settings class after initialization
+     */
     async init() {
         // Get app version from package.json file
         const filenamePackage = `./package.json`;
@@ -716,32 +726,10 @@ class Settings {
         return instance;
     }
 
-    // Static function to check if a file exists
-    static checkFileExistsSync(filepath) {
-        let flag = true;
-        try {
-            fs.accessSync(filepath, fs.constants.F_OK);
-        } catch (e) {
-            flag = false;
-        }
-        return flag;
-    }
-
-    // Static sleep function
-    static sleep(ms) {
-        return new Promise((resolve) => setTimeout(resolve, ms));
-    }
-
-    // Static function to check if Butler is running in a Docker container
-    static isRunningInDocker() {
-        try {
-            fs.accessSync('/.dockerenv');
-            return true;
-        } catch (_) {
-            return false;
-        }
-    }
-
+    /**
+     * Initializes the InfluxDB connection based on configuration settings.
+     * Sets up databases, retention policies, and write APIs depending on InfluxDB version.
+     */
     async initInfluxDB() {
         let enableInfluxdb = false;
 
@@ -937,6 +925,12 @@ class Settings {
         }
     }
 
+    /**
+     * Gathers and returns information about the host system where Butler SOS is running.
+     * Includes OS details, network info, hardware details, and a unique ID.
+     *
+     * @returns {Object|null} Object containing host information or null if an error occurs
+     */
     async initHostInfo() {
         try {
             const siCPU = await si.cpu();
@@ -994,6 +988,49 @@ class Settings {
         } catch (err) {
             this.logger.error(`CONFIG: Getting host info: ${err}`);
             return null;
+        }
+    }
+
+    /**
+     * Checks if a file exists at the specified file path.
+     *
+     * @param {string} filepath - Path to the file to check
+     *
+     * @returns {boolean} True if the file exists, false otherwise
+     */
+    static checkFileExistsSync(filepath) {
+        let flag = true;
+        try {
+            fs.accessSync(filepath, fs.constants.F_OK);
+        } catch (e) {
+            flag = false;
+        }
+        return flag;
+    }
+
+    /**
+     * Creates a Promise that resolves after a specified time in milliseconds.
+     * Used for implementing delays in asynchronous code.
+     *
+     * @param {number} ms - The number of milliseconds to sleep
+     *
+     * @returns {Promise} A promise that resolves after the specified delay
+     */
+    static sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Detects if Butler SOS is running inside a Docker container.
+     *
+     * @returns {boolean} True if running in Docker, false otherwise
+     */
+    static isRunningInDocker() {
+        try {
+            fs.accessSync('/.dockerenv');
+            return true;
+        } catch (_) {
+            return false;
         }
     }
 }

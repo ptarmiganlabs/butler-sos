@@ -29,7 +29,7 @@ import { isoDateRegex, uuidRegex, formatUserFields } from '../utils/common-utils
  * 17: Execution ID associated with the event. Ex: 4831c6a5-34f6-45bb-9d40-73a6e6992670
  *
  * @param {Array} msg - The message parts
- * @returns {Object} Processed message object
+ * @returns {object} Processed message object
  */
 export function processSchedulerEvent(msg) {
     globals.logger.verbose(`LOG EVENT: ${msg[0]}:${msg[5]}:${msg[4]}, ${msg[6]}, Msg: ${msg[8]}`);

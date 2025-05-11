@@ -3,8 +3,20 @@ import { Mutex } from 'async-mutex';
 import globals from '../globals.js';
 import { storeRejectedEventCountInfluxDB, storeEventCountInfluxDB } from './post-to-influxdb.js';
 
-// Class for counting rejected events
+/**
+ * Class for tracking counts of UDP events received from Qlik Sense.
+ *
+ * This class provides thread-safe methods to track different types of events:
+ * - Log events (from various Qlik Sense services)
+ * - User events (user session related events)
+ * - Rejected log events (events that didn't match filtering criteria)
+ */
 export class UdpEvents {
+    /**
+     * Creates a new UdpEvents instance.
+     *
+     * @param {object} logger - The logger object to use for logging
+     */
     constructor(logger) {
         this.logger = logger;
 
@@ -31,7 +43,16 @@ export class UdpEvents {
         this.rejectedLogMutex = new Mutex();
     }
 
-    // Add a log event of any type
+    /**
+     * Adds a log event to the tracking.
+     *
+     * @param {object} event - The log event to add
+     * @param {string} event.source - The source of the event
+     * @param {string} event.host - The host where the event originated
+     * @param {string} event.subsystem - The subsystem that generated the event
+     * @returns {Promise<void>}
+     * @throws {Error} If the event object doesn't have the required properties
+     */
     async addLogEvent(event) {
         // Ensure the passed event is an object with properties:
         // - source: string
@@ -79,7 +100,11 @@ export class UdpEvents {
         }
     }
 
-    // Clear log events
+    /**
+     * Clears all tracked log events.
+     *
+     * @returns {Promise<void>}
+     */
     async clearLogEvents() {
         const release = await this.logMutex.acquire();
 
@@ -92,7 +117,11 @@ export class UdpEvents {
         }
     }
 
-    // Clear rejected events
+    /**
+     * Clears all tracked rejected events.
+     *
+     * @returns {Promise<void>}
+     */
     async clearRejectedEvents() {
         const release = await this.rejectedLogMutex.acquire();
 
@@ -105,7 +134,11 @@ export class UdpEvents {
         }
     }
 
-    // Clear user events
+    /**
+     * Clears all tracked user events.
+     *
+     * @returns {Promise<void>}
+     */
     async clearUserEvents() {
         const release = await this.userMutex.acquire();
 
@@ -118,7 +151,16 @@ export class UdpEvents {
         }
     }
 
-    // Add a user event
+    /**
+     * Adds a user event to the tracking.
+     *
+     * @param {object} event - The user event to add
+     * @param {string} event.source - The source of the event
+     * @param {string} event.host - The host where the event originated
+     * @param {string} event.subsystem - The subsystem that generated the event
+     * @returns {Promise<void>}
+     * @throws {Error} If the event object doesn't have the required properties
+     */
     async addUserEvent(event) {
         // Ensure the passed event is an object with properties:
         // - source: string
@@ -166,7 +208,11 @@ export class UdpEvents {
         }
     }
 
-    // Get log events
+    /**
+     * Retrieves all tracked log events.
+     *
+     * @returns {Promise<Array>} Array of tracked log events
+     */
     async getLogEvents() {
         const release = await this.logMutex.acquire();
 
@@ -177,7 +223,11 @@ export class UdpEvents {
         }
     }
 
-    // Get rejected log events
+    /**
+     * Retrieves all tracked rejected log events.
+     *
+     * @returns {Promise<Array>} Array of tracked rejected log events
+     */
     async getRejectedLogEvents() {
         const release = await this.rejectedLogMutex.acquire();
         try {
@@ -187,7 +237,11 @@ export class UdpEvents {
         }
     }
 
-    // Get user events
+    /**
+     * Retrieves all tracked user events.
+     *
+     * @returns {Promise<Array>} Array of tracked user events
+     */
     async getUserEvents() {
         const release = await this.userMutex.acquire();
 
@@ -198,9 +252,23 @@ export class UdpEvents {
         }
     }
 
-    // Add rejected log event
-    // "Rejected log events" are events that are correctly formatted but are rejected
-    // Butler SOS due to some reason, e.g. matching the exclude filter criteria in the config file.
+    /**
+     * Adds a rejected log event to the tracking.
+     *
+     * "Rejected log events" are events that are correctly formatted but are rejected
+     * by Butler SOS due to some reason, e.g. matching the exclude filter criteria in the config file.
+     * This method handles both regular log events and performance log events (from qseow-qix-perf).
+     *
+     * @param {object} event - The rejected log event to add
+     * @param {string} event.source - The source of the event
+     * @param {string} [event.appId] - The app ID (for performance log events)
+     * @param {string} [event.appName] - The app name (for performance log events)
+     * @param {string} [event.method] - The method name (for performance log events)
+     * @param {string} [event.objectType] - The object type (for performance log events)
+     * @param {number} [event.processTime] - The process time (for performance log events)
+     * @returns {Promise<void>}
+     * @throws {Error} If the event object doesn't have the required properties
+     */
     async addRejectedLogEvent(event) {
         // Ensure the passed event is an object with properties:
         // - source: string
@@ -285,6 +353,17 @@ export class UdpEvents {
     }
 }
 
+/**
+ * Sets up periodic storage of UDP events statistics to InfluxDB.
+ *
+ * This function creates a timer that periodically:
+ * 1. Stores event counts (log and user events) to InfluxDB
+ * 2. Stores rejected event counts to InfluxDB
+ * 3. Clears event counters after they've been stored
+ *
+ * @param {Function} [callbackForTest] - Optional callback function used for testing
+ * @returns {number|undefined} The interval ID if the timer was set up, or undefined if disabled
+ */
 export function setupUdpEventsStorage(callbackForTest) {
     // Is storing event counts to InfluxDB enabled?
     if (

@@ -5,6 +5,23 @@ import globals from '../globals.js';
 // Define variable to hold the PostHog client
 let posthogClient;
 
+/**
+ * Sends anonymous telemetry data to PostHog.
+ *
+ * This function collects information about the Butler SOS instance, its environment,
+ * and which features are enabled/disabled. This data helps the developers understand
+ * how Butler SOS is being used and prioritize development efforts accordingly.
+ *
+ * The telemetry includes:
+ * - System information (OS, architecture, Node.js version)
+ * - Enabled/disabled features
+ * - Configuration settings (without sensitive information)
+ * - Whether the app is running in Docker
+ *
+ * No personally identifiable information or sensitive configuration data is collected.
+ *
+ * @returns {void}
+ */
 export const callRemoteURL = function reportTelemetry() {
     try {
         let heartbeat = false;
@@ -297,6 +314,17 @@ export const callRemoteURL = function reportTelemetry() {
     }
 };
 
+/**
+ * Sets up a timer to periodically send anonymous usage telemetry.
+ *
+ * This function initializes the PostHog client and configures a timer to send
+ * anonymous telemetry data every 12 hours. It also sends an initial telemetry
+ * report immediately upon setup.
+ *
+ * @param {object} [logger] - Optional logger object (not used in the function)
+ * @param {object} [hostInfo] - Optional host information (not used in the function)
+ * @returns {void}
+ */
 export function setupAnonUsageReportTimer(logger, hostInfo) {
     try {
         // Setup PostHog client

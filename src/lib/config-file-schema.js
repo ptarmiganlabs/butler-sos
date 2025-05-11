@@ -1,3 +1,22 @@
+/**
+ * Schema definition for Butler SOS configuration file validation.
+ *
+ * This schema is used with AJV (Another JSON Validator) to validate the
+ * structure and content of the Butler SOS YAML configuration file.
+ * It defines all possible configuration options, their data types,
+ * validation rules, and which options are required.
+ *
+ * The schema includes validation for:
+ * - General application settings (logging, telemetry, etc.)
+ * - Server connection details
+ * - Integration configurations (InfluxDB, MQTT, etc.)
+ * - User event and log event handling
+ * - Monitoring options and filters
+ * - Prometheus metrics
+ * - Third-party tool credentials
+ *
+ * @type {object} JSON Schema object for Butler SOS configuration validation
+ */
 export const confifgFileSchema = {
     type: 'object',
     properties: {

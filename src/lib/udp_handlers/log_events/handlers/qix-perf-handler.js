@@ -38,7 +38,7 @@ import { processAppSpecificFilters, processAllAppsFilters } from '../filters/qix
  * 25: Object type. Ex: <Unknown>, AppPropsList, SheetList, StoryList, VariableList, linechart, barchart, map, listbox, CurrentSelection
  *
  * @param {Array} msg - The message parts
- * @returns {Object|null} Processed message object or null if event should be skipped
+ * @returns {object | null} Processed message object or null if event should be skipped
  */
 export function processQixPerfEvent(msg) {
     globals.logger.verbose(

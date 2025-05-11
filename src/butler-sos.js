@@ -49,10 +49,24 @@ process.emit = function (name, data, ...args) {
     return originalEmit.apply(process, arguments);
 };
 
+/**
+ * Delays execution for the specified amount of time.
+ *
+ * @param {number} ms - The number of milliseconds to sleep.
+ * @returns {Promise<void>} A promise that resolves after the specified time has elapsed.
+ */
 async function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Main application entry point that initializes and starts all Butler SOS services.
+ *
+ * This function initializes globals, sets up logging, starts UDP servers for user events
+ * and log events, and initializes various metrics collection services based on configuration.
+ *
+ * @returns {Promise<void>} A promise that resolves when initialization is complete.
+ */
 async function mainScript() {
     // Set env variable to indicate that it is ok to change config settings
     process.env.ALLOW_CONFIG_MUTATIONS = 'true';
@@ -64,6 +78,12 @@ async function mainScript() {
 
     // Ensure that initialisation of globals is complete
     // Sleep 5 seconds otherwise to allow globals to be initialised
+    /**
+     * Helper function for sleeping/delaying within the mainScript function.
+     *
+     * @param {number} ms - The number of milliseconds to sleep.
+     * @returns {Promise<void>} A promise that resolves after the specified time has elapsed.
+     */
     function sleepLocal(ms) {
         return new Promise((resolve) => setTimeout(resolve, ms));
     }

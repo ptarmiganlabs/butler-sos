@@ -12,20 +12,22 @@ import { processSchedulerEvent } from './handlers/scheduler-handler.js';
 import { processQixPerfEvent } from './handlers/qix-perf-handler.js';
 
 /**
- * Message event handler for UDP log events
+ * Handler for UDP messages containing Qlik Sense log events.
  *
- * This handler processes UDP messages from Qlik Sense Enterprise on Windows (QSEoW) log events.
- * It supports different log sources:
+ * This function processes incoming UDP messages from Qlik Sense Enterprise on Windows (QSEoW)
+ * log events. It supports different log sources:
  * - qseow-engine: Engine service logs
  * - qseow-proxy: Proxy service logs
  * - qseow-repository: Repository service logs
  * - qseow-scheduler: Scheduler service logs
  * - qseow-qix-perf: QIX performance logs
  *
- * Each log source has its own format and is processed by a specialized handler.
+ * Each log event type is processed by a specialized handler function, then categorized
+ * (if enabled), and finally forwarded to configured destinations (MQTT, InfluxDB, New Relic).
  *
- * @param {Object} message - The UDP message
- * @param {Object} _remote - Remote connection information
+ * @param {Buffer} message - The raw UDP message buffer containing the log event
+ * @param {object} _remote - Information about the remote sender (unused in this handler)
+ * @returns {Promise<void>} A promise that resolves when processing is complete
  */
 export async function messageEventHandler(message, _remote) {
     try {

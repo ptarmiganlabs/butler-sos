@@ -76,6 +76,18 @@ export async function verifyConfigFileSchema(configFile) {
 }
 
 // Function to do verification of app specific settings and relationships between settings
+/**
+ * Verifies application-specific settings and relationships between configuration settings.
+ *
+ * This function performs validation beyond simple schema validation, checking:
+ * 1. If InfluxDB is enabled, verifies that version is valid (must be 1 or 2)
+ * 2. Validates server tag configuration:
+ *    - All tags defined in serverTagsDefinition must be set for each server
+ *    - All tags specified for each server must be present in serverTagsDefinition
+ *
+ * @param {object} cfg - The configuration object to verify
+ * @returns {Promise<boolean>} A promise that resolves to true if all checks pass, false otherwise
+ */
 export async function verifyAppConfig(cfg) {
     // Verify values of specific config entries
 

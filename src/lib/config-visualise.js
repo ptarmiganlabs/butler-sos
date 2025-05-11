@@ -9,6 +9,21 @@ import handlebars from 'handlebars';
 import globals from '../globals.js';
 import configObfuscate from './config-obfuscate.js';
 
+/**
+ * Sets up and starts a web server for visualizing Butler SOS configuration.
+ *
+ * This function creates a Fastify server that serves a web interface where users can
+ * view the current Butler SOS configuration in a more readable format. It includes:
+ * - Rate limiting to prevent abuse
+ * - Optional obfuscation of sensitive configuration values
+ * - Serving static files for the web interface
+ * - Rendering the configuration as both JSON and YAML
+ *
+ * @param {object} [logger] - Optional logger object (not used in this function)
+ * @param {object} [config] - Optional configuration object (not used in this function)
+ * @returns {Promise<void>} A promise that resolves when the server is set up
+ * @throws {Error} If there's an error setting up the server
+ */
 export async function setupConfigVisServer(logger, config) {
     try {
         // Register rate limit for API

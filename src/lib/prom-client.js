@@ -38,6 +38,17 @@ let promMetricUserSessionsTotal = null;
 
 // client.collectDefaultMetrics();
 
+/**
+ * Sets up the Prometheus client and metrics endpoints.
+ *
+ * This function initializes all Prometheus metrics gauges for Butler SOS
+ * and starts an HTTP server that exposes these metrics.
+ *
+ * @param {object} promServer - The Fastify server instance for the metrics endpoint
+ * @param {number} promPort - The port number for the metrics endpoint
+ * @param {string} promHost - The host to bind the metrics endpoint to
+ * @returns {Promise<void>} A promise that resolves when the setup is complete
+ */
 export async function setupPromClient(promServer, promPort, promHost) {
     try {
         // If Prometheus is not enabled, return immediately
@@ -220,6 +231,18 @@ export async function setupPromClient(promServer, promPort, promHost) {
     }
 }
 
+/**
+ * Stores health metrics data from Qlik Sense in Prometheus gauges.
+ *
+ * This function takes the health data received from the Sense engine's health check API
+ * and populates the Prometheus gauges with appropriate values, including app metrics,
+ * cache metrics, CPU usage, memory usage, session counts, and user counts.
+ *
+ * @param {string} host - The hostname or IP address of the Sense server
+ * @param {object} data - The health metrics data from Sense engine healthcheck API
+ * @param {object} labels - Labels to associate with the metrics
+ * @returns {void}
+ */
 export function saveHealthMetricsToPrometheus(host, data, labels) {
     try {
         globals.logger.silly(`PROM: Health metrics (host): ${host}`);
@@ -267,6 +290,19 @@ export function saveHealthMetricsToPrometheus(host, data, labels) {
     }
 }
 
+/**
+ * Stores user session metrics data in Prometheus gauges.
+ *
+ * This function takes the user session data collected from Sense Proxy API
+ * and populates the Prometheus gauges with appropriate values.
+ *
+ * @param {object} userSessionsData - Object containing user session metrics
+ * @param {string} userSessionsData.host - The hostname of the Sense server
+ * @param {string} userSessionsData.virtualProxy - The virtual proxy name
+ * @param {object} userSessionsData.datapointPrometheus - The metrics data formatted for Prometheus
+ * @param {object} userSessionsData.tags - Tags to associate with the metrics
+ * @returns {void}
+ */
 export function saveUserSessionMetricsToPrometheus(userSessionsData) {
     try {
         globals.logger.silly(`PROM: Session metrics (host): ${userSessionsData.host}`);

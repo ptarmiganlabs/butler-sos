@@ -8,9 +8,25 @@ import { postUserEventToNewRelic } from '../../post-to-new-relic.js';
 import { postUserEventToMQTT } from '../../post-to-mqtt.js';
 
 /**
- * Handler for UDP messages relating to log events
- * @param {*} message The UDP message
- * @param {*} _remote Unused parameter
+ * Handler for UDP messages relating to user events from Qlik Sense Proxy service.
+ *
+ * This function processes incoming UDP messages containing user activity information,
+ * parses the message format, extracts relevant information such as user, app, browser details,
+ * and forwards the processed data to configured destinations (MQTT, InfluxDB, New Relic).
+ *
+ * Message format expected:
+ * - Field 0: Message type (/qseow-proxy-connection/ or /qseow-proxy-session/)
+ * - Field 1: Host
+ * - Field 2: Command (Start session, Stop session, Open connection, Close connection)
+ * - Field 3: User directory
+ * - Field 4: User ID
+ * - Field 5: Origin
+ * - Field 6: Context
+ * - Field 7: Message (may contain UserAgent information)
+ *
+ * @param {Buffer} message - The raw UDP message buffer
+ * @param {object} _remote - Information about the remote sender (unused)
+ * @returns {Promise<void>} A promise that resolves when processing is complete
  */
 export async function messageEventHandler(message, _remote) {
     try {
