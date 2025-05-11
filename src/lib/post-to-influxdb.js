@@ -1327,10 +1327,15 @@ export async function storeEventCountInfluxDB() {
 
     // Debug
     globals.logger.debug(`EVENT COUNT INFLUXDB: Log events: ${JSON.stringify(logEvents, null, 2)}`);
-
     globals.logger.debug(
         `EVENT COUNT INFLUXDB: User events: ${JSON.stringify(userEvents, null, 2)}`
     );
+
+    // Are there any events to store?
+    if (logEvents.length === 0 && userEvents.length === 0) {
+        globals.logger.verbose('EVENT COUNT INFLUXDB: No events to store in InfluxDB');
+        return;
+    }
 
     // InfluxDB 1.x
     if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
@@ -1413,7 +1418,12 @@ export async function storeEventCountInfluxDB() {
             globals.influx.writePoints(points);
         } catch (err) {
             globals.logger.error(`EVENT COUNT INFLUXDB: Error saving data to InfluxDB v1! ${err}`);
+            return;
         }
+
+        globals.logger.verbose(
+            'EVENT COUNT INFLUXDB: Sent Butler SOS event count data to InfluxDB'
+        );
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
         // Create new write API object
         // Advanced write options
@@ -1520,8 +1530,9 @@ export async function storeEventCountInfluxDB() {
                 globals.logger.debug(`EVENT COUNT INFLUXDB: Wrote data to InfluxDB v2`);
             } catch (err) {
                 globals.logger.error(
-                    `EVENT COUNT INFLUXDB: Error saving health data to InfluxDB v2! ${err.stack}`
+                    `EVENT COUNT INFLUXDB: Error saving health data to InfluxDB v2! ${err}`
                 );
+                return;
             }
 
             globals.logger.verbose(
@@ -1546,6 +1557,12 @@ export async function storeRejectedEventCountInfluxDB() {
             2
         )}`
     );
+
+    // Are there any events to store?
+    if (rejectedLogEvents.length === 0) {
+        globals.logger.verbose('REJECTED EVENT COUNT INFLUXDB: No events to store in InfluxDB');
+        return;
+    }
 
     // InfluxDB 1.x
     if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
@@ -1635,7 +1652,12 @@ export async function storeRejectedEventCountInfluxDB() {
             globals.logger.error(
                 `REJECT LOG EVENT INFLUXDB: Error saving data to InfluxDB v1! ${err}`
             );
+            return;
         }
+
+        globals.logger.verbose(
+            'REJECT LOG EVENT INFLUXDB: Sent Butler SOS rejected event count data to InfluxDB'
+        );
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
         // Create new write API object
         // Advanced write options
@@ -1739,9 +1761,14 @@ export async function storeRejectedEventCountInfluxDB() {
                 globals.logger.debug(`REJECT LOG EVENT INFLUXDB: Wrote data to InfluxDB v2`);
             } catch (err) {
                 globals.logger.error(
-                    `REJECTED LOG EVENT INFLUXDB: Error saving data to InfluxDB v2! ${err.stack}`
+                    `REJECTED LOG EVENT INFLUXDB: Error saving data to InfluxDB v2! ${err}`
                 );
+                return;
             }
+
+            globals.logger.verbose(
+                'REJECT LOG EVENT INFLUXDB: Sent Butler SOS rejected event count data to InfluxDB'
+            );
         } catch (err) {
             globals.logger.error(`REJECTED LOG EVENT INFLUXDB: Error getting write API: ${err}`);
         }

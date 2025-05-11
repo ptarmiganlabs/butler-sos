@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import later from '@breejs/later';
 import axios from 'axios';
 

@@ -4,8 +4,13 @@ import { default as Ajv } from 'ajv';
 
 import { confifgFileSchema } from './config-file-schema.js';
 
-// Function to verify that the config file has the correct format
-// Use yaml-validator to validate the config file
+/**
+ * Verifies that the config file has the correct format.
+ * Use yaml-validator to validate the config file
+ *
+ * @param {string} configFile path to the config file to verify
+ * @returns {Promise<boolean>} true if the config file is valid, false otherwise
+ */
 export async function verifyConfigFileSchema(configFile) {
     try {
         const ajv = new Ajv({
@@ -34,7 +39,8 @@ export async function verifyConfigFileSchema(configFile) {
         try {
             parsedFileContent = load(fileContent);
         } catch (err) {
-            throw new Error(`VERIFY CONFIG FILE: Error parsing YAML file: ${err}`);
+            console.error(`VERIFY CONFIG FILE: Error parsing YAML file: ${err}`);
+            return false;
         }
 
         // Validate the parsed YAML file against the schema

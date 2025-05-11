@@ -40,6 +40,12 @@ let promMetricUserSessionsTotal = null;
 
 export async function setupPromClient(promServer, promPort, promHost) {
     try {
+        // If Prometheus is not enabled, return immediately
+        if (!promServer) {
+            globals.logger.verbose('PROM: Prometheus metrics disabled, skipping setup');
+            return;
+        }
+
         // Create array with all defined server tags that should be used as Prometheus labels
         globals.serverList.forEach((server) => {
             globals.logger.verbose(
@@ -206,7 +212,11 @@ export async function setupPromClient(promServer, promPort, promHost) {
             `PROM: Prometheus Butler SOS metrics server now listening on port ${promPort}`
         );
     } catch (err) {
-        globals.logger.error(`PROM: ${err}`);
+        globals.logger.error(`PROM: Error setting up Prometheus client: ${err}`);
+
+        if (globals.getLoggingLevel() === 'debug') {
+            globals.logger.error(`PROM: Error stack: ${err.stack}`);
+        }
     }
 }
 

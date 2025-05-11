@@ -1,9 +1,9 @@
 import Fastify from 'fastify';
 import FastifyRateLimit from '@fastify/rate-limit';
 import FastifyStatic from '@fastify/static';
-import fs from 'fs';
-import path from 'path';
-import yaml from 'js-yaml';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as yaml from 'js-yaml';
 import handlebars from 'handlebars';
 
 import globals from '../globals.js';
@@ -51,7 +51,7 @@ export async function setupConfigVisServer(logger, config) {
         await configVisServer.register(import('../plugins/support.js'), { options: {} });
 
         // Create absolute path to the html directory
-        // dirname points to the directory where this file (app.js) is located, taking into account
+        // appBasePath points to the directory where this file (app.js) is located, taking into account
         // if the app is running as a packaged app or as a Node.js app.
         globals.logger.verbose(`----------------2: ${globals.appBasePath}`);
 

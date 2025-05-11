@@ -285,7 +285,7 @@ export class UdpEvents {
     }
 }
 
-export function setupUdpEventsStorage() {
+export function setupUdpEventsStorage(callbackForTest) {
     // Is storing event counts to InfluxDB enabled?
     if (
         globals.config.get('Butler-SOS.influxdbConfig.enable') !== true ||
@@ -297,7 +297,7 @@ export function setupUdpEventsStorage() {
         return;
     } else {
         // Configure timer for storing event counts to InfluxDB
-        setInterval(async () => {
+        const intervalId = setInterval(async () => {
             globals.logger.verbose(
                 'EVENT COUNTS: Timer for storing event counts to InfluxDB triggered'
             );
@@ -313,6 +313,13 @@ export function setupUdpEventsStorage() {
             await globals.rejectedEvents.clearRejectedEvents();
             await globals.udpEvents.clearLogEvents();
             await globals.udpEvents.clearUserEvents();
+
+            // For testing purposes - allows tests to know when the timer callback has completed
+            if (callbackForTest) {
+                callbackForTest();
+            }
         }, globals.config.get('Butler-SOS.qlikSenseEvents.influxdb.writeFrequency'));
+
+        return intervalId;
     }
 }

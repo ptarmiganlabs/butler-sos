@@ -5,7 +5,7 @@ import globals from '../globals.js';
 // Define variable to hold the PostHog client
 let posthogClient;
 
-const callRemoteURL = async function reportTelemetry() {
+export const callRemoteURL = async function reportTelemetry() {
     try {
         let heartbeat = false;
         let dockerHealthCheck = false;
@@ -310,14 +310,14 @@ export function setupAnonUsageReportTimer(logger, hostInfo) {
 
         setInterval(
             () => {
-                callRemoteURL(logger, hostInfo);
+                callRemoteURL();
             },
             1000 * 60 * 60 * 12
         ); // Report anon usage every 12 hours
         // }, 1000 * 60 * 15); // Report anon usage every 15 monutes for testing
 
         // Do an initial telemetry report
-        callRemoteURL(logger, hostInfo);
+        callRemoteURL();
     } catch (err) {
         logger.error(`TELEMETRY: ${err}`);
     }

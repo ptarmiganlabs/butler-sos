@@ -1,11 +1,10 @@
 // Get app names from the Qlik Repository Service (QRS) API
-import path from 'path';
 import qrsInteract from 'qrs-interact';
 import clonedeep from 'lodash.clonedeep';
 
 import globals from '../globals.js';
 
-function getAppNames() {
+export function getAppNames() {
     globals.logger.verbose(`APP NAMES: Start getting app names from repository db`);
 
     // Set up Sense repository service configuration
