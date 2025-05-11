@@ -33,6 +33,19 @@ let instance = null;
  * @property {object} config - The loaded configuration object.
  * @property {boolean} isSea - Indicates if the application is running as a standalone executable.
  * @property {string} execPath - The execution path of the application.
+ * @property {string} appBasePath - The base path of the application.
+ * @property {object} logger - The logger instance for logging messages.
+ * @property {object} logTransports - The array of log transports for the logger.
+ * @property {object} options - The command line options parsed from the command line arguments.
+ * @property {object} udpServerUserActivity - The UDP server for user activity events.
+ * @property {object} udpServerLogEvents - The UDP server for log events.
+ * @property {object} udpEvents - The UDP events instance for tracking user activity.
+ * @property {object} rejectedEvents - The UDP events instance for tracking rejected user and log events.
+ * @property {object} serverList - The list of servers to monitor.
+ * @property {object} mqttClient - The MQTT client instance for connecting to the MQTT broker.
+ * @property {object} certPath - The path to the client certificate.
+ * @property {object} keyPath - The path to the client certificate key.
+ * @property {object} caPath - The path to the client certificate CA.
  * @property {object} influx - The InfluxDB client instance.
  * @property {object} influxWriteApi - The InfluxDB write API instance.
  * @property {object} influxWriteOptions - The InfluxDB write options.
