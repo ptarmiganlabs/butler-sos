@@ -6,18 +6,13 @@
             "request": "launch",
             "name": "Launch Program",
             "program": "${workspaceFolder}/src/butler-sos.js",
-            "runtimeVersion": "18",
+            "runtimeVersion": "22",
             "cwd": "${workspaceFolder}/src",
             "env": {
                 "NODE_CONFIG_DIR": "${workspaceFolder}/src/config",
                 "NODE_ENV": "production"
             },
-            "args": [
-                "--loglevel", 
-                "info", 
-                "--configfile", 
-                "./config/production.yaml"
-            ]
+            "args": ["--loglevel", "info", "--configfile", "./config/production.yaml"]
         }
     ]
 }
