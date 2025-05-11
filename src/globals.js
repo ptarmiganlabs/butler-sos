@@ -88,7 +88,7 @@ class Settings {
         // Are we running as a packaged app?
         if (sea.isSea()) {
             // Get contents of package.json file
-            packageJson = sea.getAsset('package.json', 'utf8');
+            const packageJson = sea.getAsset('package.json', 'utf8');
             const version = JSON.parse(packageJson).version;
 
             appVersion = version;
