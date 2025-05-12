@@ -1,5 +1,3 @@
-/* eslint-disable no-console */
-
 // Set up REST endpoint for Docker healthchecks
 import httpHealth from 'http';
 

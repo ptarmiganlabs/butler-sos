@@ -30,7 +30,7 @@ import { isoDateRegex, uuidRegex, formatUserFields } from '../utils/common-utils
  * 18: App ID (uuid)
  *
  * @param {Array} msg - The message parts
- * @returns {Object} Processed message object
+ * @returns {object} Processed message object
  */
 export function processEngineEvent(msg) {
     globals.logger.verbose(`LOG EVENT: ${msg[0]}:${msg[5]}:${msg[4]}, ${msg[6]}, Msg: ${msg[8]}`);

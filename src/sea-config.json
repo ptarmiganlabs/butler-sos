@@ -5,7 +5,7 @@
     "assets": {
         "package.json": "./package.json",
         "/404.html": "./static/404.html",
-        "/logo.png": "./static/logo.png",
+        "/butler-sos.png": "./static/logo.png",
         "/configvis/index.html": "./static/configvis/index.html",
         "/configvis/butler-sos.png": "./static/configvis/butler-sos.png",
         "/configvis/download-solid.svg": "./static/configvis/download-solid.svg",
