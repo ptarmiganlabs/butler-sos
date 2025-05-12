@@ -27,7 +27,7 @@ import { isoDateRegex, formatUserFields } from '../utils/common-utils.js';
  * 15: Context where the log event occured. Ex: /qps/servicestatusworker
  *
  * @param {Array} msg - The message parts
- * @returns {Object} Processed message object
+ * @returns {object} Processed message object
  */
 export function processRepositoryEvent(msg) {
     globals.logger.verbose(`LOG EVENT: ${msg[0]}:${msg[5]}:${msg[4]}, ${msg[6]}, Msg: ${msg[8]}`);

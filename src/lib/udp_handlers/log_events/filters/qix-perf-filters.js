@@ -154,8 +154,9 @@ export function processAppSpecificFilters(eventData, appSpecificFilters) {
 
 /**
  * Processes filters for all-apps monitoring configuration
+ *
  * @param {object} eventData - The event data
- * @param {Object} allAppsFilters - The all-apps filter configuration
+ * @param {object} allAppsFilters - The all-apps filter configuration
  * @returns {boolean} True if the event matches all-apps filters
  */
 export function processAllAppsFilters(eventData, allAppsFilters) {
@@ -221,6 +222,7 @@ export function processAllAppsFilters(eventData, allAppsFilters) {
 
 /**
  * Process object ID filters
+ *
  * @param {object} objectConfig - The object filter configuration
  * @param {string} eventObjectId - The object ID from the event
  * @returns {boolean} True if the event passes the filter
@@ -251,6 +253,7 @@ function processObjectIdFilters(objectConfig, eventObjectId) {
 
 /**
  * Process method filters
+ *
  * @param {object} methodConfig - The method filter configuration
  * @param {string} eventMethod - The method from the event
  * @returns {boolean} True if the event passes the filter
