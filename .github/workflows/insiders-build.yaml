@@ -230,12 +230,12 @@ jobs:
                           echo "DEBUG: Setting keychain search list"
                           security list-keychains -d user -s "${KEYCHAIN_NAME}" ${OLD_KEYCHAIN_NAMES}
 
-                          echo "DEBUG: Getting current default keychain"
-                          DEFAULT_KEYCHAIN=$(security default-keychain | sed -e 's/"//g')
-                          echo "DEBUG: Default keychain is: ${DEFAULT_KEYCHAIN}"
+                          # echo "DEBUG: Getting current default keychain"
+                          # DEFAULT_KEYCHAIN=$(security default-keychain | sed -e 's/"//g')
+                          # echo "DEBUG: Default keychain is: ${DEFAULT_KEYCHAIN}"
 
-                          echo "DEBUG: Setting our keychain as default"
-                          security default-keychain -d user -s "${KEYCHAIN_NAME}"
+                          # echo "DEBUG: Setting our keychain as default"
+                          # security default-keychain -d user -s "${KEYCHAIN_NAME}"
 
                           echo "DEBUG: Unlocking keychain"
                           security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "${KEYCHAIN_NAME}"
@@ -255,8 +255,8 @@ jobs:
                           echo "DEBUG: Verifying code signature"
                           codesign -vvv --deep --strict "./${DIST_FILE_NAME}"
 
-                          echo "DEBUG: Restoring original default keychain"
-                          security default-keychain -d user -s "$DEFAULT_KEYCHAIN"
+                          # echo "DEBUG: Restoring original default keychain"
+                          # security default-keychain -d user -s "$DEFAULT_KEYCHAIN"
 
                           echo "DEBUG: Restoring original keychain list"
                           security list-keychains -d user -s ${OLD_KEYCHAIN_NAMES}
