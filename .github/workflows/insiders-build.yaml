@@ -223,10 +223,13 @@ jobs:
                           # Might need to review this: https://stackoverflow.com/questions/20205162/user-interaction-is-not-allowed-trying-to-sign-an-osx-app-using-codesign
 
                           # Create a new keychain
+                          echo "1..."
                           security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "${KEYCHAIN_NAME}"
 
                           # Get the current keychain list and add our new continue-on-error:
+                          echo "2..."
                           OLD_KEYCHAIN_NAMES=$(security list-keychains -d user | sed -e 's/"//g')
+                          echo "3..."
                           security list-keychains -d user -s "${KEYCHAIN_NAME}" ${OLD_KEYCHAIN_NAMES}
                           # security list-keychains -d user -s "${KEYCHAIN_NAME}"
 
@@ -234,15 +237,19 @@ jobs:
                           # security default-keychain -d user -s "${KEYCHAIN_NAME}"
 
                           # Unlock the keychain
+                          echo "4..."
                           security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "${KEYCHAIN_NAME}"
 
                           # Import certificate
+                          echo "5..."
                           security import certificate.p12 -k "${KEYCHAIN_NAME}" -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
 
                           # Set partition list for the keychain
+                          echo "6..."
                           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" "${KEYCHAIN_NAME}"
 
                           # Sign the binary
+                          echo "7..."
                           codesign --force -s "$MACOS_CERTIFICATE_NAME" -v "./${DIST_FILE_NAME}" --deep --strict --options=runtime --timestamp --entitlements ./release-config/${DIST_FILE_NAME}.entitlements
 
                           # -------------------
