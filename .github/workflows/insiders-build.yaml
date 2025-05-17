@@ -8,7 +8,7 @@ jobs:
     insiders-build:
         strategy:
             matrix:
-                os: [win-code-sign, mac-build2-arm64, mac-build1-x64, ubuntu-latest]
+                os: [win-code-sign, mac-build2, mac-build1, ubuntu-latest]
                 include:
                     - os: win-code-sign
                       build: |
