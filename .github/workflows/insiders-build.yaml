@@ -94,7 +94,8 @@ jobs:
                       # artifact_release_path: release-binaries-win/*
                       artifact_insider: butler-sos--win-x64--${{ github.sha }}.zip
 
-                    - os: mac-build1-x64
+                    # x64 build
+                    - os: mac-build1
                       build: |
                           # Inject git SHA into package.json
                           GIT_SHA=$(git rev-parse --short HEAD)
@@ -176,7 +177,8 @@ jobs:
                           ls -la
                       artifact_insider: butler-sos--macos-x64--${{ github.sha }}.zip
 
-                    - os: mac-build2-arm64
+                    # Arm64 build
+                    - os: mac-build2
                       build: |
                           # Inject git SHA into package.json
                           GIT_SHA=$(git rev-parse --short HEAD)
