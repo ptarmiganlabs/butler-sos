@@ -206,51 +206,68 @@ jobs:
                           ls -la
 
                           # Start signing of the binary
-
-                          # -------------------
-                          # Turn our base64-encoded certificate back to a regular .p12 file              
-                          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
-
-
-                          # Set env variable KEYCHAIN_NAME
-                          export KEYCHAIN_NAME="build.keychain"
+                          # Might need to review this: https://stackoverflow.com/questions/20205162/user-interaction-is-not-allowed-trying-to-sign-an-osx-app-using-codesign
 
                           # -------------------
                           # We need to create a new keychain, otherwise using the certificate will prompt
                           # with a UI dialog asking for the certificate password, which we can't
                           # use in a headless CI environment
-                          #
-                          # Might need to review this: https://stackoverflow.com/questions/20205162/user-interaction-is-not-allowed-trying-to-sign-an-osx-app-using-codesign
 
-                          # Create a new keychain
-                          echo "1..."
+                          # Turn our base64-encoded certificate back to a regular .p12 file              
+                          echo "DEBUG: Decoding certificate from base64"
+                          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
+
+                          echo "DEBUG: Setting KEYCHAIN_NAME environment variable"
+                          export KEYCHAIN_NAME="build.keychain"
+
+                          echo "DEBUG: Creating new keychain"
                           security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "${KEYCHAIN_NAME}"
 
-                          # Get the current keychain list and add our new continue-on-error:
-                          echo "2..."
+                          echo "DEBUG: Getting current keychain list"
                           OLD_KEYCHAIN_NAMES=$(security list-keychains -d user | sed -e 's/"//g')
-                          echo "3..."
+                          echo "DEBUG: Current keychains: ${OLD_KEYCHAIN_NAMES}"
+
+                          echo "DEBUG: Setting keychain search list"
                           security list-keychains -d user -s "${KEYCHAIN_NAME}" ${OLD_KEYCHAIN_NAMES}
-                          # security list-keychains -d user -s "${KEYCHAIN_NAME}"
 
-                          # Set the new keychain as default REMOVED
-                          # security default-keychain -d user -s "${KEYCHAIN_NAME}"
+                          echo "DEBUG: Getting current default keychain"
+                          DEFAULT_KEYCHAIN=$(security default-keychain | sed -e 's/"//g')
+                          echo "DEBUG: Default keychain is: ${DEFAULT_KEYCHAIN}"
 
-                          # Unlock the keychain
-                          echo "4..."
+                          echo "DEBUG: Setting our keychain as default"
+                          security default-keychain -d user -s "${KEYCHAIN_NAME}"
+
+                          echo "DEBUG: Unlocking keychain"
                           security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "${KEYCHAIN_NAME}"
 
-                          # Import certificate
-                          echo "5..."
+                          echo "DEBUG: Importing certificate into keychain"
                           security import certificate.p12 -k "${KEYCHAIN_NAME}" -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
 
-                          # Set partition list for the keychain
-                          echo "6..."
+                          echo "DEBUG: Setting keychain timeout to prevent locking"
+                          security set-keychain-settings -t 3600 -l "${KEYCHAIN_NAME}"
+
+                          echo "DEBUG: Setting key partition list"
                           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" "${KEYCHAIN_NAME}"
 
-                          # Sign the binary
-                          echo "7..."
+                          echo "DEBUG: Performing codesign operation"
                           codesign --force -s "$MACOS_CERTIFICATE_NAME" -v "./${DIST_FILE_NAME}" --deep --strict --options=runtime --timestamp --entitlements ./release-config/${DIST_FILE_NAME}.entitlements
+
+                          echo "DEBUG: Verifying code signature"
+                          codesign -vvv --deep --strict "./${DIST_FILE_NAME}"
+
+                          echo "DEBUG: Restoring original default keychain"
+                          security default-keychain -d user -s "$DEFAULT_KEYCHAIN"
+
+                          echo "DEBUG: Restoring original keychain list"
+                          security list-keychains -d user -s ${OLD_KEYCHAIN_NAMES}
+
+                          echo "DEBUG: Attempting to unlock default keychain"
+                          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "$DEFAULT_KEYCHAIN" || echo "DEBUG: Could not unlock default keychain, but continuing"
+
+                          echo "DEBUG: Code signing process complete"
+
+
+
 
                           # -------------------
                           # Notarize
