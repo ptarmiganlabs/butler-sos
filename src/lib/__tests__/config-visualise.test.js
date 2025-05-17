@@ -5,6 +5,7 @@ jest.unstable_mockModule('fastify', () => {
     const mockFastifyInstance = {
         register: jest.fn().mockResolvedValue(undefined),
         setErrorHandler: jest.fn(),
+        setNotFoundHandler: jest.fn(),
         get: jest.fn(),
         listen: jest.fn((options, callback) => {
             callback(null, 'http://127.0.0.1:8090');
@@ -42,6 +43,7 @@ jest.unstable_mockModule('fs', () => ({
 // Mock path
 jest.unstable_mockModule('path', () => ({
     resolve: jest.fn().mockReturnValue('/mock/path'),
+    join: jest.fn().mockReturnValue('/mock/path/static'),
 }));
 
 // Mock js-yaml

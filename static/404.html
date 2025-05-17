@@ -1,47 +1,188 @@
 <!doctype html>
-<html>
+<html lang="en">
     <head>
-        <title>404 Not Found</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>404 - Page Not Found | Butler SOS</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
         <style>
+            :root {
+                --primary-color: #dc8100;
+                --secondary-color: #333;
+                --background-color: #f8f9fa;
+                --box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+                --transition-time: 0.3s;
+            }
+            
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            
             body {
+                font-family: 'Roboto', Helvetica, sans-serif;
+                color: var(--secondary-color);
+                background: var(--background-color);
+                line-height: 1.6;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                padding: 20px;
+            }
+            
+            .container {
+                max-width: 800px;
+                background: white;
+                border-radius: 8px;
+                box-shadow: var(--box-shadow);
+                padding: 40px;
                 text-align: center;
-                padding: 150px;
+                animation: fadeIn 0.8s ease-in-out;
             }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            @keyframes float {
+                0% { transform: translateY(0px); }
+                50% { transform: translateY(-15px); }
+                100% { transform: translateY(0px); }
+            }
+            
+            .logo {
+                height: 180px;
+                animation: float 6s ease-in-out infinite;
+                margin-bottom: 20px;
+                transition: transform var(--transition-time);
+            }
+            
+            .logo:hover {
+                transform: scale(1.1);
+            }
+            
             h1 {
-                font-size: 50px;
+                font-size: 4rem;
+                margin-bottom: 20px;
+                color: var(--primary-color);
             }
-            body {
-                font:
-                    20px Helvetica,
-                    sans-serif;
-                color: #333;
+            
+            .error-code {
+                font-size: 8rem;
+                font-weight: bold;
+                color: #f0f0f0;
+                position: absolute;
+                z-index: -1;
+                left: 50%;
+                transform: translateX(-50%);
+                opacity: 0.6;
+                user-select: none;
             }
-            article {
-                display: block;
-                text-align: left;
-                width: 650px;
-                margin: 0 auto;
+            
+            .message {
+                font-size: 1.5rem;
+                margin-bottom: 30px;
             }
-            a {
-                color: #dc8100;
+            
+            .details {
+                font-size: 1.2rem;
+                margin-bottom: 30px;
+                color: #666;
+            }
+            
+            .action-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 15px;
+                margin-top: 30px;
+            }
+            
+            .btn {
+                display: inline-block;
+                padding: 12px 30px;
+                background: var(--primary-color);
+                color: white;
+                border-radius: 30px;
                 text-decoration: none;
+                font-weight: 700;
+                transition: all var(--transition-time);
+                border: 2px solid var(--primary-color);
             }
-            a:hover {
-                color: #333;
-                text-decoration: none;
+            
+            .btn:hover {
+                background: white;
+                color: var(--primary-color);
+                transform: translateY(-3px);
+                box-shadow: 0 5px 15px rgba(220, 129, 0, 0.3);
+            }
+            
+            .btn-secondary {
+                background: white;
+                color: var(--primary-color);
+            }
+            
+            .btn-secondary:hover {
+                background: var(--primary-color);
+                color: white;
+            }
+            
+            @media (max-width: 768px) {
+                h1 {
+                    font-size: 3rem;
+                }
+                
+                .logo {
+                    height: 140px;
+                }
+                
+                .error-code {
+                    font-size: 6rem;
+                }
+                
+                .message {
+                    font-size: 1.2rem;
+                }
             }
         </style>
     </head>
     <body>
-        <article>
-            <img src="/butler-sos.png" alt="Butler SOS logo" style="height: 200px" />
-            <h1>Err. That's an error.</h1>
-            <p>The page you were looking for could not be found.</p>
-            <!-- Open in new tab -->
-            <p>
-                This really shouldn't happen, so please open a ticket in the Butler SOS bug tracker
-                <a target="_blank" href="https://github.com/ptarmiganlabs/butler-sos/issues/new/choose">on GitHub</a>.
-            </p>
-        </article>
+        <div class="error-code">404</div>
+        <div class="container">
+            <img src="/butler-sos.png" alt="Butler SOS logo" class="logo" />
+            <h1>Oops! Can't find that page.</h1>
+            <p class="message">The page you were looking for appears to have vanished.</p>
+            <p class="details">Or maybe it never existed in the first place.</p>
+            <p class="details">Either way, please consider filing a bug if you think something is not quite working as expected.</p>
+            
+            <div class="action-buttons">
+                <a href="/" class="btn">Go Home</a>
+                <a target="_blank" href="https://github.com/ptarmiganlabs/butler-sos/issues/new/choose" class="btn btn-secondary">Report Issue on GitHub</a>
+            </div>
+        </div>
+        
+        <script>
+            // Add some interactive elements
+            document.addEventListener('DOMContentLoaded', function() {
+                const logo = document.querySelector('.logo');
+                
+                // Make the logo respond to mouse movement slightly
+                document.addEventListener('mousemove', function(e) {
+                    const xAxis = (window.innerWidth / 2 - e.pageX) / 30;
+                    const yAxis = (window.innerHeight / 2 - e.pageY) / 30;
+                    logo.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+                });
+                
+                // Reset transform when mouse leaves
+                document.addEventListener('mouseleave', function() {
+                    logo.style.transform = 'rotateY(0deg) rotateX(0deg)';
+                });
+            });
+        </script>
     </body>
 </html>
