@@ -260,8 +260,11 @@ jobs:
                           # Store the notarization credentials so that we can prevent a UI password dialog from blocking the CI
                           echo "Create keychain profile"
                           # xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_NOTARIZATION_APPLE_ID" --team-id "$PROD_MACOS_NOTARIZATION_TEAM_ID" --password "$PROD_MACOS_NOTARIZATION_PWD"
-                          xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_NOTARIZATION_APPLE_ID" --team-id "$PROD_MACOS_NOTARIZATION_TEAM_ID" --password "$PROD_MACOS_NOTARIZATION_PWD" --keychain "${KEYCHAIN_NAME}"
-
+                          #xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_NOTARIZATION_APPLE_ID" --team-id "$PROD_MACOS_NOTARIZATION_TEAM_ID" --password "$PROD_MACOS_NOTARIZATION_PWD" --keychain "${KEYCHAIN_NAME}"
+                          # Get the absolute path to the keychain in ~/Library/Keychains/
+                          KEYCHAIN_PATH=~/Library/Keychains/${KEYCHAIN_NAME}
+                          echo "DEBUG: Using keychain at path: ${KEYCHAIN_PATH}"
+                          xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_NOTARIZATION_APPLE_ID" --team-id "$PROD_MACOS_NOTARIZATION_TEAM_ID" --password "$PROD_MACOS_NOTARIZATION_PWD" --keychain "${KEYCHAIN_PATH}"
 
 
                           # -------------------
@@ -279,8 +282,9 @@ jobs:
 
                           # Here we send the notarization request to the Apple's Notarization service, waiting for the result.
                           echo "Notarize insider app"
-                          #xcrun notarytool submit "./${DIST_FILE_NAME}--macos-arm64--${{ github.sha }}.zip" --keychain-profile "notarytool-profile" --wait
-                          xcrun notarytool submit "./${DIST_FILE_NAME}--macos-arm64--${{ github.sha }}.zip" --keychain-profile "notarytool-profile" --wait --keychain "${KEYCHAIN_NAME}"
+                          # xcrun notarytool submit "./${DIST_FILE_NAME}--macos-arm64--${{ github.sha }}.zip" --keychain-profile "notarytool-profile" --wait
+                          # xcrun notarytool submit "./${DIST_FILE_NAME}--macos-arm64--${{ github.sha }}.zip" --keychain-profile "notarytool-profile" --wait --keychain "${KEYCHAIN_NAME}"
+                          xcrun notarytool submit "./${DIST_FILE_NAME}--macos-arm64--${{ github.sha }}.zip" --keychain-profile "notarytool-profile" --wait --keychain "${KEYCHAIN_PATH}"
 
                           echo "DEBUG: Restoring original default keychain"
                           security default-keychain -d user -s "$DEFAULT_KEYCHAIN"
