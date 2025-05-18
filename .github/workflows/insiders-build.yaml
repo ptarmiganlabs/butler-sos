@@ -224,14 +224,14 @@ jobs:
                           security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "${KEYCHAIN_NAME}"
 
                           echo "DEBUG: Getting current keychain list"
-                          OLD_KEYCHAIN_NAMES=$(security list-keychains -d user | sed -e 's/"//g')
+                          OLD_KEYCHAIN_NAMES=$(security list-keychains -d user | sed -e 's/"//g' | xargs)
                           echo "DEBUG: Current keychains: ${OLD_KEYCHAIN_NAMES}"
 
                           echo "DEBUG: Setting keychain search list"
                           security list-keychains -d user -s "${KEYCHAIN_NAME}" ${OLD_KEYCHAIN_NAMES}
 
                           echo "DEBUG: Getting current default keychain"
-                          DEFAULT_KEYCHAIN=$(security default-keychain -d user | sed -e 's/"//g')
+                          DEFAULT_KEYCHAIN=$(security default-keychain -d user | sed -e 's/"//g' | xargs)
                           echo "DEBUG: Default keychain is: ${DEFAULT_KEYCHAIN}"
 
                           echo "DEBUG: Setting our keychain as default"
@@ -287,10 +287,10 @@ jobs:
                           xcrun notarytool submit "./${DIST_FILE_NAME}--macos-arm64--${{ github.sha }}.zip" --keychain-profile "notarytool-profile" --wait --keychain "${KEYCHAIN_PATH}"
 
                           echo "DEBUG: Restoring original default keychain"
-                          security default-keychain -d user -s "$DEFAULT_KEYCHAIN"
+                          security default-keychain -d user -s "$DEFAULT_KEYCHAIN" || echo "WARNING: Failed to restore default keychain, continuing anyway"
 
                           echo "DEBUG: Restoring original keychain list"
-                          security list-keychains -d user -s ${OLD_KEYCHAIN_NAMES}
+                          security list-keychains -d user -s ${OLD_KEYCHAIN_NAMES} || echo "WARNING: Failed to restore keychain list, continuing anyway"
 
                           # -------------------
                           # Clean up
