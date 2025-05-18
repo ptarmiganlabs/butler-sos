@@ -261,8 +261,8 @@ jobs:
                           echo "Create keychain profile"
                           # xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_NOTARIZATION_APPLE_ID" --team-id "$PROD_MACOS_NOTARIZATION_TEAM_ID" --password "$PROD_MACOS_NOTARIZATION_PWD"
                           #xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_NOTARIZATION_APPLE_ID" --team-id "$PROD_MACOS_NOTARIZATION_TEAM_ID" --password "$PROD_MACOS_NOTARIZATION_PWD" --keychain "${KEYCHAIN_NAME}"
-                          # Get the absolute path to the keychain in ~/Library/Keychains/
-                          KEYCHAIN_PATH=~/Library/Keychains/${KEYCHAIN_NAME}
+                          # Get the absolute path to the keychain in ~/Library/Keychains/ with the -db suffix macOS adds to keychain files
+                          KEYCHAIN_PATH=~/Library/Keychains/${KEYCHAIN_NAME}-db
                           echo "DEBUG: Using keychain at path: ${KEYCHAIN_PATH}"
                           xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_NOTARIZATION_APPLE_ID" --team-id "$PROD_MACOS_NOTARIZATION_TEAM_ID" --password "$PROD_MACOS_NOTARIZATION_PWD" --keychain "${KEYCHAIN_PATH}"
 
