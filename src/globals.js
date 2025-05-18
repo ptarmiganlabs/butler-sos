@@ -170,9 +170,37 @@ class Settings {
                 process.exit(1);
             }
 
-            if (this.checkFileExistsSync(this.options.configfile)) {
-                process.env.NODE_CONFIG_DIR = configFilePath;
-                process.env.NODE_ENV = configFileBasename;
+            if (this.checkFileExistsSync(this.configFile)) {
+                // When running as a packaged app, we need different configuration handling
+                if (sea.isSea()) {
+                    try {
+                        // For SEA packages, read the YAML file directly and parse it
+                        // Make sure js-yaml is included in the SEA package
+                        const yaml = await import('js-yaml');
+                        const configFileContent = fs.readFileSync(this.configFile, 'utf8');
+
+                        console.log(`SEA: Loaded config file from ${this.configFile}`);
+                        console.log(`SEA: Config file content: ${configFileContent}`);
+
+                        // Parse YAML content
+                        const parsedConfig = yaml.load(configFileContent);
+                        console.log(
+                            `SEA: Parsed config file content: ${JSON.stringify(parsedConfig, null, 2)}`
+                        );
+
+                        // Set NODE_CONFIG with stringified JSON version of the parsed YAML
+                        process.env.NODE_CONFIG = JSON.stringify(parsedConfig);
+
+                        console.log(`SEA: Loaded and parsed YAML config from ${this.configFile}`);
+                    } catch (err) {
+                        console.error(`SEA: Failed to load or parse config file: ${err.message}`);
+                        process.exit(1);
+                    }
+                } else {
+                    // Standard non-packaged approach
+                    process.env.NODE_CONFIG_DIR = configFilePath;
+                    process.env.NODE_ENV = configFileBasename;
+                }
             } else {
                 console.log('Error: Specified config file does not exist');
                 process.exit(1);
