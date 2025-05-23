@@ -585,27 +585,18 @@ jobs:
                   # Make binary executable
                   chmod +x ./${DIST_FILE_NAME}
 
-                  # Compress insider's build
+            - name: Compress insider's build
+              run: |
                   # Include following directories & files in the created archive file.
                   # - ./src/config/log_appender_xml
                   # - ./src/config⁄production_template.yaml                          
                   ls -la
+                  echo "Creating zip file"
                   zip -9 -r ./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-linux-x64.zip ${DIST_FILE_NAME}
 
+                  # Add additional files to the zip file
                   cd src
-                  zip -9 -u -r "../${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-linux-x64.zip" "./config/production_template.yaml" "./config/log_appender_xml"
-
-                  ls -la
-
-                  # Compress insider's build
-                  # Include following directories & files in the created archive file.
-                  # - ./src/config/log_appender_xml
-                  # - ./src/config⁄production_template.yaml
-
-                  ls -la
-                  zip -9 -r ./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-linux-x64.zip ${DIST_FILE_NAME}
-
-                  cd src
+                  echo "Adding additional files"
                   zip -9 -u -r "../${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-linux-x64.zip" "./config/production_template.yaml" "./config/log_appender_xml"
 
                   ls -la
@@ -620,7 +611,7 @@ jobs:
                   # artifactContentType: application/zip
                   draft: true
                   tag: ${{ needs.release-please.outputs.release_tag_name }}
-                  artifacts: ./butler-sos-${{ needs.release-please.outputs.release_version }}-linux.zip
+                  artifacts: ./butler-sos-${{ needs.release-please.outputs.release_version }}-linux-x64.zip
                   token: ${{ github.token }}
 
             - name: Tidy up before existing
@@ -629,4 +620,4 @@ jobs:
                   ls -la
                   rm build.cjs
                   rm "./${DIST_FILE_NAME}"
-                  rm "./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-linux.zip"
+                  rm "./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-linux-x64.zip"
