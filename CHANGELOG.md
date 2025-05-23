@@ -3,6 +3,14 @@
 ## [11.1.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v11.1.0...butler-sos-v11.1.0) (2025-05-23)
 
 
+### Miscellaneous
+
+* **master:** release butler-sos 11.1.0 ([7a53515](https://github.com/ptarmiganlabs/butler-sos/commit/7a535154e808cd4df705256ace6243d6bb9170c8))
+* **master:** release butler-sos 11.1.0 ([210613d](https://github.com/ptarmiganlabs/butler-sos/commit/210613dfcc5fa6e62f86533ace9bc54c3070cf1e))
+
+## [11.1.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v11.1.0...butler-sos-v11.1.0) (2025-05-23)
+
+
 ### Features
 
 * Add custom 404 page for config visualisation server ([3523025](https://github.com/ptarmiganlabs/butler-sos/commit/35230252ff6cc578263726ee3f7e24e2fe6d3588))
