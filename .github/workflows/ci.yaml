@@ -204,7 +204,6 @@ jobs:
                   # Clean up
                   # Delete build keychain
                   security delete-keychain build.keychain
-                  rm build.cjs certificate.p12
 
                   ls -la
 
@@ -225,7 +224,7 @@ jobs:
               run: |
                   pwd
                   ls -la 
-                  rm build.cjs
+                  rm build.cjs certificate.p12
                   rm "./${DIST_FILE_NAME}"
                   rm "./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-macos-x64.zip"
 
@@ -381,7 +380,6 @@ jobs:
                   # Clean up
                   # Delete build keychain
                   security delete-keychain build.keychain
-                  rm build.cjs certificate.p12
 
                   ls -la
 
@@ -402,7 +400,7 @@ jobs:
               run: |
                   pwd
                   ls -la 
-                  rm build.cjs
+                  rm build.cjs certificate.p12
                   rm "./${DIST_FILE_NAME}"
                   rm "./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-macos-arm64.zip"
 
@@ -519,7 +517,6 @@ jobs:
 
                   # -------------------
                   # Clean up
-                  Remove-Item -Force build.cjs
 
                   dir
 
@@ -539,9 +536,9 @@ jobs:
             - name: Tidy up before existing
               run: |
                   dir
-                  del build.cjs
-                  del "./${env:DIST_FILE_NAME}.exe"
-                  del "./${env:DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-win.zip"
+                  Remove-Item -Force build.cjs
+                  Remove-Item -Force "./${env:DIST_FILE_NAME}.exe"
+                  Remove-Item -Force "./${env:DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-win.zip"
 
     release-linux:
         needs: release-please
@@ -597,11 +594,6 @@ jobs:
 
                   cd src
                   zip -9 -u -r "../${DIST_FILE_NAME}--linux-x64--${{ github.sha }}.zip" "./config/production_template.yaml" "./config/log_appender_xml"
-
-                  # -------------------
-                  # Clean up
-                  cd ..
-                  rm build.cjs
 
                   ls -la
 
