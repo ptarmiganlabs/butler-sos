@@ -179,28 +179,19 @@ class Settings {
                         const yaml = await import('js-yaml');
                         const configFileContent = fs.readFileSync(this.configFile, 'utf8');
 
-                        if (
-                            this.config['Butler-SOS'].logLevel === 'verbose' ||
-                            this.config['Butler-SOS'].logLevel === 'debug' ||
-                            this.config['Butler-SOS'].logLevel === 'silly'
-                        ) {
-                            // We don't have a logging object yet, so use plain console.log
-                            console.log(`SEA: Loaded config file from ${this.configFile}`);
-                        }
+                        // We don't have a logging object yet, so use plain console.log
+                        // console.log(`SEA: Loaded config file from ${this.configFile}`);
 
-                        if (
-                            this.config['Butler-SOS'].logLevel === 'debug' ||
-                            this.config['Butler-SOS'].logLevel === 'silly'
-                        ) {
-                            // We don't have a logging object yet, so use plain console.log
-                            console.log(`SEA: Config file content: ${configFileContent}`);
-                        }
+                        // We don't have a logging object yet, so use plain console.log
+                        // console.log(`SEA: Config file content: ${configFileContent}`);
 
                         // Parse YAML content
                         const parsedConfig = yaml.load(configFileContent);
 
+                        // Set NODE_CONFIG with stringified JSON version of the parsed YAML
+                        process.env.NODE_CONFIG = JSON.stringify(parsedConfig);
+
                         if (
-                            this.config['Butler-SOS'].logLevel === 'verbose' ||
                             this.config['Butler-SOS'].logLevel === 'debug' ||
                             this.config['Butler-SOS'].logLevel === 'silly'
                         ) {
@@ -209,9 +200,6 @@ class Settings {
                                 `SEA: Parsed config file content: ${JSON.stringify(parsedConfig, null, 2)}`
                             );
                         }
-
-                        // Set NODE_CONFIG with stringified JSON version of the parsed YAML
-                        process.env.NODE_CONFIG = JSON.stringify(parsedConfig);
 
                         console.log(`SEA: Loaded and parsed YAML config from ${this.configFile}`);
                     } catch (err) {
@@ -255,7 +243,11 @@ class Settings {
         }
 
         // Load config file
-        this.config = (await import('config')).default;
+        // If running as a packaged app, the config has already been loaded and parsed at this point
+        // If running in a non-packaged environment, load the config file
+        if (!sea.isSea()) {
+            this.config = (await import('config')).default;
+        }
 
         // Verify application specific settings and relationships between settings
         if (this.options.skipConfigVerification) {
