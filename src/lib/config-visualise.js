@@ -9,6 +9,7 @@ import sea from 'node:sea';
 
 import globals from '../globals.js';
 import configObfuscate from './config-obfuscate.js';
+import { prepareFile, compileTemplate, getMimeType } from './file-prep.js';
 
 /**
  * Serves the custom 404 error page
@@ -19,29 +20,27 @@ import configObfuscate from './config-obfuscate.js';
  */
 async function serve404Page(request, reply) {
     try {
-        let template404;
         const host = globals.config.get('Butler-SOS.configVisualisation.host');
         const port = globals.config.get('Butler-SOS.configVisualisation.port');
 
-        if (globals.isSea) {
-            // In SEA mode, get the 404 template via sea.getAsset
-            globals.logger.verbose(`CONFIG VIS: Getting 404.html template via sea.getAsset`);
-            template404 = sea.getAsset('/404.html', 'utf8');
-            if (!template404) {
-                globals.logger.error(`CONFIG VIS: Could not find 404.html template in SEA assets`);
-                reply.code(404).send({ error: 'Page not found' });
-                return;
-            }
-        } else {
-            // In Node.js mode, read from filesystem
-            const filePath = path.resolve(globals.appBasePath, 'static', '404.html');
-            globals.logger.verbose(`CONFIG VIS: Reading 404.html template from ${filePath}`);
-            template404 = fs.readFileSync(filePath, 'utf8');
+        // Get the 404 template file path
+        const filePath = globals.isSea
+            ? '/404.html'
+            : path.resolve(globals.appBasePath, 'static', '404.html');
+
+        globals.logger.verbose(`CONFIG VIS: Getting 404.html template from ${filePath}`);
+
+        // Use the file prep utility to get the file
+        const fileResult = await prepareFile(filePath, 'utf8');
+
+        if (!fileResult.found) {
+            globals.logger.error(`CONFIG VIS: Could not find 404.html template`);
+            reply.code(404).send({ error: 'Page not found' });
+            return;
         }
 
         // Compile handlebars template and replace variables
-        const compiledTemplate = handlebars.compile(template404);
-        const renderedHtml = compiledTemplate({
+        const renderedHtml = compileTemplate(fileResult.content, {
             visTaskHost: host,
             visTaskPort: port,
         });
@@ -124,18 +123,7 @@ export async function setupConfigVisServer(logger, config) {
                 `CONFIG VIS: Running in SEA mode, setting up custom static file handlers`
             );
 
-            // Define MIME types for different file extensions
-            const mimeTypes = {
-                '.html': 'text/html; charset=utf-8',
-                '.css': 'text/css',
-                '.js': 'application/javascript',
-                '.png': 'image/png',
-                '.jpg': 'image/jpeg',
-                '.gif': 'image/gif',
-                '.svg': 'image/svg+xml',
-                '.map': 'application/json',
-                '.ico': 'image/x-icon',
-            };
+            // We'll use the MIME types defined in file-prep.js
 
             // Set up routes for the static files listed in sea-config.json
             configVisServer.get('/:filename', async (request, reply) => {
@@ -143,21 +131,21 @@ export async function setupConfigVisServer(logger, config) {
                     const filename = request.params.filename;
                     const assetPath = `/configvis/${filename}`;
                     const fileExtension = path.extname(filename);
-                    const contentType = mimeTypes[fileExtension] || 'application/octet-stream';
 
-                    // Get the asset from SEA
-                    const content = sea.getAsset(
-                        assetPath,
-                        fileExtension === '.png' || fileExtension === '.ico' ? undefined : 'utf8'
-                    );
+                    // Use the file prep utility to get the file
+                    const fileResult = await prepareFile(assetPath);
 
-                    if (!content) {
+                    if (!fileResult.found) {
                         // File not found - serve custom 404 page
                         await serve404Page(request, reply);
                         return;
                     }
 
-                    reply.code(200).header('Content-Type', contentType).send(content);
+                    // Send the file content with correct MIME type
+                    reply
+                        .code(200)
+                        .header('Content-Type', fileResult.mimeType)
+                        .send(fileResult.content);
                 } catch (err) {
                     globals.logger.error(
                         `CONFIG VIS: Error serving static file in SEA mode: ${err.message}`
@@ -169,18 +157,16 @@ export async function setupConfigVisServer(logger, config) {
             // Add specific handler for the butler-sos.png file at the root path
             configVisServer.get('/butler-sos.png', async (request, reply) => {
                 try {
-                    // Get the asset from SEA (no encoding for binary files)
-                    const logoContent = sea.getAsset('/butler-sos.png');
+                    // Use the file prep utility to get the file
+                    const fileResult = await prepareFile('/butler-sos.png');
 
-                    if (!logoContent) {
-                        globals.logger.error(
-                            `CONFIG VIS: Could not find butler-sos.png in SEA assets`
-                        );
+                    if (!fileResult.found) {
+                        globals.logger.error(`CONFIG VIS: Could not find butler-sos.png in assets`);
                         reply.code(404).send({ error: 'Logo not found' });
                         return;
                     }
 
-                    reply.code(200).header('Content-Type', 'image/png').send(logoContent);
+                    reply.code(200).header('Content-Type', 'image/png').send(fileResult.content);
                 } catch (err) {
                     globals.logger.error(
                         `CONFIG VIS: Error serving logo in SEA mode: ${err.message}`
@@ -220,63 +206,59 @@ export async function setupConfigVisServer(logger, config) {
         configVisServer.setNotFoundHandler(serve404Page);
 
         configVisServer.get('/', async (request, reply) => {
-            // Obfuscate the config object before sending it to the client
-            // First get clean copy of the config object
-            let newConfig = JSON.parse(JSON.stringify(globals.config));
+            try {
+                // Obfuscate the config object before sending it to the client
+                // First get clean copy of the config object
+                let newConfig = JSON.parse(JSON.stringify(globals.config));
 
-            if (globals.config.get('Butler-SOS.configVisualisation.obfuscate')) {
-                // Obfuscate config file before presenting it to the user
-                // This is done to avoid leaking sensitive information
-                // to users who should not have access to it.
-                // The obfuscation is done by replacing parts of the
-                // config file with masked strings.
-                newConfig = configObfuscate(newConfig);
-            }
+                if (globals.config.get('Butler-SOS.configVisualisation.obfuscate')) {
+                    // Obfuscate config file before presenting it to the user
+                    // This is done to avoid leaking sensitive information
+                    // to users who should not have access to it.
+                    // The obfuscation is done by replacing parts of the
+                    // config file with masked strings.
+                    newConfig = configObfuscate(newConfig);
+                }
 
-            // Convert the (potentially obfuscated) config object to YAML format (=string)
-            const butlerConfigYaml = yaml.dump(newConfig);
+                // Convert the (potentially obfuscated) config object to YAML format (=string)
+                const butlerConfigYaml = yaml.dump(newConfig);
 
-            // Read index.html - depending on whether we're in SEA mode or not
-            // dirname points to the directory where this file (app.js) is located, taking into account
-            // if the app is running as a packaged app or as a Node.js app.
-            globals.logger.verbose(`----------------: ${globals.appBasePath}`);
+                // Get index.html path depending on whether we're in SEA mode or not
+                const filePath = globals.isSea
+                    ? '/configvis/index.html'
+                    : path.resolve(globals.appBasePath, 'static/configvis', 'index.html');
 
-            let template;
-            if (globals.isSea) {
-                // In SEA mode, get the template via sea.getAsset
-                globals.logger.verbose(`CONFIG VIS: Getting index.html template via sea.getAsset`);
-                template = sea.getAsset('/configvis/index.html', 'utf8');
-                if (!template) {
-                    globals.logger.error(
-                        `CONFIG VIS: Could not find index.html template in SEA assets`
-                    );
+                globals.logger.verbose(`CONFIG VIS: Getting index.html template from ${filePath}`);
+
+                // Use the file prep utility to get the file
+                const fileResult = await prepareFile(filePath, 'utf8');
+
+                if (!fileResult.found) {
+                    globals.logger.error(`CONFIG VIS: Could not find index.html template`);
                     reply.code(500).send({ error: 'Internal server error: Template not found' });
                     return;
                 }
-            } else {
-                // In Node.js mode, read from filesystem
-                const filePath = path.resolve(
-                    globals.appBasePath,
-                    'static/configvis',
-                    'index.html'
-                );
-                globals.logger.verbose(`CONFIG VIS: Reading index.html template from ${filePath}`);
-                template = fs.readFileSync(filePath, 'utf8');
+
+                // Get config as HTML encoded JSON string
+                const butlerSosConfigJsonEncoded = JSON.stringify(newConfig);
+
+                // Compile handlebars template and replace variables
+                const renderedText = compileTemplate(fileResult.content, {
+                    butlerSosConfigJsonEncoded,
+                    butlerConfigYaml,
+                });
+
+                globals.logger.debug(`CONFIG VIS: Rendered text: ${renderedText}`);
+
+                // Send reply as HTML
+                reply
+                    .code(200)
+                    .header('Content-Type', 'text/html; charset=utf-8')
+                    .send(renderedText);
+            } catch (err) {
+                globals.logger.error(`CONFIG VIS: Error serving home page: ${err.message}`);
+                reply.code(500).send({ error: 'Internal server error' });
             }
-
-            // Compile handlebars template
-            const compiledTemplate = handlebars.compile(template);
-
-            // Get config as HTML encoded JSON string
-            const butlerSosConfigJsonEncoded = JSON.stringify(newConfig);
-
-            // Render the template
-            const renderedText = compiledTemplate({ butlerSosConfigJsonEncoded, butlerConfigYaml });
-
-            globals.logger.debug(`CONFIG VIS: Rendered text: ${renderedText}`);
-
-            // Send reply as HTML
-            reply.code(200).header('Content-Type', 'text/html; charset=utf-8').send(renderedText);
         });
 
         configVisServer.listen(
