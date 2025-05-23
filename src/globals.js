@@ -191,15 +191,10 @@ class Settings {
                         // Set NODE_CONFIG with stringified JSON version of the parsed YAML
                         process.env.NODE_CONFIG = JSON.stringify(parsedConfig);
 
-                        if (
-                            this.config['Butler-SOS'].logLevel === 'debug' ||
-                            this.config['Butler-SOS'].logLevel === 'silly'
-                        ) {
-                            // We don't have a logging object yet, so use plain console.log
-                            console.log(
-                                `SEA: Parsed config file content: ${JSON.stringify(parsedConfig, null, 2)}`
-                            );
-                        }
+                        // We don't have a logging object yet, so use plain console.log
+                        // console.log(
+                        //     `SEA: Parsed config file content: ${JSON.stringify(parsedConfig, null, 2)}`
+                        // );
 
                         console.log(`SEA: Loaded and parsed YAML config from ${this.configFile}`);
                     } catch (err) {
@@ -242,11 +237,23 @@ class Settings {
             }
         }
 
+        // Set config strict mode if we're running in SEA mode
+        if (this.isSea) {
+            process.env.NODE_CONFIG_STRICT_MODE = 'true';
+        } else {
+            process.env.NODE_CONFIG_STRICT_MODE = 'false';
+        }
+
         // Load config file
-        // If running as a packaged app, the config has already been loaded and parsed at this point
-        // If running in a non-packaged environment, load the config file
-        if (!sea.isSea()) {
+        try {
             this.config = (await import('config')).default;
+        } catch (err) {
+            // If SEA we expect this to fail, so just continue.
+            // Otherwise, log the error and exit.
+            if (!this.isSea) {
+                console.error(`MAIN: Failed to load config file: ${err.message}`);
+                process.exit(1);
+            }
         }
 
         // Verify application specific settings and relationships between settings
