@@ -191,6 +191,9 @@ class Settings {
                         // Set NODE_CONFIG with stringified JSON version of the parsed YAML
                         process.env.NODE_CONFIG = JSON.stringify(parsedConfig);
 
+                        // Prevent config package from looking for deployment config files
+                        process.env.NODE_ENV = '';
+
                         // We don't have a logging object yet, so use plain console.log
                         // console.log(
                         //     `SEA: Parsed config file content: ${JSON.stringify(parsedConfig, null, 2)}`
