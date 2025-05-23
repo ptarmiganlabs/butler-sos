@@ -148,7 +148,7 @@ export async function setupConfigVisServer(logger, config) {
                     // Get the asset from SEA
                     const content = sea.getAsset(
                         assetPath,
-                        fileExtension === '.png' || fileExtension === '.ico' ? null : 'utf8'
+                        fileExtension === '.png' || fileExtension === '.ico' ? 'binary' : 'utf8'
                     );
 
                     if (!content) {
@@ -169,8 +169,8 @@ export async function setupConfigVisServer(logger, config) {
             // Add specific handler for the butler-sos.png file at the root path
             configVisServer.get('/butler-sos.png', async (request, reply) => {
                 try {
-                    // Get the asset from SEA
-                    const logoContent = sea.getAsset('/butler-sos.png');
+                    // Get the asset from SEA as binary data
+                    const logoContent = sea.getAsset('/butler-sos.png', 'binary');
 
                     if (!logoContent) {
                         globals.logger.error(
