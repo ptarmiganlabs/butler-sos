@@ -1,4 +1,6 @@
 {
+    "last-release-sha": "cfea7104919baae3006d1e8a37a42de32446153c",
+    "release-as": "11.1.0",
     "release-type": "node",
     "prerelease": false,
     "draft": true,
