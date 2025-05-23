@@ -590,10 +590,10 @@ jobs:
                   # - ./src/config/log_appender_xml
                   # - ./src/config⁄production_template.yaml                          
                   ls -la
-                  zip -9 -r ./${DIST_FILE_NAME}--linux-x64--${{ github.sha }}.zip ${DIST_FILE_NAME}
+                  zip -9 -r ./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-linux-x64.zip ${DIST_FILE_NAME}
 
                   cd src
-                  zip -9 -u -r "../${DIST_FILE_NAME}--linux-x64--${{ github.sha }}.zip" "./config/production_template.yaml" "./config/log_appender_xml"
+                  zip -9 -u -r "../${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-linux-x64.zip" "./config/production_template.yaml" "./config/log_appender_xml"
 
                   ls -la
 
@@ -603,10 +603,10 @@ jobs:
                   # - ./src/config⁄production_template.yaml
 
                   ls -la
-                  zip -9 -r ./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-linux.zip ${DIST_FILE_NAME}
+                  zip -9 -r ./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-linux-x64.zip ${DIST_FILE_NAME}
 
                   cd src
-                  zip -9 -u -r "../${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-linux.zip" "./config/production_template.yaml" "./config/log_appender_xml"
+                  zip -9 -u -r "../${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-linux-x64.zip" "./config/production_template.yaml" "./config/log_appender_xml"
 
                   ls -la
 
