@@ -30,6 +30,56 @@
 * **deps:** update Fastify and related dependencies to latest versions ([3707472](https://github.com/ptarmiganlabs/butler-sos/commit/3707472cdb239c8121a9ab96d3ef57e472f497bc))
 * **deps:** update uuid and globals dependencies to latest versions ([cf669f8](https://github.com/ptarmiganlabs/butler-sos/commit/cf669f8a09535361920d9acc8d8b7cc237d4d919))
 * **deps:** Upgrade Prism to 1.30 ([e0287cd](https://github.com/ptarmiganlabs/butler-sos/commit/e0287cd230ce7d37ba18cf4e410bc9d8c71c8424))
+* **master:** release butler-sos 11.1.0 ([7614d5a](https://github.com/ptarmiganlabs/butler-sos/commit/7614d5a30e1cb7567399042df56bc3f6cbd24424))
+* **master:** release butler-sos 11.1.0 ([9ad83e3](https://github.com/ptarmiganlabs/butler-sos/commit/9ad83e30500f038ad58186151bd44b56f40e6364))
+* **master:** release butler-sos 11.1.0 ([061c58e](https://github.com/ptarmiganlabs/butler-sos/commit/061c58e665b2c8f7e459476c0a34af32ab3ec80e))
+* **master:** release butler-sos 11.1.0 ([986dab6](https://github.com/ptarmiganlabs/butler-sos/commit/986dab65564ab1204b63686edf1c64f7ca1008ec))
+* **master:** release butler-sos 11.1.0 ([144e586](https://github.com/ptarmiganlabs/butler-sos/commit/144e5862da25c74fb459ad5875bb11619ab0f37c))
+* **master:** release butler-sos 11.1.0 ([a9880a6](https://github.com/ptarmiganlabs/butler-sos/commit/a9880a618b6cf65a82bfeafbe55a2c94100b79dd))
+* Switch to using Node SEA when building binaries for Windows, macOS-x64 and Linux ([d073518](https://github.com/ptarmiganlabs/butler-sos/commit/d073518dca90ff08720224df486ace6484b1d76b))
+* Update runtime version to 22 for dev work ([bf226b3](https://github.com/ptarmiganlabs/butler-sos/commit/bf226b39db8db0d409e9ab048e49439bf7c30d43))
+
+
+### Refactoring
+
+* Add JSDoc comments to ALL functions ([b406e6c](https://github.com/ptarmiganlabs/butler-sos/commit/b406e6cae1a52d33cee16c04d461839a0aa7f55d))
+* Make parsing of event messages from QS more scalable, maintainable and testable. ([4d8dcea](https://github.com/ptarmiganlabs/butler-sos/commit/4d8dcea5de956f5d33d01ce751b3c34869494e51))
+
+
+### Documentation
+
+* Add new Markdown source code overview file and cmd for creating it ([53c4a77](https://github.com/ptarmiganlabs/butler-sos/commit/53c4a7730165afef3bad5c789ac5b5991cd75ee3))
+
+## [11.1.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v11.1.0...butler-sos-v11.1.0) (2025-05-23)
+
+
+### Features
+
+* Add custom 404 page for config visualisation server ([3523025](https://github.com/ptarmiganlabs/butler-sos/commit/35230252ff6cc578263726ee3f7e24e2fe6d3588))
+* Build binary specifically for Apple Silicon ([1c4b906](https://github.com/ptarmiganlabs/butler-sos/commit/1c4b90677eb84d3d68421c3af3446ef3ff99b648))
+* enhance 404 page with improved styling and interactive elements ([f1548c7](https://github.com/ptarmiganlabs/butler-sos/commit/f1548c7a27a1fc5dd73661f03e4d4db8c8721675))
+* enhance 404 page with improved styling and interactive elements ([57461c6](https://github.com/ptarmiganlabs/butler-sos/commit/57461c63b3cb636ae5e91e504bcdb6d7ae2a4648))
+
+
+### Bug Fixes
+
+* **config-visualise:** Update asset retrieval to use binary format for images ([8f11a11](https://github.com/ptarmiganlabs/butler-sos/commit/8f11a110bc315ce0e44a17add779388ae4d96703))
+* **docker:** Update base image to Node22 ([7f3ad5a](https://github.com/ptarmiganlabs/butler-sos/commit/7f3ad5ae8002917067d3abbe00a4bcd3de596538))
+* **docker:** Update base image to Node22 ([642c608](https://github.com/ptarmiganlabs/butler-sos/commit/642c60830777b7f52e624a5192a8ee0f27a435e0))
+
+
+### Miscellaneous
+
+* Add a first set of ca 90 unit tests ([12d44bd](https://github.com/ptarmiganlabs/butler-sos/commit/12d44bd4098fdc29d446c866bffc4b3c4e1dff3e))
+* Add copilot instructions for code formatting and JSDoc comments ([dc6233a](https://github.com/ptarmiganlabs/butler-sos/commit/dc6233a158891c29a9ecfa50530862fddb527686))
+* **deeps:** update dependencies for commander, ua-parser-js, and eslint-config-prettier. Update code and tests to handle changes in those libs. ([78bc8c7](https://github.com/ptarmiganlabs/butler-sos/commit/78bc8c783e7c59d867e4f808f1ab67c808147889))
+* **deps:** update @fastify/static, posthog-node, and systeminformation to latest versions ([1fc604e](https://github.com/ptarmiganlabs/butler-sos/commit/1fc604ecd442bbe1d5cbdc36c33b4b5fb6a138af))
+* **deps:** update @fastify/static, posthog-node, and systeminformation to latest versions ([9c77b14](https://github.com/ptarmiganlabs/butler-sos/commit/9c77b142c386cfa2f163b032f8492d4eeef9473d))
+* **deps:** update dependencies for fastify, eslint, eslint-plugin-jsdoc, and snyk ([aa5cd1d](https://github.com/ptarmiganlabs/butler-sos/commit/aa5cd1d7e946454783ed3c500806253868cf2ef2))
+* **deps:** Update dependencies: bump @fastify/rate-limit to 10.3.0, commander to 14.0.0, and config to 4.0.0 ([0bcd12d](https://github.com/ptarmiganlabs/butler-sos/commit/0bcd12d9d9709fa71fc167dcc98577b01785bfa9))
+* **deps:** update Fastify and related dependencies to latest versions ([3707472](https://github.com/ptarmiganlabs/butler-sos/commit/3707472cdb239c8121a9ab96d3ef57e472f497bc))
+* **deps:** update uuid and globals dependencies to latest versions ([cf669f8](https://github.com/ptarmiganlabs/butler-sos/commit/cf669f8a09535361920d9acc8d8b7cc237d4d919))
+* **deps:** Upgrade Prism to 1.30 ([e0287cd](https://github.com/ptarmiganlabs/butler-sos/commit/e0287cd230ce7d37ba18cf4e410bc9d8c71c8424))
 * **master:** release butler-sos 11.1.0 ([061c58e](https://github.com/ptarmiganlabs/butler-sos/commit/061c58e665b2c8f7e459476c0a34af32ab3ec80e))
 * **master:** release butler-sos 11.1.0 ([986dab6](https://github.com/ptarmiganlabs/butler-sos/commit/986dab65564ab1204b63686edf1c64f7ca1008ec))
 * **master:** release butler-sos 11.1.0 ([144e586](https://github.com/ptarmiganlabs/butler-sos/commit/144e5862da25c74fb459ad5875bb11619ab0f37c))
