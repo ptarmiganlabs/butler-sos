@@ -166,7 +166,7 @@ class Settings {
             configFileBasename = upath.basename(this.configFile, configFileExtension);
 
             if (configFileExtension.toLowerCase() !== '.yaml') {
-                console.log('Error: Config file extension must be yaml');
+                console.error('Error: Config file extension must be yaml');
                 process.exit(1);
             }
 
@@ -179,14 +179,36 @@ class Settings {
                         const yaml = await import('js-yaml');
                         const configFileContent = fs.readFileSync(this.configFile, 'utf8');
 
-                        console.log(`SEA: Loaded config file from ${this.configFile}`);
-                        console.log(`SEA: Config file content: ${configFileContent}`);
+                        if (
+                            this.config['Butler-SOS'].logLevel === 'verbose' ||
+                            this.config['Butler-SOS'].logLevel === 'debug' ||
+                            this.config['Butler-SOS'].logLevel === 'silly'
+                        ) {
+                            // We don't have a logging object yet, so use plain console.log
+                            console.log(`SEA: Loaded config file from ${this.configFile}`);
+                        }
+
+                        if (
+                            this.config['Butler-SOS'].logLevel === 'debug' ||
+                            this.config['Butler-SOS'].logLevel === 'silly'
+                        ) {
+                            // We don't have a logging object yet, so use plain console.log
+                            console.log(`SEA: Config file content: ${configFileContent}`);
+                        }
 
                         // Parse YAML content
                         const parsedConfig = yaml.load(configFileContent);
-                        console.log(
-                            `SEA: Parsed config file content: ${JSON.stringify(parsedConfig, null, 2)}`
-                        );
+
+                        if (
+                            this.config['Butler-SOS'].logLevel === 'verbose' ||
+                            this.config['Butler-SOS'].logLevel === 'debug' ||
+                            this.config['Butler-SOS'].logLevel === 'silly'
+                        ) {
+                            // We don't have a logging object yet, so use plain console.log
+                            console.log(
+                                `SEA: Parsed config file content: ${JSON.stringify(parsedConfig, null, 2)}`
+                            );
+                        }
 
                         // Set NODE_CONFIG with stringified JSON version of the parsed YAML
                         process.env.NODE_CONFIG = JSON.stringify(parsedConfig);

@@ -4,12 +4,10 @@ import FastifyStatic from '@fastify/static';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
-import handlebars from 'handlebars';
-import sea from 'node:sea';
 
 import globals from '../globals.js';
 import configObfuscate from './config-obfuscate.js';
-import { prepareFile, compileTemplate, getMimeType } from './file-prep.js';
+import { prepareFile, compileTemplate } from './file-prep.js';
 
 /**
  * Serves the custom 404 error page
@@ -112,7 +110,6 @@ export async function setupConfigVisServer(logger, config) {
         // Create absolute path to the html directory
         // appBasePath points to the directory where this file (app.js) is located, taking into account
         // if the app is running as a packaged app or as a Node.js app.
-        globals.logger.verbose(`----------------2: ${globals.appBasePath}`);
 
         // Handle static files differently depending on whether we're running in SEA mode or not
         if (globals.isSea) {
