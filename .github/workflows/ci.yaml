@@ -120,7 +120,6 @@ jobs:
                   ls -la
 
                   # Start signing of the binary
-
                   # -------------------
                   # We need to create a new keychain, otherwise using the certificate will prompt
                   # with a UI dialog asking for the certificate password, which we can't
