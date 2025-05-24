@@ -1,19 +1,23 @@
 import { jest, describe, test, afterEach, beforeEach } from '@jest/globals';
 
+// Create mock functions that will be reused
+const mockAccessSync = jest.fn();
+const mockReadFileSync = jest.fn();
+
 // Mock fs-extra
 jest.unstable_mockModule('fs-extra', () => ({
     default: {
-        accessSync: jest.fn(),
+        accessSync: mockAccessSync,
         constants: {
             F_OK: 0,
         },
-        readFileSync: jest.fn(),
+        readFileSync: mockReadFileSync,
     },
-    accessSync: jest.fn(),
+    accessSync: mockAccessSync,
     constants: {
         F_OK: 0,
     },
-    readFileSync: jest.fn(),
+    readFileSync: mockReadFileSync,
 }));
 
 // Mock node:sea
@@ -78,31 +82,32 @@ describe('globals', () => {
             test('should return true when file exists', () => {
                 // Clear any previous mock calls
                 jest.clearAllMocks();
-                
+
                 // Mock fs.accessSync to succeed (not throw)
-                fs.accessSync.mockImplementation(() => {
+                mockAccessSync.mockImplementation(() => {
                     // Success case - don't throw
                 });
 
+                // Access the static method directly from the constructor of the singleton instance
                 const result = Settings.constructor.checkFileExistsSync('/test/path');
 
                 expect(result).toBe(true);
-                expect(fs.accessSync).toHaveBeenCalledWith('/test/path', fs.constants.F_OK);
+                expect(mockAccessSync).toHaveBeenCalledWith('/test/path', 0);
             });
 
             test('should return false when file does not exist', () => {
                 // Clear any previous mock calls
                 jest.clearAllMocks();
-                
+
                 // Mock fs.accessSync to throw error (file doesn't exist)
-                fs.accessSync.mockImplementation(() => {
+                mockAccessSync.mockImplementation(() => {
                     throw new Error('File not found');
                 });
 
                 const result = Settings.constructor.checkFileExistsSync('/test/path');
 
                 expect(result).toBe(false);
-                expect(fs.accessSync).toHaveBeenCalledWith('/test/path', fs.constants.F_OK);
+                expect(mockAccessSync).toHaveBeenCalledWith('/test/path', 0);
             });
         });
 
@@ -128,9 +133,9 @@ describe('globals', () => {
             test('should detect Docker environment from /.dockerenv', () => {
                 // Clear any previous mock calls
                 jest.clearAllMocks();
-                
+
                 // Mock fs.accessSync to succeed for /.dockerenv check
-                fs.accessSync.mockImplementation((filePath) => {
+                mockAccessSync.mockImplementation((filePath) => {
                     if (filePath === '/.dockerenv') {
                         return; // File exists, no error
                     }
@@ -140,22 +145,22 @@ describe('globals', () => {
                 const result = Settings.constructor.isRunningInDocker();
 
                 expect(result).toBe(true);
-                expect(fs.accessSync).toHaveBeenCalledWith('/.dockerenv');
+                expect(mockAccessSync).toHaveBeenCalledWith('/.dockerenv');
             });
 
             test('should return false when not in Docker', () => {
                 // Clear any previous mock calls
                 jest.clearAllMocks();
-                
+
                 // Mock fs.accessSync to always throw (/.dockerenv doesn't exist)
-                fs.accessSync.mockImplementation(() => {
+                mockAccessSync.mockImplementation(() => {
                     throw new Error('File not found');
                 });
 
                 const result = Settings.constructor.isRunningInDocker();
 
                 expect(result).toBe(false);
-                expect(fs.accessSync).toHaveBeenCalledWith('/.dockerenv');
+                expect(mockAccessSync).toHaveBeenCalledWith('/.dockerenv');
             });
         });
     });
