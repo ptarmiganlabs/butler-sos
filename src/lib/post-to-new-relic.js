@@ -853,6 +853,10 @@ export async function postUserEventToNewRelic(msg) {
  * from a given Qlik Sense service should be sent to New Relic based on the log level
  * and the service name.
  *
+ * TODO: Missing support for 'info' log level - function only checks for 'error' and 'warn' levels
+ * across all services (engine, proxy, repository, scheduler). This causes info-level log events
+ * to be silently ignored even when configured to be sent to New Relic.
+ *
  * @param {string} sourceService - The name of the Qlik Sense service that generated the log event
  * @param {string} sourceLogLevel - The log level of the log event
  * @returns {boolean} True if the log event should be sent to New Relic, false otherwise

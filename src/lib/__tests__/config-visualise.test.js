@@ -456,6 +456,54 @@ describe('config-visualise', () => {
         );
     });
 
+    test('should handle SEA mode filename route execution with successful file', async () => {
+        globals.isSea = true;
+
+        await setupConfigVisServer(globals.logger, globals.config);
+
+        // Verify that the /:filename route was set up in SEA mode
+        const getRoutes = fastifyModule.__mockInstance.get.mock.calls;
+        const filenameRoute = getRoutes.find((call) => call[0] === '/:filename');
+
+        expect(filenameRoute).toBeDefined();
+        expect(typeof filenameRoute[1]).toBe('function');
+
+        // Verify that the SEA mode info was logged
+        expect(globals.logger.info).toHaveBeenCalledWith(
+            expect.stringContaining('Running in SEA mode, setting up custom static file handlers')
+        );
+    });
+
+    test('should handle serve404Page function execution', async () => {
+        globals.isSea = false;
+        const filePrep = await import('../file-prep.js');
+        filePrep.prepareFile.mockResolvedValueOnce({
+            found: true,
+            content: 'Not found page content {{visTaskHost}} {{visTaskPort}}',
+            mimeType: 'text/html',
+        });
+
+        await setupConfigVisServer(globals.logger, globals.config);
+
+        // Get the not found handler
+        const notFoundHandler = fastifyModule.__mockInstance.setNotFoundHandler.mock.calls[0][0];
+
+        const mockRequest = {};
+        const mockReply = {
+            code: jest.fn().mockReturnThis(),
+            header: jest.fn().mockReturnThis(),
+            send: jest.fn(),
+        };
+
+        await notFoundHandler(mockRequest, mockReply);
+
+        expect(filePrep.prepareFile).toHaveBeenCalled();
+        expect(filePrep.compileTemplate).toHaveBeenCalled();
+        expect(mockReply.code).toHaveBeenCalledWith(404);
+        expect(mockReply.header).toHaveBeenCalledWith('Content-Type', 'text/html; charset=utf-8');
+        expect(mockReply.send).toHaveBeenCalledWith('compiled template');
+    });
+
     afterEach(() => {
         // Reset globals
         globals.isSea = false;
