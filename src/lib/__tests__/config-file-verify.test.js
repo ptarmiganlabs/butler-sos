@@ -40,7 +40,7 @@ jest.spyOn(console, 'info').mockImplementation(() => {});
 const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
 
 // Import the module under test
-const { verifyConfigFileSchema } = await import('../config-file-verify.js');
+const { verifyConfigFileSchema, verifyAppConfig } = await import('../config-file-verify.js');
 
 describe('config-file-verify', () => {
     afterEach(() => {
@@ -148,5 +148,223 @@ describe('config-file-verify', () => {
         expect(fs.readFile).toHaveBeenCalledWith('config.yaml', 'utf8');
         expect(console.error).toHaveBeenCalledWith(expect.stringContaining('File not found'));
         expect(result).toBe(false);
+    });
+
+    describe('verifyAppConfig', () => {
+        let mockConfig;
+
+        beforeEach(() => {
+            // Mock config object with get method
+            mockConfig = {
+                get: jest.fn(),
+            };
+        });
+
+        test('should return true when InfluxDB is disabled', async () => {
+            mockConfig.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') return [];
+                if (key === 'Butler-SOS.serversToMonitor.servers') return [];
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockConfig);
+
+            expect(result).toBe(true);
+            expect(mockConfig.get).toHaveBeenCalledWith('Butler-SOS.influxdbConfig.enable');
+        });
+
+        test('should return true when InfluxDB is enabled with valid version 1', async () => {
+            mockConfig.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.enable') return true;
+                if (key === 'Butler-SOS.influxdbConfig.version') return 1;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') return [];
+                if (key === 'Butler-SOS.serversToMonitor.servers') return [];
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockConfig);
+
+            expect(result).toBe(true);
+            expect(mockConfig.get).toHaveBeenCalledWith('Butler-SOS.influxdbConfig.enable');
+            expect(mockConfig.get).toHaveBeenCalledWith('Butler-SOS.influxdbConfig.version');
+        });
+
+        test('should return true when InfluxDB is enabled with valid version 2', async () => {
+            mockConfig.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.enable') return true;
+                if (key === 'Butler-SOS.influxdbConfig.version') return 2;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') return [];
+                if (key === 'Butler-SOS.serversToMonitor.servers') return [];
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockConfig);
+
+            expect(result).toBe(true);
+        });
+
+        test('should return false when InfluxDB is enabled with invalid version', async () => {
+            mockConfig.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.enable') return true;
+                if (key === 'Butler-SOS.influxdbConfig.version') return 3;
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockConfig);
+
+            expect(result).toBe(false);
+            expect(console.error).toHaveBeenCalledWith(
+                expect.stringContaining('InfluxDB version) 3 is invalid')
+            );
+        });
+
+        test('should return true when server tags are correctly configured', async () => {
+            const serverTagsDefinition = ['environment', 'datacenter'];
+            const servers = [
+                {
+                    serverName: 'server1',
+                    serverTags: { environment: 'prod', datacenter: 'us-east' },
+                },
+                {
+                    serverName: 'server2',
+                    serverTags: { environment: 'dev', datacenter: 'us-west' },
+                },
+            ];
+
+            mockConfig.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition')
+                    return serverTagsDefinition;
+                if (key === 'Butler-SOS.serversToMonitor.servers') return servers;
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockConfig);
+
+            expect(result).toBe(true);
+        });
+
+        test('should return false when server is missing a required tag', async () => {
+            const serverTagsDefinition = ['environment', 'datacenter'];
+            const servers = [
+                {
+                    serverName: 'server1',
+                    serverTags: { environment: 'prod' }, // missing datacenter
+                },
+            ];
+
+            mockConfig.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition')
+                    return serverTagsDefinition;
+                if (key === 'Butler-SOS.serversToMonitor.servers') return servers;
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockConfig);
+
+            expect(result).toBe(false);
+            expect(console.error).toHaveBeenCalledWith(
+                expect.stringContaining(
+                    'Server tag "datacenter" is not defined for server "server1"'
+                )
+            );
+        });
+
+        test('should return false when server has null serverTags', async () => {
+            const serverTagsDefinition = ['environment'];
+            const servers = [
+                {
+                    serverName: 'server1',
+                    serverTags: null,
+                },
+            ];
+
+            mockConfig.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition')
+                    return serverTagsDefinition;
+                if (key === 'Butler-SOS.serversToMonitor.servers') return servers;
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockConfig);
+
+            expect(result).toBe(false);
+            expect(console.error).toHaveBeenCalledWith(
+                expect.stringContaining(
+                    'Server tag "environment" is not defined for server "server1"'
+                )
+            );
+        });
+
+        test('should return false when server has undefined tag that is not in definition', async () => {
+            const serverTagsDefinition = ['environment'];
+            const servers = [
+                {
+                    serverName: 'server1',
+                    serverTags: { environment: 'prod', extraTag: 'value' },
+                },
+            ];
+
+            mockConfig.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition')
+                    return serverTagsDefinition;
+                if (key === 'Butler-SOS.serversToMonitor.servers') return servers;
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockConfig);
+
+            expect(result).toBe(false);
+            expect(console.error).toHaveBeenCalledWith(
+                expect.stringContaining(
+                    'Server tag "extraTag" for server "server1" is not defined in Butler-SOS.serversToMonitor.serverTagsDefinition'
+                )
+            );
+        });
+
+        test('should return true when no server tags are defined', async () => {
+            const serverTagsDefinition = [];
+            const servers = [
+                {
+                    serverName: 'server1',
+                    serverTags: {},
+                },
+            ];
+
+            mockConfig.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition')
+                    return serverTagsDefinition;
+                if (key === 'Butler-SOS.serversToMonitor.servers') return servers;
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockConfig);
+
+            expect(result).toBe(true);
+        });
+
+        test('should return false when server tags verification throws an error', async () => {
+            mockConfig.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') {
+                    throw new Error('Config access error');
+                }
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockConfig);
+
+            expect(result).toBe(false);
+            expect(console.error).toHaveBeenCalledWith(
+                expect.stringContaining(
+                    'Server tags verification failed. Error: Config access error'
+                )
+            );
+        });
     });
 });

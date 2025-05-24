@@ -66,6 +66,17 @@ jest.unstable_mockModule('../config-obfuscate.js', () => ({
     }),
 }));
 
+// Mock file-prep
+jest.unstable_mockModule('../file-prep.js', () => ({
+    prepareFile: jest.fn().mockResolvedValue({
+        found: true,
+        content:
+            'file content {{visTaskHost}} {{visTaskPort}} {{butlerSosConfigJsonEncoded}} {{butlerConfigYaml}}',
+        mimeType: 'text/html',
+    }),
+    compileTemplate: jest.fn().mockReturnValue('compiled template'),
+}));
+
 // Mock globals
 jest.unstable_mockModule('../../globals.js', () => ({
     default: {
@@ -195,5 +206,258 @@ describe('config-visualise', () => {
             // Restore process.exit
             process.exit = originalExit;
         }
+    });
+
+    test('should set log level to info when debug/silly logging is enabled', async () => {
+        globals.getLoggingLevel.mockReturnValueOnce('debug');
+
+        await setupConfigVisServer(globals.logger, globals.config);
+
+        expect(fastifyModule.__mockInstance.log.level).toBe('info');
+    });
+
+    test('should set log level to silent for other log levels', async () => {
+        globals.getLoggingLevel.mockReturnValueOnce('error');
+
+        await setupConfigVisServer(globals.logger, globals.config);
+
+        expect(fastifyModule.__mockInstance.log.level).toBe('silent');
+    });
+
+    test('should set up error handler for rate limiting', async () => {
+        await setupConfigVisServer(globals.logger, globals.config);
+
+        expect(fastifyModule.__mockInstance.setErrorHandler).toHaveBeenCalledWith(
+            expect.any(Function)
+        );
+
+        // Test the error handler
+        const errorHandler = fastifyModule.__mockInstance.setErrorHandler.mock.calls[0][0];
+        const mockRequest = { ip: '127.0.0.1', method: 'GET', url: '/test' };
+        const mockReply = { send: jest.fn() };
+        const mockError = { statusCode: 429 };
+
+        errorHandler(mockError, mockRequest, mockReply);
+
+        expect(globals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Rate limit exceeded for source IP address 127.0.0.1')
+        );
+        expect(mockReply.send).toHaveBeenCalledWith(mockError);
+    });
+
+    test('should handle root route with obfuscation enabled', async () => {
+        const filePrep = await import('../file-prep.js');
+
+        await setupConfigVisServer(globals.logger, globals.config);
+
+        // Get the root route handler
+        const rootRouteCall = fastifyModule.__mockInstance.get.mock.calls.find(
+            (call) => call[0] === '/'
+        );
+        expect(rootRouteCall).toBeDefined();
+
+        const routeHandler = rootRouteCall[1];
+        const mockRequest = {};
+        const mockReply = {
+            code: jest.fn().mockReturnThis(),
+            header: jest.fn().mockReturnThis(),
+            send: jest.fn(),
+        };
+
+        await routeHandler(mockRequest, mockReply);
+
+        expect(filePrep.prepareFile).toHaveBeenCalled();
+        expect(filePrep.compileTemplate).toHaveBeenCalled();
+        expect(configObfuscate).toHaveBeenCalled();
+        expect(yaml.dump).toHaveBeenCalled();
+        expect(mockReply.code).toHaveBeenCalledWith(200);
+        expect(mockReply.header).toHaveBeenCalledWith('Content-Type', 'text/html; charset=utf-8');
+        expect(mockReply.send).toHaveBeenCalled();
+    });
+
+    test('should handle root route with obfuscation disabled', async () => {
+        globals.config.get.mockImplementation((path) => {
+            if (path === 'Butler-SOS.configVisualisation.obfuscate') return false;
+            if (path === 'Butler-SOS.configVisualisation.host') return '127.0.0.1';
+            if (path === 'Butler-SOS.configVisualisation.port') return 8090;
+            return null;
+        });
+
+        await setupConfigVisServer(globals.logger, globals.config);
+
+        // Get the root route handler
+        const rootRouteCall = fastifyModule.__mockInstance.get.mock.calls.find(
+            (call) => call[0] === '/'
+        );
+        const routeHandler = rootRouteCall[1];
+        const mockRequest = {};
+        const mockReply = {
+            code: jest.fn().mockReturnThis(),
+            header: jest.fn().mockReturnThis(),
+            send: jest.fn(),
+        };
+
+        await routeHandler(mockRequest, mockReply);
+
+        expect(configObfuscate).not.toHaveBeenCalled();
+    });
+
+    test('should handle root route error when template not found', async () => {
+        const filePrep = await import('../file-prep.js');
+        filePrep.prepareFile.mockResolvedValueOnce({
+            found: false,
+            content: null,
+            mimeType: null,
+        });
+
+        await setupConfigVisServer(globals.logger, globals.config);
+
+        const rootRouteCall = fastifyModule.__mockInstance.get.mock.calls.find(
+            (call) => call[0] === '/'
+        );
+        const routeHandler = rootRouteCall[1];
+        const mockRequest = {};
+        const mockReply = {
+            code: jest.fn().mockReturnThis(),
+            send: jest.fn(),
+        };
+
+        await routeHandler(mockRequest, mockReply);
+
+        expect(globals.logger.error).toHaveBeenCalledWith(
+            expect.stringContaining('Could not find index.html template')
+        );
+        expect(mockReply.code).toHaveBeenCalledWith(500);
+        expect(mockReply.send).toHaveBeenCalledWith({
+            error: 'Internal server error: Template not found',
+        });
+    });
+
+    test('should handle root route error during processing', async () => {
+        yaml.dump.mockImplementationOnce(() => {
+            throw new Error('YAML dump failed');
+        });
+
+        await setupConfigVisServer(globals.logger, globals.config);
+
+        const rootRouteCall = fastifyModule.__mockInstance.get.mock.calls.find(
+            (call) => call[0] === '/'
+        );
+        const routeHandler = rootRouteCall[1];
+        const mockRequest = {};
+        const mockReply = {
+            code: jest.fn().mockReturnThis(),
+            send: jest.fn(),
+        };
+
+        await routeHandler(mockRequest, mockReply);
+
+        expect(globals.logger.error).toHaveBeenCalledWith(
+            expect.stringContaining('Error serving home page')
+        );
+        expect(mockReply.code).toHaveBeenCalledWith(500);
+        expect(mockReply.send).toHaveBeenCalledWith({ error: 'Internal server error' });
+    });
+
+    test('should handle SEA mode setup', async () => {
+        globals.isSea = true;
+
+        await setupConfigVisServer(globals.logger, globals.config);
+
+        expect(globals.logger.info).toHaveBeenCalledWith(
+            expect.stringContaining('Running in SEA mode, setting up custom static file handlers')
+        );
+        expect(globals.logger.info).toHaveBeenCalledWith(
+            expect.stringContaining('Custom static file handlers set up for SEA mode')
+        );
+
+        // Verify SEA-specific routes were set up
+        const getRoutes = fastifyModule.__mockInstance.get.mock.calls;
+        const filenameRoute = getRoutes.find((call) => call[0] === '/:filename');
+        const logoRoute = getRoutes.find((call) => call[0] === '/butler-sos.png');
+
+        expect(filenameRoute).toBeDefined();
+        expect(logoRoute).toBeDefined();
+    });
+
+    test('should handle SEA mode filename route', async () => {
+        globals.isSea = true;
+        const filePrep = await import('../file-prep.js');
+
+        await setupConfigVisServer(globals.logger, globals.config);
+
+        const getRoutes = fastifyModule.__mockInstance.get.mock.calls;
+        const filenameRoute = getRoutes.find((call) => call[0] === '/:filename');
+        const routeHandler = filenameRoute[1];
+
+        expect(filenameRoute).toBeDefined();
+        expect(typeof routeHandler).toBe('function');
+    });
+
+    test('should handle SEA mode logo route', async () => {
+        globals.isSea = true;
+
+        await setupConfigVisServer(globals.logger, globals.config);
+
+        const getRoutes = fastifyModule.__mockInstance.get.mock.calls;
+        const logoRoute = getRoutes.find((call) => call[0] === '/butler-sos.png');
+
+        expect(logoRoute).toBeDefined();
+        expect(typeof logoRoute[1]).toBe('function');
+    });
+
+    test('should handle Node.js mode static file setup', async () => {
+        globals.isSea = false;
+
+        await setupConfigVisServer(globals.logger, globals.config);
+
+        expect(globals.logger.info).toHaveBeenCalledWith(
+            expect.stringContaining('Serving static files from')
+        );
+
+        // Verify FastifyStatic was registered
+        const registerCalls = fastifyModule.__mockInstance.register.mock.calls;
+        const staticRegister = registerCalls.find(
+            (call) => call[1] && call[1].root && call[1].redirect === true
+        );
+        expect(staticRegister).toBeDefined();
+    });
+
+    test('should handle fs.readdirSync error in Node.js mode', async () => {
+        globals.isSea = false;
+        fs.readdirSync.mockImplementationOnce(() => {
+            throw new Error('Permission denied');
+        });
+
+        await setupConfigVisServer(globals.logger, globals.config);
+
+        expect(globals.logger.error).toHaveBeenCalledWith(
+            expect.stringContaining('Error reading static directory')
+        );
+    });
+
+    test('should set up not found handler', async () => {
+        await setupConfigVisServer(globals.logger, globals.config);
+
+        expect(fastifyModule.__mockInstance.setNotFoundHandler).toHaveBeenCalled();
+    });
+
+    test('should handle general setup errors', async () => {
+        fastifyModule.__mockInstance.register.mockRejectedValueOnce(
+            new Error('Plugin registration failed')
+        );
+
+        await expect(setupConfigVisServer(globals.logger, globals.config)).rejects.toThrow(
+            'Plugin registration failed'
+        );
+
+        expect(globals.logger.error).toHaveBeenCalledWith(
+            expect.stringContaining('Error setting up config visualisation server')
+        );
+    });
+
+    afterEach(() => {
+        // Reset globals
+        globals.isSea = false;
     });
 });
