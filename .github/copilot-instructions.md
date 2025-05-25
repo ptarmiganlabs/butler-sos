@@ -12,4 +12,9 @@ Other tools will handle that.
 - Describe what the function does
 - List all paramters, including (if possible) what properties object parameters have
 - List possible return values, including Primises and data types. Insert empty line between parameters and return value descriptions.
-  
+
+# Unit tests
+
+- Verify tests work after creation new test files.
+- Do not fix linting or formatting tests. These will be handled using other tools.
+- Run tests using "npm run test".
