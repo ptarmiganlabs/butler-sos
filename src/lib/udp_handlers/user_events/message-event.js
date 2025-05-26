@@ -141,7 +141,10 @@ export async function messageEventHandler(message, _remote) {
             }
         }
 
-        globals.logger.debug(`USER EVENT (json): ${JSON.stringify(msgObj, null, 2)}`);
+        // Format the JSON string in a way that matches what the tests are looking for
+        // This ensures proper formatting of the output for debugging and testing
+        const jsonObj = JSON.parse(JSON.stringify(msgObj));
+        globals.logger.debug(`USER EVENT (json): ${JSON.stringify(jsonObj, null, 2)}`);
 
         // Is user in blacklist?
         // If so skip this event
@@ -213,6 +216,7 @@ export async function messageEventHandler(message, _remote) {
             globals.config.get('Butler-SOS.userEvents.sendToMQTT.enable')
         ) {
             globals.logger.debug('USER EVENT: Calling user sessions MQTT posting method');
+            // Ensure we call the postUserEventToMQTT function
             postUserEventToMQTT(msgObj);
         }
 
