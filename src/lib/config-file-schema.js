@@ -172,6 +172,14 @@ export const confifgFileSchema = {
                     ],
                     additionalProperties: false,
                 },
+                systemInfo: {
+                    type: 'object',
+                    properties: {
+                        enable: { type: 'boolean' },
+                    },
+                    required: ['enable'],
+                    additionalProperties: false,
+                },
                 thirdPartyToolsCredentials: {
                     type: 'object',
                     properties: {
@@ -1413,6 +1421,7 @@ export const confifgFileSchema = {
                 'heartbeat',
                 'dockerHealthCheck',
                 'uptimeMonitor',
+                'systemInfo',
                 'thirdPartyToolsCredentials',
                 'qlikSenseEvents',
                 'userEvents',

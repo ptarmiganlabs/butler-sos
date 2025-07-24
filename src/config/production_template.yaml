@@ -64,6 +64,15 @@ Butler-SOS:
           butlerVersion: 
             enable: true            # Should the Butler SOS version be included in the data sent to New Relic?
 
+  # System information gathering
+  # Butler SOS collects system information for monitoring and diagnostic purposes.
+  # On Windows, this may trigger security alerts as it executes OS commands like:
+  # - cmd.exe /d /s /c \chcp (to get code page info)
+  # - netstat -r (to get routing table)  
+  # - cmd.exe /d /s /c \echo %COMPUTERNAME%.%USERDNSDOMAIN% (to get computer/domain names)
+  # These commands are executed by the 'systeminformation' npm package, not directly by Butler SOS.
+  systemInfo:
+    enable: true                    # Should detailed system information be collected? Set to false in security-sensitive environments.
 
   # Credentials for third party systems that Butler SOS integrate with.
   # These can also be specified via command line parameters when starting Butler SOS. 
