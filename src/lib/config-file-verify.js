@@ -103,6 +103,19 @@ export async function verifyAppConfig(cfg) {
         }
     }
 
+    // Verify that telemetry and system info settings are compatible
+    // If telemetry is enabled but system info gathering is disabled, this creates an incompatibility
+    // because telemetry relies on detailed system information for proper functionality
+    const anonTelemetryEnabled = cfg.get('Butler-SOS.anonTelemetry');
+    const systemInfoEnabled = cfg.get('Butler-SOS.systemInfo.enable');
+
+    if (anonTelemetryEnabled === true && systemInfoEnabled === false) {
+        console.error(
+            'VERIFY CONFIG FILE ERROR: Anonymous telemetry is enabled (Butler-SOS.anonTelemetry=true) but system information gathering is disabled (Butler-SOS.systemInfo.enable=false). Telemetry requires detailed system information to function properly. Either disable telemetry by setting Butler-SOS.anonTelemetry=false or enable system info gathering by setting Butler-SOS.systemInfo.enable=true. Exiting.'
+        );
+        return false;
+    }
+
     // Verify that server tags are correctly defined
     // In the config file section `Butler-SOS.serversToMonitor.serverTagsDefinition` it's possible to define zero or more tags that can be set for each server that is to be monitored.
     // When Butler SOS is started, do the following checks:

@@ -40,7 +40,7 @@ jest.spyOn(console, 'info').mockImplementation(() => {});
 const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
 
 // Import the module under test
-const { verifyConfigFileSchema } = await import('../config-file-verify.js');
+const { verifyConfigFileSchema, verifyAppConfig } = await import('../config-file-verify.js');
 
 describe('config-file-verify', () => {
     afterEach(() => {
@@ -148,5 +148,114 @@ describe('config-file-verify', () => {
         expect(fs.readFile).toHaveBeenCalledWith('config.yaml', 'utf8');
         expect(console.error).toHaveBeenCalledWith(expect.stringContaining('File not found'));
         expect(result).toBe(false);
+    });
+});
+
+describe('verifyAppConfig', () => {
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should return true when telemetry is disabled', async () => {
+        // Mock config object
+        const mockConfig = {
+            get: jest.fn((key) => {
+                if (key === 'Butler-SOS.anonTelemetry') return false;
+                if (key === 'Butler-SOS.systemInfo.enable') return false;
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') return [];
+                if (key === 'Butler-SOS.serversToMonitor.servers') return [];
+                return undefined;
+            }),
+        };
+
+        const result = await verifyAppConfig(mockConfig);
+
+        expect(result).toBe(true);
+        expect(console.error).not.toHaveBeenCalled();
+    });
+
+    test('should return true when both telemetry and system info are enabled', async () => {
+        // Mock config object
+        const mockConfig = {
+            get: jest.fn((key) => {
+                if (key === 'Butler-SOS.anonTelemetry') return true;
+                if (key === 'Butler-SOS.systemInfo.enable') return true;
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') return [];
+                if (key === 'Butler-SOS.serversToMonitor.servers') return [];
+                return undefined;
+            }),
+        };
+
+        const result = await verifyAppConfig(mockConfig);
+
+        expect(result).toBe(true);
+        expect(console.error).not.toHaveBeenCalled();
+    });
+
+    test('should return false when telemetry is enabled but system info is disabled', async () => {
+        // Mock config object
+        const mockConfig = {
+            get: jest.fn((key) => {
+                if (key === 'Butler-SOS.anonTelemetry') return true;
+                if (key === 'Butler-SOS.systemInfo.enable') return false;
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') return [];
+                if (key === 'Butler-SOS.serversToMonitor.servers') return [];
+                return undefined;
+            }),
+        };
+
+        const result = await verifyAppConfig(mockConfig);
+
+        expect(result).toBe(false);
+        expect(console.error).toHaveBeenCalledWith(
+            expect.stringContaining('Anonymous telemetry is enabled')
+        );
+        expect(console.error).toHaveBeenCalledWith(
+            expect.stringContaining('system information gathering is disabled')
+        );
+    });
+
+    test('should return true when both telemetry and system info are disabled', async () => {
+        // Mock config object
+        const mockConfig = {
+            get: jest.fn((key) => {
+                if (key === 'Butler-SOS.anonTelemetry') return false;
+                if (key === 'Butler-SOS.systemInfo.enable') return false;
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') return [];
+                if (key === 'Butler-SOS.serversToMonitor.servers') return [];
+                return undefined;
+            }),
+        };
+
+        const result = await verifyAppConfig(mockConfig);
+
+        expect(result).toBe(true);
+        expect(console.error).not.toHaveBeenCalled();
+    });
+
+    test('should validate InfluxDB version when enabled', async () => {
+        // Mock config object with invalid InfluxDB version
+        const mockConfig = {
+            get: jest.fn((key) => {
+                if (key === 'Butler-SOS.anonTelemetry') return false;
+                if (key === 'Butler-SOS.systemInfo.enable') return true;
+                if (key === 'Butler-SOS.influxdbConfig.enable') return true;
+                if (key === 'Butler-SOS.influxdbConfig.version') return 3; // Invalid version
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') return [];
+                if (key === 'Butler-SOS.serversToMonitor.servers') return [];
+                return undefined;
+            }),
+        };
+
+        const result = await verifyAppConfig(mockConfig);
+
+        expect(result).toBe(false);
+        expect(console.error).toHaveBeenCalledWith(
+            expect.stringContaining('InfluxDB version) 3 is invalid')
+        );
     });
 });
