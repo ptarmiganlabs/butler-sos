@@ -1021,12 +1021,12 @@ class Settings {
     /**
      * Gathers and returns information about the host system where Butler SOS is running.
      * Includes OS details, network info, hardware details, and a unique ID.
-     * 
+     *
      * Note: On Windows, this function may execute OS commands via the 'systeminformation' npm package:
      * - cmd.exe /d /s /c \chcp (to get code page info)
      * - netstat -r (to get routing table info)
      * - cmd.exe /d /s /c \echo %COMPUTERNAME%.%USERDNSDOMAIN% (to get computer/domain names)
-     * 
+     *
      * These commands are not executed directly by Butler SOS, but by the systeminformation package
      * to gather system details. If this triggers security alerts, you can disable detailed system
      * information gathering by setting Butler-SOS.systemInfo.enable to false in the config file.
@@ -1037,7 +1037,7 @@ class Settings {
         try {
             // Check if detailed system info gathering is enabled
             const enableSystemInfo = this.config.get('Butler-SOS.systemInfo.enable');
-            
+
             let siCPU = {};
             let siSystem = {};
             let siMem = {};
@@ -1045,7 +1045,7 @@ class Settings {
             let siDocker = {};
             let siNetwork = [];
             let siNetworkDefault = '';
-            
+
             // Only gather detailed system info if enabled in config
             if (enableSystemInfo) {
                 siCPU = await si.cpu();
@@ -1057,27 +1057,31 @@ class Settings {
                 siNetworkDefault = await si.networkInterfaceDefault();
             } else {
                 // If detailed system info is disabled, use minimal fallback values
-                this.logger.info('SYSTEM INFO: Detailed system information gathering is disabled. Using minimal system info.');
+                this.logger.info(
+                    'SYSTEM INFO: Detailed system information gathering is disabled. Using minimal system info.'
+                );
                 siSystem = { uuid: 'disabled' };
                 siMem = { total: 0 };
-                siOS = { 
+                siOS = {
                     platform: os.platform(),
                     arch: os.arch(),
                     release: 'unknown',
                     distro: 'unknown',
-                    codename: 'unknown'
+                    codename: 'unknown',
                 };
                 siCPU = {
                     processors: 1,
                     physicalCores: 1,
                     cores: 1,
-                    hypervizor: 'unknown'
+                    hypervizor: 'unknown',
                 };
-                siNetwork = [{
-                    iface: 'default',
-                    mac: '00:00:00:00:00:00',
-                    ip4: '127.0.0.1'
-                }];
+                siNetwork = [
+                    {
+                        iface: 'default',
+                        mac: '00:00:00:00:00:00',
+                        ip4: '127.0.0.1',
+                    },
+                ];
                 siNetworkDefault = 'default';
             }
 
@@ -1088,10 +1092,13 @@ class Settings {
             );
 
             // Ensure we have at least one network interface for ID generation
-            const netIface = networkInterface.length > 0 ? networkInterface[0] : siNetwork[0] || {
-                mac: '00:00:00:00:00:00',
-                ip4: '127.0.0.1'
-            };
+            const netIface =
+                networkInterface.length > 0
+                    ? networkInterface[0]
+                    : siNetwork[0] || {
+                          mac: '00:00:00:00:00:00',
+                          ip4: '127.0.0.1',
+                      };
 
             const idSrc = netIface.mac + netIface.ip4 + siSystem.uuid;
             const salt = netIface.mac;

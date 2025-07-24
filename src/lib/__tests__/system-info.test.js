@@ -6,7 +6,7 @@ import addKeywords from 'ajv-keywords';
 
 describe('System Information Configuration Schema', () => {
     let ajv;
-    
+
     beforeAll(() => {
         ajv = new Ajv({ strict: false });
         addFormats(ajv);
@@ -18,24 +18,24 @@ describe('System Information Configuration Schema', () => {
         const systemInfoSchema = {
             type: 'object',
             properties: {
-                systemInfo: confifgFileSchema.properties['Butler-SOS'].properties.systemInfo
+                systemInfo: confifgFileSchema.properties['Butler-SOS'].properties.systemInfo,
             },
-            required: ['systemInfo']
+            required: ['systemInfo'],
         };
 
         const config = {
             systemInfo: {
-                enable: false
-            }
+                enable: false,
+            },
         };
 
         const validate = ajv.compile(systemInfoSchema);
         const isValid = validate(config);
-        
+
         if (!isValid) {
             console.log('Validation errors:', validate.errors);
         }
-        
+
         expect(isValid).toBe(true);
     });
 
@@ -44,20 +44,20 @@ describe('System Information Configuration Schema', () => {
         const systemInfoSchema = {
             type: 'object',
             properties: {
-                systemInfo: confifgFileSchema.properties['Butler-SOS'].properties.systemInfo
+                systemInfo: confifgFileSchema.properties['Butler-SOS'].properties.systemInfo,
             },
-            required: ['systemInfo']
+            required: ['systemInfo'],
         };
 
         const config = {
             systemInfo: {
-                enable: true
-            }
+                enable: true,
+            },
         };
 
         const validate = ajv.compile(systemInfoSchema);
         const isValid = validate(config);
-        
+
         expect(isValid).toBe(true);
     });
 
@@ -66,25 +66,25 @@ describe('System Information Configuration Schema', () => {
         const systemInfoSchema = {
             type: 'object',
             properties: {
-                systemInfo: confifgFileSchema.properties['Butler-SOS'].properties.systemInfo
+                systemInfo: confifgFileSchema.properties['Butler-SOS'].properties.systemInfo,
             },
-            required: ['systemInfo']
+            required: ['systemInfo'],
         };
 
         const config = {
             systemInfo: {
-                enable: 'not-a-boolean'
-            }
+                enable: 'not-a-boolean',
+            },
         };
 
         const validate = ajv.compile(systemInfoSchema);
         const isValid = validate(config);
-        
+
         expect(isValid).toBe(false);
         expect(validate.errors).toContainEqual(
             expect.objectContaining({
-                instancePath: "/systemInfo/enable",
-                keyword: "type"
+                instancePath: '/systemInfo/enable',
+                keyword: 'type',
             })
         );
     });
@@ -94,23 +94,23 @@ describe('System Information Configuration Schema', () => {
         const systemInfoSchema = {
             type: 'object',
             properties: {
-                systemInfo: confifgFileSchema.properties['Butler-SOS'].properties.systemInfo
+                systemInfo: confifgFileSchema.properties['Butler-SOS'].properties.systemInfo,
             },
-            required: ['systemInfo']
+            required: ['systemInfo'],
         };
 
         const config = {
-            systemInfo: {}
+            systemInfo: {},
         };
 
         const validate = ajv.compile(systemInfoSchema);
         const isValid = validate(config);
-        
+
         expect(isValid).toBe(false);
         expect(validate.errors).toContainEqual(
             expect.objectContaining({
-                instancePath: "/systemInfo",
-                keyword: "required"
+                instancePath: '/systemInfo',
+                keyword: 'required',
             })
         );
     });
