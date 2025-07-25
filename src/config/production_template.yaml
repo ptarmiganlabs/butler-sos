@@ -1,581 +1,578 @@
 ---
 Butler-SOS:
-  # All configuration items are mandatory, unless otherwise noted.
+    # All configuration items are mandatory, unless otherwise noted.
 
-  # Logging configuration
-  logLevel: info          # Log level. Possible log levels are silly, debug, verbose, info, warn, error. Case sensitive.
-  fileLogging: true       # true/false to enable/disable logging to disk file
-  logDirectory: log       # Subdirectory where log files are stored
+    # Logging configuration
+    logLevel: info # Log level. Possible log levels are silly, debug, verbose, info, warn, error. Case sensitive.
+    fileLogging: true # true/false to enable/disable logging to disk file
+    logDirectory: log # Subdirectory where log files are stored
 
-  # System information gathering
-  # Butler SOS collects system information for monitoring and diagnostic purposes.
-  # On Windows, this may trigger security alerts as it executes OS commands like:
-  # - cmd.exe /d /s /c \chcp (to get code page info)
-  # - netstat -r (to get routing table)  
-  # - cmd.exe /d /s /c \echo %COMPUTERNAME%.%USERDNSDOMAIN% (to get computer/domain names)
-  # These commands are executed by the 'systeminformation' npm package, not directly by Butler SOS.
-  systemInfo:
-    enable: true                    # Should detailed system information be collected? Set to false in security-sensitive environments.
+    # System information gathering
+    # Butler SOS collects system information for monitoring and diagnostic purposes.
+    # On Windows, this may trigger security alerts in enterprise monitoring tools as it executes various OS commands:
+    # These commands are executed by the 'systeminformation' npm package, not directly by Butler SOS.
+    systemInfo:
+        enable: true # Should detailed system information be collected? Set to false in security-sensitive environments.
 
-  anonTelemetry: true     # Can Butler SOS send anonymous data about what computer it is running on? 
-                          # More info on whata data is collected: https://butler-sos.ptarmiganlabs.com/docs/about/telemetry/
-                          # Please consider leaving this at true - it really helps future development of Butler SOS!
+    anonTelemetry:
+        true # Can Butler SOS send anonymous data about what computer it is running on?
+        # More info on whata data is collected: https://butler-sos.ptarmiganlabs.com/docs/about/telemetry/
+        # Please consider leaving this at true - it really helps future development of Butler SOS!
 
-  # Should Butler SOS start a web server that serves an obfuscated view of the Butler SOS config file?
-  configVisualisation:
-    enable: false
-    host: localhost       # Hostname or IP address where the web server will listen. Should be localhost in most cases.
-    port: 3100            # Port where the web server will listen. Change if port 3100 is already in use.
-    obfuscate: true        # Should the config file shown in the web UI be obfuscated?
-
-  # Heartbeats can be used to send "I'm alive" messages to some other tool, e.g. an infrastructure monitoring tool
-  # The concept is simple: The remoteURL will be called at the specified frequency. The receiving tool will then know 
-  # that Butler SOS is alive.
-  heartbeat:
-    enable: false
-    remoteURL: http://my.monitoring.server/some/path/
-    frequency: every 1 hour         # https://bunkat.github.io/later/parsers.html#text
-
-  # Docker health checks are used when running Butler SOS as a Docker container. 
-  # The Docker engine will call the container's health check REST endpoint with a set interval to determine
-  # whether the container is alive/well or not.
-  # If you are not running Butler SOS in Docker you can safely disable this feature. 
-  dockerHealthCheck:
-    enable: false                    # Control whether a REST endpoint will be set up to serve Docker health check messages
-    port: 12398                     # Port the Docker health check service runs on (if enabled)
-
-  # Uptime monitor
-  uptimeMonitor:
-    enable: true                    # Should uptime messages be written to the console and log files?
-    frequency: every 15 minutes     # https://bunkat.github.io/later/parsers.html#text
-    logLevel: verbose               # Starting at what log level should uptime messages be shown in console log and log files?
-    storeInInfluxdb: 
-      butlerSOSMemoryUsage: true    # Should data on Butler SOS' own memory use be stored in Infludb?
-      instanceTag: DEV              # Tag that can be used to differentiate data from multiple Butler SOS instances
-    storeNewRelic:
-      enable: false
-      destinationAccount:
-        # - First NR account
-        # - Second NR account
-      metric:
-        dynamic:
-          butlerMemoryUsage:
-            enable: true            # Should Butler SOS' memory/RAM usage be sent to New Relic?
-          butlerUptime:
-            enable: true            # Should Butler SOS' uptime (how long since it was started) be sent to New Relic?
-      attribute: 
-        static:                     # Static attributes/dimensions to attach to the data sent to New Relic.
-          # - name: metricType
-          #   value: butler-sos-uptime
-          # - name: qs_service
-          #   value: butler-sos
-          # - name: qs_environment
-          #   value: prod
-        dynamic:
-          butlerVersion: 
-            enable: true            # Should the Butler SOS version be included in the data sent to New Relic?
-
-  # Credentials for third party systems that Butler SOS integrate with.
-  # These can also be specified via command line parameters when starting Butler SOS. 
-  # Command line options takes precedence over settings in this config file.
-  thirdPartyToolsCredentials:
-    newRelic:         # Array of New Relic accounts/insert keys.
-      # - accountName: First NR account
-      #   insertApiKey: <API key 1 (with insert permissions) from New Relic> 
-      #   accountId: <New Relic account ID 1>
-      # - accountName: Second NR account
-      #   insertApiKey: <API key 2 (with insert permissions) from New Relic> 
-      #   accountId: <New Relic account ID 2>
-
-  # Shared settings for user and log events (see below)
-  qlikSenseEvents:                  # Shared settings for user and log events (see below)
-    influxdb:
-      enable: false                 # Should summary (counter) of user/log events, and rejected events be stored in InfluxDB?
-      writeFrequency: 20000         # How often (milliseconds) should event counts be written to InfluxDB?  
-    eventCount:                     # Track how many events are received from Sense.
-                                    # Some events are valid, some are not. Of the valid events, some are rejected by Butler SOS
-                                    # based on the configuration in this file. 
-      enable: false                 # Should event count be stored in InfluxDB?
-      influxdb:
-        measurementName: event_count # Name of the InfluxDB measurement where event count is stored
-        tags:                       # Tags are added to the data before it's stored in InfluxDB
-          # - name: env
-          #   value: DEV
-          # - name: foo
-          #   value: bar
-    rejectedEventCount:             # Rejected events are events that are received from Sense, that are correctly formatted, 
-                                    # but that are rejected by Butler SOS based on the configuration in this file. 
-                                    # An example of a rejected event is a performance log event that is filtered out by Butler SOS.
-      enable: false                 # Should rejected events be counted and stored in InfluxDB?
-      influxdb:
-        measurementName: rejected_event_count # Name of the InfluxDB measurement where rejected event count is stored
-
-  # Track individual users opening/closing apps and starting/stopping sessions. 
-  # Requires log appender XML file(s) to be added to Sense server(s).
-  userEvents:                       
-    enable: false
-    excludeUser:                    # Optional blacklist of users that should be disregarded when it comes to user events
-      # - directory: LAB
-      #   userId: testuser1
-      # - directory: LAB
-      #   userId: testuser2
-    udpServerConfig:
-      serverHost: <IP or FQDN>      # Host/IP where user event server will listen for events from Sense
-      portUserActivityEvents: 9997  # Port on which user event server will listen for events from Sense
-    tags:                           # Tags are added to the data before it's stored in InfluxDB
-      # - name: env
-      #   value: DEV
-      # - name: foo
-      #   value: bar
-    sendToMQTT: 
-      enable: false                 # Set to true if user events should be forwarded as MQTT messages
-      postTo:                       # Control when and to which MQTT topics messages are sent 
-        everythingTopic:            # Topic to which all user events are sent
-          enable: true
-          topic: qliksense/userevent
-        sessionStartTopic:          # Topic to which "session start" events are sent
-          enable: true
-          topic: qliksense/userevent/session/start
-        sessionStopTopic:           # Topic to which "session stop" events are sent
-          enable: true
-          topic: qliksense/userevent/session/stop
-        connectionOpenTopic:        # Topic to which "connection open" events are sent
-          enable: true
-          topic: qliksense/userevent/connection/open
-        connectionCloseTopic:       # Topic to which "connection close" events are sent
-          enable: true
-          topic: qliksense/userevent/connection/close
-    sendToInfluxdb:
-      enable: true                  # Set to true if user events should be stored in InfluxDB
-    sendToNewRelic:
-      enable: false                  # Should log events be sent to New Relic?
-      destinationAccount:
-        # - First NR account
-        # - Second NR account
-      scramble: true                # Should user info (user directory and user ID) be scrambled before sent to NR?
-
-  # Log events are used to capture Sense warnings, errors and fatals in real time
-  logEvents:
-    udpServerConfig:
-      serverHost: <IP or FQDN>         # Host/IP where log event server will listen for events from Sense
-      portLogEvents: 9996              # Port on which log event server will listen for events from Sense
-    tags:
-      # - name: env
-      #   value: DEV
-      # - name: foo
-      #   value: bar
-    source:
-      engine:
-        enable: false                  # Should log events from the engine service be handled?
-      proxy:
-        enable: false                  # Should log events from the proxy service be handled?
-      repository:
-        enable: false                  # Should log events from the repository service be handled?
-      scheduler:
-        enable: false                  # Should log events from the scheduler service be handled?
-      qixPerf:
-        enable: true                   # Should log events relating to QIX performance be handled?
-    categorise:                        # Take actions on log events based on their content
-      enable: false
-      rules:                           # Rules are used to match log events to filters
-        # - description: Find access denied errors
-        #   logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
-        #     - WARN
-        #     - ERROR
-        #   action: categorise           # Action to take on matched log events. Possible values are categorise, drop
-        #   category:                    # Category to assign to matched log events. Name/value pairs. 
-        #                                # Will be added to InfluxDB datapoints as tags.
-        #     - name: qs_log_category
-        #       value: access-denied
-        #   filter:                      # Filter used to match log events. Case sensitive.
-        #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-        #       value: "Access was denied for User:"
-        #     - type: so
-        #       value: was denied for User
-        # - description: Find AD issues
-        #   logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
-        #     - ERROR
-        #     - WARN
-        #   action: categorise           # Action to take on matched log events. Possible values are categorise, drop
-        #   category:                    # Category to assign to matched log events. Name/value pairs. 
-        #                                # Will be added to InfluxDB datapoints as tags.
-        #     - name: qs_log_category
-        #       value: user-directory
-        #   filter:                      # Filter used to match log events. Case sensitive.
-        #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-        #       value: Duplicate entity with userId
-        # - description: Qlik Sense service down
-        #   logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
-        #     - WARN
-        #   action: categorise           # Action to take on matched log events. Possible values are categorise, drop
-        #   category:                    # Category to assign to matched log events. Name/value pairs. 
-        #                                # Will be added to InfluxDB datapoints as tags.
-        #     - name: qs_log_category
-        #       value: qs-service
-        #   filter:                      # Filter used to match log events. Case sensitive.
-        #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-        #       value: Failed to request service alive response from
-        #     - type: so                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-        #       value: Unable to connect to the remote server
-        # - description: Reload task failed
-        #   logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
-        #     - WARN
-        #     - ERROR
-        #   action: categorise           # Action to take on matched log events. Possible values are categorise, drop
-        #   category:                    # Category to assign to matched log events. Name/value pairs. 
-        #                                # Will be added to InfluxDB datapoints as tags.
-        #     - name: qs_log_category
-        #       value: reload-failed
-        #   filter:                      # Filter used to match log events. Case sensitive.
-        #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-        #       value: Task finished with state FinishedFail
-        #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-        #       value: Task finished with state Error
-        #     - type: ew                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-        #       value: Reload failed in Engine. Check engine or script logs.
-        #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
-        #       value: Reload sequence was not successful (Result=False, Finished=True, Aborted=False) for engine connection with handle
-      ruleDefault:                     # Default rule to use if no other rules match the log event
-        enable: true
-        category:
-          - name: qs_log_category
-            value: unknown
-    enginePerformanceMonitor:           # Detailed app performance data extraction from log events
-      enable: false                     # Should app performance data be extracted from log events?
-      appNameLookup:                    # Should app names be looked up based on app IDs?
+    # Should Butler SOS start a web server that serves an obfuscated view of the Butler SOS config file?
+    configVisualisation:
         enable: false
-      trackRejectedEvents: 
-        enable: false                   # Should events that are rejected by the app performance monitor be tracked?
-        tags:                           # Tags are added to the data before it's stored in InfluxDB
-          # - name: env
-          #   value: DEV
-          # - name: foo
-          #   value: bar
-      monitorFilter:                    # What objects should be monitored? Entire apps or just specific object(s) within some specific app(s)?
-                                        # Two kinds of monitoring can be done:
-                                        # 1) Monitor all apps, except those listed for exclusion. This is defined in the allApps section.
-                                        # 2) Monitor only specific apps. This is defined in the appSpecific section.
-                                        # An event will be accepted if it matches any of the rules in the allApps section OR any of the rules in the appSpecific section.
-        allApps:
-          enable: false                 # Should all apps be monitored?
-          appExclude:                   # What apps should be excluded from monitoring?
-                                        # If both appId and appName are specified, both must match the event's data for it to be considered a match.
-            # - appId: 5b817efe-472d-43ce-8a31-6cce34af7de9
-            # - appName: Sales forecast
-            # - appId: f42d6b16-8faf-45ca-a783-59f9da47db6e
-            #   appName: Inventory analysis
-          objectType:
-            allObjectTypes: true        # Should all object types be monitored?
-            allObjectTypesExclude:      # If allObjectTypes is set to true, the object types in this array are excluded from monitoring. 
-                                        # someObjectTypesInclude (below) is ignored in that case.
-              # - LoadModelList
-              # - <Unknown>
-              # - linechart
-              # - map
-            someObjectTypesInclude:     # What object types should be included in monitoring?
-                                        # Only applicable if allObjectTypes is set to false.
-              # - LoadModelList
-              # - sheet
-              # - barchart
-          method:
-            allMethods: true            # Should all methods be monitored?
-            allMethodsExclude:          # If allMethods is set to true, the methods in this array are excluded from monitoring.
-                                        # someMethodsInclude (below) is ignored in that case.
-              # - Global::OpenApp
-              # - Doc::GetAppLayout
-              # - Doc::CreateSessionObject
-            someMethodsInclude:         # What methods should be included in monitoring?
-                                        # Only applicable if allMethods is set to false.
-              # - GenericObject::GetLayout
-              # - GenericObject::GetHyperCubeContinuousData
-        appSpecific:
-          enable: false                 # Should app specific monitoring be done?
-          app:
-            - include:                  # What apps should be monitored?
-                                        # If both appId and appName are specified, both must match the event's data for it to be considered a match.
-                # - appId: d7cf16f9-6a95-462a-9ff1-a6d413326de4
-                # - appName: Budget 2025
-                # - appId: 6931136d-c234-4358-a40c-e37153aba7c9
-                #   appName: Sales basket analysis
-              objectType:
-                allObjectTypes: true    # Should all object types be monitored?
-                allObjectTypesExclude:  # If allObjectTypes is set to true, the object types in this array are excluded from monitoring. 
-                                        # someObjectTypesInclude (below) is ignored in that case.
-                  # - table
-                  # - map
-                someObjectTypesInclude: # What object types should be included in monitoring?
-                                        # Only applicable if allObjectTypes is set to false.
-                  # - sheet
-                  # - barchart
-                  # - linechart
-                  # - map
-              appObject:
-                allAppObjects: true     # Should all app objects be monitored?
-                allAppObjectsExclude:   # If allAppObjects is set to true, the app objects in this array are excluded from monitoring.
-                                        # someAppObjectsInclude (below) is ignored in that case.
-                  # - objectId: AaBbCc
-                  # - objectId: DdEeFf
-                someAppObjectsInclude:  # What app objects should be included in monitoring?
-                                        # Only applicable if allAppObjects is set to false.
-                  # - objectId: YJEpPT    
-              method: 
-                allMethods: true        # Should all methods be monitored?
-                allMethodsExclude:      # If allMethods is set to true, the methods in this array are excluded from monitoring.
-                                        # someMethodsInclude (below) is ignored in that case.
-                  # - Global::OpenApp
-                  # - Doc::GetAppLayout
-                  # - Doc::CreateSessionObject
-                someMethodsInclude:     # What methods should be included in monitoring?
-                                        # Only applicable if allMethods is set to false.
-                  # - GenericObject::GetLayout
-                  # - GenericObject::GetHyperCubeContinuousData
-    sendToMQTT:
-      enable: false                    # Should log events be sent as MQTT messages?
-      baseTopic: qliksense/logevent    # What topic should log events be forwarded to? 
-      postTo:
-        baseTopic: true
-        subsystemTopics: true          # Should log events be sent to subtopics corresponding to the QSEoW subsystems where the events originated?
-    sendToInfluxdb:
-      enable: false                    # Should log events be stored in InfluxDB?
-    sendToNewRelic:
-      enable: false                    # Should log events be sent to New Relic?
-      destinationAccount:
-        # - First NR account
-        # - Second NR account
-      source:
-        engine:
-          enable: true                 # Should log events from the engine service be handled?
-          logLevel: 
-            error: true                # Should error level log events be handled by Butler SOS?
-            warn: true                 # Should warning level log events be handled by Butler SOS?
-        proxy:
-          enable: true                 # Should log events from the proxy service be handled?
-          logLevel: 
-            error: true                # Should error level log events be handled by Butler SOS?
-            warn: true                 # Should warning level log events be handled by Butler SOS?
-        repository:
-          enable: true                 # Should log events from the repository service be handled?
-          logLevel: 
-            error: true                # Should error level log events be handled by Butler SOS?
-            warn: true                 # Should warning level log events be handled by Butler SOS?
-        scheduler:
-          enable: true                 # Should log events from the scheduler service be handled?
-          logLevel: 
-            error: true                # Should error level log events be handled by Butler SOS?
-            warn: true                 # Should warning level log events be handled by Butler SOS?
+        host: localhost # Hostname or IP address where the web server will listen. Should be localhost in most cases.
+        port: 3100 # Port where the web server will listen. Change if port 3100 is already in use.
+        obfuscate: true # Should the config file shown in the web UI be obfuscated?
 
-  # Certificates to use when connecting to Sense. Get these from the Certificate Export in QMC.
-  cert:
-    clientCert: <path/to/cert/client.pem>
-    clientCertKey: <path/to/cert/client_key.pem>
-    clientCertCA: <path/to/cert/root.pem>
-    clientCertPassphrase: <certificate key password, if one was specified when exporting certificates from Sense QMC >
-    # If running Butler SOS in a Docker container, the cert paths MUST be the following
-    # clientCert: /nodeapp/config/certificate/client.pem
-    # clientCertKey: /nodeapp/config/certificate/client_key.pem
-    # clientCertCA: /nodeapp/config/certificate/root.pem
-    # clientCertPassphrase:
+    # Heartbeats can be used to send "I'm alive" messages to some other tool, e.g. an infrastructure monitoring tool
+    # The concept is simple: The remoteURL will be called at the specified frequency. The receiving tool will then know
+    # that Butler SOS is alive.
+    heartbeat:
+        enable: false
+        remoteURL: http://my.monitoring.server/some/path/
+        frequency: every 1 hour # https://bunkat.github.io/later/parsers.html#text
 
-  # MQTT config parameters
-  mqttConfig:
-    enable: false
-    # Items below are mandatory if mqttConfig.enable=true
-    brokerHost: <IP of MQTT broker/server>
-    brokerPort: 1883
-    baseTopic: butler-sos/          # Default topic used if not not oherwise specified elsewhere. Should end with /
+    # Docker health checks are used when running Butler SOS as a Docker container.
+    # The Docker engine will call the container's health check REST endpoint with a set interval to determine
+    # whether the container is alive/well or not.
+    # If you are not running Butler SOS in Docker you can safely disable this feature.
+    dockerHealthCheck:
+        enable: false # Control whether a REST endpoint will be set up to serve Docker health check messages
+        port: 12398 # Port the Docker health check service runs on (if enabled)
 
-  # New Relic config
-  # If enabled, select Butler SOS metrics will be sent to New Relic.
-  newRelic:
-    enable: false
-    event:
-      # There are different URLs depending on whther you have an EU or US region New Relic account.
-      # The available URLs are listed here: https://docs.newrelic.com/docs/accounts/accounts-billing/account-setup/choose-your-data-center/
-      #
-      # Note that the URL path should *not* be included in the url setting below!
-      # As of this writing the valid options are
-      # https://insights-collector.eu01.nr-data.net
-      # https://insights-collector.newrelic.com
-      url: https://insights-collector.eu01.nr-data.net
-      header:                   # Custom http headers
-        # - name: X-My-Header
-        #   value: Header value
-      attribute: 
-        static:                 # Static attributes/dimensions to attach to the events sent to New Relic.
-          # - name: service
-          #   value: butler-sos
-          # - name: environment
-          #   value: prod
-        dynamic:
-          butlerSosVersion: 
-            enable: true       # Should the Butler SOS version be included in the events sent to New Relic?
-    metric:
-      destinationAccount:
-        # - First NR account
-        # - Second NR account
-      # There are different URLs depending on whther you have an EU or US region New Relic account.
-      # The available URLs are listed here: https://docs.newrelic.com/docs/accounts/accounts-billing/account-setup/choose-your-data-center/
-      # As of this writing the options for the New Relic metrics API are
-      # https://insights-collector.eu01.nr-data.net/metric/v1
-      # https://metric-api.newrelic.com/metric/v1
-      url: https://insights-collector.eu01.nr-data.net/metric/v1   # Where should uptime data be sent?
-      header:                   # Custom http headers
-        # - name: X-My-Header
-        #   value: Header value
-      dynamic:
-        engine:
-          memory:               # Engine RAM (free/committed/allocated).
-            enable: true
-          cpu:                  # Engine CPU.
-            enable: true        
-          calls:                # Total number of requests made to the engine.
-            enable: true        
-          selections:           # Total number of selections made to the engine.
-            enable: true        
-          sessions:             # Engine session metrics (active and total number of engine sessions).
-            enable: true        
-          users:                # Engine user metrics (active and total number of users in engine.
-            enable: true        
-          saturated:            # Engine saturation status (tracks whether engine has high or low load).
-            enable: true
-        apps:
-          docCount:
-            enable: true
-          # Use with caution! Enabling activeDocs, loadedDocs or inMemoryDocs may result in lots of data sent to New Relic.
-          activeDocs:           # Should data on what docs are active in engine be sent to New Relic (true/false)? 
-            enable: true
-          loadedDocs:           # Should data on what docs are loaded (=having open sessions or connections) in engine be sent to New Relic (true/false)?
-            enable: true
-          inMemoryDocs:         # Should data on what docs are in engine memory be sent to New Relic (true/false)?
-            enable: true
-        cache:
-          cache:                # Cache metrics.
-            enable: true
-        proxy:
-          sessions:             # Session metrics as reported by the Sense proxy service
-            enable: true
-      attribute: 
-        static:                 # Static attributes/dimensions to attach to the data sent to New Relic.
-          # - name: service
-          #   value: butler-sos
-          # - name: environment
-          #   value: prod
-        dynamic:
-          butlerSosVersion: 
-            enable: true       # Should the Butler SOS version be included in the data sent to New Relic?
+    # Uptime monitor
+    uptimeMonitor:
+        enable: true # Should uptime messages be written to the console and log files?
+        frequency: every 15 minutes # https://bunkat.github.io/later/parsers.html#text
+        logLevel: verbose # Starting at what log level should uptime messages be shown in console log and log files?
+        storeInInfluxdb:
+            butlerSOSMemoryUsage: true # Should data on Butler SOS' own memory use be stored in Infludb?
+            instanceTag: DEV # Tag that can be used to differentiate data from multiple Butler SOS instances
+        storeNewRelic:
+            enable: false
+            destinationAccount:
+                # - First NR account
+                # - Second NR account
+            metric:
+                dynamic:
+                    butlerMemoryUsage:
+                        enable: true # Should Butler SOS' memory/RAM usage be sent to New Relic?
+                    butlerUptime:
+                        enable: true # Should Butler SOS' uptime (how long since it was started) be sent to New Relic?
+            attribute:
+                static: # Static attributes/dimensions to attach to the data sent to New Relic.
+                    # - name: metricType
+                    #   value: butler-sos-uptime
+                    # - name: qs_service
+                    #   value: butler-sos
+                    # - name: qs_environment
+                    #   value: prod
+                dynamic:
+                    butlerVersion:
+                        enable: true # Should the Butler SOS version be included in the data sent to New Relic?
 
-  # Prometheus config
-  # If enabled, select Butler SOS metrics will be exposed on a Prometheus compatible URL from where they can be scraped.
-  prometheus:
-    enable: false                                   # Default false
-    host: <IP or FQDN where Butler SOS is running>  # On what IP/FQDN should the Prometheus metrics be exposed? Default 0.0.0.0, i.e. all available IPs
-    port: 9842                                      # Port for Prometheus endpoint. Default 9842
+    # Credentials for third party systems that Butler SOS integrate with.
+    # These can also be specified via command line parameters when starting Butler SOS.
+    # Command line options takes precedence over settings in this config file.
+    thirdPartyToolsCredentials:
+        newRelic: # Array of New Relic accounts/insert keys.
+            # - accountName: First NR account
+            #   insertApiKey: <API key 1 (with insert permissions) from New Relic>
+            #   accountId: <New Relic account ID 1>
+            # - accountName: Second NR account
+            #   insertApiKey: <API key 2 (with insert permissions) from New Relic>
+            #   accountId: <New Relic account ID 2>
 
-  # Influx db config parameters
-  influxdbConfig:
-    enable: true
-    # Items below are mandatory if influxdbConfig.enable=true
-    host: influxdb.mycompany.com    # InfluxDB host, hostname, FQDN or IP address
-    port: 8086                      # Port where InfluxDBdb is listening, usually 8086
-    version: 1                      # Is the InfluxDB instance version 1.x or 2.x? Valid values are 1 or 2
-    v2Config:                       # Settings for InfluxDB v2.x only, i.e. Butler-SOS.influxdbConfig.version=2
-      org: myorg
-      bucket: mybucket
-      description: Butler SOS metrics
-      token: mytoken
-      retentionDuration: 10d
-    v1Config:                       # Settings below are for InfluxDB v1.x only, i.e. Butler-SOS.influxdbConfig.version=1
-      auth:
-        enable: false               # Does influxdb instance require authentication (true/false)?
-        username: <username>        # Username for Influxdb authentication. Mandatory if auth.enable=true
-        password: <password>        # Password for Influxdb authentication. Mandatory if auth.enable=true
-      dbName: SenseOps
-      # Default retention policy that should be created in InfluxDB when Butler SOS creates a new database there. 
-      # Any data older than retention policy threshold will be purged from InfluxDB.
-      retentionPolicy:
-        name: 10d
-        duration: 10d                 # Possible duration units here: https://docs.influxdata.com/influxdb/v1.8/query_language/spec/#durations
-    # Control whether certain metrics are stored in InfluxDB or not
-    # Use with caution! Enabling activeDocs, loadedDocs or inMemoryDocs may result in lots of data sent to InfluxDB.
-    includeFields:
-      activeDocs: false              # Should data on what docs are active be stored in Influxdb (true/false)? 
-      loadedDocs: false              # Should data on what docs are loaded be stored in Influxdb (true/false)?
-      inMemoryDocs: false            # Should data on what docs are in memory be stored in Influxdb (true/false)?
+    # Shared settings for user and log events (see below)
+    qlikSenseEvents: # Shared settings for user and log events (see below)
+        influxdb:
+            enable: false # Should summary (counter) of user/log events, and rejected events be stored in InfluxDB?
+            writeFrequency: 20000 # How often (milliseconds) should event counts be written to InfluxDB?
+        eventCount: # Track how many events are received from Sense.
+            # Some events are valid, some are not. Of the valid events, some are rejected by Butler SOS
+            # based on the configuration in this file.
+            enable: false # Should event count be stored in InfluxDB?
+            influxdb:
+                measurementName: event_count # Name of the InfluxDB measurement where event count is stored
+                tags: # Tags are added to the data before it's stored in InfluxDB
+                    # - name: env
+                    #   value: DEV
+                    # - name: foo
+                    #   value: bar
+        rejectedEventCount: # Rejected events are events that are received from Sense, that are correctly formatted,
+            # but that are rejected by Butler SOS based on the configuration in this file.
+            # An example of a rejected event is a performance log event that is filtered out by Butler SOS.
+            enable: false # Should rejected events be counted and stored in InfluxDB?
+            influxdb:
+                measurementName: rejected_event_count # Name of the InfluxDB measurement where rejected event count is stored
 
-  # Extract app names
-  appNames: 
-    enableAppNameExtract: true    # Extract app names in addition to app IDs (tue/false)?
-    extractInterval: 60000        # How often (milliseconds) should app names be extracted?
-    hostIP: <IP or FQDN>          # What Sense server should be queried for app names?
+    # Track individual users opening/closing apps and starting/stopping sessions.
+    # Requires log appender XML file(s) to be added to Sense server(s).
+    userEvents:
+        enable: false
+        excludeUser: # Optional blacklist of users that should be disregarded when it comes to user events
+            # - directory: LAB
+            #   userId: testuser1
+            # - directory: LAB
+            #   userId: testuser2
+        udpServerConfig:
+            serverHost: <IP or FQDN> # Host/IP where user event server will listen for events from Sense
+            portUserActivityEvents: 9997 # Port on which user event server will listen for events from Sense
+        tags: # Tags are added to the data before it's stored in InfluxDB
+            # - name: env
+            #   value: DEV
+            # - name: foo
+            #   value: bar
+        sendToMQTT:
+            enable: false # Set to true if user events should be forwarded as MQTT messages
+            postTo: # Control when and to which MQTT topics messages are sent
+                everythingTopic: # Topic to which all user events are sent
+                    enable: true
+                    topic: qliksense/userevent
+                sessionStartTopic: # Topic to which "session start" events are sent
+                    enable: true
+                    topic: qliksense/userevent/session/start
+                sessionStopTopic: # Topic to which "session stop" events are sent
+                    enable: true
+                    topic: qliksense/userevent/session/stop
+                connectionOpenTopic: # Topic to which "connection open" events are sent
+                    enable: true
+                    topic: qliksense/userevent/connection/open
+                connectionCloseTopic: # Topic to which "connection close" events are sent
+                    enable: true
+                    topic: qliksense/userevent/connection/close
+        sendToInfluxdb:
+            enable: true # Set to true if user events should be stored in InfluxDB
+        sendToNewRelic:
+            enable: false # Should log events be sent to New Relic?
+            destinationAccount:
+                # - First NR account
+                # - Second NR account
+            scramble: true # Should user info (user directory and user ID) be scrambled before sent to NR?
 
-  # Sessions per virtual proxy
-  userSessions:
-    enableSessionExtract: true      # Query unique user IDs of what users have sessions open (true/false)?
-    # Items below are mandatory if enableSessionExtract=true    
-    pollingInterval: 30000        # How often (milliseconds) should session data be polled?
-    excludeUser:                  # Optional blacklist of users that should be disregarded when it comes to session monitoring.
-                                  # Blacklist is only applied to data in InfluxDB. All session data will be sent to MQTT.
-      # - directory: LAB
-      #   userId: testuser1
-      # - directory: LAB
-      #   userId: testuser2
+    # Log events are used to capture Sense warnings, errors and fatals in real time
+    logEvents:
+        udpServerConfig:
+            serverHost: <IP or FQDN> # Host/IP where log event server will listen for events from Sense
+            portLogEvents: 9996 # Port on which log event server will listen for events from Sense
+        tags:
+            # - name: env
+            #   value: DEV
+            # - name: foo
+            #   value: bar
+        source:
+            engine:
+                enable: false # Should log events from the engine service be handled?
+            proxy:
+                enable: false # Should log events from the proxy service be handled?
+            repository:
+                enable: false # Should log events from the repository service be handled?
+            scheduler:
+                enable: false # Should log events from the scheduler service be handled?
+            qixPerf:
+                enable: true # Should log events relating to QIX performance be handled?
+        categorise: # Take actions on log events based on their content
+            enable: false
+            rules: # Rules are used to match log events to filters
+                # - description: Find access denied errors
+                #   logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
+                #     - WARN
+                #     - ERROR
+                #   action: categorise           # Action to take on matched log events. Possible values are categorise, drop
+                #   category:                    # Category to assign to matched log events. Name/value pairs.
+                #                                # Will be added to InfluxDB datapoints as tags.
+                #     - name: qs_log_category
+                #       value: access-denied
+                #   filter:                      # Filter used to match log events. Case sensitive.
+                #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+                #       value: "Access was denied for User:"
+                #     - type: so
+                #       value: was denied for User
+                # - description: Find AD issues
+                #   logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
+                #     - ERROR
+                #     - WARN
+                #   action: categorise           # Action to take on matched log events. Possible values are categorise, drop
+                #   category:                    # Category to assign to matched log events. Name/value pairs.
+                #                                # Will be added to InfluxDB datapoints as tags.
+                #     - name: qs_log_category
+                #       value: user-directory
+                #   filter:                      # Filter used to match log events. Case sensitive.
+                #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+                #       value: Duplicate entity with userId
+                # - description: Qlik Sense service down
+                #   logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
+                #     - WARN
+                #   action: categorise           # Action to take on matched log events. Possible values are categorise, drop
+                #   category:                    # Category to assign to matched log events. Name/value pairs.
+                #                                # Will be added to InfluxDB datapoints as tags.
+                #     - name: qs_log_category
+                #       value: qs-service
+                #   filter:                      # Filter used to match log events. Case sensitive.
+                #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+                #       value: Failed to request service alive response from
+                #     - type: so                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+                #       value: Unable to connect to the remote server
+                # - description: Reload task failed
+                #   logLevel:                    # Log events of this Log level will be matched. WARN, ERROR, FATAL. Case insensitive.
+                #     - WARN
+                #     - ERROR
+                #   action: categorise           # Action to take on matched log events. Possible values are categorise, drop
+                #   category:                    # Category to assign to matched log events. Name/value pairs.
+                #                                # Will be added to InfluxDB datapoints as tags.
+                #     - name: qs_log_category
+                #       value: reload-failed
+                #   filter:                      # Filter used to match log events. Case sensitive.
+                #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+                #       value: Task finished with state FinishedFail
+                #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+                #       value: Task finished with state Error
+                #     - type: ew                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+                #       value: Reload failed in Engine. Check engine or script logs.
+                #     - type: sw                 # Type of filter. sw = starts with, ew = ends with, so = substring of
+                #       value: Reload sequence was not successful (Result=False, Finished=True, Aborted=False) for engine connection with handle
+            ruleDefault: # Default rule to use if no other rules match the log event
+                enable: true
+                category:
+                    - name: qs_log_category
+                      value: unknown
+        enginePerformanceMonitor: # Detailed app performance data extraction from log events
+            enable: false # Should app performance data be extracted from log events?
+            appNameLookup: # Should app names be looked up based on app IDs?
+                enable: false
+            trackRejectedEvents:
+                enable: false # Should events that are rejected by the app performance monitor be tracked?
+                tags: # Tags are added to the data before it's stored in InfluxDB
+                    # - name: env
+                    #   value: DEV
+                    # - name: foo
+                    #   value: bar
+            monitorFilter: # What objects should be monitored? Entire apps or just specific object(s) within some specific app(s)?
+                # Two kinds of monitoring can be done:
+                # 1) Monitor all apps, except those listed for exclusion. This is defined in the allApps section.
+                # 2) Monitor only specific apps. This is defined in the appSpecific section.
+                # An event will be accepted if it matches any of the rules in the allApps section OR any of the rules in the appSpecific section.
+                allApps:
+                    enable: false # Should all apps be monitored?
+                    appExclude: # What apps should be excluded from monitoring?
+                        # If both appId and appName are specified, both must match the event's data for it to be considered a match.
+                        # - appId: 5b817efe-472d-43ce-8a31-6cce34af7de9
+                        # - appName: Sales forecast
+                        # - appId: f42d6b16-8faf-45ca-a783-59f9da47db6e
+                        #   appName: Inventory analysis
+                    objectType:
+                        allObjectTypes: true # Should all object types be monitored?
+                        allObjectTypesExclude: # If allObjectTypes is set to true, the object types in this array are excluded from monitoring.
+                            # someObjectTypesInclude (below) is ignored in that case.
+                            # - LoadModelList
+                            # - <Unknown>
+                            # - linechart
+                            # - map
+                        someObjectTypesInclude: # What object types should be included in monitoring?
+                            # Only applicable if allObjectTypes is set to false.
+                            # - LoadModelList
+                            # - sheet
+                            # - barchart
+                    method:
+                        allMethods: true # Should all methods be monitored?
+                        allMethodsExclude: # If allMethods is set to true, the methods in this array are excluded from monitoring.
+                            # someMethodsInclude (below) is ignored in that case.
+                            # - Global::OpenApp
+                            # - Doc::GetAppLayout
+                            # - Doc::CreateSessionObject
+                        someMethodsInclude: # What methods should be included in monitoring?
+                            # Only applicable if allMethods is set to false.
+                            # - GenericObject::GetLayout
+                            # - GenericObject::GetHyperCubeContinuousData
+                appSpecific:
+                    enable: false # Should app specific monitoring be done?
+                    app:
+                        - include: # What apps should be monitored?
+                              # If both appId and appName are specified, both must match the event's data for it to be considered a match.
+                              # - appId: d7cf16f9-6a95-462a-9ff1-a6d413326de4
+                              # - appName: Budget 2025
+                              # - appId: 6931136d-c234-4358-a40c-e37153aba7c9
+                              #   appName: Sales basket analysis
+                          objectType:
+                              allObjectTypes: true # Should all object types be monitored?
+                              allObjectTypesExclude: # If allObjectTypes is set to true, the object types in this array are excluded from monitoring.
+                                  # someObjectTypesInclude (below) is ignored in that case.
+                                  # - table
+                                  # - map
+                              someObjectTypesInclude: # What object types should be included in monitoring?
+                                  # Only applicable if allObjectTypes is set to false.
+                                  # - sheet
+                                  # - barchart
+                                  # - linechart
+                                  # - map
+                          appObject:
+                              allAppObjects: true # Should all app objects be monitored?
+                              allAppObjectsExclude: # If allAppObjects is set to true, the app objects in this array are excluded from monitoring.
+                                  # someAppObjectsInclude (below) is ignored in that case.
+                                  # - objectId: AaBbCc
+                                  # - objectId: DdEeFf
+                              someAppObjectsInclude: # What app objects should be included in monitoring?
+                                  # Only applicable if allAppObjects is set to false.
+                                  # - objectId: YJEpPT
+                          method:
+                              allMethods: true # Should all methods be monitored?
+                              allMethodsExclude: # If allMethods is set to true, the methods in this array are excluded from monitoring.
+                                  # someMethodsInclude (below) is ignored in that case.
+                                  # - Global::OpenApp
+                                  # - Doc::GetAppLayout
+                                  # - Doc::CreateSessionObject
+                              someMethodsInclude: # What methods should be included in monitoring?
+                                  # Only applicable if allMethods is set to false.
+                                  # - GenericObject::GetLayout
+                                  # - GenericObject::GetHyperCubeContinuousData
+        sendToMQTT:
+            enable: false # Should log events be sent as MQTT messages?
+            baseTopic: qliksense/logevent # What topic should log events be forwarded to?
+            postTo:
+                baseTopic: true
+                subsystemTopics: true # Should log events be sent to subtopics corresponding to the QSEoW subsystems where the events originated?
+        sendToInfluxdb:
+            enable: false # Should log events be stored in InfluxDB?
+        sendToNewRelic:
+            enable: false # Should log events be sent to New Relic?
+            destinationAccount:
+                # - First NR account
+                # - Second NR account
+            source:
+                engine:
+                    enable: true # Should log events from the engine service be handled?
+                    logLevel:
+                        error: true # Should error level log events be handled by Butler SOS?
+                        warn: true # Should warning level log events be handled by Butler SOS?
+                proxy:
+                    enable: true # Should log events from the proxy service be handled?
+                    logLevel:
+                        error: true # Should error level log events be handled by Butler SOS?
+                        warn: true # Should warning level log events be handled by Butler SOS?
+                repository:
+                    enable: true # Should log events from the repository service be handled?
+                    logLevel:
+                        error: true # Should error level log events be handled by Butler SOS?
+                        warn: true # Should warning level log events be handled by Butler SOS?
+                scheduler:
+                    enable: true # Should log events from the scheduler service be handled?
+                    logLevel:
+                        error: true # Should error level log events be handled by Butler SOS?
+                        warn: true # Should warning level log events be handled by Butler SOS?
 
-  serversToMonitor:
-    pollingInterval: 30000          # How often (milliseconds) should the healthcheck API be polled?
+    # Certificates to use when connecting to Sense. Get these from the Certificate Export in QMC.
+    cert:
+        clientCert: <path/to/cert/client.pem>
+        clientCertKey: <path/to/cert/client_key.pem>
+        clientCertCA: <path/to/cert/root.pem>
+        clientCertPassphrase: <certificate key password, if one was specified when exporting certificates from Sense QMC >
+        # If running Butler SOS in a Docker container, the cert paths MUST be the following
+        # clientCert: /nodeapp/config/certificate/client.pem
+        # clientCertKey: /nodeapp/config/certificate/client_key.pem
+        # clientCertCA: /nodeapp/config/certificate/root.pem
+        # clientCertPassphrase:
 
-    # If false, Butler SOS will accept TLS certificates on the server without verifying them with the CA. 
-    # If true, data will only be retrieved from the Sense server if that server's TLS cert verifies 
-    # successfuully against the list of CAs available on the computer where Butler SOS is running.
-    rejectUnauthorized: true 
+    # MQTT config parameters
+    mqttConfig:
+        enable: false
+        # Items below are mandatory if mqttConfig.enable=true
+        brokerHost: <IP of MQTT broker/server>
+        brokerPort: 1883
+        baseTopic: butler-sos/ # Default topic used if not not oherwise specified elsewhere. Should end with /
 
-    # List of extra tags for each server. Useful for creating more advanced Grafana dashboards.
-    # Each server below MUST include these tags in its serverTags property.
-    # The tags below are just examples - define your own as needed
-    # These tags will also be used to label data exposed on the Prometheus endpoint (if it is enabled)
-    # NOTE: Prometheus only allows label names consisting of ASCII letters, numbers, as well as underscores. They must match the regex [a-zA-Z_][a-zA-Z0-9_]*. 
-    # I.e. if the Prometheus endpoint is enabled, the tag names below must follow the label naming standard of Prometheus. 
-    serverTagsDefinition: 
-      # - server_group
-      # - serverLocation
-      # - server_type
-      # - serverBrand
+    # New Relic config
+    # If enabled, select Butler SOS metrics will be sent to New Relic.
+    newRelic:
+        enable: false
+        event:
+            # There are different URLs depending on whther you have an EU or US region New Relic account.
+            # The available URLs are listed here: https://docs.newrelic.com/docs/accounts/accounts-billing/account-setup/choose-your-data-center/
+            #
+            # Note that the URL path should *not* be included in the url setting below!
+            # As of this writing the valid options are
+            # https://insights-collector.eu01.nr-data.net
+            # https://insights-collector.newrelic.com
+            url: https://insights-collector.eu01.nr-data.net
+            header: # Custom http headers
+                # - name: X-My-Header
+                #   value: Header value
+            attribute:
+                static: # Static attributes/dimensions to attach to the events sent to New Relic.
+                    # - name: service
+                    #   value: butler-sos
+                    # - name: environment
+                    #   value: prod
+                dynamic:
+                    butlerSosVersion:
+                        enable: true # Should the Butler SOS version be included in the events sent to New Relic?
+        metric:
+            destinationAccount:
+                # - First NR account
+                # - Second NR account
+            # There are different URLs depending on whther you have an EU or US region New Relic account.
+            # The available URLs are listed here: https://docs.newrelic.com/docs/accounts/accounts-billing/account-setup/choose-your-data-center/
+            # As of this writing the options for the New Relic metrics API are
+            # https://insights-collector.eu01.nr-data.net/metric/v1
+            # https://metric-api.newrelic.com/metric/v1
+            url: https://insights-collector.eu01.nr-data.net/metric/v1 # Where should uptime data be sent?
+            header: # Custom http headers
+                # - name: X-My-Header
+                #   value: Header value
+            dynamic:
+                engine:
+                    memory: # Engine RAM (free/committed/allocated).
+                        enable: true
+                    cpu: # Engine CPU.
+                        enable: true
+                    calls: # Total number of requests made to the engine.
+                        enable: true
+                    selections: # Total number of selections made to the engine.
+                        enable: true
+                    sessions: # Engine session metrics (active and total number of engine sessions).
+                        enable: true
+                    users: # Engine user metrics (active and total number of users in engine.
+                        enable: true
+                    saturated: # Engine saturation status (tracks whether engine has high or low load).
+                        enable: true
+                apps:
+                    docCount:
+                        enable: true
+                    # Use with caution! Enabling activeDocs, loadedDocs or inMemoryDocs may result in lots of data sent to New Relic.
+                    activeDocs: # Should data on what docs are active in engine be sent to New Relic (true/false)?
+                        enable: true
+                    loadedDocs: # Should data on what docs are loaded (=having open sessions or connections) in engine be sent to New Relic (true/false)?
+                        enable: true
+                    inMemoryDocs: # Should data on what docs are in engine memory be sent to New Relic (true/false)?
+                        enable: true
+                cache:
+                    cache: # Cache metrics.
+                        enable: true
+                proxy:
+                    sessions: # Session metrics as reported by the Sense proxy service
+                        enable: true
+            attribute:
+                static: # Static attributes/dimensions to attach to the data sent to New Relic.
+                    # - name: service
+                    #   value: butler-sos
+                    # - name: environment
+                    #   value: prod
+                dynamic:
+                    butlerSosVersion:
+                        enable: true # Should the Butler SOS version be included in the data sent to New Relic?
 
-    # Sense Servers that should be queried for healthcheck data 
-    servers:
-      - host: <server1.my.domain>:4747        # Example: 10.34.3.45:4747
-        serverName: <server1>
-        serverDescription: <description>
-        userSessions:
-          enable: true
-          # Items below are mandatory if userSessions.enable=true
-          host: <server1.my.domain>:4243      # Example: 10.34.3.45:4243
-          virtualProxies:
-            - virtualProxy: /                 # Default virtual proxy
-            - virtualProxy: /hdr              # "hdr" virtual proxy
-            - virtualProxy: /sales            # "sales" virtual proxy
-        serverTags:
-          # server_group: DEV
-          # serverLocation: Asia
-          # server_type: virtual
-          # serverBrand: Dell
-        headers: 
-          # X-My-Header-1: Header value 1
-          # X-My-Header-2: Header value 2
-      - host: <server2.my.domain>:4747        # Example: 10.34.3.46:4747
-        serverName: <server2>
-        serverDescription: <description>
-        userSessions:
-          enable: true
-          # Items below are mandatory if userSessions.enable=true
-          host: <server2.my.domain>:4243      # Example: 10.34.3.46:4243
-          virtualProxies:
-            - virtualProxy: /finance          # "finance" virtual proxy
-        serverTags:
-          # server_group: PROD
-          # serverLocation: Europe
-          # server_type: physical
-          # serverBrand: HP
-        headers: 
-          # X-My-Header-3: Header value 3
-          # X-My-Header-4: Header value 4
-    
+    # Prometheus config
+    # If enabled, select Butler SOS metrics will be exposed on a Prometheus compatible URL from where they can be scraped.
+    prometheus:
+        enable: false # Default false
+        host: <IP or FQDN where Butler SOS is running> # On what IP/FQDN should the Prometheus metrics be exposed? Default 0.0.0.0, i.e. all available IPs
+        port: 9842 # Port for Prometheus endpoint. Default 9842
+
+    # Influx db config parameters
+    influxdbConfig:
+        enable: true
+        # Items below are mandatory if influxdbConfig.enable=true
+        host: influxdb.mycompany.com # InfluxDB host, hostname, FQDN or IP address
+        port: 8086 # Port where InfluxDBdb is listening, usually 8086
+        version: 1 # Is the InfluxDB instance version 1.x or 2.x? Valid values are 1 or 2
+        v2Config: # Settings for InfluxDB v2.x only, i.e. Butler-SOS.influxdbConfig.version=2
+            org: myorg
+            bucket: mybucket
+            description: Butler SOS metrics
+            token: mytoken
+            retentionDuration: 10d
+        v1Config: # Settings below are for InfluxDB v1.x only, i.e. Butler-SOS.influxdbConfig.version=1
+            auth:
+                enable: false # Does influxdb instance require authentication (true/false)?
+                username: <username> # Username for Influxdb authentication. Mandatory if auth.enable=true
+                password: <password> # Password for Influxdb authentication. Mandatory if auth.enable=true
+            dbName: SenseOps
+            # Default retention policy that should be created in InfluxDB when Butler SOS creates a new database there.
+            # Any data older than retention policy threshold will be purged from InfluxDB.
+            retentionPolicy:
+                name: 10d
+                duration: 10d # Possible duration units here: https://docs.influxdata.com/influxdb/v1.8/query_language/spec/#durations
+        # Control whether certain metrics are stored in InfluxDB or not
+        # Use with caution! Enabling activeDocs, loadedDocs or inMemoryDocs may result in lots of data sent to InfluxDB.
+        includeFields:
+            activeDocs: false # Should data on what docs are active be stored in Influxdb (true/false)?
+            loadedDocs: false # Should data on what docs are loaded be stored in Influxdb (true/false)?
+            inMemoryDocs: false # Should data on what docs are in memory be stored in Influxdb (true/false)?
+
+    # Extract app names
+    appNames:
+        enableAppNameExtract: true # Extract app names in addition to app IDs (tue/false)?
+        extractInterval: 60000 # How often (milliseconds) should app names be extracted?
+        hostIP: <IP or FQDN> # What Sense server should be queried for app names?
+
+    # Sessions per virtual proxy
+    userSessions:
+        enableSessionExtract: true # Query unique user IDs of what users have sessions open (true/false)?
+        # Items below are mandatory if enableSessionExtract=true
+        pollingInterval: 30000 # How often (milliseconds) should session data be polled?
+        excludeUser: # Optional blacklist of users that should be disregarded when it comes to session monitoring.
+            # Blacklist is only applied to data in InfluxDB. All session data will be sent to MQTT.
+            # - directory: LAB
+            #   userId: testuser1
+            # - directory: LAB
+            #   userId: testuser2
+
+    serversToMonitor:
+        pollingInterval: 30000 # How often (milliseconds) should the healthcheck API be polled?
+
+        # If false, Butler SOS will accept TLS certificates on the server without verifying them with the CA.
+        # If true, data will only be retrieved from the Sense server if that server's TLS cert verifies
+        # successfuully against the list of CAs available on the computer where Butler SOS is running.
+        rejectUnauthorized: true
+
+        # List of extra tags for each server. Useful for creating more advanced Grafana dashboards.
+        # Each server below MUST include these tags in its serverTags property.
+        # The tags below are just examples - define your own as needed
+        # These tags will also be used to label data exposed on the Prometheus endpoint (if it is enabled)
+        # NOTE: Prometheus only allows label names consisting of ASCII letters, numbers, as well as underscores. They must match the regex [a-zA-Z_][a-zA-Z0-9_]*.
+        # I.e. if the Prometheus endpoint is enabled, the tag names below must follow the label naming standard of Prometheus.
+        serverTagsDefinition:
+            # - server_group
+            # - serverLocation
+            # - server_type
+            # - serverBrand
+
+        # Sense Servers that should be queried for healthcheck data
+        servers:
+            - host: <server1.my.domain>:4747 # Example: 10.34.3.45:4747
+              serverName: <server1>
+              serverDescription: <description>
+              userSessions:
+                  enable: true
+                  # Items below are mandatory if userSessions.enable=true
+                  host: <server1.my.domain>:4243 # Example: 10.34.3.45:4243
+                  virtualProxies:
+                      - virtualProxy: / # Default virtual proxy
+                      - virtualProxy: /hdr # "hdr" virtual proxy
+                      - virtualProxy: /sales # "sales" virtual proxy
+              serverTags:
+                  # server_group: DEV
+                  # serverLocation: Asia
+                  # server_type: virtual
+                  # serverBrand: Dell
+              headers:
+                  # X-My-Header-1: Header value 1
+                  # X-My-Header-2: Header value 2
+            - host: <server2.my.domain>:4747 # Example: 10.34.3.46:4747
+              serverName: <server2>
+              serverDescription: <description>
+              userSessions:
+                  enable: true
+                  # Items below are mandatory if userSessions.enable=true
+                  host: <server2.my.domain>:4243 # Example: 10.34.3.46:4243
+                  virtualProxies:
+                      - virtualProxy: /finance # "finance" virtual proxy
+              serverTags:
+                  # server_group: PROD
+                  # serverLocation: Europe
+                  # server_type: physical
+                  # serverBrand: HP
+              headers:
+                  # X-My-Header-3: Header value 3
+                  # X-My-Header-4: Header value 4

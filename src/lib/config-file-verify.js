@@ -183,7 +183,7 @@ export async function verifyAppConfig(cfg) {
 
     if (anonTelemetryEnabled === true && systemInfoEnabled === false) {
         console.error(
-            'VERIFY CONFIG FILE ERROR: Anonymous telemetry is enabled (Butler-SOS.anonTelemetry=true) but system information gathering is disabled (Butler-SOS.systemInfo.enable=false). Telemetry requires detailed system information to function properly. Either disable telemetry by setting Butler-SOS.anonTelemetry=false or enable system info gathering by setting Butler-SOS.systemInfo.enable=true. Exiting.'
+            'VERIFY CONFIG FILE ERROR: Anonymous telemetry is enabled (Butler-SOS.anonTelemetry=true) but system information gathering is disabled (Butler-SOS.systemInfo.enable=false). Telemetry requires system information to function properly. Either disable telemetry by setting Butler-SOS.anonTelemetry=false or enable system info gathering by setting Butler-SOS.systemInfo.enable=true. Exiting.'
         );
         return false;
     }
