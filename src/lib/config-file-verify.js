@@ -2,7 +2,7 @@ import { load } from 'js-yaml';
 import fs from 'fs/promises';
 import { default as Ajv } from 'ajv';
 
-import { confifgFileSchema } from './config-file-schema.js';
+import configFileSchema from './config-file-schema.js';
 
 /**
  * Verifies that the config file has the correct format.
@@ -44,7 +44,7 @@ export async function verifyConfigFileSchema(configFile) {
         }
 
         // Validate the parsed YAML file against the schema
-        const validate = ajv.compile(confifgFileSchema);
+        const validate = ajv.compile(configFileSchema);
         const valid = await validate(parsedFileContent);
 
         if (!valid) {

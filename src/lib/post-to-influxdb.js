@@ -3,6 +3,7 @@ import { Point } from '@influxdata/influxdb-client';
 import globals from '../globals.js';
 
 const sessionAppPrefix = 'SessionApp';
+const MIN_TIMESTAMP_LENGTH = 15;
 
 /**
  * Calculates and formats the uptime of a Qlik Sense engine.
@@ -13,7 +14,16 @@ const sessionAppPrefix = 'SessionApp';
  * @param {string} serverStarted - The server start time in format "YYYYMMDDThhmmss"
  * @returns {string} A formatted string representing uptime (e.g. "5 days, 3h 45m 12s")
  */
-function getFormattedTime(serverStarted) {
+export function getFormattedTime(serverStarted) {
+    // Handle invalid or empty input
+    if (
+        !serverStarted ||
+        typeof serverStarted !== 'string' ||
+        serverStarted.length < MIN_TIMESTAMP_LENGTH
+    ) {
+        return '';
+    }
+
     const dateTime = Date.now();
     const timestamp = Math.floor(dateTime);
 
@@ -24,7 +34,26 @@ function getFormattedTime(serverStarted) {
     const hour = str.substring(9, 11);
     const minute = str.substring(11, 13);
     const second = str.substring(13, 15);
+
+    // Validate date components
+    if (
+        isNaN(year) ||
+        isNaN(month) ||
+        isNaN(day) ||
+        isNaN(hour) ||
+        isNaN(minute) ||
+        isNaN(second)
+    ) {
+        return '';
+    }
+
     const dateTimeStarted = new Date(year, month - 1, day, hour, minute, second);
+
+    // Check if the date is valid
+    if (isNaN(dateTimeStarted.getTime())) {
+        return '';
+    }
+
     const timestampStarted = Math.floor(dateTimeStarted);
 
     const diff = timestamp - timestampStarted;
@@ -610,6 +639,10 @@ export async function postProxySessionsToInfluxdb(userSessions) {
                 `PROXY SESSIONS: Error saving user session data to InfluxDB v2! ${err.stack}`
             );
         }
+
+        globals.logger.verbose(
+            `PROXY SESSIONS: Sent user session data to InfluxDB for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"`
+        );
     }
 }
 
@@ -740,6 +773,10 @@ export async function postButlerSOSMemoryUsageToInfluxdb(memory) {
         } catch (err) {
             globals.logger.error(`MEMORY USAGE INFLUXDB: Error getting write API: ${err}`);
         }
+
+        globals.logger.verbose(
+            'MEMORY USAGE INFLUXDB: Sent Butler SOS memory usage data to InfluxDB'
+        );
     }
 }
 

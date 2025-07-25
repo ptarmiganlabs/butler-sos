@@ -56,3 +56,4 @@ jspm_packages
 .node_repl_history
 build.cjs
 butler-sos
+src/config/production_vac.yaml
