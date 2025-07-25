@@ -44,9 +44,9 @@ describe('Realistic Config Conditional Validation', () => {
         // Modify the MQTT config to have disabled feature with invalid placeholders
         templateConfig['Butler-SOS'].mqttConfig = {
             enable: false,
-            brokerHost: '<IP of MQTT broker/server>',  // Placeholder from template - should be allowed when disabled
+            brokerHost: '<IP of MQTT broker/server>', // Placeholder from template - should be allowed when disabled
             brokerPort: 1883,
-            baseTopic: 'butler-sos/'
+            baseTopic: 'butler-sos/',
         };
 
         // Also disable other features that might have validation issues in the template
@@ -58,7 +58,7 @@ describe('Realistic Config Conditional Validation', () => {
         templateConfig['Butler-SOS'].dockerHealthCheck.enable = false;
 
         const configPath = await createTempConfig(templateConfig);
-        
+
         // This should pass validation because features are disabled
         const result = await verifyConfigFileSchema(configPath);
         expect(result).toBe(true);
@@ -72,14 +72,14 @@ describe('Realistic Config Conditional Validation', () => {
 
         // Enable MQTT but leave placeholder values that should be invalid
         templateConfig['Butler-SOS'].mqttConfig = {
-            enable: true,  // Enable MQTT
-            brokerHost: '<IP of MQTT broker/server>',  // Invalid placeholder - should cause validation to fail
+            enable: true, // Enable MQTT
+            brokerHost: '<IP of MQTT broker/server>', // Invalid placeholder - should cause validation to fail
             brokerPort: 1883,
-            baseTopic: 'butler-sos/'
+            baseTopic: 'butler-sos/',
         };
 
         const configPath = await createTempConfig(templateConfig);
-        
+
         // This should fail validation because MQTT is enabled with invalid config
         const result = await verifyConfigFileSchema(configPath);
         expect(result).toBe(false);

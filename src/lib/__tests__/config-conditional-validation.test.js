@@ -1,6 +1,6 @@
 /**
  * Test suite for conditional configuration validation based on feature enable flags.
- * 
+ *
  * Tests that Butler SOS only validates configuration sections when the associated feature is enabled.
  * When a feature is disabled, its detailed configuration should not be validated.
  */
@@ -55,16 +55,16 @@ describe('Conditional Configuration Validation', () => {
                 enable: false,
                 host: 'localhost',
                 port: 3100,
-                obfuscate: true
+                obfuscate: true,
             },
             heartbeat: {
                 enable: false,
                 remoteURL: 'http://example.com',
-                frequency: 'every 1 hour'
+                frequency: 'every 1 hour',
             },
             dockerHealthCheck: {
                 enable: false,
-                port: 12398
+                port: 12398,
             },
             uptimeMonitor: {
                 enable: true,
@@ -72,7 +72,7 @@ describe('Conditional Configuration Validation', () => {
                 logLevel: 'verbose',
                 storeInInfluxdb: {
                     butlerSOSMemoryUsage: true,
-                    instanceTag: 'DEV'
+                    instanceTag: 'DEV',
                 },
                 storeNewRelic: {
                     enable: false,
@@ -80,45 +80,45 @@ describe('Conditional Configuration Validation', () => {
                     metric: {
                         dynamic: {
                             butlerMemoryUsage: { enable: true },
-                            butlerUptime: { enable: true }
-                        }
+                            butlerUptime: { enable: true },
+                        },
                     },
                     attribute: {
                         static: [],
                         dynamic: {
-                            butlerVersion: { enable: true }
-                        }
-                    }
-                }
+                            butlerVersion: { enable: true },
+                        },
+                    },
+                },
             },
             thirdPartyToolsCredentials: {
-                newRelic: []
+                newRelic: [],
             },
             qlikSenseEvents: {
                 influxdb: {
                     enable: false,
-                    writeFrequency: 20000
+                    writeFrequency: 20000,
                 },
                 eventCount: {
                     enable: false,
                     influxdb: {
                         measurementName: 'event_count',
-                        tags: []
-                    }
+                        tags: [],
+                    },
                 },
                 rejectedEventCount: {
                     enable: false,
                     influxdb: {
-                        measurementName: 'rejected_event_count'
-                    }
-                }
+                        measurementName: 'rejected_event_count',
+                    },
+                },
             },
             userEvents: {
                 enable: false,
                 excludeUser: [],
                 udpServerConfig: {
                     serverHost: 'localhost',
-                    portUserActivityEvents: 9997
+                    portUserActivityEvents: 9997,
                 },
                 tags: [],
                 sendToMQTT: {
@@ -128,20 +128,20 @@ describe('Conditional Configuration Validation', () => {
                         sessionStartTopic: { enable: true, topic: 'test' },
                         sessionStopTopic: { enable: true, topic: 'test' },
                         connectionOpenTopic: { enable: true, topic: 'test' },
-                        connectionCloseTopic: { enable: true, topic: 'test' }
-                    }
+                        connectionCloseTopic: { enable: true, topic: 'test' },
+                    },
                 },
                 sendToInfluxdb: { enable: true },
                 sendToNewRelic: {
                     enable: false,
                     destinationAccount: [],
-                    scramble: true
-                }
+                    scramble: true,
+                },
             },
             logEvents: {
                 udpServerConfig: {
                     serverHost: 'localhost',
-                    portLogEvents: 9996
+                    portLogEvents: 9996,
                 },
                 tags: [],
                 source: {
@@ -149,44 +149,44 @@ describe('Conditional Configuration Validation', () => {
                     proxy: { enable: false },
                     repository: { enable: false },
                     scheduler: { enable: false },
-                    qixPerf: { enable: true }
+                    qixPerf: { enable: true },
                 },
                 categorise: {
                     enable: false,
-                    rules: []
+                    rules: [],
                 },
                 appNameLookup: {
-                    enable: true
+                    enable: true,
                 },
                 appAccess: {
                     enable: false,
                     influxdb: {
                         enable: false,
-                        measurementName: 'app_access'
+                        measurementName: 'app_access',
                     },
                     rejectedEventCount: {
                         enable: false,
                         influxdb: {
-                            measurementName: 'rejected_app_access'
-                        }
+                            measurementName: 'rejected_app_access',
+                        },
                     },
                     allApps: {
                         enable: false,
                         appsInclude: [],
-                        appsExclude: []
+                        appsExclude: [],
                     },
                     someApps: {
                         enable: false,
-                        appsInclude: []
-                    }
+                        appsInclude: [],
+                    },
                 },
                 sendToMQTT: {
                     enable: false,
                     baseTopic: 'qliksense/logevent',
                     postTo: {
                         baseTopic: true,
-                        subsystemTopics: true
-                    }
+                        subsystemTopics: true,
+                    },
                 },
                 sendToInfluxdb: { enable: false },
                 sendToNewRelic: {
@@ -195,34 +195,34 @@ describe('Conditional Configuration Validation', () => {
                     source: {
                         engine: {
                             enable: true,
-                            logLevel: { error: true, warn: true }
+                            logLevel: { error: true, warn: true },
                         },
                         proxy: {
                             enable: true,
-                            logLevel: { error: true, warn: true }
+                            logLevel: { error: true, warn: true },
                         },
                         repository: {
                             enable: true,
-                            logLevel: { error: true, warn: true }
+                            logLevel: { error: true, warn: true },
                         },
                         scheduler: {
                             enable: true,
-                            logLevel: { error: true, warn: true }
-                        }
-                    }
-                }
+                            logLevel: { error: true, warn: true },
+                        },
+                    },
+                },
             },
             cert: {
                 clientCert: '/path/to/cert',
                 clientCertKey: '/path/to/key',
                 clientCertCA: '/path/to/ca',
-                clientCertPassphrase: ''
+                clientCertPassphrase: '',
             },
             mqttConfig: {
                 enable: false,
                 brokerHost: 'localhost',
                 brokerPort: 1883,
-                baseTopic: 'butler-sos/'
+                baseTopic: 'butler-sos/',
             },
             newRelic: {
                 enable: false,
@@ -232,9 +232,9 @@ describe('Conditional Configuration Validation', () => {
                     attribute: {
                         static: [],
                         dynamic: {
-                            butlerSosVersion: { enable: true }
-                        }
-                    }
+                            butlerSosVersion: { enable: true },
+                        },
+                    },
                 },
                 metric: {
                     destinationAccount: [],
@@ -248,33 +248,33 @@ describe('Conditional Configuration Validation', () => {
                             selections: { enable: true },
                             sessions: { enable: true },
                             users: { enable: true },
-                            saturated: { enable: true }
+                            saturated: { enable: true },
                         },
                         apps: {
                             docCount: { enable: true },
                             activeDocs: { enable: true },
                             loadedDocs: { enable: true },
-                            inMemoryDocs: { enable: true }
+                            inMemoryDocs: { enable: true },
                         },
                         cache: {
-                            cache: { enable: true }
+                            cache: { enable: true },
                         },
                         proxy: {
-                            sessions: { enable: true }
-                        }
+                            sessions: { enable: true },
+                        },
                     },
                     attribute: {
                         static: [],
                         dynamic: {
-                            butlerSosVersion: { enable: true }
-                        }
-                    }
-                }
+                            butlerSosVersion: { enable: true },
+                        },
+                    },
+                },
             },
             prometheus: {
                 enable: false,
                 host: 'localhost',
-                port: 9842
+                port: 9842,
             },
             influxdbConfig: {
                 enable: true,
@@ -284,7 +284,7 @@ describe('Conditional Configuration Validation', () => {
                 auth: {
                     enable: false,
                     username: '',
-                    password: ''
+                    password: '',
                 },
                 dbName: 'butler-sos',
                 instanceTag: 'DEV',
@@ -292,70 +292,70 @@ describe('Conditional Configuration Validation', () => {
                     host: 'localhost',
                     port: 8086,
                     database: 'butler-sos',
-                    retentionPolicy: 'autogen'
+                    retentionPolicy: 'autogen',
                 },
                 v2Config: {
                     url: 'http://localhost:8086',
                     token: 'token',
                     org: 'org',
-                    bucket: 'bucket'
+                    bucket: 'bucket',
                 },
                 writeSchedule: {
                     frequency: 10000,
-                    tags: []
-                }
+                    tags: [],
+                },
             },
             appNames: {
                 enableAppNameLookup: true,
                 lookupFrequency: 30000,
                 influxdb: {
-                    enable: true
+                    enable: true,
                 },
                 newRelic: {
                     enable: true,
                     destinationAccount: [],
                     metric: {
                         dynamic: {
-                            butlerSosVersion: { enable: true }
-                        }
+                            butlerSosVersion: { enable: true },
+                        },
                     },
                     attribute: {
                         static: [],
                         dynamic: {
-                            butlerSosVersion: { enable: true }
-                        }
-                    }
-                }
+                            butlerSosVersion: { enable: true },
+                        },
+                    },
+                },
             },
             userSessions: {
                 enableSessionExtract: true,
                 pollingFrequency: 30000,
                 excludeUser: [],
                 influxdb: {
-                    enable: true
+                    enable: true,
                 },
                 newRelic: {
                     enable: false,
                     destinationAccount: [],
                     metric: {
                         dynamic: {
-                            butlerSosVersion: { enable: true }
-                        }
+                            butlerSosVersion: { enable: true },
+                        },
                     },
                     attribute: {
                         static: [],
                         dynamic: {
-                            butlerSosVersion: { enable: true }
-                        }
-                    }
-                }
+                            butlerSosVersion: { enable: true },
+                        },
+                    },
+                },
             },
             serversToMonitor: {
                 pollingFrequency: 30000,
                 serverTagsDefinition: [],
-                servers: []
-            }
-        }
+                servers: [],
+            },
+        },
     };
 
     test('should pass validation with minimal config when MQTT is disabled', async () => {
@@ -370,16 +370,16 @@ describe('Conditional Configuration Validation', () => {
                     enable: false,
                     host: 'localhost',
                     port: 3100,
-                    obfuscate: true
+                    obfuscate: true,
                 },
                 heartbeat: {
                     enable: false,
                     remoteURL: 'http://example.com',
-                    frequency: 'every 1 hour'
+                    frequency: 'every 1 hour',
                 },
                 dockerHealthCheck: {
                     enable: false,
-                    port: 12398
+                    port: 12398,
                 },
                 uptimeMonitor: {
                     enable: true,
@@ -387,7 +387,7 @@ describe('Conditional Configuration Validation', () => {
                     logLevel: 'verbose',
                     storeInInfluxdb: {
                         butlerSOSMemoryUsage: true,
-                        instanceTag: 'DEV'
+                        instanceTag: 'DEV',
                     },
                     storeNewRelic: {
                         enable: false,
@@ -395,45 +395,45 @@ describe('Conditional Configuration Validation', () => {
                         metric: {
                             dynamic: {
                                 butlerMemoryUsage: { enable: true },
-                                butlerUptime: { enable: true }
-                            }
+                                butlerUptime: { enable: true },
+                            },
                         },
                         attribute: {
                             static: [],
                             dynamic: {
-                                butlerVersion: { enable: true }
-                            }
-                        }
-                    }
+                                butlerVersion: { enable: true },
+                            },
+                        },
+                    },
                 },
                 thirdPartyToolsCredentials: {
-                    newRelic: []
+                    newRelic: [],
                 },
                 qlikSenseEvents: {
                     influxdb: {
                         enable: false,
-                        writeFrequency: 20000
+                        writeFrequency: 20000,
                     },
                     eventCount: {
                         enable: false,
                         influxdb: {
                             measurementName: 'event_count',
-                            tags: []
-                        }
+                            tags: [],
+                        },
                     },
                     rejectedEventCount: {
                         enable: false,
                         influxdb: {
-                            measurementName: 'rejected_event_count'
-                        }
-                    }
+                            measurementName: 'rejected_event_count',
+                        },
+                    },
                 },
                 userEvents: {
                     enable: false,
                     excludeUser: [],
                     udpServerConfig: {
                         serverHost: 'localhost',
-                        portUserActivityEvents: 9997
+                        portUserActivityEvents: 9997,
                     },
                     tags: [],
                     sendToMQTT: {
@@ -443,20 +443,20 @@ describe('Conditional Configuration Validation', () => {
                             sessionStartTopic: { enable: true, topic: 'test' },
                             sessionStopTopic: { enable: true, topic: 'test' },
                             connectionOpenTopic: { enable: true, topic: 'test' },
-                            connectionCloseTopic: { enable: true, topic: 'test' }
-                        }
+                            connectionCloseTopic: { enable: true, topic: 'test' },
+                        },
                     },
                     sendToInfluxdb: { enable: true },
                     sendToNewRelic: {
                         enable: false,
                         destinationAccount: [],
-                        scramble: true
-                    }
+                        scramble: true,
+                    },
                 },
                 logEvents: {
                     udpServerConfig: {
                         serverHost: 'localhost',
-                        portLogEvents: 9996
+                        portLogEvents: 9996,
                     },
                     tags: [],
                     source: {
@@ -464,23 +464,23 @@ describe('Conditional Configuration Validation', () => {
                         proxy: { enable: false },
                         repository: { enable: false },
                         scheduler: { enable: false },
-                        qixPerf: { enable: true }
+                        qixPerf: { enable: true },
                     },
                     categorise: {
                         enable: false,
                         ruleDefault: { enable: false },
-                        rules: []
+                        rules: [],
                     },
                     appNameLookup: {
-                        enable: true
+                        enable: true,
                     },
                     sendToMQTT: {
                         enable: false,
                         baseTopic: 'qliksense/logevent',
                         postTo: {
                             baseTopic: true,
-                            subsystemTopics: true
-                        }
+                            subsystemTopics: true,
+                        },
                     },
                     sendToInfluxdb: { enable: false },
                     sendToNewRelic: {
@@ -489,34 +489,34 @@ describe('Conditional Configuration Validation', () => {
                         source: {
                             engine: {
                                 enable: true,
-                                logLevel: { error: true, warn: true }
+                                logLevel: { error: true, warn: true },
                             },
                             proxy: {
                                 enable: true,
-                                logLevel: { error: true, warn: true }
+                                logLevel: { error: true, warn: true },
                             },
                             repository: {
                                 enable: true,
-                                logLevel: { error: true, warn: true }
+                                logLevel: { error: true, warn: true },
                             },
                             scheduler: {
                                 enable: true,
-                                logLevel: { error: true, warn: true }
-                            }
-                        }
-                    }
+                                logLevel: { error: true, warn: true },
+                            },
+                        },
+                    },
                 },
                 cert: {
                     clientCert: '/path/to/cert',
                     clientCertKey: '/path/to/key',
                     clientCertCA: '/path/to/ca',
-                    clientCertPassphrase: ''
+                    clientCertPassphrase: '',
                 },
                 mqttConfig: {
                     enable: false,
-                    brokerHost: 'INVALID_HOST_FORMAT',  // This should be ignored when disabled
-                    brokerPort: 'INVALID_PORT',         // This should be ignored when disabled
-                    baseTopic: ''                       // This should be ignored when disabled
+                    brokerHost: 'INVALID_HOST_FORMAT', // This should be ignored when disabled
+                    brokerPort: 'INVALID_PORT', // This should be ignored when disabled
+                    baseTopic: '', // This should be ignored when disabled
                 },
                 newRelic: {
                     enable: false,
@@ -526,9 +526,9 @@ describe('Conditional Configuration Validation', () => {
                         attribute: {
                             static: [],
                             dynamic: {
-                                butlerSosVersion: { enable: true }
-                            }
-                        }
+                                butlerSosVersion: { enable: true },
+                            },
+                        },
                     },
                     metric: {
                         destinationAccount: [],
@@ -542,33 +542,33 @@ describe('Conditional Configuration Validation', () => {
                                 selections: { enable: true },
                                 sessions: { enable: true },
                                 users: { enable: true },
-                                saturated: { enable: true }
+                                saturated: { enable: true },
                             },
                             apps: {
                                 docCount: { enable: true },
                                 activeDocs: { enable: true },
                                 loadedDocs: { enable: true },
-                                inMemoryDocs: { enable: true }
+                                inMemoryDocs: { enable: true },
                             },
                             cache: {
-                                cache: { enable: true }
+                                cache: { enable: true },
                             },
                             proxy: {
-                                sessions: { enable: true }
-                            }
+                                sessions: { enable: true },
+                            },
                         },
                         attribute: {
                             static: [],
                             dynamic: {
-                                butlerSosVersion: { enable: true }
-                            }
-                        }
-                    }
+                                butlerSosVersion: { enable: true },
+                            },
+                        },
+                    },
                 },
                 prometheus: {
                     enable: false,
                     host: 'localhost',
-                    port: 9842
+                    port: 9842,
                 },
                 influxdbConfig: {
                     enable: false,
@@ -580,42 +580,42 @@ describe('Conditional Configuration Validation', () => {
                         bucket: 'bucket',
                         description: 'description',
                         token: 'token',
-                        retentionDuration: '30d'
+                        retentionDuration: '30d',
                     },
                     v1Config: {
                         auth: {
                             enable: false,
                             username: 'user',
-                            password: 'pass'
+                            password: 'pass',
                         },
                         dbName: 'butler-sos',
                         retentionPolicy: {
                             name: 'autogen',
-                            duration: '30d'
-                        }
+                            duration: '30d',
+                        },
                     },
                     includeFields: {
                         activeDocs: true,
                         loadedDocs: true,
-                        inMemoryDocs: true
-                    }
+                        inMemoryDocs: true,
+                    },
                 },
                 appNames: {
                     enableAppNameLookup: true,
-                    lookupFrequency: 30000
+                    lookupFrequency: 30000,
                 },
                 userSessions: {
                     enableSessionExtract: true,
                     pollingInterval: 30000,
-                    excludeUser: []
+                    excludeUser: [],
                 },
                 serversToMonitor: {
                     pollingInterval: 30000,
                     rejectUnauthorized: true,
                     serverTagsDefinition: [],
-                    servers: []
-                }
-            }
+                    servers: [],
+                },
+            },
         };
 
         const configPath = await createTempConfig(minimalConfig);
@@ -629,9 +629,9 @@ describe('Conditional Configuration Validation', () => {
         const config = JSON.parse(JSON.stringify(baseValidConfig));
         config['Butler-SOS'].mqttConfig = {
             enable: true,
-            brokerHost: 'INVALID_HOST_FORMAT',  // This should cause validation to fail
-            brokerPort: 'INVALID_PORT',         // This should cause validation to fail
-            baseTopic: ''                       // This should cause validation to fail
+            brokerHost: 'INVALID_HOST_FORMAT', // This should cause validation to fail
+            brokerPort: 'INVALID_PORT', // This should cause validation to fail
+            baseTopic: '', // This should cause validation to fail
         };
 
         const configPath = await createTempConfig(config);
@@ -646,10 +646,10 @@ describe('Conditional Configuration Validation', () => {
         config['Butler-SOS'].newRelic = {
             enable: false,
             event: {
-                url: 'INVALID_URL',              // This should be ignored when disabled
-                header: 'INVALID_HEADER',        // This should be ignored when disabled
-                attribute: 'INVALID_ATTRIBUTE'   // This should be ignored when disabled
-            }
+                url: 'INVALID_URL', // This should be ignored when disabled
+                header: 'INVALID_HEADER', // This should be ignored when disabled
+                attribute: 'INVALID_ATTRIBUTE', // This should be ignored when disabled
+            },
             // Missing required 'metric' property - should be ignored when disabled
         };
 

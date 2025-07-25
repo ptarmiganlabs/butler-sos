@@ -37,7 +37,7 @@ function isBinaryFile(fileExtension) {
  *
  * @param {string} filePath - The path to the file to prepare
  * @param {string} [encoding] - Optional encoding for text files, defaults to 'utf8' for text files
- * @returns {Promise<Object>} - An object containing the file extension, a stream of the file contents, and a found flag
+ * @returns {Promise<object>} - An object containing the file extension, a stream of the file contents, and a found flag
  */
 export async function prepareFile(filePath, encoding) {
     globals.logger.verbose(`FILE PREP: Preparing file ${filePath}`);
