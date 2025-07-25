@@ -4,7 +4,7 @@ applyTo: '**'
 
 # Formatting and indentention when generating code
 
-Don't worry about fixing indentation or formatting when generating code or tests.  
+DO NOT fix code indentation or formatting as part of work done by Copilot.  
 Other tools will handle that.
 
 # JSDoc comments
