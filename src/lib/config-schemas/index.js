@@ -46,6 +46,7 @@ const configFileSchema = {
                 'fileLogging',
                 'logDirectory',
                 'anonTelemetry',
+                'systemInfo',
                 'configVisualisation',
                 'heartbeat',
                 'dockerHealthCheck',

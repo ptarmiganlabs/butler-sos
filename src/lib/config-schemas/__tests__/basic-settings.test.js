@@ -22,6 +22,7 @@ describe('basic-settings schema', () => {
         expect(basicSettingsSchema.fileLogging).toBeDefined();
         expect(basicSettingsSchema.logDirectory).toBeDefined();
         expect(basicSettingsSchema.anonTelemetry).toBeDefined();
+        expect(basicSettingsSchema.systemInfo).toBeDefined();
     });
 
     describe('logLevel property', () => {
@@ -148,11 +149,59 @@ describe('basic-settings schema', () => {
         });
     });
 
+    describe('systemInfo property', () => {
+        test('should accept valid systemInfo configuration', () => {
+            const schema = {
+                type: 'object',
+                properties: { systemInfo: basicSettingsSchema.systemInfo },
+            };
+
+            const validate = ajv.compile(schema);
+
+            expect(validate({ systemInfo: { enable: true } })).toBe(true);
+            expect(validate({ systemInfo: { enable: false } })).toBe(true);
+        });
+
+        test('should reject invalid systemInfo configuration', () => {
+            const schema = {
+                type: 'object',
+                properties: { systemInfo: basicSettingsSchema.systemInfo },
+            };
+
+            const validate = ajv.compile(schema);
+
+            // Missing enable property
+            expect(validate({ systemInfo: {} })).toBe(false);
+
+            // Invalid enable type
+            expect(validate({ systemInfo: { enable: 'true' } })).toBe(false);
+            expect(validate({ systemInfo: { enable: 1 } })).toBe(false);
+            expect(validate({ systemInfo: { enable: null } })).toBe(false);
+
+            // Additional properties not allowed
+            expect(validate({ systemInfo: { enable: true, extra: 'value' } })).toBe(false);
+        });
+
+        test('should require enable property', () => {
+            const schema = {
+                type: 'object',
+                properties: { systemInfo: basicSettingsSchema.systemInfo },
+                required: ['systemInfo'],
+            };
+
+            const validate = ajv.compile(schema);
+
+            expect(validate({ systemInfo: { enable: true } })).toBe(true);
+            expect(validate({ systemInfo: {} })).toBe(false);
+            expect(validate({})).toBe(false);
+        });
+    });
+
     test('should validate complete basic settings object', () => {
         const schema = {
             type: 'object',
             properties: basicSettingsSchema,
-            required: ['logLevel', 'fileLogging', 'logDirectory', 'anonTelemetry'],
+            required: ['logLevel', 'fileLogging', 'logDirectory', 'anonTelemetry', 'systemInfo'],
         };
 
         const validate = ajv.compile(schema);
@@ -162,6 +211,7 @@ describe('basic-settings schema', () => {
             fileLogging: true,
             logDirectory: './log',
             anonTelemetry: false,
+            systemInfo: { enable: true },
         };
 
         expect(validate(validConfig)).toBe(true);

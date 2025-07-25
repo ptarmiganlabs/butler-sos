@@ -48,28 +48,28 @@ describe('Issue #1036: Conditional Config Validation', () => {
                 fileLogging: true,
                 logDirectory: 'log',
                 anonTelemetry: true,
-                
+
                 // Features with enable flags - all disabled with placeholder/invalid values
                 configVisualisation: {
                     enable: false,
                     host: 'localhost',
                     port: 3100,
-                    obfuscate: true
+                    obfuscate: true,
                 },
                 heartbeat: {
                     enable: false,
                     remoteURL: 'http://my.monitoring.server/some/path/', // Placeholder from template
-                    frequency: 'every 1 hour'
+                    frequency: 'every 1 hour',
                 },
                 dockerHealthCheck: {
                     enable: false,
-                    port: 12398
+                    port: 12398,
                 },
                 mqttConfig: {
                     enable: false,
-                    brokerHost: '<IP of MQTT broker/server>',  // Placeholder - invalid hostname
+                    brokerHost: '<IP of MQTT broker/server>', // Placeholder - invalid hostname
                     brokerPort: 1883,
-                    baseTopic: 'butler-sos/'
+                    baseTopic: 'butler-sos/',
                 },
                 newRelic: {
                     enable: false,
@@ -79,9 +79,9 @@ describe('Issue #1036: Conditional Config Validation', () => {
                         attribute: {
                             static: [],
                             dynamic: {
-                                butlerSosVersion: { enable: true }
-                            }
-                        }
+                                butlerSosVersion: { enable: true },
+                            },
+                        },
                     },
                     metric: {
                         destinationAccount: [],
@@ -95,33 +95,33 @@ describe('Issue #1036: Conditional Config Validation', () => {
                                 selections: { enable: true },
                                 sessions: { enable: true },
                                 users: { enable: true },
-                                saturated: { enable: true }
+                                saturated: { enable: true },
                             },
                             apps: {
                                 docCount: { enable: true },
                                 activeDocs: { enable: true },
                                 loadedDocs: { enable: true },
-                                inMemoryDocs: { enable: true }
+                                inMemoryDocs: { enable: true },
                             },
                             cache: {
-                                cache: { enable: true }
+                                cache: { enable: true },
                             },
                             proxy: {
-                                sessions: { enable: true }
-                            }
+                                sessions: { enable: true },
+                            },
                         },
                         attribute: {
                             static: [],
                             dynamic: {
-                                butlerSosVersion: { enable: true }
-                            }
-                        }
-                    }
+                                butlerSosVersion: { enable: true },
+                            },
+                        },
+                    },
                 },
                 prometheus: {
                     enable: false,
                     host: 'localhost',
-                    port: 9842
+                    port: 9842,
                 },
                 influxdbConfig: {
                     enable: false,
@@ -133,27 +133,27 @@ describe('Issue #1036: Conditional Config Validation', () => {
                         bucket: 'bucket',
                         description: 'description',
                         token: 'token',
-                        retentionDuration: '30d'
+                        retentionDuration: '30d',
                     },
                     v1Config: {
                         auth: {
                             enable: false,
                             username: 'user',
-                            password: 'pass'
+                            password: 'pass',
                         },
                         dbName: 'butler-sos',
                         retentionPolicy: {
                             name: 'autogen',
-                            duration: '30d'
-                        }
+                            duration: '30d',
+                        },
                     },
                     includeFields: {
                         activeDocs: true,
                         loadedDocs: true,
-                        inMemoryDocs: true
-                    }
+                        inMemoryDocs: true,
+                    },
                 },
-                
+
                 // Required sections with minimal valid config
                 uptimeMonitor: {
                     enable: true,
@@ -161,7 +161,7 @@ describe('Issue #1036: Conditional Config Validation', () => {
                     logLevel: 'verbose',
                     storeInInfluxdb: {
                         butlerSOSMemoryUsage: true,
-                        instanceTag: 'DEV'
+                        instanceTag: 'DEV',
                     },
                     storeNewRelic: {
                         enable: false,
@@ -169,45 +169,45 @@ describe('Issue #1036: Conditional Config Validation', () => {
                         metric: {
                             dynamic: {
                                 butlerMemoryUsage: { enable: true },
-                                butlerUptime: { enable: true }
-                            }
+                                butlerUptime: { enable: true },
+                            },
                         },
                         attribute: {
                             static: [],
                             dynamic: {
-                                butlerVersion: { enable: true }
-                            }
-                        }
-                    }
+                                butlerVersion: { enable: true },
+                            },
+                        },
+                    },
                 },
                 thirdPartyToolsCredentials: {
-                    newRelic: []
+                    newRelic: [],
                 },
                 qlikSenseEvents: {
                     influxdb: {
                         enable: false,
-                        writeFrequency: 20000
+                        writeFrequency: 20000,
                     },
                     eventCount: {
                         enable: false,
                         influxdb: {
                             measurementName: 'event_count',
-                            tags: []
-                        }
+                            tags: [],
+                        },
                     },
                     rejectedEventCount: {
                         enable: false,
                         influxdb: {
-                            measurementName: 'rejected_event_count'
-                        }
-                    }
+                            measurementName: 'rejected_event_count',
+                        },
+                    },
                 },
                 userEvents: {
                     enable: false,
                     excludeUser: [],
                     udpServerConfig: {
                         serverHost: 'localhost',
-                        portUserActivityEvents: 9997
+                        portUserActivityEvents: 9997,
                     },
                     tags: [],
                     sendToMQTT: {
@@ -217,20 +217,20 @@ describe('Issue #1036: Conditional Config Validation', () => {
                             sessionStartTopic: { enable: true, topic: 'test' },
                             sessionStopTopic: { enable: true, topic: 'test' },
                             connectionOpenTopic: { enable: true, topic: 'test' },
-                            connectionCloseTopic: { enable: true, topic: 'test' }
-                        }
+                            connectionCloseTopic: { enable: true, topic: 'test' },
+                        },
                     },
                     sendToInfluxdb: { enable: true },
                     sendToNewRelic: {
                         enable: false,
                         destinationAccount: [],
-                        scramble: true
-                    }
+                        scramble: true,
+                    },
                 },
                 logEvents: {
                     udpServerConfig: {
                         serverHost: 'localhost',
-                        portLogEvents: 9996
+                        portLogEvents: 9996,
                     },
                     tags: [],
                     source: {
@@ -238,26 +238,26 @@ describe('Issue #1036: Conditional Config Validation', () => {
                         proxy: { enable: false },
                         repository: { enable: false },
                         scheduler: { enable: false },
-                        qixPerf: { enable: true }
+                        qixPerf: { enable: true },
                     },
                     categorise: {
                         enable: false,
-                        ruleDefault: { 
+                        ruleDefault: {
                             enable: false,
-                            category: []
+                            category: [],
                         },
-                        rules: []
+                        rules: [],
                     },
                     appNameLookup: {
-                        enable: true
+                        enable: true,
                     },
                     sendToMQTT: {
                         enable: false,
                         baseTopic: 'qliksense/logevent',
                         postTo: {
                             baseTopic: true,
-                            subsystemTopics: true
-                        }
+                            subsystemTopics: true,
+                        },
                     },
                     sendToInfluxdb: { enable: false },
                     sendToNewRelic: {
@@ -266,53 +266,53 @@ describe('Issue #1036: Conditional Config Validation', () => {
                         source: {
                             engine: {
                                 enable: true,
-                                logLevel: { error: true, warn: true }
+                                logLevel: { error: true, warn: true },
                             },
                             proxy: {
                                 enable: true,
-                                logLevel: { error: true, warn: true }
+                                logLevel: { error: true, warn: true },
                             },
                             repository: {
                                 enable: true,
-                                logLevel: { error: true, warn: true }
+                                logLevel: { error: true, warn: true },
                             },
                             scheduler: {
                                 enable: true,
-                                logLevel: { error: true, warn: true }
-                            }
-                        }
-                    }
+                                logLevel: { error: true, warn: true },
+                            },
+                        },
+                    },
                 },
                 cert: {
                     clientCert: '/path/to/cert',
                     clientCertKey: '/path/to/key',
                     clientCertCA: '/path/to/ca',
-                    clientCertPassphrase: ''
+                    clientCertPassphrase: '',
                 },
                 appNames: {
                     enableAppNameExtract: true,
                     extractInterval: 30000,
                     hostIP: 'localhost',
                     enableAppNameLookup: true,
-                    lookupFrequency: 30000
+                    lookupFrequency: 30000,
                 },
                 userSessions: {
                     enableSessionExtract: true,
                     pollingInterval: 30000,
-                    excludeUser: []
+                    excludeUser: [],
                 },
                 serversToMonitor: {
                     pollingInterval: 30000,
                     rejectUnauthorized: true,
                     serverTagsDefinition: [],
-                    servers: []
-                }
-            }
+                    servers: [],
+                },
+            },
         };
 
         const configPath = await createTempConfig(config);
         const result = await verifyConfigFileSchema(configPath);
-        
+
         // Before the fix, this would fail because MQTT validation would reject '<IP of MQTT broker/server>'
         // After the fix, this should pass because MQTT is disabled
         expect(result).toBe(true);
@@ -329,22 +329,22 @@ describe('Issue #1036: Conditional Config Validation', () => {
                     enable: false,
                     host: 'localhost',
                     port: 3100,
-                    obfuscate: true
+                    obfuscate: true,
                 },
                 heartbeat: {
                     enable: false,
                     remoteURL: 'http://example.com',
-                    frequency: 'every 1 hour'
+                    frequency: 'every 1 hour',
                 },
                 dockerHealthCheck: {
                     enable: false,
-                    port: 12398
+                    port: 12398,
                 },
                 mqttConfig: {
-                    enable: true,  // Enabled with invalid config
-                    brokerHost: '<INVALID>',  // Invalid hostname format
+                    enable: true, // Enabled with invalid config
+                    brokerHost: '<INVALID>', // Invalid hostname format
                     brokerPort: 1883,
-                    baseTopic: 'butler-sos/'
+                    baseTopic: 'butler-sos/',
                 },
                 newRelic: {
                     enable: false,
@@ -354,9 +354,9 @@ describe('Issue #1036: Conditional Config Validation', () => {
                         attribute: {
                             static: [],
                             dynamic: {
-                                butlerSosVersion: { enable: true }
-                            }
-                        }
+                                butlerSosVersion: { enable: true },
+                            },
+                        },
                     },
                     metric: {
                         destinationAccount: [],
@@ -370,33 +370,33 @@ describe('Issue #1036: Conditional Config Validation', () => {
                                 selections: { enable: true },
                                 sessions: { enable: true },
                                 users: { enable: true },
-                                saturated: { enable: true }
+                                saturated: { enable: true },
                             },
                             apps: {
                                 docCount: { enable: true },
                                 activeDocs: { enable: true },
                                 loadedDocs: { enable: true },
-                                inMemoryDocs: { enable: true }
+                                inMemoryDocs: { enable: true },
                             },
                             cache: {
-                                cache: { enable: true }
+                                cache: { enable: true },
                             },
                             proxy: {
-                                sessions: { enable: true }
-                            }
+                                sessions: { enable: true },
+                            },
                         },
                         attribute: {
                             static: [],
                             dynamic: {
-                                butlerSosVersion: { enable: true }
-                            }
-                        }
-                    }
+                                butlerSosVersion: { enable: true },
+                            },
+                        },
+                    },
                 },
                 prometheus: {
                     enable: false,
                     host: 'localhost',
-                    port: 9842
+                    port: 9842,
                 },
                 influxdbConfig: {
                     enable: false,
@@ -408,25 +408,25 @@ describe('Issue #1036: Conditional Config Validation', () => {
                         bucket: 'bucket',
                         description: 'description',
                         token: 'token',
-                        retentionDuration: '30d'
+                        retentionDuration: '30d',
                     },
                     v1Config: {
                         auth: {
                             enable: false,
                             username: 'user',
-                            password: 'pass'
+                            password: 'pass',
                         },
                         dbName: 'butler-sos',
                         retentionPolicy: {
                             name: 'autogen',
-                            duration: '30d'
-                        }
+                            duration: '30d',
+                        },
                     },
                     includeFields: {
                         activeDocs: true,
                         loadedDocs: true,
-                        inMemoryDocs: true
-                    }
+                        inMemoryDocs: true,
+                    },
                 },
                 uptimeMonitor: {
                     enable: true,
@@ -434,7 +434,7 @@ describe('Issue #1036: Conditional Config Validation', () => {
                     logLevel: 'verbose',
                     storeInInfluxdb: {
                         butlerSOSMemoryUsage: true,
-                        instanceTag: 'DEV'
+                        instanceTag: 'DEV',
                     },
                     storeNewRelic: {
                         enable: false,
@@ -442,45 +442,45 @@ describe('Issue #1036: Conditional Config Validation', () => {
                         metric: {
                             dynamic: {
                                 butlerMemoryUsage: { enable: true },
-                                butlerUptime: { enable: true }
-                            }
+                                butlerUptime: { enable: true },
+                            },
                         },
                         attribute: {
                             static: [],
                             dynamic: {
-                                butlerVersion: { enable: true }
-                            }
-                        }
-                    }
+                                butlerVersion: { enable: true },
+                            },
+                        },
+                    },
                 },
                 thirdPartyToolsCredentials: {
-                    newRelic: []
+                    newRelic: [],
                 },
                 qlikSenseEvents: {
                     influxdb: {
                         enable: false,
-                        writeFrequency: 20000
+                        writeFrequency: 20000,
                     },
                     eventCount: {
                         enable: false,
                         influxdb: {
                             measurementName: 'event_count',
-                            tags: []
-                        }
+                            tags: [],
+                        },
                     },
                     rejectedEventCount: {
                         enable: false,
                         influxdb: {
-                            measurementName: 'rejected_event_count'
-                        }
-                    }
+                            measurementName: 'rejected_event_count',
+                        },
+                    },
                 },
                 userEvents: {
                     enable: false,
                     excludeUser: [],
                     udpServerConfig: {
                         serverHost: 'localhost',
-                        portUserActivityEvents: 9997
+                        portUserActivityEvents: 9997,
                     },
                     tags: [],
                     sendToMQTT: {
@@ -490,20 +490,20 @@ describe('Issue #1036: Conditional Config Validation', () => {
                             sessionStartTopic: { enable: true, topic: 'test' },
                             sessionStopTopic: { enable: true, topic: 'test' },
                             connectionOpenTopic: { enable: true, topic: 'test' },
-                            connectionCloseTopic: { enable: true, topic: 'test' }
-                        }
+                            connectionCloseTopic: { enable: true, topic: 'test' },
+                        },
                     },
                     sendToInfluxdb: { enable: true },
                     sendToNewRelic: {
                         enable: false,
                         destinationAccount: [],
-                        scramble: true
-                    }
+                        scramble: true,
+                    },
                 },
                 logEvents: {
                     udpServerConfig: {
                         serverHost: 'localhost',
-                        portLogEvents: 9996
+                        portLogEvents: 9996,
                     },
                     tags: [],
                     source: {
@@ -511,26 +511,26 @@ describe('Issue #1036: Conditional Config Validation', () => {
                         proxy: { enable: false },
                         repository: { enable: false },
                         scheduler: { enable: false },
-                        qixPerf: { enable: true }
+                        qixPerf: { enable: true },
                     },
                     categorise: {
                         enable: false,
-                        ruleDefault: { 
+                        ruleDefault: {
                             enable: false,
-                            category: []
+                            category: [],
                         },
-                        rules: []
+                        rules: [],
                     },
                     appNameLookup: {
-                        enable: true
+                        enable: true,
                     },
                     sendToMQTT: {
                         enable: false,
                         baseTopic: 'qliksense/logevent',
                         postTo: {
                             baseTopic: true,
-                            subsystemTopics: true
-                        }
+                            subsystemTopics: true,
+                        },
                     },
                     sendToInfluxdb: { enable: false },
                     sendToNewRelic: {
@@ -539,53 +539,53 @@ describe('Issue #1036: Conditional Config Validation', () => {
                         source: {
                             engine: {
                                 enable: true,
-                                logLevel: { error: true, warn: true }
+                                logLevel: { error: true, warn: true },
                             },
                             proxy: {
                                 enable: true,
-                                logLevel: { error: true, warn: true }
+                                logLevel: { error: true, warn: true },
                             },
                             repository: {
                                 enable: true,
-                                logLevel: { error: true, warn: true }
+                                logLevel: { error: true, warn: true },
                             },
                             scheduler: {
                                 enable: true,
-                                logLevel: { error: true, warn: true }
-                            }
-                        }
-                    }
+                                logLevel: { error: true, warn: true },
+                            },
+                        },
+                    },
                 },
                 cert: {
                     clientCert: '/path/to/cert',
                     clientCertKey: '/path/to/key',
                     clientCertCA: '/path/to/ca',
-                    clientCertPassphrase: ''
+                    clientCertPassphrase: '',
                 },
                 appNames: {
                     enableAppNameExtract: true,
                     extractInterval: 30000,
                     hostIP: 'localhost',
                     enableAppNameLookup: true,
-                    lookupFrequency: 30000
+                    lookupFrequency: 30000,
                 },
                 userSessions: {
                     enableSessionExtract: true,
                     pollingInterval: 30000,
-                    excludeUser: []
+                    excludeUser: [],
                 },
                 serversToMonitor: {
                     pollingInterval: 30000,
                     rejectUnauthorized: true,
                     serverTagsDefinition: [],
-                    servers: []
-                }
-            }
+                    servers: [],
+                },
+            },
         };
 
         const configPath = await createTempConfig(config);
         const result = await verifyConfigFileSchema(configPath);
-        
+
         // This should fail because MQTT is enabled with invalid hostname
         expect(result).toBe(false);
     });
