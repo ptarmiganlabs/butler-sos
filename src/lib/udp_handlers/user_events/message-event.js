@@ -141,10 +141,8 @@ export async function messageEventHandler(message, _remote) {
             }
         }
 
-        // Format the JSON string in a way that matches what the tests are looking for
-        // This ensures proper formatting of the output for debugging and testing
-        const jsonObj = JSON.parse(JSON.stringify(msgObj));
-        globals.logger.debug(`USER EVENT (json): ${JSON.stringify(jsonObj, null, 2)}`);
+        // Log the user event object for debugging and testing
+        globals.logger.debug('USER EVENT (json):', msgObj);
 
         // Is user in blacklist?
         // If so skip this event

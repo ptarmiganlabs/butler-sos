@@ -3,6 +3,7 @@ import { Point } from '@influxdata/influxdb-client';
 import globals from '../globals.js';
 
 const sessionAppPrefix = 'SessionApp';
+const MIN_TIMESTAMP_LENGTH = 15;
 
 /**
  * Calculates and formats the uptime of a Qlik Sense engine.
@@ -15,7 +16,11 @@ const sessionAppPrefix = 'SessionApp';
  */
 export function getFormattedTime(serverStarted) {
     // Handle invalid or empty input
-    if (!serverStarted || typeof serverStarted !== 'string' || serverStarted.length < 15) {
+    if (
+        !serverStarted ||
+        typeof serverStarted !== 'string' ||
+        serverStarted.length < MIN_TIMESTAMP_LENGTH
+    ) {
         return '';
     }
 
