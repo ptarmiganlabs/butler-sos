@@ -32,6 +32,9 @@ describe('config-file-schema', () => {
                 fileLogging: true,
                 logDirectory: './log',
                 anonTelemetry: false,
+                systemInfo: {
+                    enable: true,
+                },
                 configVisualisation: {
                     enable: false,
                     host: 'localhost',

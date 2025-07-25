@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { confifgFileSchema } from '../config-file-schema.js';
+import { basicSettingsSchema } from '../config-schemas/basic-settings.js';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import addKeywords from 'ajv-keywords';
@@ -18,7 +18,7 @@ describe('System Information Configuration Schema', () => {
         const systemInfoSchema = {
             type: 'object',
             properties: {
-                systemInfo: confifgFileSchema.properties['Butler-SOS'].properties.systemInfo,
+                systemInfo: basicSettingsSchema.systemInfo,
             },
             required: ['systemInfo'],
         };
@@ -44,7 +44,7 @@ describe('System Information Configuration Schema', () => {
         const systemInfoSchema = {
             type: 'object',
             properties: {
-                systemInfo: confifgFileSchema.properties['Butler-SOS'].properties.systemInfo,
+                systemInfo: basicSettingsSchema.systemInfo,
             },
             required: ['systemInfo'],
         };
@@ -66,7 +66,7 @@ describe('System Information Configuration Schema', () => {
         const systemInfoSchema = {
             type: 'object',
             properties: {
-                systemInfo: confifgFileSchema.properties['Butler-SOS'].properties.systemInfo,
+                systemInfo: basicSettingsSchema.systemInfo,
             },
             required: ['systemInfo'],
         };
@@ -94,7 +94,7 @@ describe('System Information Configuration Schema', () => {
         const systemInfoSchema = {
             type: 'object',
             properties: {
-                systemInfo: confifgFileSchema.properties['Butler-SOS'].properties.systemInfo,
+                systemInfo: basicSettingsSchema.systemInfo,
             },
             required: ['systemInfo'],
         };
