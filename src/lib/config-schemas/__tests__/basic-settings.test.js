@@ -172,12 +172,12 @@ describe('basic-settings schema', () => {
 
             // Missing enable property
             expect(validate({ systemInfo: {} })).toBe(false);
-            
+
             // Invalid enable type
             expect(validate({ systemInfo: { enable: 'true' } })).toBe(false);
             expect(validate({ systemInfo: { enable: 1 } })).toBe(false);
             expect(validate({ systemInfo: { enable: null } })).toBe(false);
-            
+
             // Additional properties not allowed
             expect(validate({ systemInfo: { enable: true, extra: 'value' } })).toBe(false);
         });

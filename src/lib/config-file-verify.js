@@ -6,7 +6,7 @@ import configFileSchema from './config-file-schema.js';
 
 /**
  * Creates a modified schema that only validates sections when their associated features are enabled.
- * 
+ *
  * @param {object} parsedConfig - The parsed configuration object
  * @param {object} baseSchema - The base schema to modify
  * @returns {object} Modified schema with conditional validation
@@ -14,45 +14,45 @@ import configFileSchema from './config-file-schema.js';
 function createConditionalSchema(parsedConfig, baseSchema) {
     // Deep clone the base schema to avoid modifying the original
     const schema = JSON.parse(JSON.stringify(baseSchema));
-    
+
     // Get the Butler-SOS configuration section
     const butlerConfig = parsedConfig['Butler-SOS'];
     if (!butlerConfig) {
         return schema; // Return original schema if no Butler-SOS section
     }
-    
+
     const butlerSchema = schema.properties['Butler-SOS'];
-    
+
     // Helper function to create conditional validation for a feature
     const makeFeatureConditional = (featureName) => {
         const featureSchema = butlerSchema.properties[featureName];
         if (!featureSchema) return;
-        
+
         // Store the original schema
         const originalSchema = JSON.parse(JSON.stringify(featureSchema));
-        
+
         // Create conditional schema using if/then/else
         butlerSchema.properties[featureName] = {
             type: 'object',
             properties: {
-                enable: { type: 'boolean' }
+                enable: { type: 'boolean' },
             },
             required: ['enable'],
             if: {
-                properties: { enable: { const: true } }
+                properties: { enable: { const: true } },
             },
             then: originalSchema,
             else: {
                 type: 'object',
                 properties: {
-                    enable: { type: 'boolean' }
+                    enable: { type: 'boolean' },
                 },
                 required: ['enable'],
-                additionalProperties: true // Allow any additional properties when disabled
-            }
+                additionalProperties: true, // Allow any additional properties when disabled
+            },
         };
     };
-    
+
     // Apply conditional validation to features with enable flags
     makeFeatureConditional('mqttConfig');
     makeFeatureConditional('newRelic');
@@ -62,7 +62,7 @@ function createConditionalSchema(parsedConfig, baseSchema) {
     makeFeatureConditional('configVisualisation');
     makeFeatureConditional('heartbeat');
     makeFeatureConditional('dockerHealthCheck');
-    
+
     return schema;
 }
 
@@ -107,10 +107,12 @@ export async function verifyConfigFileSchema(configFile) {
 
         // Create a conditional schema based on enabled features
         const conditionalSchema = createConditionalSchema(parsedFileContent, configFileSchema);
-        
+
         // Log the schema modification for debugging (in development)
         if (process.env.NODE_ENV === 'development' || process.env.DEBUG_CONFIG_VALIDATION) {
-            console.debug('VERIFY CONFIG FILE: Created conditional schema based on enabled features');
+            console.debug(
+                'VERIFY CONFIG FILE: Created conditional schema based on enabled features'
+            );
         }
 
         // Validate the parsed YAML file against the conditional schema

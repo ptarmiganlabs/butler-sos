@@ -19,14 +19,14 @@ export const basicSettingsSchema = {
     anonTelemetry: { type: 'boolean' },
     /**
      * System information gathering configuration.
-     * 
+     *
      * When enabled (default), Butler SOS uses the systeminformation npm package
      * to collect detailed system information. This package executes certain OS commands
      * on Windows that may trigger security alerts in enterprise environments:
      * - `cmd.exe /d /s /c \chcp` (code page information)
      * - `netstat -r` (routing table)
      * - `cmd.exe /d /s /c \echo %COMPUTERNAME%.%USERDNSDOMAIN%` (computer/domain names)
-     * 
+     *
      * Set to false in security-sensitive environments to disable detailed system
      * information gathering and prevent these OS command executions.
      */
