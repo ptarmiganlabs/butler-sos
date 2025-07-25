@@ -162,7 +162,15 @@ async function mainScript() {
         globals.logger.info(`Processors        : ${globals.hostInfo.si.cpu.processors}`);
         globals.logger.info(`Physical cores    : ${globals.hostInfo.si.cpu.physicalCores}`);
         globals.logger.info(`Cores             : ${globals.hostInfo.si.cpu.cores}`);
-        globals.logger.info(`Docker arch.      : ${globals.hostInfo.si.cpu.hypervizor}`);
+        globals.logger.info(
+            `Docker arch.      : ${
+                globals.hostInfo.isRunningInDocker
+                    ? globals.hostInfo.si.docker.architecture ||
+                      globals.hostInfo.si.os.arch ||
+                      'N/A'
+                    : 'N/A'
+            }`
+        );
         globals.logger.info(`Total memory      : ${globals.hostInfo.si.memory.total}`);
         globals.logger.info(`Standalone app    : ${globals.isSea}`);
 
