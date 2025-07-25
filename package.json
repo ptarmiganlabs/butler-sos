@@ -6,8 +6,8 @@
     "scripts": {
         "build": "npx jsdoc-to-markdown 'src/**/*.js' > docs/src-code-overview.md",
         "butler-sos": "node src/butler-sos.js",
-        "jest": "node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js --runInBand",
-        "test": "node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js --runInBand && snyk test && npm run format",
+        "jest": "node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js",
+        "test": "node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js && snyk test && npm run format",
         "test:unit": "npm run jest",
         "format": "npm run format:prettier",
         "format:prettier": "npx prettier --config .prettierrc.yaml \"./**/*.{ts,css,less,js}\" --write",
@@ -75,7 +75,7 @@
         "eslint-plugin-jsdoc": "^51.4.1",
         "eslint-plugin-prettier": "^5.5.3",
         "globals": "^16.3.0",
-        "jest": "^29.7.0",
+        "jest": "^30.0.5",
         "jsdoc-to-markdown": "^9.1.2",
         "prettier": "^3.6.2",
         "snyk": "^1.1298.1"

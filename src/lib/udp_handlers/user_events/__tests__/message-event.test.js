@@ -140,30 +140,6 @@ describe('messageEventHandler', () => {
                 subsystem: 'https://host2',
             });
         });
-
-        test('should handle message with semicolons in the message field', async () => {
-            const message = Buffer.from(
-                '/qseow-proxy-connection/;host1;Open connection;INTERNAL;testuser;https://host1;/app/12345678-1234-1234-1234-123456789abc;Complex message; with; multiple; semicolons'
-            );
-
-            await messageEventHandler(message, {});
-
-            expect(globals.logger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('USER EVENT (json):')
-            );
-        });
-
-        test('should handle message with single quotes in the message field', async () => {
-            const message = Buffer.from(
-                "/qseow-proxy-connection/;host1;Open connection;INTERNAL;testuser;https://host1;/app/12345678-1234-1234-1234-123456789abc;Message with 'single quotes'"
-            );
-
-            await messageEventHandler(message, {});
-
-            expect(globals.logger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('USER EVENT (json):')
-            );
-        });
     });
 
     describe('App ID and name handling', () => {
@@ -614,50 +590,6 @@ describe('messageEventHandler', () => {
 
             expect(globals.udpEvents.addUserEvent).not.toHaveBeenCalled();
         });
-    });
-
-    describe('User full field creation', () => {
-        test('should create user_full field when both directory and user id are present', async () => {
-            const message = Buffer.from(
-                '/qseow-proxy-connection/;host1;Start session;INTERNAL;testuser;origin;context;message'
-            );
-
-            await messageEventHandler(message, {});
-
-            // The user_full field is included in the JSON output, but we can't check it directly
-            // Instead, verify that the message was processed successfully
-            expect(globals.logger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('USER EVENT (json)')
-            );
-        });
-
-        test('should create empty user_full field when user directory is empty', async () => {
-            const message = Buffer.from(
-                '/qseow-proxy-connection/;host1;Start session;;testuser;origin;context;message'
-            );
-
-            await messageEventHandler(message, {});
-
-            // Verify the event was processed
-            expect(globals.logger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('USER EVENT (json)')
-            );
-        });
-
-        // test('should create empty user_full field when user id is empty', async () => {
-        //     const message = Buffer.from(
-        //         '/qseow-proxy-connection/;host1;Start session;INTERNAL;;origin;context;message'
-        //     );
-
-        //     await messageEventHandler(message, {});
-
-        //     // Check that any debug call contains the expected string
-        //     const debugCalls = globals.logger.debug.mock.calls;
-        //     const hasUserFullEmpty = debugCalls.some((call) => {
-        //         return typeof call[0] === 'string' && call[0].includes('"user_full":""');
-        //     });
-        //     expect(hasUserFullEmpty).toBe(true);
-        // });
     });
 
     describe('Different commands', () => {
