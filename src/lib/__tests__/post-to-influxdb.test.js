@@ -22,6 +22,7 @@ jest.unstable_mockModule('../../globals.js', () => ({
             debug: jest.fn(),
             error: jest.fn(),
             warn: jest.fn(),
+            silly: jest.fn(),
         },
         config: {
             get: jest.fn(),
@@ -513,6 +514,262 @@ describe('post-to-influxdb', () => {
             await influxdb.postHealthMetricsToInfluxdb(serverName, host, healthBody, serverTags);
             expect(globals.config.get).toHaveBeenCalledWith('Butler-SOS.influxdbConfig.version');
             expect(globals.influxWriteApi[0].writeAPI.writePoints).toHaveBeenCalled();
+        });
+    });
+
+    describe('getFormattedTime', () => {
+        test('should return valid formatted time for valid Date string', () => {
+            const validDate = '20230615T143022';
+            const result = influxdb.getFormattedTime(validDate);
+            expect(result).toBeDefined();
+            expect(typeof result).toBe('string');
+            expect(result).toMatch(/^\d+ days, \d{1,2}h \d{2}m \d{2}s$/);
+        });
+
+        test('should return empty string for invalid Date string', () => {
+            const invalidDate = 'invalid-date';
+            const result = influxdb.getFormattedTime(invalidDate);
+            expect(result).toBe('');
+        });
+
+        test('should return empty string for undefined input', () => {
+            const result = influxdb.getFormattedTime(undefined);
+            expect(result).toBe('');
+        });
+
+        test('should return empty string for null input', () => {
+            const result = influxdb.getFormattedTime(null);
+            expect(result).toBe('');
+        });
+    });
+
+    describe('postHealthMetricsToInfluxdb', () => {
+        test('should post health metrics to InfluxDB v1', async () => {
+            globals.config.get = jest.fn((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.version') return 1;
+                if (key === 'Butler-SOS.influxdbConfig.includeFields.activeDocs') return false;
+                if (key === 'Butler-SOS.influxdbConfig.includeFields.loadedDocs') return false;
+                if (key === 'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') return false;
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
+                return undefined;
+            });
+            const serverName = 'test-server';
+            const host = 'test-host';
+            const serverTags = { server_name: serverName };
+            const healthBody = {
+                started: '20220801T121212.000Z',
+                apps: { active_docs: [], loaded_docs: [], in_memory_docs: [] },
+                cache: { added: 0, hits: 0, lookups: 0, replaced: 0, bytes_added: 0 },
+                cpu: { total: 0 },
+                mem: { committed: 0, allocated: 0, free: 0 },
+                session: { active: 0, total: 0 },
+                users: { active: 0, total: 0 },
+            };
+
+            await influxdb.postHealthMetricsToInfluxdb(serverName, host, healthBody, serverTags);
+
+            expect(globals.influx.writePoints).toHaveBeenCalled();
+        });
+
+        test('should post health metrics to InfluxDB v2', async () => {
+            globals.config.get = jest.fn((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.version') return 2;
+                if (key === 'Butler-SOS.influxdbConfig.includeFields.activeDocs') return false;
+                if (key === 'Butler-SOS.influxdbConfig.includeFields.loadedDocs') return false;
+                if (key === 'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') return false;
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
+                return undefined;
+            });
+            globals.influxWriteApi = [
+                { serverName: 'test-server', writeAPI: { writePoints: jest.fn() } },
+            ];
+            const serverName = 'test-server';
+            const host = 'test-host';
+            const serverTags = { server_name: serverName };
+            const healthBody = {
+                started: '20220801T121212.000Z',
+                apps: { active_docs: [], loaded_docs: [], in_memory_docs: [] },
+                cache: { added: 0, hits: 0, lookups: 0, replaced: 0, bytes_added: 0 },
+                cpu: { total: 0 },
+                mem: { committed: 0, allocated: 0, free: 0 },
+                session: { active: 0, total: 0 },
+                users: { active: 0, total: 0 },
+            };
+
+            await influxdb.postHealthMetricsToInfluxdb(serverName, host, healthBody, serverTags);
+
+            expect(globals.influxWriteApi[0].writeAPI.writePoints).toHaveBeenCalled();
+        });
+    });
+
+    describe('postProxySessionsToInfluxdb', () => {
+        test('should post proxy sessions to InfluxDB v1', async () => {
+            globals.config.get = jest.fn((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.version') return 1;
+                if (key === 'Butler-SOS.influxdbConfig.instanceTag') return 'DEV';
+                if (key === 'Butler-SOS.userSessions.influxdb.measurementName')
+                    return 'user_sessions';
+                return undefined;
+            });
+            globals.config.has = jest.fn().mockReturnValue(true);
+            const mockUserSessions = {
+                serverName: 'test-server',
+                host: 'test-host',
+                virtualProxy: 'test-proxy',
+                datapointInfluxdb: [
+                    {
+                        measurement: 'user_sessions',
+                        tags: { host: 'test-host' },
+                        fields: { count: 1 },
+                    },
+                ],
+                sessionCount: 1,
+                uniqueUserList: 'user1',
+            };
+
+            await influxdb.postProxySessionsToInfluxdb(mockUserSessions);
+
+            expect(globals.influx.writePoints).toHaveBeenCalled();
+        });
+
+        test('should post proxy sessions to InfluxDB v2', async () => {
+            globals.config.get = jest.fn((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.version') return 2;
+                if (key === 'Butler-SOS.influxdbConfig.instanceTag') return 'DEV';
+                if (key === 'Butler-SOS.userSessions.influxdb.measurementName')
+                    return 'user_sessions';
+                return undefined;
+            });
+            globals.config.has = jest.fn().mockReturnValue(true);
+
+            // Mock the writeAPI object that will be found via find()
+            const mockWriteAPI = { writePoints: jest.fn() };
+            globals.influxWriteApi = [{ serverName: 'test-server', writeAPI: mockWriteAPI }];
+
+            const mockUserSessions = {
+                serverName: 'test-server',
+                host: 'test-host',
+                virtualProxy: 'test-proxy',
+                datapointInfluxdb: [
+                    {
+                        measurement: 'user_sessions',
+                        tags: { host: 'test-host' },
+                        fields: { count: 1 },
+                    },
+                ],
+                sessionCount: 1,
+                uniqueUserList: 'user1',
+            };
+
+            await influxdb.postProxySessionsToInfluxdb(mockUserSessions);
+
+            expect(mockWriteAPI.writePoints).toHaveBeenCalled();
+            expect(globals.logger.verbose).toHaveBeenCalledWith(
+                'PROXY SESSIONS: Sent user session data to InfluxDB for server "test-host", virtual proxy "test-proxy"'
+            );
+        });
+    });
+
+    describe('postButlerSOSMemoryUsageToInfluxdb', () => {
+        test('should post memory usage to InfluxDB v1', async () => {
+            globals.config.get = jest.fn((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.version') return 1;
+                if (key === 'Butler-SOS.influxdbConfig.instanceTag') return 'DEV';
+                if (key === 'Butler-SOS.heartbeat.influxdb.measurementName')
+                    return 'butlersos_memory_usage';
+                return undefined;
+            });
+            globals.config.has = jest.fn().mockReturnValue(true);
+            const mockMemory = {
+                heapUsed: 50000000,
+                heapTotal: 100000000,
+                external: 5000000,
+                processMemory: 200000000,
+            };
+
+            await influxdb.postButlerSOSMemoryUsageToInfluxdb(mockMemory);
+
+            expect(globals.influx.writePoints).toHaveBeenCalled();
+        });
+
+        test('should post memory usage to InfluxDB v2', async () => {
+            globals.config.get = jest.fn((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.version') return 2;
+                if (key === 'Butler-SOS.influxdbConfig.instanceTag') return 'DEV';
+                if (key === 'Butler-SOS.heartbeat.influxdb.measurementName')
+                    return 'butlersos_memory_usage';
+                if (key === 'Butler-SOS.influxdbConfig.v2Config.org') return 'test-org';
+                if (key === 'Butler-SOS.influxdbConfig.v2Config.bucket') return 'test-bucket';
+                return undefined;
+            });
+            globals.config.has = jest.fn().mockReturnValue(true);
+
+            // Mock the writeAPI returned by getWriteApi()
+            const mockWriteApi = { writePoint: jest.fn() };
+            globals.influx.getWriteApi = jest.fn().mockReturnValue(mockWriteApi);
+
+            const mockMemory = {
+                instanceTag: 'DEV',
+                heapUsedMByte: 50,
+                heapTotalMByte: 100,
+                externalMemoryMByte: 5,
+                processMemoryMByte: 200,
+            };
+
+            await influxdb.postButlerSOSMemoryUsageToInfluxdb(mockMemory);
+
+            expect(globals.influx.getWriteApi).toHaveBeenCalledWith(
+                'test-org',
+                'test-bucket',
+                'ns',
+                expect.any(Object)
+            );
+            expect(mockWriteApi.writePoint).toHaveBeenCalled();
+            expect(globals.logger.verbose).toHaveBeenCalledWith(
+                'MEMORY USAGE INFLUXDB: Sent Butler SOS memory usage data to InfluxDB'
+            );
+        });
+    });
+
+    describe('postUserEventToInfluxdb', () => {
+        test('should post user event to InfluxDB v1', async () => {
+            globals.config.get = jest.fn((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.version') return 1;
+                if (key === 'Butler-SOS.influxdbConfig.instanceTag') return 'DEV';
+                if (key === 'Butler-SOS.qlikSenseEvents.userActivity.influxdb.measurementName')
+                    return 'user_events';
+                return undefined;
+            });
+            globals.config.has = jest.fn().mockReturnValue(true);
+            const mockMsg = {
+                message: 'User activity',
+                host: 'test-host',
+                source: 'test-source',
+                subsystem: 'test-subsystem',
+                command: 'login',
+                user_directory: 'test-dir',
+                user_id: 'test-user',
+                origin: 'test-origin',
+            };
+
+            await influxdb.postUserEventToInfluxdb(mockMsg);
+
+            expect(globals.influx.writePoints).toHaveBeenCalled();
+        });
+    });
+
+    describe('postLogEventToInfluxdb', () => {
+        test('should handle errors gracefully', async () => {
+            globals.config.get = jest.fn().mockImplementation(() => {
+                throw new Error('Test error');
+            });
+            const mockMsg = { message: 'Test log event' };
+
+            await influxdb.postLogEventToInfluxdb(mockMsg);
+
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                'LOG EVENT INFLUXDB 2: Error saving log event to InfluxDB! Error: Test error'
+            );
         });
     });
 });

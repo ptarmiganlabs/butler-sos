@@ -393,4 +393,407 @@ describe('post-to-new-relic', () => {
             );
         });
     });
+
+    describe('postHealthMetricsToNewRelic', () => {
+        test('should post health metrics to New Relic successfully', async () => {
+            // Setup
+            const host = 'server1.example.com';
+            const body = {
+                started: '20240101T120000',
+                mem: {
+                    committed: 1024,
+                    allocated: 512,
+                    free: 256,
+                },
+                cpu: {
+                    total: 45.5,
+                },
+                apps: {
+                    calls: 100,
+                    selections: 50,
+                    active_docs: ['app1', 'app2'],
+                    loaded_docs: ['app1', 'app2', 'app3'],
+                    in_memory_docs: ['app1'],
+                },
+                session: {
+                    active: 5,
+                    total: 10,
+                },
+                users: {
+                    active: 3,
+                    total: 8,
+                },
+                saturated: false,
+                cache: {
+                    hits: 100,
+                    lookups: 120,
+                    added: 5,
+                    replaced: 2,
+                    bytes_added: 1024,
+                },
+            };
+            const tags = {
+                host: 'server1.example.com',
+                server_name: 'Qlik1',
+            };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.newRelic.metric.url')
+                    return 'https://metric-api.newrelic.com/metric/v1';
+                if (path === 'Butler-SOS.newRelic.metric.attribute.static')
+                    return [{ name: 'environment', value: 'test' }];
+                if (path === 'Butler-SOS.newRelic.metric.attribute.dynamic.butlerSosVersion.enable')
+                    return true;
+                if (path === 'Butler-SOS.newRelic.metric.dynamic.engine.memory.enable') return true;
+                if (path === 'Butler-SOS.newRelic.metric.dynamic.engine.cpu.enable') return true;
+                if (path === 'Butler-SOS.newRelic.metric.dynamic.engine.calls.enable') return true;
+                if (path === 'Butler-SOS.newRelic.metric.dynamic.engine.selections.enable')
+                    return true;
+                if (path === 'Butler-SOS.newRelic.metric.dynamic.engine.sessions.enable')
+                    return true;
+                if (path === 'Butler-SOS.newRelic.metric.dynamic.engine.users.enable') return true;
+                if (path === 'Butler-SOS.newRelic.metric.dynamic.engine.saturated.enable')
+                    return true;
+                if (path === 'Butler-SOS.newRelic.metric.dynamic.apps.docCount.enable') return true;
+                if (path === 'Butler-SOS.newRelic.metric.dynamic.cache.cache.enable') return true;
+                if (path === 'Butler-SOS.serversToMonitor.pollingInterval') return 5000;
+                if (path === 'Butler-SOS.userEvents.sendToNewRelic.destinationAccount')
+                    return ['account1'];
+                if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic')
+                    return [
+                        {
+                            accountName: 'account1',
+                            accountId: '12345',
+                            insertApiKey: 'test-insert-key',
+                        },
+                    ];
+                return undefined;
+            });
+
+            globals.config.has.mockImplementation((path) => {
+                if (path === 'Butler-SOS.newRelic.metric.attribute.static') return true;
+                if (path === 'Butler-SOS.newRelic.metric.attribute.dynamic.butlerSosVersion.enable')
+                    return true;
+                if (path === 'Butler-SOS.newRelic.metric.header') return false;
+                return false;
+            });
+
+            // Mock successful axios response
+            axios.post.mockResolvedValue({
+                status: 200,
+                statusText: 'OK',
+            });
+
+            // Execute
+            await newRelic.postHealthMetricsToNewRelic(host, body, tags);
+
+            // Verify
+            expect(axios.post).toHaveBeenCalled();
+            expect(globals.logger.verbose).toHaveBeenCalledWith(
+                expect.stringContaining(
+                    'HEALTH METRICS NEW RELIC: Sent Qlik Sense health metrics to New Relic'
+                )
+            );
+        });
+
+        test('should handle errors gracefully', async () => {
+            const host = 'server1.example.com';
+            const body = {
+                started: '20240101T120000',
+                mem: {},
+                cpu: {},
+                apps: {
+                    active_docs: ['app1'],
+                    loaded_docs: ['app1', 'app2'],
+                    in_memory_docs: ['app1'],
+                },
+                session: {},
+                users: {},
+                cache: {},
+            };
+            const tags = { host: 'server1.example.com' };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.userEvents.sendToNewRelic.destinationAccount')
+                    return ['account1'];
+                if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic')
+                    return [
+                        {
+                            accountName: 'account1',
+                            accountId: '12345',
+                            insertApiKey: 'test-insert-key',
+                        },
+                    ];
+                return undefined;
+            });
+
+            // Mock axios to throw error
+            const networkError = new Error('Network error');
+            axios.post.mockRejectedValue(networkError);
+
+            // Execute
+            await newRelic.postHealthMetricsToNewRelic(host, body, tags);
+
+            // Verify
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('HEALTH METRICS NEW RELIC: Error sending proxy sessions')
+            );
+        });
+    });
+
+    describe('postButlerSOSUptimeToNewRelic', () => {
+        test('should post Butler SOS uptime metrics to New Relic', async () => {
+            // Setup
+            const fields = {
+                intervalMillisec: 30000,
+                heapUsed: 50000000,
+                heapTotal: 100000000,
+                externalMemory: 5000000,
+                processMemory: 120000000,
+                uptimeMillisec: 86400000,
+            };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.uptimeMonitor.storeNewRelic.destinationAccount')
+                    return ['account1'];
+                if (path === 'Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static')
+                    return [{ name: 'service', value: 'butler-sos' }];
+                if (
+                    path ===
+                    'Butler-SOS.uptimeMonitor.storeNewRelic.attribute.dynamic.butlerVersion.enable'
+                )
+                    return true;
+                if (
+                    path ===
+                    'Butler-SOS.uptimeMonitor.storeNewRelic.metric.dynamic.butlerMemoryUsage.enable'
+                )
+                    return true;
+                if (
+                    path ===
+                    'Butler-SOS.uptimeMonitor.storeNewRelic.metric.dynamic.butlerUptime.enable'
+                )
+                    return true;
+                if (path === 'Butler-SOS.newRelic.metric.url')
+                    return 'https://metric-api.newrelic.com/metric/v1';
+                if (path === 'Butler-SOS.newRelic.metric.header')
+                    return [{ name: 'User-Agent', value: 'Butler-SOS' }];
+                if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic')
+                    return [
+                        {
+                            accountName: 'account1',
+                            accountId: '12345',
+                            insertApiKey: 'test-insert-key',
+                        },
+                    ];
+                return undefined;
+            });
+
+            globals.config.has.mockImplementation((path) => {
+                if (path === 'Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static') return true;
+                if (path === 'Butler-SOS.newRelic.metric.header') return true;
+                return false;
+            });
+
+            // Mock successful axios response
+            axios.post.mockResolvedValue({
+                status: 200,
+                statusText: 'OK',
+            });
+
+            // Execute
+            await newRelic.postButlerSOSUptimeToNewRelic(fields);
+
+            // Verify
+            expect(axios.post).toHaveBeenCalled();
+            expect(globals.logger.verbose).toHaveBeenCalledWith(
+                expect.stringContaining(
+                    'UPTIME NEW RELIC: Sent Butler SOS memory usage data to New Relic'
+                )
+            );
+        });
+
+        test('should handle uptime posting errors', async () => {
+            const fields = {
+                intervalMillisec: 30000,
+                heapUsed: 50000000,
+                heapTotal: 100000000,
+            };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.uptimeMonitor.storeNewRelic.destinationAccount')
+                    return ['account1'];
+                if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic')
+                    return [
+                        {
+                            accountName: 'account1',
+                            accountId: '12345',
+                            insertApiKey: 'test-insert-key',
+                        },
+                    ];
+                return undefined;
+            });
+
+            // Mock axios to throw error
+            const networkError = new Error('Uptime posting failed');
+            axios.post.mockRejectedValue(networkError);
+
+            // Execute
+            await newRelic.postButlerSOSUptimeToNewRelic(fields);
+
+            // Verify
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('UPTIME NEW RELIC: Error sending uptime')
+            );
+        });
+    });
+
+    describe('postUserEventToNewRelic', () => {
+        test('should post user event to New Relic successfully', async () => {
+            // Setup
+            const userEvent = {
+                userId: 'testuser',
+                userDirectory: 'DOMAIN',
+                session: {
+                    sessionId: 'session123',
+                    virtualProxy: 'header',
+                },
+                source: {
+                    engine: true,
+                    proxy: false,
+                    repository: false,
+                    scheduler: false,
+                },
+                ts_iso: '2024-01-01T12:00:00.000Z',
+                ts_start: '2024-01-01T12:00:00.000Z',
+                ts_end: '2024-01-01T12:00:30.000Z',
+                session_duration_sec: 30,
+            };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.newRelic.event.url')
+                    return 'https://insights-collector.newrelic.com/';
+                if (path === 'Butler-SOS.newRelic.event.attribute.static')
+                    return [{ name: 'environment', value: 'test' }];
+                if (path === 'Butler-SOS.newRelic.event.attribute.dynamic.butlerSosVersion.enable')
+                    return true;
+                if (path === 'Butler-SOS.userEvents.sendToNewRelic.destinationAccount')
+                    return ['account1'];
+                if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic')
+                    return [
+                        {
+                            accountName: 'account1',
+                            accountId: '12345',
+                            insertApiKey: 'test-insert-key',
+                        },
+                    ];
+                return undefined;
+            });
+
+            globals.config.has.mockImplementation((path) => {
+                if (path === 'Butler-SOS.newRelic.event.attribute.static') return true;
+                if (path === 'Butler-SOS.newRelic.event.header') return false;
+                return false;
+            });
+
+            // Mock successful axios response
+            axios.post.mockResolvedValue({
+                status: 200,
+                statusText: 'OK',
+            });
+
+            // Execute
+            await newRelic.postUserEventToNewRelic(userEvent);
+
+            // Verify
+            expect(axios.post).toHaveBeenCalled();
+            expect(globals.logger.verbose).toHaveBeenCalledWith(
+                expect.stringContaining('USER EVENT NEW RELIC: Sent user event to New Relic')
+            );
+        });
+
+        test('should handle user event posting errors', async () => {
+            const userEvent = {
+                userId: 'testuser',
+                userDirectory: 'DOMAIN',
+            };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.newRelic.event.url')
+                    return 'https://insights-collector.newrelic.com/';
+                if (path === 'Butler-SOS.userEvents.sendToNewRelic.destinationAccount')
+                    return ['account1'];
+                if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic')
+                    return [
+                        {
+                            accountName: 'account1',
+                            accountId: '12345',
+                            insertApiKey: 'test-insert-key',
+                        },
+                    ];
+                return undefined;
+            });
+
+            // Mock axios to throw error
+            const networkError = new Error('User event posting failed');
+            axios.post.mockRejectedValue(networkError);
+
+            // Execute
+            await newRelic.postUserEventToNewRelic(userEvent);
+
+            // Verify
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining(
+                    'USER EVENT NEW RELIC: Error saving user event to New Relic!'
+                )
+            );
+        });
+    });
+
+    describe('postLogEventToNewRelic', () => {
+        test('should handle log event posting errors', async () => {
+            const logEvent = {
+                source: 'qseow-engine',
+                level: 'ERROR',
+                host: 'server1.example.com',
+            };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.newRelic.event.url')
+                    return 'https://insights-collector.newrelic.com/';
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.enable')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.destinationAccount')
+                    return ['account1'];
+                if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic')
+                    return [
+                        {
+                            accountName: 'account1',
+                            accountId: '12345',
+                            insertApiKey: 'test-insert-key',
+                        },
+                    ];
+                return undefined;
+            });
+
+            globals.config.has.mockImplementation((path) => {
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
+                    return true;
+                return false;
+            });
+
+            // Mock axios to throw error
+            const networkError = new Error('Log event posting failed');
+            axios.post.mockRejectedValue(networkError);
+
+            // Execute
+            await newRelic.postLogEventToNewRelic(logEvent);
+
+            // Verify
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('LOG EVENT NEW RELIC: Error saving event to New Relic!')
+            );
+        });
+    });
 });
