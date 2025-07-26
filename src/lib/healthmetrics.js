@@ -48,7 +48,7 @@ function getCertificates(options) {
  * @returns {void}
  */
 export function getHealthStatsFromSense(serverName, host, tags, headers) {
-    globals.logger.debug(`HEALTH: URL=https://${host}/engine/healthcheck/`);
+    globals.logger.debug(`HEALTH: URL=https://${host}/engine/healthcheck`);
 
     const options = {};
 
@@ -90,7 +90,7 @@ export function getHealthStatsFromSense(serverName, host, tags, headers) {
     });
 
     const requestSettings = {
-        url: `https://${host}/engine/healthcheck/`,
+        url: `https://${host}/engine/healthcheck`,
         method: 'get',
         headers: {
             'Cache-Control': 'no-cache',

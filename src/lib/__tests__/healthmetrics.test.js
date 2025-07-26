@@ -164,7 +164,7 @@ describe('healthmetrics', () => {
         // Expectations
         expect(axios.request).toHaveBeenCalled();
         expect(globals.logger.debug).toHaveBeenCalledWith(
-            'HEALTH: URL=https://server1.example.com/engine/healthcheck/'
+            'HEALTH: URL=https://server1.example.com/engine/healthcheck'
         );
 
         // Verify that metrics were posted to all enabled destinations
