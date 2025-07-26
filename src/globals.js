@@ -417,11 +417,19 @@ class Settings {
         );
 
         // Get certificate file paths for QRS connection
-        const filename = fileURLToPath(import.meta.url);
-        const dirname = upath.dirname(filename);
-        this.certPath = upath.resolve(dirname, this.config.get('Butler-SOS.cert.clientCert'));
-        this.keyPath = upath.resolve(dirname, this.config.get('Butler-SOS.cert.clientCertKey'));
-        this.caPath = upath.resolve(dirname, this.config.get('Butler-SOS.cert.clientCertCA'));
+        // When running as SEA (Single Executable Application), resolve paths relative to executable directory
+        // rather than source directory to avoid "file not included in executable" errors
+        let basePath;
+        if (this.isSea) {
+            basePath = this.execPath;
+        } else {
+            const filename = fileURLToPath(import.meta.url);
+            basePath = upath.dirname(filename);
+        }
+
+        this.certPath = upath.resolve(basePath, this.config.get('Butler-SOS.cert.clientCert'));
+        this.keyPath = upath.resolve(basePath, this.config.get('Butler-SOS.cert.clientCertKey'));
+        this.caPath = upath.resolve(basePath, this.config.get('Butler-SOS.cert.clientCertCA'));
 
         // ------------------------------------
         // User activity UDP server
