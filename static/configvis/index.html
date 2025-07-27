@@ -132,50 +132,36 @@
                 overflow: auto;
             }
 
-            /* Make tooltips clickable by allowing hover on the tooltip itself */
+            /* Make tooltips hoverable so links can be clicked */
+            div.jsontree-js-tooltip,
+            div.jsontree-js-tooltip-value {
+                /* Increase z-index to ensure tooltips appear above other elements */
+                z-index: 9999 !important;
+                /* Make the tooltip itself hoverable */
+                pointer-events: auto !important;
+                /* Add padding around tooltip for easier hover targeting */
+                padding: 12px !important;
+            }
+
+            /* Prevent tooltips from disappearing when hovering over them */
             div.jsontree-js-tooltip:hover,
             div.jsontree-js-tooltip-value:hover {
                 display: block !important;
+                visibility: visible !important;
             }
 
-            /* Add a slight delay and prevent tooltips from disappearing when cursor moves towards them */
-            div.jsontree-js-tooltip,
-            div.jsontree-js-tooltip-value {
-                transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out !important;
-                pointer-events: auto !important;
-            }
-
-            /* Override user-select for links inside tooltips to make them selectable and clickable */
+            /* Style links in tooltips to be more obviously clickable */
             div.jsontree-js-tooltip a,
             div.jsontree-js-tooltip-value a {
                 color: #4a9eff !important;
                 text-decoration: underline !important;
-                cursor: pointer !important;
-                user-select: auto !important;
-                -moz-user-select: auto !important;
-                -webkit-user-select: auto !important;
-                -ms-user-select: auto !important;
-                -o-user-select: auto !important;
                 pointer-events: auto !important;
             }
 
             div.jsontree-js-tooltip a:hover,
             div.jsontree-js-tooltip-value a:hover {
                 color: #66b3ff !important;
-                text-decoration: underline !important;
-            }
-
-            /* Create a hover bridge between the trigger element and tooltip */
-            div.jsontree-js-tooltip::before,
-            div.jsontree-js-tooltip-value::before {
-                content: '';
-                position: absolute;
-                top: -10px;
-                left: -10px;
-                right: -10px;
-                bottom: -10px;
-                pointer-events: auto;
-                z-index: -1;
+                background-color: rgba(74, 158, 255, 0.1) !important;
             }
 
 
