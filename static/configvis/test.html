@@ -138,44 +138,17 @@
                 display: block !important;
             }
 
-            /* Add a slight delay and prevent tooltips from disappearing when cursor moves towards them */
-            div.jsontree-js-tooltip,
-            div.jsontree-js-tooltip-value {
-                transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out !important;
-                pointer-events: auto !important;
-            }
-
-            /* Override user-select for links inside tooltips to make them selectable and clickable */
+            /* Ensure links in tooltips are clickable */
             div.jsontree-js-tooltip a,
             div.jsontree-js-tooltip-value a {
-                color: #4a9eff !important;
-                text-decoration: underline !important;
-                cursor: pointer !important;
-                user-select: auto !important;
-                -moz-user-select: auto !important;
-                -webkit-user-select: auto !important;
-                -ms-user-select: auto !important;
-                -o-user-select: auto !important;
-                pointer-events: auto !important;
+                color: #4a9eff;
+                text-decoration: underline;
+                cursor: pointer;
             }
 
             div.jsontree-js-tooltip a:hover,
             div.jsontree-js-tooltip-value a:hover {
-                color: #66b3ff !important;
-                text-decoration: underline !important;
-            }
-
-            /* Create a hover bridge between the trigger element and tooltip */
-            div.jsontree-js-tooltip::before,
-            div.jsontree-js-tooltip-value::before {
-                content: '';
-                position: absolute;
-                top: -10px;
-                left: -10px;
-                right: -10px;
-                bottom: -10px;
-                pointer-events: auto;
-                z-index: -1;
+                color: #66b3ff;
             }
 
 
@@ -232,7 +205,15 @@
         <!-- Tab content -->
         <div id="YAML" class="tabcontent">
             <h3>YAML configuration</h3>
-            <pre class="line-numbers"><code class="language-yaml">{{butlerConfigYaml}}</code></pre>
+            <pre class="line-numbers"><code class="language-yaml">
+Butler-SOS:
+  logLevel: info
+  anonTelemetry: true
+  heartbeat:
+    frequency: every 30 second
+  uptimeMonitor:
+    frequency: every 10 minutes
+            </code></pre>
         </div>
 
         <div id="JSONTree" class="tabcontent">
@@ -248,7 +229,18 @@
                 showCounts: true, 
                 sortPropertyNames: false, 
                 sortPropertyNamesInAlphabeticalOrder: false, 
-                data: {{butlerSosConfigJsonEncoded}},
+                data: {
+                    "Butler-SOS": {
+                        "logLevel": "info",
+                        "anonTelemetry": true,
+                        "heartbeat": {
+                            "frequency": "every 30 second"
+                        },
+                        "uptimeMonitor": {
+                            "frequency": "every 10 minutes"
+                        }
+                    }
+                },
                 tooltip: {
                     delay: 50,
                     offset: 15
@@ -354,7 +346,13 @@
             // Function that gets data from handlebars template butlerConfigYamlObfuscated and returns it
             function getYamlFromHandlebars() {
                 try {
-                    const yamlData = `{{butlerConfigYaml}}`;
+                    const yamlData = `Butler-SOS:
+  logLevel: info
+  anonTelemetry: true
+  heartbeat:
+    frequency: every 30 second
+  uptimeMonitor:
+    frequency: every 10 minutes`;
                     return yamlData;
                 } catch (error) {
                     console.error(
