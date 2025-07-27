@@ -78,6 +78,9 @@ class Settings {
      * @returns {object} The singleton instance of the Settings class after initialization
      */
     async init() {
+        // Initialize the SEA wrapper module
+        await sea.initialize();
+
         // Get app version from package.json file
         const filenamePackage = `./package.json`;
         let a;
