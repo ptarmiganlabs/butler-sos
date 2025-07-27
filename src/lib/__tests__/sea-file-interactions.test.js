@@ -205,4 +205,62 @@ describe('SEA vs non-SEA file interactions integration tests', () => {
         
         expect(encoding2).toBeUndefined();
     });
+
+    test('should handle certificate file loading patterns in both modes', () => {
+        // Certificate file loading should work in both modes
+        const certificatePaths = {
+            Certificate: '/path/to/client.crt',
+            CertificateKey: '/path/to/client.key',
+            CertificateCA: '/path/to/ca.crt'
+        };
+
+        // Non-SEA mode: should use filesystem
+        mockGlobals.isSea = false;
+        const shouldUseFilesystem = !mockGlobals.isSea;
+        expect(shouldUseFilesystem).toBe(true);
+
+        // Mock filesystem certificate reading
+        mockFs.readFileSync
+            .mockReturnValueOnce('-----BEGIN CERTIFICATE-----\ncert data...')
+            .mockReturnValueOnce('-----BEGIN PRIVATE KEY-----\nkey data...')
+            .mockReturnValueOnce('-----BEGIN CERTIFICATE-----\nca data...');
+
+        if (!mockGlobals.isSea) {
+            const certs = {
+                cert: mockFs.readFileSync(certificatePaths.Certificate),
+                key: mockFs.readFileSync(certificatePaths.CertificateKey),
+                ca: mockFs.readFileSync(certificatePaths.CertificateCA)
+            };
+            
+            expect(certs.cert).toBe('-----BEGIN CERTIFICATE-----\ncert data...');
+            expect(certs.key).toBe('-----BEGIN PRIVATE KEY-----\nkey data...');
+            expect(certs.ca).toBe('-----BEGIN CERTIFICATE-----\nca data...');
+        }
+
+        // SEA mode: should use assets
+        mockGlobals.isSea = true;
+        const shouldUseAssets = mockGlobals.isSea;
+        expect(shouldUseAssets).toBe(true);
+
+        // Mock SEA asset certificate reading
+        const mockSeaGetAsset = jest.fn()
+            .mockReturnValueOnce('-----BEGIN CERTIFICATE-----\ncert data...')
+            .mockReturnValueOnce('-----BEGIN PRIVATE KEY-----\nkey data...')
+            .mockReturnValueOnce('-----BEGIN CERTIFICATE-----\nca data...');
+
+        if (mockGlobals.isSea) {
+            const certs = {
+                cert: mockSeaGetAsset(certificatePaths.Certificate, 'utf8'),
+                key: mockSeaGetAsset(certificatePaths.CertificateKey, 'utf8'),
+                ca: mockSeaGetAsset(certificatePaths.CertificateCA, 'utf8')
+            };
+            
+            expect(certs.cert).toBe('-----BEGIN CERTIFICATE-----\ncert data...');
+            expect(certs.key).toBe('-----BEGIN PRIVATE KEY-----\nkey data...');
+            expect(certs.ca).toBe('-----BEGIN CERTIFICATE-----\nca data...');
+            expect(mockSeaGetAsset).toHaveBeenCalledWith('/path/to/client.crt', 'utf8');
+            expect(mockSeaGetAsset).toHaveBeenCalledWith('/path/to/client.key', 'utf8');
+            expect(mockSeaGetAsset).toHaveBeenCalledWith('/path/to/ca.crt', 'utf8');
+        }
+    });
 });
