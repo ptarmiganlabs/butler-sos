@@ -77,6 +77,14 @@ jest.unstable_mockModule('../file-prep.js', () => ({
     compileTemplate: jest.fn().mockReturnValue('compiled template'),
 }));
 
+// Mock sea-wrapper (needed by file-prep.js)
+jest.unstable_mockModule('../sea-wrapper.js', () => ({
+    default: {
+        getAsset: jest.fn(),
+        isSea: jest.fn().mockReturnValue(false),
+    },
+}));
+
 // Mock globals
 jest.unstable_mockModule('../../globals.js', () => ({
     default: {
