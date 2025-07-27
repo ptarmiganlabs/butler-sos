@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Readable } from 'node:stream';
-import sea from 'node:sea';
+import sea from './sea-wrapper.js';
 import handlebars from 'handlebars';
 
 import globals from '../globals.js';

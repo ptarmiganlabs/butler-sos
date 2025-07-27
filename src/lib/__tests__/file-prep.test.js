@@ -10,9 +10,10 @@ jest.unstable_mockModule('path', () => ({
     extname: jest.fn(),
 }));
 
-jest.unstable_mockModule('node:sea', () => ({
+jest.unstable_mockModule('../sea-wrapper.js', () => ({
     default: {
         getAsset: jest.fn(),
+        isSea: jest.fn().mockReturnValue(false),
     },
 }));
 
@@ -35,7 +36,7 @@ jest.unstable_mockModule('../../globals.js', () => ({
 // Import mocked modules
 const fs = await import('fs');
 const path = await import('path');
-const sea = (await import('node:sea')).default;
+const sea = (await import('../sea-wrapper.js')).default;
 const handlebars = (await import('handlebars')).default;
 const globals = (await import('../../globals.js')).default;
 
@@ -185,6 +186,99 @@ describe('file-prep', () => {
             // Verify
             expect(fs.readFileSync).toHaveBeenCalledWith('/test/file.txt', 'latin1');
         });
+
+        test('should handle large file content in SEA mode', async () => {
+            // Setup mocks
+            globals.isSea = true;
+            path.extname.mockReturnValue('.txt');
+            const largeContent = 'x'.repeat(10000); // Large text content
+            sea.getAsset.mockReturnValue(largeContent);
+
+            // Execute
+            const result = await prepareFile('/test/large.txt');
+
+            // Verify
+            expect(result.found).toBe(true);
+            expect(result.content).toBe(largeContent);
+            expect(result.content.length).toBe(10000);
+        });
+
+        test('should handle empty file content in both modes', async () => {
+            // Test non-SEA mode with empty file
+            globals.isSea = false;
+            path.extname.mockReturnValue('.txt');
+            fs.existsSync.mockReturnValue(true);
+            fs.readFileSync.mockReturnValue('');
+
+            const result1 = await prepareFile('/test/empty.txt');
+            expect(result1.found).toBe(true);
+            expect(result1.content).toBe('');
+
+            // Test SEA mode with empty asset
+            globals.isSea = true;
+            sea.getAsset.mockReturnValue('');
+
+            const result2 = await prepareFile('/test/empty.txt');
+            expect(result2.found).toBe(true);
+            expect(result2.content).toBe('');
+        });
+
+        test('should handle file path with special characters', async () => {
+            // Setup mocks
+            path.extname.mockReturnValue('.html');
+            fs.existsSync.mockReturnValue(true);
+            fs.readFileSync.mockReturnValue('<html>Special chars</html>');
+
+            // Execute with path containing special characters
+            const result = await prepareFile('/test/file-with-special_chars[1].html');
+
+            // Verify
+            expect(result.found).toBe(true);
+            expect(result.content).toBe('<html>Special chars</html>');
+        });
+
+        test('should handle concurrent file preparation requests', async () => {
+            // Setup mocks
+            path.extname.mockReturnValue('.txt');
+            fs.existsSync.mockReturnValue(true);
+            fs.readFileSync.mockReturnValue('concurrent content');
+
+            // Execute multiple concurrent requests
+            const promises = [
+                prepareFile('/test/file1.txt'),
+                prepareFile('/test/file2.txt'),
+                prepareFile('/test/file3.txt'),
+            ];
+
+            const results = await Promise.all(promises);
+
+            // Verify all requests succeeded
+            results.forEach((result, index) => {
+                expect(result.found).toBe(true);
+                expect(result.content).toBe('concurrent content');
+                expect(fs.readFileSync).toHaveBeenCalledWith(`/test/file${index + 1}.txt`, 'utf8');
+            });
+        });
+
+        test('should validate stream creation for different content types', async () => {
+            // Test text content stream
+            path.extname.mockReturnValue('.txt');
+            fs.existsSync.mockReturnValue(true);
+            fs.readFileSync.mockReturnValue('text content');
+
+            const textResult = await prepareFile('/test/text.txt');
+            expect(textResult.stream).toBeDefined();
+            expect(textResult.content).toBe('text content');
+
+            // Test binary content stream
+            path.extname.mockReturnValue('.png');
+            const binaryBuffer = Buffer.from([0x89, 0x50, 0x4E, 0x47]); // PNG header
+            fs.readFileSync.mockReturnValue(binaryBuffer);
+
+            const binaryResult = await prepareFile('/test/image.png');
+            expect(binaryResult.stream).toBeDefined();
+            expect(Buffer.isBuffer(binaryResult.content)).toBe(true);
+        });
     });
 
     describe('compileTemplate', () => {
@@ -277,6 +371,38 @@ describe('file-prep', () => {
             path.extname.mockReturnValue('.HTML');
             const result = getMimeType('/test/file.HTML');
             expect(result).toBe('text/html; charset=utf-8');
+        });
+
+        test('should handle files without extensions', () => {
+            path.extname.mockReturnValue('');
+            const result = getMimeType('/test/file-no-extension');
+            expect(result).toBe('application/octet-stream');
+        });
+
+        test('should handle complex file paths', () => {
+            path.extname.mockReturnValue('.css');
+            const result = getMimeType('/deep/nested/path/with-special_chars[1]/style.css');
+            expect(result).toBe('text/css');
+        });
+
+        test('should handle all supported MIME types', () => {
+            const extensionTests = [
+                { ext: '.html', expected: 'text/html; charset=utf-8' },
+                { ext: '.css', expected: 'text/css' },
+                { ext: '.js', expected: 'application/javascript' },
+                { ext: '.png', expected: 'image/png' },
+                { ext: '.jpg', expected: 'image/jpeg' },
+                { ext: '.gif', expected: 'image/gif' },
+                { ext: '.svg', expected: 'image/svg+xml' },
+                { ext: '.map', expected: 'application/json' },
+                { ext: '.ico', expected: 'image/x-icon' },
+            ];
+
+            extensionTests.forEach(({ ext, expected }) => {
+                path.extname.mockReturnValue(ext);
+                const result = getMimeType(`/test/file${ext}`);
+                expect(result).toBe(expected);
+            });
         });
     });
 });

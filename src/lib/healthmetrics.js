@@ -6,6 +6,7 @@ import path from 'path';
 import https from 'https';
 import fs from 'fs';
 import axios from 'axios';
+import sea from './sea-wrapper.js';
 
 import globals from '../globals.js';
 import { postHealthMetricsToInfluxdb } from './post-to-influxdb.js';
@@ -16,7 +17,7 @@ import { getServerTags } from './servertags.js';
 import { saveHealthMetricsToPrometheus } from './prom-client.js';
 
 /**
- * Loads TLS certificates from the filesystem based on the provided options.
+ * Loads TLS certificates from the filesystem or SEA assets based on the provided options.
  *
  * @param {object} options - Certificate options
  * @param {string} options.Certificate - Path to the client certificate file
@@ -25,12 +26,20 @@ import { saveHealthMetricsToPrometheus } from './prom-client.js';
  * @param {string} [options.CertificatePassphrase] - Optional passphrase for the certificate
  * @returns {object} Object containing cert, key, and ca properties with certificate contents
  */
-function getCertificates(options) {
+export function getCertificates(options) {
     const certificate = {};
 
-    certificate.cert = fs.readFileSync(options.Certificate);
-    certificate.key = fs.readFileSync(options.CertificateKey);
-    certificate.ca = fs.readFileSync(options.CertificateCA);
+    if (globals.isSea) {
+        // In SEA mode, get certificates from embedded assets
+        certificate.cert = sea.getAsset(options.Certificate, 'utf8');
+        certificate.key = sea.getAsset(options.CertificateKey, 'utf8');
+        certificate.ca = sea.getAsset(options.CertificateCA, 'utf8');
+    } else {
+        // In non-SEA mode, read certificates from filesystem
+        certificate.cert = fs.readFileSync(options.Certificate);
+        certificate.key = fs.readFileSync(options.CertificateKey);
+        certificate.ca = fs.readFileSync(options.CertificateCA);
+    }
 
     return certificate;
 }

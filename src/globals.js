@@ -13,7 +13,7 @@ import { Command, Option } from 'commander';
 import { InfluxDB, HttpError, DEFAULT_WriteOptions } from '@influxdata/influxdb-client';
 import { OrgsAPI, BucketsAPI } from '@influxdata/influxdb-client-apis';
 import { fileURLToPath } from 'url';
-import sea from 'node:sea';
+import sea from './lib/sea-wrapper.js';
 
 import { getServerTags } from './lib/servertags.js';
 import { UdpEvents } from './lib/udp-event.js';
