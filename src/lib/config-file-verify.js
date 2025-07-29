@@ -24,6 +24,11 @@ function createConditionalSchema(parsedConfig, baseSchema) {
     const butlerSchema = schema.properties['Butler-SOS'];
 
     // Helper function to create conditional validation for a feature
+    /**
+     * Creates conditional validation for a feature based on its enable status
+     *
+     * @param {string} featureName - The name of the feature to make conditional
+     */
     const makeFeatureConditional = (featureName) => {
         const featureSchema = butlerSchema.properties[featureName];
         if (!featureSchema) return;
