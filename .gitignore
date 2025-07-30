@@ -15,6 +15,7 @@ release-macos
 ssl/*
 *.tmp
 snyk.sarif
+build
 
 # Logs
 log/

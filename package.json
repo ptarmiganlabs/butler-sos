@@ -12,7 +12,10 @@
         "format": "npm run format:prettier",
         "format:prettier": "npx prettier --config .prettierrc.yaml \"./**/*.{ts,css,less,js}\" --write",
         "lint": "npx eslint src/**/*.js",
-        "lint:fix": "npx eslint --fix src/**/*.js"
+        "lint:fix": "npx eslint --fix src/**/*.js",
+        "security:audit": "npm audit --audit-level=high",
+        "security:full": "npm run security:audit && snyk test --severity-threshold=high",
+        "sbom:generate": "rm -r ./build && mkdir -p ./build && sbom-tool generate -b ./build -bc . -pn butler-sos -pv $(node -p \"require('./package.json').version\") -ps \"Ptarmigan Labs\" -nsb https://sbom.ptarmiganlabs.com -V verbose"
     },
     "repository": {
         "type": "git",
