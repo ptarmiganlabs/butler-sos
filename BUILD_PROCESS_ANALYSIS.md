@@ -214,11 +214,32 @@ jobs:
 
 **OSV Scanner (Google) - FREE vulnerability scanning**:
 
-```bash
-# Install OSV Scanner
-go install github.com/google/osv-scanner/cmd/osv-scanner@latest
-# Or use in GitHub Actions
+**Current Implementation**: ✅ **Active** - OSV-scanner scheduled workflow configured
+
+**Current Setup**:
+
+- ✅ **Scheduled daily scans** at 03:00 CET (02:00 UTC)
+- ✅ **Push-triggered scans** on master branch
+- ✅ **SARIF integration** with GitHub Security tab
+- ✅ **Automated vulnerability detection** for dependencies
+
+**Workflow file**: `.github/workflows/osv-scanner-scheduled.yml`
+
+```yaml
+name: OSV-Scanner Scheduled Scan
+on:
+    schedule:
+        - cron: '0 2 * * *' # Daily at 02:00 UTC (03:00 CET)
+    push:
+        branches: [master]
 ```
+
+**Benefits**:
+
+- Comprehensive vulnerability database coverage
+- Automated daily security scanning
+- Integration with GitHub Security tab
+- No configuration required - works out of the box
 
 **Socket Security - FREE for open source**:
 
@@ -384,10 +405,10 @@ sbom-build:
 **J. Cost-Free Implementation Priority**:
 
 1. **Week 1**: ✅ **SBOM generation already implemented** with Microsoft SBOM Tool in ci.yaml
-2. **Week 2**: Implement lockfile validation and audit-ci
-3. **Week 3**: Add license checking with license-checker
-4. **Week 4**: Enhance existing SBOM workflow with additional validation
-5. **Week 5**: Add OSV Scanner integration
+2. **Week 2**: ✅ **License checking already implemented** with license-checker-rseidelsohn
+3. **Week 3**: ✅ **OSV-scanner already implemented** with daily scheduled scans
+4. **Week 4**: Implement lockfile validation and audit-ci
+5. **Week 5**: Enhance existing SBOM workflow with additional validation
 
 **Benefits**:
 
