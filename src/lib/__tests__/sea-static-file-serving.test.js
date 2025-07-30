@@ -44,7 +44,7 @@ describe('SEA Static File Serving Tests', () => {
             compileTemplate: jest.fn(),
         };
 
-        // Mock path utilities  
+        // Mock path utilities
         mockPath = {
             resolve: jest.fn(),
         };
@@ -54,10 +54,10 @@ describe('SEA Static File Serving Tests', () => {
         // Setup non-SEA mode
         mockGlobals.isSea = false;
         mockPath.resolve.mockReturnValue('/mock/app/base/static/404.html');
-        
+
         // Simulate 404 page request
-        const filePath = mockGlobals.isSea 
-            ? '/404.html' 
+        const filePath = mockGlobals.isSea
+            ? '/404.html'
             : mockPath.resolve(mockGlobals.appBasePath, 'static', '404.html');
 
         expect(filePath).toBe('/mock/app/base/static/404.html');
@@ -67,10 +67,10 @@ describe('SEA Static File Serving Tests', () => {
     test('should handle 404 page serving in SEA mode', async () => {
         // Setup SEA mode
         mockGlobals.isSea = true;
-        
-        // Simulate 404 page request  
-        const filePath = mockGlobals.isSea 
-            ? '/404.html' 
+
+        // Simulate 404 page request
+        const filePath = mockGlobals.isSea
+            ? '/404.html'
             : mockPath.resolve(mockGlobals.appBasePath, 'static', '404.html');
 
         expect(filePath).toBe('/404.html');
@@ -82,23 +82,27 @@ describe('SEA Static File Serving Tests', () => {
         // Setup non-SEA mode
         mockGlobals.isSea = false;
         mockPath.resolve.mockReturnValue('/mock/app/base/static/configvis/index.html');
-        
+
         // Simulate config vis template request
-        const filePath = mockGlobals.isSea 
-            ? '/configvis/index.html' 
+        const filePath = mockGlobals.isSea
+            ? '/configvis/index.html'
             : mockPath.resolve(mockGlobals.appBasePath, 'static/configvis', 'index.html');
 
         expect(filePath).toBe('/mock/app/base/static/configvis/index.html');
-        expect(mockPath.resolve).toHaveBeenCalledWith('/mock/app/base', 'static/configvis', 'index.html');
+        expect(mockPath.resolve).toHaveBeenCalledWith(
+            '/mock/app/base',
+            'static/configvis',
+            'index.html'
+        );
     });
 
     test('should handle config visualization template serving in SEA mode', async () => {
         // Setup SEA mode
         mockGlobals.isSea = true;
-        
+
         // Simulate config vis template request
-        const filePath = mockGlobals.isSea 
-            ? '/configvis/index.html' 
+        const filePath = mockGlobals.isSea
+            ? '/configvis/index.html'
             : mockPath.resolve(mockGlobals.appBasePath, 'static/configvis', 'index.html');
 
         expect(filePath).toBe('/configvis/index.html');
@@ -109,7 +113,7 @@ describe('SEA Static File Serving Tests', () => {
     test('should setup static file plugin in non-SEA mode', async () => {
         // Setup non-SEA mode
         mockGlobals.isSea = false;
-        
+
         // Simulate static file plugin registration logic
         if (!mockGlobals.isSea) {
             // Would register @fastify/static plugin
@@ -118,9 +122,9 @@ describe('SEA Static File Serving Tests', () => {
                 prefix: '/',
             });
         }
-        
+
         expect(mockFastify.register).toHaveBeenCalledWith('mockStaticPlugin', {
-            root: '/mock/app/base/static', 
+            root: '/mock/app/base/static',
             prefix: '/',
         });
     });
@@ -128,18 +132,18 @@ describe('SEA Static File Serving Tests', () => {
     test('should setup custom file routes in SEA mode', async () => {
         // Setup SEA mode
         mockGlobals.isSea = true;
-        
+
         // Simulate custom route setup logic
         if (mockGlobals.isSea) {
             mockGlobals.logger.info('Running in SEA mode, setting up custom static file handlers');
-            
+
             // Would set up individual routes for each static file
             mockFastify.get('/:filename', jest.fn());
             mockFastify.get('/butler-sos.png', jest.fn());
-            
+
             mockGlobals.logger.info('Custom static file handlers set up for SEA mode');
         }
-        
+
         expect(mockGlobals.logger.info).toHaveBeenCalledWith(
             'Running in SEA mode, setting up custom static file handlers'
         );
@@ -159,21 +163,22 @@ describe('SEA Static File Serving Tests', () => {
         };
         mockFilePrep.prepareFile.mockResolvedValue(mockFileResult);
         mockFilePrep.compileTemplate.mockReturnValue('<html>Hello World!</html>');
-        
+
         // Simulate file serving with template compilation
         const filePath = '/test/template.html';
         const fileResult = await mockFilePrep.prepareFile(filePath, 'utf8');
-        
+
         if (fileResult.found) {
-            const compiledContent = mockFilePrep.compileTemplate(fileResult.content, { name: 'World' });
+            const compiledContent = mockFilePrep.compileTemplate(fileResult.content, {
+                name: 'World',
+            });
             expect(compiledContent).toBe('<html>Hello World!</html>');
         }
-        
+
         expect(mockFilePrep.prepareFile).toHaveBeenCalledWith(filePath, 'utf8');
-        expect(mockFilePrep.compileTemplate).toHaveBeenCalledWith(
-            '<html>Hello {{name}}!</html>',
-            { name: 'World' }
-        );
+        expect(mockFilePrep.compileTemplate).toHaveBeenCalledWith('<html>Hello {{name}}!</html>', {
+            name: 'World',
+        });
     });
 
     test('should handle file not found error in both modes', async () => {
@@ -184,30 +189,30 @@ describe('SEA Static File Serving Tests', () => {
             mimeType: null,
         };
         mockFilePrep.prepareFile.mockResolvedValue(mockFileResult);
-        
+
         // Test non-SEA mode file not found
         mockGlobals.isSea = false;
         const filePath1 = '/mock/app/base/static/missing.html';
         const result1 = await mockFilePrep.prepareFile(filePath1);
-        
+
         if (!result1.found) {
             mockGlobals.logger.error('Could not find template file');
         }
-        
+
         expect(mockGlobals.logger.error).toHaveBeenCalledWith('Could not find template file');
-        
+
         // Reset mocks
         mockGlobals.logger.error.mockClear();
-        
+
         // Test SEA mode file not found
         mockGlobals.isSea = true;
         const filePath2 = '/missing.html';
         const result2 = await mockFilePrep.prepareFile(filePath2);
-        
+
         if (!result2.found) {
             mockGlobals.logger.error('Could not find template file');
         }
-        
+
         expect(mockGlobals.logger.error).toHaveBeenCalledWith('Could not find template file');
     });
 
@@ -220,21 +225,21 @@ describe('SEA Static File Serving Tests', () => {
             ext: 'png',
         };
         mockFilePrep.prepareFile.mockResolvedValue(mockBinaryResult);
-        
+
         // Non-SEA mode
         mockGlobals.isSea = false;
         const nonSeaPath = mockGlobals.isSea ? '/logo.png' : '/mock/app/base/static/logo.png';
         const result1 = await mockFilePrep.prepareFile(nonSeaPath);
-        
+
         expect(result1.found).toBe(true);
         expect(result1.mimeType).toBe('image/png');
         expect(Buffer.isBuffer(result1.content)).toBe(true);
-        
-        // SEA mode  
+
+        // SEA mode
         mockGlobals.isSea = true;
         const seaPath = mockGlobals.isSea ? '/logo.png' : '/mock/app/base/static/logo.png';
         const result2 = await mockFilePrep.prepareFile(seaPath);
-        
+
         expect(result2.found).toBe(true);
         expect(result2.mimeType).toBe('image/png');
         expect(Buffer.isBuffer(result2.content)).toBe(true);
@@ -250,10 +255,10 @@ describe('SEA Static File Serving Tests', () => {
             mimeType: 'text/plain',
         };
         mockFilePrep.prepareFile.mockResolvedValue(mockStreamResult);
-        
+
         // Test that file streams are created properly
         const result = await mockFilePrep.prepareFile('/test/file.txt');
-        
+
         expect(result.found).toBe(true);
         expect(result.stream).toBeDefined();
         expect(result.stream.pipe).toBeDefined();
@@ -263,7 +268,7 @@ describe('SEA Static File Serving Tests', () => {
         // Test MIME type mappings that should work consistently in both modes
         const mimeTypes = {
             '.html': 'text/html; charset=utf-8',
-            '.css': 'text/css', 
+            '.css': 'text/css',
             '.js': 'application/javascript',
             '.png': 'image/png',
             '.jpg': 'image/jpeg',
@@ -271,7 +276,7 @@ describe('SEA Static File Serving Tests', () => {
             '.svg': 'image/svg+xml',
             '.ico': 'image/x-icon',
         };
-        
+
         Object.entries(mimeTypes).forEach(([ext, expectedMimeType]) => {
             expect(mimeTypes[ext]).toBe(expectedMimeType);
         });
@@ -280,13 +285,13 @@ describe('SEA Static File Serving Tests', () => {
     test('should handle custom route parameters in SEA mode', async () => {
         // Test that SEA mode can handle parameterized routes
         mockGlobals.isSea = true;
-        
+
         if (mockGlobals.isSea) {
             // Mock route handler for /:filename
             const filenameHandler = jest.fn(async (request, reply) => {
                 const filename = request.params.filename;
                 const filePath = `/${filename}`;
-                
+
                 const result = await mockFilePrep.prepareFile(filePath);
                 if (result.found) {
                     reply.type(result.mimeType).send(result.content);
@@ -294,26 +299,26 @@ describe('SEA Static File Serving Tests', () => {
                     reply.code(404).send('File not found');
                 }
             });
-            
+
             mockFastify.get('/:filename', filenameHandler);
-            
-            // Simulate request  
+
+            // Simulate request
             const mockRequest = { params: { filename: 'test.html' } };
             const mockReply = {
                 type: jest.fn().mockReturnThis(),
                 send: jest.fn(),
                 code: jest.fn().mockReturnThis(),
             };
-            
+
             // Mock successful file result
             mockFilePrep.prepareFile.mockResolvedValue({
                 found: true,
                 content: '<html>Test</html>',
                 mimeType: 'text/html; charset=utf-8',
             });
-            
+
             await filenameHandler(mockRequest, mockReply);
-            
+
             expect(mockFilePrep.prepareFile).toHaveBeenCalledWith('/test.html');
             expect(mockReply.type).toHaveBeenCalledWith('text/html; charset=utf-8');
             expect(mockReply.send).toHaveBeenCalledWith('<html>Test</html>');

@@ -2,7 +2,7 @@
 applyTo: '**'
 ---
 
-# Formatting and indentention when generating code
+# Formatting and indentention of files
 
 DO NOT fix code indentation or formatting as part of work done by Copilot.  
 Other tools will handle that.
