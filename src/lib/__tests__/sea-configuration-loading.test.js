@@ -90,7 +90,7 @@ describe('SEA Configuration Loading Tests', () => {
         sea.isSea.mockReturnValue(true);
         const mockConfigContent = 'Butler-SOS:\\n  logLevel: info\\n  port: 9842';
         const mockParsedConfig = { 'Butler-SOS': { logLevel: 'info', port: 9842 } };
-        
+
         fs.readFileSync.mockReturnValue(mockConfigContent);
         yaml.load.mockReturnValue(mockParsedConfig);
 
@@ -98,7 +98,7 @@ describe('SEA Configuration Loading Tests', () => {
         if (sea.isSea()) {
             const configFileContent = fs.readFileSync('/mock/config.yaml', 'utf8');
             const parsedConfig = yaml.load(configFileContent);
-            
+
             // In SEA mode, config should be set as NODE_CONFIG environment variable
             process.env.NODE_CONFIG = JSON.stringify(parsedConfig);
             process.env.NODE_ENV = '';
@@ -129,7 +129,7 @@ describe('SEA Configuration Loading Tests', () => {
 
     test('should handle config file existence checking in both modes', () => {
         const mockConfigPath = '/mock/config.yaml';
-        
+
         // Mock file existence check
         fs.accessSync.mockImplementation((path, mode) => {
             if (path === mockConfigPath) {
@@ -169,7 +169,7 @@ describe('SEA Configuration Loading Tests', () => {
     test('should handle asset loading in SEA mode', () => {
         // Setup SEA mode
         sea.isSea.mockReturnValue(true);
-        
+
         // Test successful asset loading
         const mockAssetContent = '<html>Test content</html>';
         sea.getAsset.mockReturnValue(mockAssetContent);
@@ -187,7 +187,7 @@ describe('SEA Configuration Loading Tests', () => {
     test('should handle binary asset loading in SEA mode', () => {
         // Setup SEA mode for binary assets
         sea.isSea.mockReturnValue(true);
-        
+
         // Test ArrayBuffer handling
         const mockArrayBuffer = new ArrayBuffer(8);
         sea.getAsset.mockReturnValue(mockArrayBuffer);
@@ -222,22 +222,24 @@ describe('SEA Configuration Loading Tests', () => {
             mockLogger.error(`SEA: Failed to load or parse config file: ${error.message}`);
         }
 
-        expect(mockLogger.error).toHaveBeenCalledWith('SEA: Failed to load or parse config file: Config file read error');
+        expect(mockLogger.error).toHaveBeenCalledWith(
+            'SEA: Failed to load or parse config file: Config file read error'
+        );
     });
 
     test('should handle YAML parsing in SEA mode', () => {
         sea.isSea.mockReturnValue(true);
-        
+
         const mockYamlContent = 'Butler-SOS:\\n  logLevel: debug\\n  port: 9842';
         const mockParsedYaml = { 'Butler-SOS': { logLevel: 'debug', port: 9842 } };
-        
+
         fs.readFileSync.mockReturnValue(mockYamlContent);
         yaml.load.mockReturnValue(mockParsedYaml);
 
         if (sea.isSea()) {
             const yamlContent = fs.readFileSync('/config.yaml', 'utf8');
             const parsed = yaml.load(yamlContent);
-            
+
             expect(yaml.load).toHaveBeenCalledWith(mockYamlContent);
             expect(parsed).toEqual(mockParsedYaml);
         }
