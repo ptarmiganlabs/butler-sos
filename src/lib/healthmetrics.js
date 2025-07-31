@@ -4,9 +4,7 @@
 
 import path from 'path';
 import https from 'https';
-import fs from 'fs';
 import axios from 'axios';
-import sea from './sea-wrapper.js';
 
 import globals from '../globals.js';
 import { postHealthMetricsToInfluxdb } from './post-to-influxdb.js';
@@ -15,34 +13,7 @@ import { postHealthToMQTT } from './post-to-mqtt.js';
 import { getServerHeaders } from './serverheaders.js';
 import { getServerTags } from './servertags.js';
 import { saveHealthMetricsToPrometheus } from './prom-client.js';
-
-/**
- * Loads TLS certificates from the filesystem or SEA assets based on the provided options.
- *
- * @param {object} options - Certificate options
- * @param {string} options.Certificate - Path to the client certificate file
- * @param {string} options.CertificateKey - Path to the client certificate key file
- * @param {string} options.CertificateCA - Path to the certificate authority file
- * @param {string} [options.CertificatePassphrase] - Optional passphrase for the certificate
- * @returns {object} Object containing cert, key, and ca properties with certificate contents
- */
-export function getCertificates(options) {
-    const certificate = {};
-
-    if (globals.isSea) {
-        // In SEA mode, get certificates from embedded assets
-        certificate.cert = sea.getAsset(options.Certificate, 'utf8');
-        certificate.key = sea.getAsset(options.CertificateKey, 'utf8');
-        certificate.ca = sea.getAsset(options.CertificateCA, 'utf8');
-    } else {
-        // In non-SEA mode, read certificates from filesystem
-        certificate.cert = fs.readFileSync(options.Certificate);
-        certificate.key = fs.readFileSync(options.CertificateKey);
-        certificate.ca = fs.readFileSync(options.CertificateCA);
-    }
-
-    return certificate;
-}
+import { getCertificates, createCertificateOptions } from './cert-utils.js';
 
 /**
  * Retrieves health statistics from Qlik Sense server via the engine healthcheck API.
@@ -59,28 +30,8 @@ export function getCertificates(options) {
 export function getHealthStatsFromSense(serverName, host, tags, headers) {
     globals.logger.debug(`HEALTH: URL=https://${host}/engine/healthcheck`);
 
-    const options = {};
-
-    options.Certificate = path.resolve(
-        process.cwd(),
-        globals.config.get('Butler-SOS.cert.clientCert')
-    );
-    options.CertificateKey = path.resolve(
-        process.cwd(),
-        globals.config.get('Butler-SOS.cert.clientCertKey')
-    );
-    options.CertificateCA = path.resolve(
-        process.cwd(),
-        globals.config.get('Butler-SOS.cert.clientCertCA')
-    );
-    if (
-        globals.config.has('Butler-SOS.cert.clientCertPassphrase') === true &&
-        globals.config.get('Butler-SOS.cert.clientCertPassphrase')?.length > 0
-    ) {
-        options.CertificatePassphrase = globals.config.get('Butler-SOS.cert.clientCertPassphrase');
-    } else {
-        options.CertificatePassphrase = null;
-    }
+    // Get certificate configuration options
+    const options = createCertificateOptions();
 
     // Get certificates used to authenticate with Sense proxy service
     const cert = getCertificates(options);
