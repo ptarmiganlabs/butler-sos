@@ -7,34 +7,32 @@ jest.unstable_mockModule('fs', () => ({
     },
 }));
 
-jest.unstable_mockModule('../sea-wrapper.js', () => ({
-    default: {
-        getAsset: jest.fn(),
-        isSea: jest.fn(),
-    },
-}));
-
 jest.unstable_mockModule('../../globals.js', () => ({
     default: {
         logger: {
             verbose: jest.fn(),
             error: jest.fn(),
             info: jest.fn(),
+            debug: jest.fn(),
         },
         isSea: false,
+        config: {
+            get: jest.fn(),
+            has: jest.fn(),
+        },
     },
 }));
 
 // Import mocked modules
 const fs = (await import('fs')).default;
-const sea = (await import('../sea-wrapper.js')).default;
 const globals = (await import('../../globals.js')).default;
 
 // Import modules under test
-const { getCertificates: getProxyCertificates } = await import('../proxysessionmetrics.js');
-const { getCertificates: getHealthCertificates } = await import('../healthmetrics.js');
+const { getCertificates: getCertificatesUtil, createCertificateOptions } = await import(
+    '../cert-utils.js'
+);
 
-describe('Certificate loading in SEA vs non-SEA modes', () => {
+describe('Certificate loading', () => {
     const mockCertificateOptions = {
         Certificate: '/path/to/client.crt',
         CertificateKey: '/path/to/client.key',
@@ -57,19 +55,14 @@ describe('Certificate loading in SEA vs non-SEA modes', () => {
         globals.isSea = false;
     });
 
-    describe('Non-SEA mode certificate loading', () => {
-        beforeEach(() => {
-            globals.isSea = false;
-        });
-
-        test('should load certificates from filesystem using fs.readFileSync - proxysessionmetrics', () => {
-            // Mock filesystem operations for this specific test
+    describe('Certificate utility function', () => {
+        test('should load certificates from filesystem', () => {
             fs.readFileSync
                 .mockReturnValueOnce(mockCertData)
                 .mockReturnValueOnce(mockKeyData)
                 .mockReturnValueOnce(mockCaData);
 
-            const certificates = getProxyCertificates(mockCertificateOptions);
+            const certificates = getCertificatesUtil(mockCertificateOptions);
 
             expect(fs.readFileSync).toHaveBeenCalledWith('/path/to/client.crt');
             expect(fs.readFileSync).toHaveBeenCalledWith('/path/to/client.key');
@@ -82,77 +75,62 @@ describe('Certificate loading in SEA vs non-SEA modes', () => {
                 ca: mockCaData,
             });
 
-            // Should not call SEA functions
-            expect(sea.getAsset).not.toHaveBeenCalled();
-        });
-
-        test('should load certificates from filesystem using fs.readFileSync - healthmetrics', () => {
-            // Mock filesystem operations for this specific test
-            fs.readFileSync
-                .mockReturnValueOnce(mockCertData)
-                .mockReturnValueOnce(mockKeyData)
-                .mockReturnValueOnce(mockCaData);
-
-            const certificates = getHealthCertificates(mockCertificateOptions);
-
-            expect(fs.readFileSync).toHaveBeenCalledWith('/path/to/client.crt');
-            expect(fs.readFileSync).toHaveBeenCalledWith('/path/to/client.key');
-            expect(fs.readFileSync).toHaveBeenCalledWith('/path/to/ca.crt');
-            expect(fs.readFileSync).toHaveBeenCalledTimes(3);
-
-            expect(certificates).toEqual({
-                cert: mockCertData,
-                key: mockKeyData,
-                ca: mockCaData,
-            });
-
-            // Should not call SEA functions
-            expect(sea.getAsset).not.toHaveBeenCalled();
-        });
-
-        test('should handle filesystem errors gracefully - proxysessionmetrics', () => {
-            fs.readFileSync.mockImplementation((path) => {
-                throw new Error(`ENOENT: no such file or directory, open '${path}'`);
-            });
-
-            expect(() => getProxyCertificates(mockCertificateOptions)).toThrow(
-                "ENOENT: no such file or directory, open '/path/to/client.crt'"
+            expect(globals.logger.debug).toHaveBeenCalledWith(
+                'Loading certificates from disk. SEA mode: false'
             );
-
-            expect(fs.readFileSync).toHaveBeenCalledWith('/path/to/client.crt');
+            expect(globals.logger.debug).toHaveBeenCalledWith(
+                'Loading certificates from disk. cert=/path/to/client.crt'
+            );
+            expect(globals.logger.debug).toHaveBeenCalledWith(
+                'Loading certificates from disk. key=/path/to/client.key'
+            );
+            expect(globals.logger.debug).toHaveBeenCalledWith(
+                'Loading certificates from disk. ca=/path/to/ca.crt'
+            );
         });
 
-        test('should handle filesystem errors gracefully - healthmetrics', () => {
+        test('should throw error when certificate paths are undefined', () => {
+            const invalidOptions = {
+                Certificate: undefined,
+                CertificateKey: '/path/to/client.key',
+                CertificateCA: '/path/to/ca.crt',
+            };
+
+            expect(() => getCertificatesUtil(invalidOptions)).toThrow(
+                'Certificate paths are not properly defined'
+            );
+        });
+
+        test('should throw error when filesystem read fails', () => {
             fs.readFileSync.mockImplementation((path) => {
                 throw new Error(`ENOENT: no such file or directory, open '${path}'`);
             });
 
-            expect(() => getHealthCertificates(mockCertificateOptions)).toThrow(
-                "ENOENT: no such file or directory, open '/path/to/client.crt'"
+            expect(() => getCertificatesUtil(mockCertificateOptions)).toThrow(
+                'Failed to load certificates from filesystem'
             );
 
             expect(fs.readFileSync).toHaveBeenCalledWith('/path/to/client.crt');
         });
     });
 
-    describe('SEA mode certificate loading', () => {
+    describe('SEA mode behavior', () => {
         beforeEach(() => {
             globals.isSea = true;
         });
 
-        test('should load certificates from SEA assets using sea.getAsset - proxysessionmetrics', () => {
-            // Mock SEA asset operations for this specific test
-            sea.getAsset
+        test('should still load certificates from filesystem in SEA mode', () => {
+            fs.readFileSync
                 .mockReturnValueOnce(mockCertData)
                 .mockReturnValueOnce(mockKeyData)
                 .mockReturnValueOnce(mockCaData);
 
-            const certificates = getProxyCertificates(mockCertificateOptions);
+            const certificates = getCertificatesUtil(mockCertificateOptions);
 
-            expect(sea.getAsset).toHaveBeenCalledWith('/path/to/client.crt', 'utf8');
-            expect(sea.getAsset).toHaveBeenCalledWith('/path/to/client.key', 'utf8');
-            expect(sea.getAsset).toHaveBeenCalledWith('/path/to/ca.crt', 'utf8');
-            expect(sea.getAsset).toHaveBeenCalledTimes(3);
+            expect(fs.readFileSync).toHaveBeenCalledWith('/path/to/client.crt');
+            expect(fs.readFileSync).toHaveBeenCalledWith('/path/to/client.key');
+            expect(fs.readFileSync).toHaveBeenCalledWith('/path/to/ca.crt');
+            expect(fs.readFileSync).toHaveBeenCalledTimes(3);
 
             expect(certificates).toEqual({
                 cert: mockCertData,
@@ -160,93 +138,75 @@ describe('Certificate loading in SEA vs non-SEA modes', () => {
                 ca: mockCaData,
             });
 
-            // Should not call filesystem functions
-            expect(fs.readFileSync).not.toHaveBeenCalled();
+            expect(globals.logger.debug).toHaveBeenCalledWith(
+                'Loading certificates from disk. SEA mode: true'
+            );
         });
 
-        test('should load certificates from SEA assets using sea.getAsset - healthmetrics', () => {
-            // Mock SEA asset operations for this specific test
-            sea.getAsset
-                .mockReturnValueOnce(mockCertData)
-                .mockReturnValueOnce(mockKeyData)
-                .mockReturnValueOnce(mockCaData);
-
-            const certificates = getHealthCertificates(mockCertificateOptions);
-
-            expect(sea.getAsset).toHaveBeenCalledWith('/path/to/client.crt', 'utf8');
-            expect(sea.getAsset).toHaveBeenCalledWith('/path/to/client.key', 'utf8');
-            expect(sea.getAsset).toHaveBeenCalledWith('/path/to/ca.crt', 'utf8');
-            expect(sea.getAsset).toHaveBeenCalledTimes(3);
-
-            expect(certificates).toEqual({
-                cert: mockCertData,
-                key: mockKeyData,
-                ca: mockCaData,
+        test('should handle filesystem errors in SEA mode', () => {
+            fs.readFileSync.mockImplementation((path) => {
+                throw new Error(`ENOENT: no such file or directory, open '${path}'`);
             });
 
-            // Should not call filesystem functions
-            expect(fs.readFileSync).not.toHaveBeenCalled();
+            expect(() => getCertificatesUtil(mockCertificateOptions)).toThrow(
+                'Failed to load certificates from filesystem'
+            );
+        });
+    });
+
+    describe('Certificate options creation', () => {
+        test('should create certificate options from global configuration', () => {
+            // Mock the config get calls
+            globals.config.get
+                .mockReturnValueOnce('cert/client.crt')
+                .mockReturnValueOnce('cert/client.key')
+                .mockReturnValueOnce('cert/ca.crt');
+            globals.config.has.mockReturnValue(false);
+
+            const options = createCertificateOptions();
+
+            expect(globals.config.get).toHaveBeenCalledWith('Butler-SOS.cert.clientCert');
+            expect(globals.config.get).toHaveBeenCalledWith('Butler-SOS.cert.clientCertKey');
+            expect(globals.config.get).toHaveBeenCalledWith('Butler-SOS.cert.clientCertCA');
+            expect(globals.config.has).toHaveBeenCalledWith('Butler-SOS.cert.clientCertPassphrase');
+
+            // Verify the paths are resolved to absolute paths
+            expect(options.Certificate).toMatch(/cert\/client\.crt$/);
+            expect(options.CertificateKey).toMatch(/cert\/client\.key$/);
+            expect(options.CertificateCA).toMatch(/cert\/ca\.crt$/);
+            expect(options.CertificatePassphrase).toBeNull();
         });
 
-        test('should handle missing SEA assets gracefully - proxysessionmetrics', () => {
-            sea.getAsset.mockReturnValue(undefined);
+        test('should include passphrase when configured', () => {
+            globals.config.get
+                .mockReturnValueOnce('cert/client.crt')
+                .mockReturnValueOnce('cert/client.key')
+                .mockReturnValueOnce('cert/ca.crt')
+                .mockReturnValue('my-passphrase'); // Any subsequent calls return the passphrase
+            globals.config.has.mockReturnValue(true);
 
-            const certificates = getProxyCertificates(mockCertificateOptions);
+            const options = createCertificateOptions();
 
-            expect(sea.getAsset).toHaveBeenCalledWith('/path/to/client.crt', 'utf8');
-            expect(certificates).toEqual({
-                cert: undefined,
-                key: undefined,
-                ca: undefined,
-            });
+            expect(globals.config.get).toHaveBeenCalledWith('Butler-SOS.cert.clientCertPassphrase');
+            expect(options.CertificatePassphrase).toBe('my-passphrase');
         });
 
-        test('should handle missing SEA assets gracefully - healthmetrics', () => {
-            sea.getAsset.mockReturnValue(undefined);
+        test('should set passphrase to null when empty string configured', () => {
+            globals.config.get
+                .mockReturnValueOnce('cert/client.crt')
+                .mockReturnValueOnce('cert/client.key')
+                .mockReturnValueOnce('cert/ca.crt')
+                .mockReturnValueOnce('');
+            globals.config.has.mockReturnValue(true);
 
-            const certificates = getHealthCertificates(mockCertificateOptions);
+            const options = createCertificateOptions();
 
-            expect(sea.getAsset).toHaveBeenCalledWith('/path/to/client.crt', 'utf8');
-            expect(certificates).toEqual({
-                cert: undefined,
-                key: undefined,
-                ca: undefined,
-            });
-        });
-
-        test('should handle mixed success/failure scenarios - proxysessionmetrics', () => {
-            sea.getAsset
-                .mockReturnValueOnce(mockCertData) // cert succeeds
-                .mockReturnValueOnce(undefined) // key fails
-                .mockReturnValueOnce(mockCaData); // ca succeeds
-
-            const certificates = getProxyCertificates(mockCertificateOptions);
-
-            expect(certificates).toEqual({
-                cert: mockCertData,
-                key: undefined,
-                ca: mockCaData,
-            });
-        });
-
-        test('should handle mixed success/failure scenarios - healthmetrics', () => {
-            sea.getAsset
-                .mockReturnValueOnce(mockCertData) // cert succeeds
-                .mockReturnValueOnce(undefined) // key fails
-                .mockReturnValueOnce(mockCaData); // ca succeeds
-
-            const certificates = getHealthCertificates(mockCertificateOptions);
-
-            expect(certificates).toEqual({
-                cert: mockCertData,
-                key: undefined,
-                ca: mockCaData,
-            });
+            expect(options.CertificatePassphrase).toBeNull();
         });
     });
 
     describe('Certificate format consistency', () => {
-        test('should handle various certificate formats in both modes', () => {
+        test('should handle various certificate formats', () => {
             const formats = [
                 '-----BEGIN CERTIFICATE-----\nMIIBIjANBgkqhkiG9w0BAQEFA...\n-----END CERTIFICATE-----',
                 '-----BEGIN CERTIFICATE-----\nMIICIjANBgkqhkiG9w0BAQEFA...\n-----END CERTIFICATE-----\n',
@@ -254,31 +214,16 @@ describe('Certificate loading in SEA vs non-SEA modes', () => {
             ];
 
             formats.forEach((certFormat, index) => {
-                // Test non-SEA mode
-                globals.isSea = false;
                 fs.readFileSync.mockClear();
                 fs.readFileSync.mockReturnValue(certFormat);
 
-                const nonSeaCerts = getProxyCertificates({
+                const certs = getCertificatesUtil({
                     Certificate: `/cert${index}.crt`,
                     CertificateKey: `/key${index}.key`,
                     CertificateCA: `/ca${index}.crt`,
                 });
 
-                expect(nonSeaCerts.cert).toBe(certFormat);
-
-                // Test SEA mode
-                globals.isSea = true;
-                sea.getAsset.mockClear();
-                sea.getAsset.mockReturnValue(certFormat);
-
-                const seaCerts = getProxyCertificates({
-                    Certificate: `/cert${index}.crt`,
-                    CertificateKey: `/key${index}.key`,
-                    CertificateCA: `/ca${index}.crt`,
-                });
-
-                expect(seaCerts.cert).toBe(certFormat);
+                expect(certs.cert).toBe(certFormat);
             });
         });
     });
@@ -308,51 +253,16 @@ describe('Certificate loading in SEA vs non-SEA modes', () => {
                 }, // Windows paths
             ];
 
-            testPaths.forEach((paths, index) => {
-                // Test non-SEA mode
-                globals.isSea = false;
+            testPaths.forEach((paths) => {
                 fs.readFileSync.mockClear();
                 fs.readFileSync.mockReturnValue('dummy-cert');
 
-                getProxyCertificates(paths);
+                getCertificatesUtil(paths);
 
                 expect(fs.readFileSync).toHaveBeenCalledWith(paths.Certificate);
                 expect(fs.readFileSync).toHaveBeenCalledWith(paths.CertificateKey);
                 expect(fs.readFileSync).toHaveBeenCalledWith(paths.CertificateCA);
-
-                // Test SEA mode
-                globals.isSea = true;
-                sea.getAsset.mockClear();
-                sea.getAsset.mockReturnValue('dummy-cert');
-
-                getHealthCertificates(paths);
-
-                expect(sea.getAsset).toHaveBeenCalledWith(paths.Certificate, 'utf8');
-                expect(sea.getAsset).toHaveBeenCalledWith(paths.CertificateKey, 'utf8');
-                expect(sea.getAsset).toHaveBeenCalledWith(paths.CertificateCA, 'utf8');
             });
-        });
-    });
-
-    describe('Error handling consistency', () => {
-        test('should provide consistent error handling patterns across modes', () => {
-            // Non-SEA mode error
-            globals.isSea = false;
-            fs.readFileSync.mockImplementation(() => {
-                throw new Error('Permission denied');
-            });
-
-            expect(() => getProxyCertificates(mockCertificateOptions)).toThrow('Permission denied');
-
-            // SEA mode should not throw for missing assets, but return undefined
-            globals.isSea = true;
-            sea.getAsset.mockClear();
-            sea.getAsset.mockReturnValue(undefined);
-
-            const certificates = getHealthCertificates(mockCertificateOptions);
-            expect(certificates.cert).toBeUndefined();
-            expect(certificates.key).toBeUndefined();
-            expect(certificates.ca).toBeUndefined();
         });
     });
 
@@ -360,39 +270,24 @@ describe('Certificate loading in SEA vs non-SEA modes', () => {
         test('should produce certificates compatible with HTTPS agent configuration', () => {
             const mockHttpsAgentOptions = {};
 
-            // Test non-SEA mode
-            globals.isSea = false;
             fs.readFileSync.mockClear();
             fs.readFileSync
                 .mockReturnValueOnce(mockCertData)
                 .mockReturnValueOnce(mockKeyData)
                 .mockReturnValueOnce(mockCaData);
 
-            const nonSeaCerts = getProxyCertificates(mockCertificateOptions);
+            const certificates = getCertificatesUtil(mockCertificateOptions);
 
             // Verify that certificate structure is suitable for HTTPS agent
-            expect(typeof nonSeaCerts.cert).toBe('string');
-            expect(typeof nonSeaCerts.key).toBe('string');
-            expect(typeof nonSeaCerts.ca).toBe('string');
+            expect(typeof certificates.cert).toBe('string');
+            expect(typeof certificates.key).toBe('string');
+            expect(typeof certificates.ca).toBe('string');
 
             // These should be assignable to HTTPS agent options
-            Object.assign(mockHttpsAgentOptions, nonSeaCerts);
+            Object.assign(mockHttpsAgentOptions, certificates);
             expect(mockHttpsAgentOptions.cert).toBe(mockCertData);
             expect(mockHttpsAgentOptions.key).toBe(mockKeyData);
             expect(mockHttpsAgentOptions.ca).toBe(mockCaData);
-
-            // Test SEA mode
-            globals.isSea = true;
-            sea.getAsset.mockClear();
-            sea.getAsset
-                .mockReturnValueOnce(mockCertData)
-                .mockReturnValueOnce(mockKeyData)
-                .mockReturnValueOnce(mockCaData);
-
-            const seaCerts = getHealthCertificates(mockCertificateOptions);
-
-            // Should produce identical structure
-            expect(seaCerts).toEqual(nonSeaCerts);
         });
     });
 });
