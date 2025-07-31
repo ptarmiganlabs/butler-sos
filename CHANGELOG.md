@@ -1,5 +1,51 @@
 # Changelog
 
+## [12.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v11.1.0...butler-sos-v12.0.0) (2025-07-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* Add new setting in YAML config file to disable retrieval of info about the host where Butler SOS is running.
+
+### Features
+
+* Add new setting in YAML config file  to disable retrieval of info about the host where Butler SOS is running. ([85add0c](https://github.com/ptarmiganlabs/butler-sos/commit/85add0c2240984eeb66d6653df7b3cd098aa4566))
+* Add new setting in YAML config file to disable retrieval of info about the host where Butler SOS is running. ([cc1efde](https://github.com/ptarmiganlabs/butler-sos/commit/cc1efdedb9637fae55b8145a743388f2682c7e0d))
+* Enhance build process and security measures ([fe5628b](https://github.com/ptarmiganlabs/butler-sos/commit/fe5628bc4668ded52f2f2d2ae0f41d66e9bf23ca))
+
+
+### Bug Fixes
+
+* **deps:** update dependency mqtt to v5.14.0 ([d0ea578](https://github.com/ptarmiganlabs/butler-sos/commit/d0ea578f3f0c961dcfb29826533e39dad6a3cdc3))
+* **deps:** update dependency mqtt to v5.14.0 ([fb4b474](https://github.com/ptarmiganlabs/butler-sos/commit/fb4b474d46d0ae28f06db79e04725fc8e0f9f74f))
+* Enhance Docker architecture logging in mainScript for better clarity on environment ([989e3a4](https://github.com/ptarmiganlabs/butler-sos/commit/989e3a4273a93e8162b93fb2ea31ae66a06d06cd))
+* Improve input validation in getFormattedTime and enhance logging in messageEventHandler ([1a22e46](https://github.com/ptarmiganlabs/butler-sos/commit/1a22e46b3667fd7f3266e256c933d35e8bbd281b))
+* Only verify settings in YAML config file if the setting's associated feature is enabled ([8f50c5d](https://github.com/ptarmiganlabs/butler-sos/commit/8f50c5df0eb0c89056d42263df00b8a17d0d0b4c))
+* Remove trailing slash warning in healthcheck endpoint requests ([e1a33df](https://github.com/ptarmiganlabs/butler-sos/commit/e1a33df3a54077ff86df387aec79c40a13ba22c5)), closes [#942](https://github.com/ptarmiganlabs/butler-sos/issues/942)
+* update error message for telemetry and system info configuration ([121d8fd](https://github.com/ptarmiganlabs/butler-sos/commit/121d8fdcc37307678368c96f3e676ea6848277bf))
+
+
+### Miscellaneous
+
+* Add OSV-Scanner scheduled workflow for automated vulnerability scanning ([803fd4d](https://github.com/ptarmiganlabs/butler-sos/commit/803fd4dfeb8f667c2a19d1ca2c2be25f8b207b24))
+* Add test cases for file interactions in SEA vs non-SEA modes ([8c14980](https://github.com/ptarmiganlabs/butler-sos/commit/8c14980b43dc1ee8cc2a3b13f2653ee2002a29cb))
+* Add unit test guidelines to copilot instructions ([438d59d](https://github.com/ptarmiganlabs/butler-sos/commit/438d59da3eaf4a7367058375546ac3f136b5edc9))
+* **deps:** update google/osv-scanner-action action to v2.1.0 ([043f402](https://github.com/ptarmiganlabs/butler-sos/commit/043f402ceb9dbebb0f1e1d2965e6d19069d28dc1))
+* **deps:** update google/osv-scanner-action action to v2.1.0 ([88c12c0](https://github.com/ptarmiganlabs/butler-sos/commit/88c12c000e4d265e3c92f8dbaec63b7f8ad4f13e))
+* Implement comprehensive license checking and reporting using license-checker-rseidelsohn ([a13b1e3](https://github.com/ptarmiganlabs/butler-sos/commit/a13b1e36dc63fc71c57a915a49a126fe694fc975))
+* **master:** release butler-sos 11.1.0 ([7a53515](https://github.com/ptarmiganlabs/butler-sos/commit/7a535154e808cd4df705256ace6243d6bb9170c8))
+* **master:** release butler-sos 11.1.0 ([210613d](https://github.com/ptarmiganlabs/butler-sos/commit/210613dfcc5fa6e62f86533ace9bc54c3070cf1e))
+* update dependencies in package.json ([33cd762](https://github.com/ptarmiganlabs/butler-sos/commit/33cd762dca61f62c4ba74cf5a81d92d853f54f71))
+* Update influxdb Docker tag to v1.11.8 ([0b892e6](https://github.com/ptarmiganlabs/butler-sos/commit/0b892e6381862b1c23d3760002aa37a2dbef1304))
+* update package dependencies and add new scripts ([eec0d4e](https://github.com/ptarmiganlabs/butler-sos/commit/eec0d4e06ff5cee5e8b3297fb18ba18f65402a59))
+* Update security scanning details and add npm-check-updates dependency ([cf25e92](https://github.com/ptarmiganlabs/butler-sos/commit/cf25e920114e82f985089eb3f921f34cef46d8d9))
+* Upgrade Jest to v30.0.5 and fix ES module compatibility ([490768f](https://github.com/ptarmiganlabs/butler-sos/commit/490768f95b908e07625d49f4b0449efe4af962fd))
+
+
+### Refactoring
+
+* Simplify return statements and improve code readability in prism.js ([b53aa8b](https://github.com/ptarmiganlabs/butler-sos/commit/b53aa8b42deadfcc58650d03534eb3405eb87906))
+
 ## [11.1.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v11.1.0...butler-sos-v11.1.0) (2025-05-23)
 
 
