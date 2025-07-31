@@ -1,5 +1,13 @@
 # Changelog
 
+## [12.0.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v12.0.0...butler-sos-v12.0.1) (2025-07-31)
+
+
+### Bug Fixes
+
+* load certificate files properly when running as pre-built binary ([d8a7027](https://github.com/ptarmiganlabs/butler-sos/commit/d8a702729ac4070ebba7ac0207824f470e37e096))
+* load certificate files properly when running as pre-built binary ([e71b6b2](https://github.com/ptarmiganlabs/butler-sos/commit/e71b6b24b24bdef13e55ab2836dd9dc4a4019eb8))
+
 ## [12.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v11.1.0...butler-sos-v12.0.0) (2025-07-31)
 
 
