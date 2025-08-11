@@ -62,7 +62,7 @@ jobs:
 
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
@@ -136,7 +136,7 @@ jobs:
                   echo "upload_url : ${{ needs.release-please.outputs.release_upload_url }}"
 
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
@@ -311,7 +311,7 @@ jobs:
                   echo "upload_url : ${{ needs.release-please.outputs.release_upload_url }}"
 
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
@@ -484,7 +484,7 @@ jobs:
                   Write-Output 'upload_url      : ${{ needs.release-please.outputs.release_upload_url }}'
 
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
@@ -612,7 +612,7 @@ jobs:
                   echo "upload_url : ${{ needs.release-please.outputs.release_upload_url }}"
 
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
