@@ -546,6 +546,113 @@ export async function postHealthMetricsToInfluxdb(serverName, host, body, server
                 `HEALTH METRICS: Error saving health data to InfluxDB v2! ${globals.getErrorMessage(err)}`
             );
         }
+    } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 3) {
+        // Only write to InfluxDB if the global influxWriteApi object has been initialized
+        if (!globals.influxWriteApi) {
+            globals.logger.warn(
+                'HEALTH METRICS: Influxdb write API object not initialized. Data will not be sent to InfluxDB'
+            );
+            return;
+        }
+
+        // Find writeApi for the server specified by serverName
+        const writeApi = globals.influxWriteApi.find(
+            (element) => element.serverName === serverName
+        );
+
+        // Ensure that the writeApi object was found
+        if (!writeApi) {
+            globals.logger.warn(
+                `HEALTH METRICS: Influxdb write API object not found for host ${host}. Data will not be sent to InfluxDB`
+            );
+            return;
+        }
+
+        // Create a new point with the data to be written to InfluxDB v3
+        const points = [
+            new Point('sense_server')
+                .stringField('version', body.version)
+                .stringField('started', body.started)
+                .stringField('uptime', formattedTime),
+
+            new Point('mem')
+                .floatField('comitted', body.mem.committed)
+                .floatField('allocated', body.mem.allocated)
+                .floatField('free', body.mem.free),
+
+            new Point('apps')
+                .intField('active_docs_count', body.apps.active_docs.length)
+                .intField('loaded_docs_count', body.apps.loaded_docs.length)
+                .intField('in_memory_docs_count', body.apps.in_memory_docs.length)
+                .stringField(
+                    'active_docs',
+                    globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
+                        ? body.apps.active_docs
+                        : ''
+                )
+                .stringField(
+                    'active_docs_names',
+                    globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
+                        globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
+                        ? activeSessionDocNames
+                        : ''
+                )
+                .stringField(
+                    'loaded_docs',
+                    globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
+                        ? body.apps.loaded_docs
+                        : ''
+                )
+                .stringField(
+                    'loaded_docs_names',
+                    globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
+                        globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
+                        ? loadedSessionDocNames
+                        : ''
+                )
+                .stringField(
+                    'in_memory_docs',
+                    globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs')
+                        ? body.apps.in_memory_docs
+                        : ''
+                )
+                .stringField(
+                    'in_memory_docs_names',
+                    globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
+                        globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs')
+                        ? inMemorySessionDocNames
+                        : ''
+                )
+                .intField('calls', body.apps.calls)
+                .intField('selections', body.apps.selections),
+
+            new Point('cpu').intField('total', body.cpu.total),
+
+            new Point('session')
+                .intField('active', body.session.active)
+                .intField('total', body.session.total),
+
+            new Point('users')
+                .intField('active', body.users.active)
+                .intField('total', body.users.total),
+
+            new Point('cache')
+                .intField('hits', body.cache.hits)
+                .intField('lookups', body.cache.lookups)
+                .intField('added', body.cache.added)
+                .intField('replaced', body.cache.replaced)
+                .intField('bytes_added', body.cache.bytes_added),
+        ];
+
+        // Write to InfluxDB
+        try {
+            const res = await writeApi.writeAPI.writePoints(points);
+            globals.logger.debug(`HEALTH METRICS: Wrote data to InfluxDB v3`);
+        } catch (err) {
+            globals.logger.error(
+                `HEALTH METRICS: Error saving health data to InfluxDB v3! ${globals.getErrorMessage(err)}`
+            );
+        }
     }
 }
 
