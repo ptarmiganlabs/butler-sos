@@ -72,6 +72,26 @@ class Settings {
     }
 
     /**
+     * Format error message appropriately for SEA vs non-SEA apps
+     * In SEA apps, stack traces are less useful, so we prefer err.message
+     * In non-SEA apps, we show full stack traces for better debugging
+     *
+     * @param {Error} err - The error object
+     * @returns {string} Formatted error message
+     */
+    getErrorMessage(err) {
+        // Check SEA status - use direct check if isSea hasn't been initialized yet
+        const isSeaApp = this.isSea !== undefined ? this.isSea : sea.isSea();
+
+        if (isSeaApp) {
+            // For SEA apps, prefer cleaner error messages
+            return err.message || err.toString();
+        }
+        // For non-SEA apps, show full stack trace for debugging
+        return err.stack || err.message || err.toString();
+    }
+
+    /**
      * Initializes the Settings object with configuration from the environment and config files.
      * Sets up logging, database connections, MQTT clients, and other application services.
      *
@@ -469,7 +489,9 @@ Configuration File:
                 'Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents'
             );
         } catch (err) {
-            this.logger.error(`CONFIG: Setting up UDP user activity listener: ${err}`);
+            this.logger.error(
+                `CONFIG: Setting up UDP user activity listener: ${this.getErrorMessage(err)}`
+            );
         }
 
         // ------------------------------------
@@ -491,7 +513,9 @@ Configuration File:
                 'Butler-SOS.logEvents.udpServerConfig.portLogEvents'
             );
         } catch (err) {
-            this.logger.error(`CONFIG: Setting up UDP log events listener: ${err}`);
+            this.logger.error(
+                `CONFIG: Setting up UDP log events listener: ${this.getErrorMessage(err)}`
+            );
         }
 
         // ------------------------------------
@@ -801,7 +825,9 @@ Configuration File:
                 try {
                     this.influx = new InfluxDB2({ url, token });
                 } catch (err) {
-                    this.logger.error(`INFLUXDB2 INIT: Error creating InfluxDB 2 client: ${err}`);
+                    this.logger.error(
+                        `INFLUXDB2 INIT: Error creating InfluxDB 2 client: ${this.getErrorMessage(err)}`
+                    );
                     this.logger.error(`INFLUXDB2 INIT: Exiting.`);
                 }
             } else {
@@ -895,12 +921,12 @@ Configuration File:
                                 );
                             } catch (err) {
                                 this.logger.error(
-                                    `CONFIG: Error creating new InfluxDB v1 retention policy "${newPolicy.name}"! ${err.stack}`
+                                    `CONFIG: Error creating new InfluxDB v1 retention policy "${newPolicy.name}"! ${this.getErrorMessage(err)}`
                                 );
                             }
                         } catch (err) {
                             this.logger.error(
-                                `CONFIG: Error creating new InfluxDB v1 database "${dbName}"! ${err.stack}`
+                                `CONFIG: Error creating new InfluxDB v1 database "${dbName}"! ${this.getErrorMessage(err)}`
                             );
                         }
                     } else {
@@ -908,7 +934,7 @@ Configuration File:
                     }
                 } catch (err) {
                     this.logger.error(
-                        `CONFIG: Error getting list of InfluxDB v1 databases. ${err.stack}`
+                        `CONFIG: Error getting list of InfluxDB v1 databases. ${this.getErrorMessage(err)}`
                     );
                 }
             }
@@ -948,7 +974,9 @@ Configuration File:
                         `INFLUXDB2: Using organization "${org}" identified by "${orgID}"`
                     );
                 } catch (err) {
-                    this.logger.error(`INFLUXDB2: Error getting organisation: ${err}`);
+                    this.logger.error(
+                        `INFLUXDB2: Error getting organisation: ${this.getErrorMessage(err)}`
+                    );
                 }
 
                 try {
@@ -991,7 +1019,9 @@ Configuration File:
                         }
                     }
                 } catch (err) {
-                    this.logger.error(`INFLUXDB2: Error getting bucket: ${err}`);
+                    this.logger.error(
+                        `INFLUXDB2: Error getting bucket: ${this.getErrorMessage(err)}`
+                    );
                 }
 
                 // Get write API
@@ -1038,7 +1068,9 @@ Configuration File:
                             writeAPI: serverWriteApi,
                         });
                     } catch (err) {
-                        this.logger.error(`INFLUXDB2: Error getting write API: ${err}`);
+                        this.logger.error(
+                            `INFLUXDB2: Error getting write API: ${this.getErrorMessage(err)}`
+                        );
                     }
                 });
             }
@@ -1166,7 +1198,7 @@ Configuration File:
 
             return hostInfo;
         } catch (err) {
-            this.logger.error(`CONFIG: Getting host info: ${err}`);
+            this.logger.error(`CONFIG: Getting host info: ${this.getErrorMessage(err)}`);
             return null;
         }
     }

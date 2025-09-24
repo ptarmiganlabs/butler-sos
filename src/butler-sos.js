@@ -189,7 +189,7 @@ async function mainScript() {
             );
         }
     } catch (err) {
-        globals.logger.error(`CONFIG: Error initiating host info: ${err}`);
+        globals.logger.error(`CONFIG: Error initiating host info: ${globals.getErrorMessage(err)}`);
     }
 
     // Set up UDP handler for user activity/events

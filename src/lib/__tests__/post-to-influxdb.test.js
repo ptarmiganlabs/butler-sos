@@ -35,6 +35,7 @@ jest.unstable_mockModule('../../globals.js', () => ({
             },
         },
         appNames: [],
+        getErrorMessage: jest.fn().mockImplementation((err) => err.toString()),
     },
 }));
 

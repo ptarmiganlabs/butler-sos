@@ -203,10 +203,9 @@ function configObfuscate(config) {
 
         return obfuscatedConfig;
     } catch (err) {
-        globals.logger.error(`CONFIG OBFUSCATE: Error obfuscating config: ${err.message}`);
-        if (err.stack) {
-            globals.logger.error(`CONFIG OBFUSCATE: ${err.stack}`);
-        }
+        globals.logger.error(
+            `CONFIG OBFUSCATE: Error obfuscating config: ${globals.getErrorMessage(err)}`
+        );
         throw err;
     }
 }

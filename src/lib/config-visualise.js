@@ -268,7 +268,7 @@ export async function setupConfigVisServer(logger, config) {
                     globals.logger.error(
                         `CONFIG VIS: Could not set up config visualisation server on ${address}`
                     );
-                    globals.logger.error(`CONFIG VIS: ${err.stack}`);
+                    globals.logger.error(`CONFIG VIS: ${globals.getErrorMessage(err)}`);
                     configVisServer.log.error(err);
                     process.exit(1);
                 }
@@ -283,11 +283,8 @@ export async function setupConfigVisServer(logger, config) {
         );
     } catch (err) {
         globals.logger.error(
-            `CONFIG VIS: Error setting up config visualisation server: ${err.message}`
+            `CONFIG VIS: Error setting up config visualisation server: ${globals.getErrorMessage(err)}`
         );
-        if (err.stack) {
-            globals.logger.error(`CONFIG VIS: ${err.stack}`);
-        }
         throw err;
     }
 }

@@ -27,6 +27,7 @@ jest.unstable_mockModule('../../globals.js', () => ({
             get: jest.fn(),
             has: jest.fn(),
         },
+        getErrorMessage: jest.fn().mockImplementation((err) => err.toString()),
     },
 }));
 const globals = (await import('../../globals.js')).default;

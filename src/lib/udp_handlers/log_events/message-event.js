@@ -126,6 +126,6 @@ export async function messageEventHandler(message, _remote) {
             }
         }
     } catch (err) {
-        globals.logger.error(`LOG EVENT: Error handling message: ${err}`);
+        globals.logger.error(`LOG EVENT: Error handling message: ${globals.getErrorMessage(err)}`);
     }
 }

@@ -1,5 +1,6 @@
 import later from '@breejs/later';
 import axios from 'axios';
+import globals from '../globals.js';
 
 /**
  * Sends a heartbeat GET request to a remote URL.
@@ -16,8 +17,8 @@ const callRemoteURL = function callRemoteURL(remoteURL, logger) {
             logger.debug(`HEARTBEAT: Sent heartbeat to ${remoteURL}`);
         })
         .catch((error) => {
-            // handle error
-            logger.error(`HEARTBEAT: Error sending heartbeat: ${error}`);
+            // Heartbeat failed
+            logger.error(`HEARTBEAT: Error sending heartbeat: ${globals.getErrorMessage(error)}`);
         });
 };
 
@@ -47,6 +48,6 @@ export function setupHeartbeatTimer(config, logger) {
         // Do an initial ping to the remote URL
         callRemoteURL(config.get('Butler-SOS.heartbeat.remoteURL'), logger);
     } catch (err) {
-        logger.error(`HEARTBEAT: Error ${err}`);
+        logger.error(`HEARTBEAT: Error ${globals.getErrorMessage(err)}`);
     }
 }

@@ -223,11 +223,9 @@ export async function setupPromClient(promServer, promPort, promHost) {
             `PROM: Prometheus Butler SOS metrics server now listening on port ${promPort}`
         );
     } catch (err) {
-        globals.logger.error(`PROM: Error setting up Prometheus client: ${err}`);
-
-        if (globals.getLoggingLevel() === 'debug') {
-            globals.logger.error(`PROM: Error stack: ${err.stack}`);
-        }
+        globals.logger.error(
+            `PROM: Error setting up Prometheus client: ${globals.getErrorMessage(err)}`
+        );
     }
 }
 
@@ -286,7 +284,9 @@ export function saveHealthMetricsToPrometheus(host, data, labels) {
         metadataLabels.engine_started = data.started;
         promMetricEngineMetadata.set(metadataLabels, 1);
     } catch (err) {
-        globals.logger.error(`PROM: Error saving health data for Prometheus! ${err.stack}`);
+        globals.logger.error(
+            `PROM: Error saving health data for Prometheus! ${globals.getErrorMessage(err)}`
+        );
     }
 }
 
@@ -322,6 +322,8 @@ export function saveUserSessionMetricsToPrometheus(userSessionsData) {
             userSessionsData.datapointPrometheus.butlersos_user_session_summary_total.value
         );
     } catch (err) {
-        globals.logger.error(`PROM: Error saving health data for Prometheus! ${err.stack}`);
+        globals.logger.error(
+            `PROM: Error saving health data for Prometheus! ${globals.getErrorMessage(err)}`
+        );
     }
 }
