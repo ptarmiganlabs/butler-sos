@@ -1,6 +1,9 @@
 // Get tag values from the server object
 /**
- * Extracts tag values from a server configuration object.
+ *     } catch (err) {
+        logger.error(`SERVERTAGS: ${globals.getErrorMessage(err)}`);
+        return null;
+    }acts tag values from a server configuration object.
  *
  * This function processes a server configuration object and extracts tags that can be
  * used to tag metrics in time series databases or monitoring systems. It always includes

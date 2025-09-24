@@ -236,6 +236,8 @@ export async function messageEventHandler(message, _remote) {
             postUserEventToNewRelic(msgObj);
         }
     } catch (err) {
-        globals.logger.error(`USER EVENT: Error processing user activity event: ${err}`);
+        globals.logger.error(
+            `USER EVENT: Error processing user activity event: ${globals.getErrorMessage(err)}`
+        );
     }
 }

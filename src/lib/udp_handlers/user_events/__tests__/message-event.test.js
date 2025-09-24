@@ -19,6 +19,7 @@ jest.unstable_mockModule('../../../../globals.js', () => {
             addUserEvent: jest.fn(),
         },
         appNames: [],
+        getErrorMessage: jest.fn().mockImplementation((err) => err.toString()),
     };
 
     return { default: mockGlobals };

@@ -409,7 +409,7 @@ export async function postHealthMetricsToInfluxdb(serverName, host, body, server
             ]);
         } catch (err) {
             globals.logger.error(
-                `HEALTH METRICS: Error saving health data to InfluxDB! ${err.stack}`
+                `HEALTH METRICS: Error saving health data to InfluxDB! ${globals.getErrorMessage(err)}`
             );
         }
 
@@ -543,7 +543,7 @@ export async function postHealthMetricsToInfluxdb(serverName, host, body, server
             globals.logger.debug(`HEALTH METRICS: Wrote data to InfluxDB v2`);
         } catch (err) {
             globals.logger.error(
-                `HEALTH METRICS: Error saving health data to InfluxDB v2! ${err.stack}`
+                `HEALTH METRICS: Error saving health data to InfluxDB v2! ${globals.getErrorMessage(err)}`
             );
         }
     }
@@ -593,7 +593,7 @@ export async function postProxySessionsToInfluxdb(userSessions) {
             const res = await globals.influx.writePoints(userSessions.datapointInfluxdb);
         } catch (err) {
             globals.logger.error(
-                `PROXY SESSIONS: Error saving user session data to InfluxDB v1! ${err.stack}`
+                `PROXY SESSIONS: Error saving user session data to InfluxDB v1! ${globals.getErrorMessage(err)}`
             );
         }
 
@@ -636,7 +636,7 @@ export async function postProxySessionsToInfluxdb(userSessions) {
             const res = await writeApi.writeAPI.writePoints(userSessions.datapointInfluxdb);
         } catch (err) {
             globals.logger.error(
-                `PROXY SESSIONS: Error saving user session data to InfluxDB v2! ${err.stack}`
+                `PROXY SESSIONS: Error saving user session data to InfluxDB v2! ${globals.getErrorMessage(err)}`
             );
         }
 
@@ -704,7 +704,7 @@ export async function postButlerSOSMemoryUsageToInfluxdb(memory) {
             const res = await globals.influx.writePoints(datapoint);
         } catch (err) {
             globals.logger.error(
-                `MEMORY USAGE INFLUXDB: Error saving user session data to InfluxDB! ${err.stack}`
+                `MEMORY USAGE INFLUXDB: Error saving user session data to InfluxDB! ${globals.getErrorMessage(err)}`
             );
         }
 
@@ -767,11 +767,13 @@ export async function postButlerSOSMemoryUsageToInfluxdb(memory) {
                 globals.logger.debug(`MEMORY USAGE INFLUXDB: Wrote data to InfluxDB v2`);
             } catch (err) {
                 globals.logger.error(
-                    `MEMORY USAGE INFLUXDB: Error saving health data to InfluxDB v2! ${err.stack}`
+                    `MEMORY USAGE INFLUXDB: Error saving health data to InfluxDB v2! ${globals.getErrorMessage(err)}`
                 );
             }
         } catch (err) {
-            globals.logger.error(`MEMORY USAGE INFLUXDB: Error getting write API: ${err}`);
+            globals.logger.error(
+                `MEMORY USAGE INFLUXDB: Error getting write API: ${globals.getErrorMessage(err)}`
+            );
         }
 
         globals.logger.verbose(
@@ -980,7 +982,7 @@ export async function postUserEventToInfluxdb(msg) {
                 globals.logger.debug(`USER EVENT INFLUXDB: Wrote data to InfluxDB v2`);
             } catch (err) {
                 globals.logger.error(
-                    `USER EVENT INFLUXDB: Error saving health data to InfluxDB v2! ${err.stack}`
+                    `USER EVENT INFLUXDB: Error saving health data to InfluxDB v2! ${globals.getErrorMessage(err)}`
                 );
             }
 
@@ -988,7 +990,9 @@ export async function postUserEventToInfluxdb(msg) {
                 'USER EVENT INFLUXDB: Sent Butler SOS user event data to InfluxDB'
             );
         } catch (err) {
-            globals.logger.error(`USER EVENT INFLUXDB: Error getting write API: ${err}`);
+            globals.logger.error(
+                `USER EVENT INFLUXDB: Error getting write API: ${globals.getErrorMessage(err)}`
+            );
         }
     }
 }
@@ -1441,7 +1445,7 @@ export async function postLogEventToInfluxdb(msg) {
                         globals.logger.debug(`LOG EVENT INFLUXDB: Wrote data to InfluxDB v2`);
                     } catch (err) {
                         globals.logger.error(
-                            `LOG EVENT INFLUXDB: Error saving health data to InfluxDB v2! ${err.stack}`
+                            `LOG EVENT INFLUXDB: Error saving health data to InfluxDB v2! ${globals.getErrorMessage(err)}`
                         );
                     }
 
@@ -1449,12 +1453,16 @@ export async function postLogEventToInfluxdb(msg) {
                         'LOG EVENT INFLUXDB: Sent Butler SOS log event data to InfluxDB'
                     );
                 } catch (err) {
-                    globals.logger.error(`LOG EVENT INFLUXDB: Error getting write API: ${err}`);
+                    globals.logger.error(
+                        `LOG EVENT INFLUXDB: Error getting write API: ${globals.getErrorMessage(err)}`
+                    );
                 }
             }
         }
     } catch (err) {
-        globals.logger.error(`LOG EVENT INFLUXDB 2: Error saving log event to InfluxDB! ${err}`);
+        globals.logger.error(
+            `LOG EVENT INFLUXDB 2: Error saving log event to InfluxDB! ${globals.getErrorMessage(err)}`
+        );
     }
 }
 

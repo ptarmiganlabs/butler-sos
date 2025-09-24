@@ -272,7 +272,7 @@ describe('file-prep', () => {
 
             // Test binary content stream
             path.extname.mockReturnValue('.png');
-            const binaryBuffer = Buffer.from([0x89, 0x50, 0x4E, 0x47]); // PNG header
+            const binaryBuffer = Buffer.from([0x89, 0x50, 0x4e, 0x47]); // PNG header
             fs.readFileSync.mockReturnValue(binaryBuffer);
 
             const binaryResult = await prepareFile('/test/image.png');

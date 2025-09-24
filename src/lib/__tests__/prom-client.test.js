@@ -37,6 +37,7 @@ jest.unstable_mockModule('../../globals.js', () => ({
             },
         ],
         getLoggingLevel: jest.fn().mockReturnValue('info'),
+        getErrorMessage: jest.fn().mockImplementation((err) => err.toString()),
     },
 }));
 

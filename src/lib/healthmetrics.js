@@ -104,7 +104,9 @@ export function getHealthStatsFromSense(serverName, host, tags, headers) {
             }
         })
         .catch((err) => {
-            globals.logger.error(`HEALTH: Error when calling health check API: ${err}`);
+            globals.logger.error(
+                `HEALTH: Error when calling health check API: ${globals.getErrorMessage(err)}`
+            );
         });
 }
 
