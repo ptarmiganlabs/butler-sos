@@ -108,7 +108,7 @@ class Settings {
             const { version } = JSON.parse(readFileSync(c));
             appVersion = version;
 
-            // Set base path of the executable
+            // Set base path of the executa
             this.appBasePath = upath.join(b, '..');
         }
 
@@ -123,9 +123,28 @@ class Settings {
             .version(this.appVersion)
             .name('butler-sos')
             .description(
-                'Butler SenseOps Stats ("Butler-SOS") is a tool publishing operational Qlik Sense metrics to InfluxDB, Prometheus, New Relic and other destinations.\nUser events and log events can be forwarded from Sense to Butler SOS and then acted upon there. Events can be stored in InfluxDB and sent to New Relic.\nAdd Grafana for great looking dashboards and you get real-time monitoring of what happens inside a Qlik Sense environment.\n\nMore info at https://butler-sos.ptarmiganlabs.com'
+                `
+Butler SenseOps Stats ("Butler-SOS") is a tool publishing operational Qlik Sense metrics to InfluxDB, Prometheus, New Relic and other destinations.
+
+User events and log events can be forwarded from Sense to Butler SOS and then acted upon there.
+Events can be stored in InfluxDB and sent to New Relic.
+
+Add Grafana for great looking dashboards and you get real-time monitoring of what happens inside a Qlik Sense environment.
+
+More info at https://butler-sos.ptarmiganlabs.com`
             )
-            .option('-c, --configfile <file>', 'path to config file')
+            .addHelpText(
+                'after',
+                `
+Configuration File:
+  Butler SOS requires a configuration file to run. You must specify one using the -c option.
+  
+  Example config files are included in the distribution ZIP file, as well as online at:
+    https://github.com/ptarmiganlabs/butler-sos/tree/master/src/config
+  
+  For more information visit: https://butler-sos.ptarmiganlabs.com`
+            )
+            .option('-c, --configfile <file>', 'path to config file (REQUIRED)')
             .addOption(
                 new Option('-l, --loglevel <level>', 'log level').choices([
                     'error',
@@ -148,6 +167,11 @@ class Settings {
         // Parse command line params
         program.parse(process.argv);
         this.options = program.opts();
+
+        // Check if config file is provided - if not, show help and exit
+        if (!this.options.configfile || this.options.configfile.length === 0) {
+            program.help();
+        }
 
         // Utility functions
         this.checkFileExistsSync = Settings.checkFileExistsSync;
