@@ -1,9 +1,4 @@
-# docker-compose_fullstack_influxdb.yml
-# Default InfluxDB configuration (v1.x) for backward compatibility
-# For version-specific configurations, use:
-# - docker-compose_fullstack_influxdb_v1.yml for InfluxDB v1.x
-# - docker-compose_fullstack_influxdb_v2.yml for InfluxDB v2.x  
-# - docker-compose_fullstack_influxdb_v3.yml for InfluxDB v3.x
+# docker-compose_fullstack_influxdb_v1.yml
 version: "3.3"
 services:
     butler-sos:
@@ -15,7 +10,7 @@ services:
             - "./config:/nodeapp/config"
             - "./log:/nodeapp/log"
         environment:
-            - "NODE_ENV=production_influxdb" # Means that Butler SOS will read config data from production_influxdb.yaml
+            - "NODE_ENV=production_influxdb_v1" # Means that Butler SOS will read config data from production_influxdb_v1.yaml
         logging:
             driver: "json-file"
             options:
@@ -25,8 +20,8 @@ services:
             - senseops
 
     influxdb:
-        image: influxdb:1.12.2
-        container_name: influxdb
+        image: influxdb:1.8-alpine
+        container_name: influxdb-v1
         restart: always
         volumes:
             - ./influxdb/data:/var/lib/influxdb # Mount for influxdb data directory
