@@ -2,19 +2,22 @@
 applyTo: '**'
 ---
 
-# Formatting and indentention of files
+# copilot-instructions.md
 
-DO NOT fix code indentation or formatting as part of work done by Copilot.  
-Other tools will handle that.
+This file provides guidance to Copilot when working with code in this repository.
 
-# JSDoc comments
+## 📚 Onboarding
 
-- Describe what the function does
-- List all paramters, including (if possible) what properties object parameters have
-- List possible return values, including Primises and data types. Insert empty line between parameters and return value descriptions.
+At the start of each session, read:
 
-# Unit tests
+1. Any `**/README.md` docs across the project
+2. Any `**/README.*.md` docs across the project
 
-- Verify tests work after creation new test files.
-- Do not fix linting or formatting issues in tests. These will be handled later using other tools.
-- Run tests using "npm run test".
+## ✅ Quality Gates
+
+When writing code, Copilot must not finish until all of these succeed:
+
+1. `npm run lint:fix`
+2. All unit tests (`npm run test`) pass
+
+If any check fails, fix the issues and run checks again.
