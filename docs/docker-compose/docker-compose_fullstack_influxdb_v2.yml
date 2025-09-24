@@ -1,9 +1,4 @@
-# docker-compose_fullstack_influxdb.yml
-# Default InfluxDB configuration (v1.x) for backward compatibility
-# For version-specific configurations, use:
-# - docker-compose_fullstack_influxdb_v1.yml for InfluxDB v1.x
-# - docker-compose_fullstack_influxdb_v2.yml for InfluxDB v2.x  
-# - docker-compose_fullstack_influxdb_v3.yml for InfluxDB v3.x
+# docker-compose_fullstack_influxdb_v2.yml
 version: "3.3"
 services:
     butler-sos:
@@ -15,7 +10,7 @@ services:
             - "./config:/nodeapp/config"
             - "./log:/nodeapp/log"
         environment:
-            - "NODE_ENV=production_influxdb" # Means that Butler SOS will read config data from production_influxdb.yaml
+            - "NODE_ENV=production_influxdb_v2" # Means that Butler SOS will read config data from production_influxdb_v2.yaml
         logging:
             driver: "json-file"
             options:
@@ -25,19 +20,24 @@ services:
             - senseops
 
     influxdb:
-        image: influxdb:1.12.2
-        container_name: influxdb
+        image: influxdb:2.7-alpine
+        container_name: influxdb-v2
         restart: always
         volumes:
-            - ./influxdb/data:/var/lib/influxdb # Mount for influxdb data directory
-            - ./influxdb/config/:/etc/influxdb/ # Mount for influxdb configuration
+            - ./influxdb/data:/var/lib/influxdb2 # Mount for influxdb data directory
+            - ./influxdb/config/:/etc/influxdb2/ # Mount for influxdb configuration
         ports:
             # The API for InfluxDB is served on port 8086
             - "8086:8086"
-            - "8082:8082"
         environment:
-            # Disable usage reporting
-            - "INFLUXDB_REPORTING_DISABLED=true"
+            # Initial setup parameters
+            - "DOCKER_INFLUXDB_INIT_MODE=setup"
+            - "DOCKER_INFLUXDB_INIT_USERNAME=admin"
+            - "DOCKER_INFLUXDB_INIT_PASSWORD=butlersos123"
+            - "DOCKER_INFLUXDB_INIT_ORG=butler-sos"
+            - "DOCKER_INFLUXDB_INIT_BUCKET=butler-sos"
+            - "DOCKER_INFLUXDB_INIT_RETENTION=10d"
+            - "DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=butlersos-token"
         networks:
             - senseops
 
