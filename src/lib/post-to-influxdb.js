@@ -2180,6 +2180,52 @@ export async function storeEventCountInfluxDB() {
                 globals.logger.debug(`EVENT COUNT INFLUXDB: Wrote data to InfluxDB v3`);
             }
 
+            // Loop through data in user events and create datapoints.
+            for (const event of userEvents) {
+                const tags = {
+                    butler_sos_instance: globals.options.instanceTag,
+                    event_type: 'user',
+                    source: event.source,
+                    host: event.host,
+                    subsystem: event.subsystem,
+                };
+
+                // Add static tags defined in config file, if any
+                if (
+                    globals.config.has('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') &&
+                    Array.isArray(
+                        globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags')
+                    )
+                ) {
+                    const configTags = globals.config.get(
+                        'Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags'
+                    );
+
+                    configTags.forEach((tag) => {
+                        tags[tag.name] = tag.value;
+                    });
+                }
+
+                const point = new Point(
+                    globals.config.get(
+                        'Butler-SOS.qlikSenseEvents.eventCount.influxdb.measurementName'
+                    )
+                )
+                    .tag('event_type', 'user')
+                    .tag('source', event.source)
+                    .tag('host', event.host)
+                    .tag('subsystem', event.subsystem)
+                    .intField('counter', event.counter);
+
+                // Add tags to point
+                Object.keys(tags).forEach((key) => {
+                    point.tag(key, tags[key]);
+                });
+
+                const res = await writeApi.writePoint(point);
+                globals.logger.debug(`EVENT COUNT INFLUXDB: Wrote user event data to InfluxDB v3`);
+            }
+
             globals.logger.verbose(
                 'EVENT COUNT INFLUXDB: Sent Butler SOS event count data to InfluxDB'
             );
