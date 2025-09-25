@@ -14,10 +14,10 @@ Butler-SOS:
     systemInfo:
         enable: true # Should detailed system information be collected? Set to false in security-sensitive environments.
 
-    anonTelemetry:
-        true # Can Butler SOS send anonymous data about what computer it is running on?
-        # More info on whata data is collected: https://butler-sos.ptarmiganlabs.com/docs/about/telemetry/
-        # Please consider leaving this at true - it really helps future development of Butler SOS!
+    # Can Butler SOS send anonymous data about what computer it is running on?
+    # More info on whata data is collected: https://butler-sos.ptarmiganlabs.com/docs/about/telemetry/
+    # Please consider leaving this at true - it really helps future development of Butler SOS!
+    anonTelemetry: true
 
     # Should Butler SOS start a web server that serves an obfuscated view of the Butler SOS config file?
     configVisualisation:
