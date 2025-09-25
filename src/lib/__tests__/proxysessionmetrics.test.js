@@ -203,7 +203,9 @@ describe('proxysessionmetrics', () => {
             // Verify
             expect(mockRequest).toHaveBeenCalled();
             expect(globals.logger.error).toHaveBeenCalledWith(
-                expect.stringContaining('PROXY SESSIONS: Error when calling proxy session API for server \'server1\' (host1.example.com), virtual proxy \'vproxy1\':')
+                expect.stringContaining(
+                    "PROXY SESSIONS: Error when calling proxy session API for server 'server1' (host1.example.com), virtual proxy 'vproxy1':"
+                )
             );
             expect(mockPostProxySessionsToInfluxdb).not.toHaveBeenCalled();
         });
