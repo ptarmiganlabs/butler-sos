@@ -37,7 +37,82 @@ Set-ExecutionPolicy RemoteSigned -Scope LocalMachine
 
 Create a Windows service named exactly `"Butler SOS insiders build"`:
 
-**Option A: Using PowerShell (Recommended)**
+**Option A: Using NSSM (Non-Sucking Service Manager) - Recommended**
+
+NSSM is a popular tool for creating Windows services from executables and provides better service management capabilities.
+
+First, download and install NSSM:
+1. Download NSSM from https://nssm.cc/download
+2. Extract to a location like `C:\nssm` 
+3. Add `C:\nssm\win64` (or `win32`) to your system PATH
+
+```cmd
+REM Run as Administrator
+REM Install the service
+nssm install "Butler SOS insiders build" "C:\butler-sos-insider\butler-sos.exe"
+
+REM Set service parameters
+nssm set "Butler SOS insiders build" AppParameters "--config C:\butler-sos-insider\config\production_template.yaml"
+nssm set "Butler SOS insiders build" AppDirectory "C:\butler-sos-insider"
+nssm set "Butler SOS insiders build" DisplayName "Butler SOS insiders build"
+nssm set "Butler SOS insiders build" Description "Butler SOS insider build for testing"
+nssm set "Butler SOS insiders build" Start SERVICE_DEMAND_START
+
+REM Optional: Set up logging
+nssm set "Butler SOS insiders build" AppStdout "C:\butler-sos-insider\logs\stdout.log"
+nssm set "Butler SOS insiders build" AppStderr "C:\butler-sos-insider\logs\stderr.log"
+
+REM Optional: Set service account (default is Local System)
+REM nssm set "Butler SOS insiders build" ObjectName ".\ServiceAccount" "password"
+```
+
+**NSSM Service Management Commands:**
+```cmd
+REM Start the service
+nssm start "Butler SOS insiders build"
+
+REM Stop the service  
+nssm stop "Butler SOS insiders build"
+
+REM Restart the service
+nssm restart "Butler SOS insiders build"
+
+REM Check service status
+nssm status "Butler SOS insiders build"
+
+REM Remove the service (if needed)
+nssm remove "Butler SOS insiders build" confirm
+
+REM Edit service configuration
+nssm edit "Butler SOS insiders build"
+```
+
+**Using NSSM with PowerShell:**
+```powershell
+# Run as Administrator
+$serviceName = "Butler SOS insiders build"
+$exePath = "C:\butler-sos-insider\butler-sos.exe"
+$configPath = "C:\butler-sos-insider\config\production_template.yaml"
+
+# Install service
+& nssm install $serviceName $exePath
+& nssm set $serviceName AppParameters "--config $configPath"
+& nssm set $serviceName AppDirectory "C:\butler-sos-insider"
+& nssm set $serviceName DisplayName $serviceName
+& nssm set $serviceName Description "Butler SOS insider build for testing"
+& nssm set $serviceName Start SERVICE_DEMAND_START
+
+# Create logs directory
+New-Item -ItemType Directory -Path "C:\butler-sos-insider\logs" -Force
+
+# Set up logging
+& nssm set $serviceName AppStdout "C:\butler-sos-insider\logs\stdout.log"
+& nssm set $serviceName AppStderr "C:\butler-sos-insider\logs\stderr.log"
+
+Write-Host "Service '$serviceName' installed successfully with NSSM"
+```
+
+**Option B: Using PowerShell**
 ```powershell
 # Run as Administrator
 $serviceName = "Butler SOS insiders build"
@@ -54,7 +129,7 @@ New-Service -Name $serviceName -BinaryPathName "$exePath --config $configPath" -
 # $service.Change($null,$null,$null,$null,$null,$null,$credential.UserName,$credential.GetNetworkCredential().Password)
 ```
 
-**Option B: Using SC command**
+**Option C: Using SC command**
 ```cmd
 REM Run as Administrator
 sc create "Butler SOS insiders build" binPath="C:\butler-sos-insider\butler-sos.exe --config C:\butler-sos-insider\config\production_template.yaml" DisplayName="Butler SOS insiders build" start=demand
@@ -68,6 +143,81 @@ sc create "Butler SOS insiders build" binPath="C:\butler-sos-insider\butler-sos.
    - Display Name: `Butler SOS insiders build`
    - Path to executable: `C:\butler-sos-insider\butler-sos.exe`
    - Startup Type: Manual or Automatic as preferred
+
+**Option D: Using NSSM (Non-Sucking Service Manager) - Recommended**
+
+NSSM is a popular tool for creating Windows services from executables and provides better service management capabilities.
+
+First, download and install NSSM:
+1. Download NSSM from https://nssm.cc/download
+2. Extract to a location like `C:\nssm` 
+3. Add `C:\nssm\win64` (or `win32`) to your system PATH
+
+```cmd
+REM Run as Administrator
+REM Install the service
+nssm install "Butler SOS insiders build" "C:\butler-sos-insider\butler-sos.exe"
+
+REM Set service parameters
+nssm set "Butler SOS insiders build" AppParameters "--config C:\butler-sos-insider\config\production_template.yaml"
+nssm set "Butler SOS insiders build" AppDirectory "C:\butler-sos-insider"
+nssm set "Butler SOS insiders build" DisplayName "Butler SOS insiders build"
+nssm set "Butler SOS insiders build" Description "Butler SOS insider build for testing"
+nssm set "Butler SOS insiders build" Start SERVICE_DEMAND_START
+
+REM Optional: Set up logging
+nssm set "Butler SOS insiders build" AppStdout "C:\butler-sos-insider\logs\stdout.log"
+nssm set "Butler SOS insiders build" AppStderr "C:\butler-sos-insider\logs\stderr.log"
+
+REM Optional: Set service account (default is Local System)
+REM nssm set "Butler SOS insiders build" ObjectName ".\ServiceAccount" "password"
+```
+
+**NSSM Service Management Commands:**
+```cmd
+REM Start the service
+nssm start "Butler SOS insiders build"
+
+REM Stop the service  
+nssm stop "Butler SOS insiders build"
+
+REM Restart the service
+nssm restart "Butler SOS insiders build"
+
+REM Check service status
+nssm status "Butler SOS insiders build"
+
+REM Remove the service (if needed)
+nssm remove "Butler SOS insiders build" confirm
+
+REM Edit service configuration
+nssm edit "Butler SOS insiders build"
+```
+
+**Using NSSM with PowerShell:**
+```powershell
+# Run as Administrator
+$serviceName = "Butler SOS insiders build"
+$exePath = "C:\butler-sos-insider\butler-sos.exe"
+$configPath = "C:\butler-sos-insider\config\production_template.yaml"
+
+# Install service
+& nssm install $serviceName $exePath
+& nssm set $serviceName AppParameters "--config $configPath"
+& nssm set $serviceName AppDirectory "C:\butler-sos-insider"
+& nssm set $serviceName DisplayName $serviceName
+& nssm set $serviceName Description "Butler SOS insider build for testing"
+& nssm set $serviceName Start SERVICE_DEMAND_START
+
+# Create logs directory
+New-Item -ItemType Directory -Path "C:\butler-sos-insider\logs" -Force
+
+# Set up logging
+& nssm set $serviceName AppStdout "C:\butler-sos-insider\logs\stdout.log"
+& nssm set $serviceName AppStderr "C:\butler-sos-insider\logs\stderr.log"
+
+Write-Host "Service '$serviceName' installed successfully with NSSM"
+```
 
 ### 3. Directory Setup
 
@@ -130,24 +280,58 @@ To manually test the deployment process:
 1. **Service not found:**
    - Ensure the service name is exactly `"Butler SOS insiders build"`
    - Check that the service was created successfully
+   - If using NSSM: `nssm status "Butler SOS insiders build"`
 
 2. **Permission denied:**
    - Verify the GitHub runner has service management permissions
    - Check directory permissions for `C:\butler-sos-insider`
+   - If using NSSM: Ensure NSSM is in system PATH and accessible to the runner account
 
 3. **Service won't start:**
    - Check the service configuration and binary path
    - Review Windows Event Logs for service startup errors
    - Ensure the configuration file is present and valid
+   - **If using NSSM:**
+     - Check service configuration: `nssm get "Butler SOS insiders build" AppDirectory`
+     - Check parameters: `nssm get "Butler SOS insiders build" AppParameters`
+     - Review NSSM logs in `C:\butler-sos-insider\logs\` (if configured)
+     - Use `nssm edit "Butler SOS insiders build"` to open the GUI editor
 
 4. **GitHub Runner not found:**
    - Verify the runner is labeled as `host2-win`
    - Ensure the runner is online and accepting jobs
 
+5. **NSSM-specific issues:**
+   - **NSSM not found:** Ensure NSSM is installed and in system PATH
+   - **Service already exists:** Use `nssm remove "Butler SOS insiders build" confirm` to remove and recreate
+   - **Wrong parameters:** Use `nssm set "Butler SOS insiders build" AppParameters "new-parameters"`
+   - **Logging issues:** Verify the logs directory exists and has write permissions
+
+**NSSM Diagnostic Commands:**
+```cmd
+REM Check if NSSM is available
+nssm version
+
+REM Get all service parameters
+nssm dump "Butler SOS insiders build"
+
+REM Check specific configuration
+nssm get "Butler SOS insiders build" Application
+nssm get "Butler SOS insiders build" AppDirectory
+nssm get "Butler SOS insiders build" AppParameters
+nssm get "Butler SOS insiders build" Start
+
+REM View service status
+nssm status "Butler SOS insiders build"
+```
+
 **Log Locations:**
 - GitHub Actions logs: Available in the workflow run details
 - Windows Event Logs: Check System and Application logs
 - Service logs: Check Butler SOS application logs if configured
+- **NSSM logs** (if using NSSM with logging enabled): 
+  - stdout: `C:\butler-sos-insider\logs\stdout.log`
+  - stderr: `C:\butler-sos-insider\logs\stderr.log`
 
 ## Configuration Files
 
