@@ -221,7 +221,7 @@ describe('healthmetrics', () => {
         // Expectations
         expect(axios.request).toHaveBeenCalled();
         expect(globals.logger.error).toHaveBeenCalledWith(
-            expect.stringContaining('HEALTH: Error when calling health check API:')
+            expect.stringContaining('HEALTH: Error when calling health check API for server \'server1\' (server1.example.com):')
         );
 
         // Verify that no metrics were posted

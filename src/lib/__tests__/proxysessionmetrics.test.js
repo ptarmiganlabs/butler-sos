@@ -71,6 +71,7 @@ jest.unstable_mockModule('../../globals.js', () => ({
             }),
             has: jest.fn().mockReturnValue(true),
         },
+        getErrorMessage: jest.fn().mockImplementation((err) => err.toString()),
         serverList: [
             {
                 serverName: 'server1',
@@ -202,7 +203,7 @@ describe('proxysessionmetrics', () => {
             // Verify
             expect(mockRequest).toHaveBeenCalled();
             expect(globals.logger.error).toHaveBeenCalledWith(
-                expect.stringContaining('Error when calling proxy session API')
+                expect.stringContaining('PROXY SESSIONS: Error when calling proxy session API for server \'server1\' (host1.example.com), virtual proxy \'vproxy1\':')
             );
             expect(mockPostProxySessionsToInfluxdb).not.toHaveBeenCalled();
         });
