@@ -453,7 +453,7 @@ jobs:
                   path: ${{ env.BUTLER_SOS_INSIDER_DOWNLOAD_PATH }}
 
             - name: Deploy Windows insider build
-              shell: pwsh
+              shell: powershell
               continue-on-error: true
               run: |
                   Write-Host "Starting deployment of Butler SOS insiders build..."
@@ -468,7 +468,7 @@ jobs:
                   $serviceName = $env:BUTLER_SOS_INSIDER_SERVICE_NAME
                   $artifactPath = "$env:BUTLER_SOS_INSIDER_DOWNLOAD_PATH\butler-sos--win-x64--${{ github.sha }}.zip"
                   $deployPath = $env:BUTLER_SOS_INSIDER_DEPLOY_PATH
-                  $serviceTimeout = [int]$env:BUTLER_SOS_INSIDER_SERVICE_TIMEOUT
+                  $serviceTimeout = [System.Convert]::ToInt32($env:BUTLER_SOS_INSIDER_SERVICE_TIMEOUT)
 
                   try {
                       # Check if artifact exists
@@ -556,7 +556,7 @@ jobs:
                   }
 
             - name: Verify deployment
-              shell: pwsh
+              shell: powershell
               continue-on-error: true
               run: |
                   Write-Host "Verifying deployment..."
