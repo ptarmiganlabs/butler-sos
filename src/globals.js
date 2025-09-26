@@ -8,10 +8,28 @@ import winston from 'winston';
 import 'winston-daily-rotate-file';
 import si from 'systeminformation';
 import { readFileSync } from 'fs';
-import Influx from 'influx';
 import { Command, Option } from 'commander';
-import { InfluxDB, HttpError, DEFAULT_WriteOptions } from '@influxdata/influxdb-client';
+
+// Note on InfluxDB libraries:
+// v1 client library: https://github.com/node-influx/node-influx
+// v2 client library: https://influxdata.github.io/influxdb-client-js/
+// v3 client library: https://github.com/InfluxCommunity/influxdb3-js
+
+// v1
+import Influx from 'influx';
+
+// v2
+// Import InfluxDB as const InfluxDB2 to avoid name clash with Influx from 'influx' above
+import {
+    InfluxDB as InfluxDB2,
+    HttpError,
+    DEFAULT_WriteOptions,
+} from '@influxdata/influxdb-client';
 import { OrgsAPI, BucketsAPI } from '@influxdata/influxdb-client-apis';
+
+// v3
+import { InfluxDBClient as InfluxDBClient3, Point as Point3 } from '@influxdata/influxdb3-client';
+
 import { fileURLToPath } from 'url';
 import sea from './lib/sea-wrapper.js';
 
@@ -134,9 +152,6 @@ class Settings {
         }
 
         this.appVersion = appVersion;
-
-        // Make copy of influxdb client
-        const InfluxDB2 = InfluxDB;
 
         // Command line parameters
         const program = new Command();
@@ -706,9 +721,6 @@ Configuration File:
                     `CONFIG: Influxdb organisation: ${this.config.get('Butler-SOS.influxdbConfig.v3Config.org')}`
                 );
                 this.logger.info(
-                    `CONFIG: Influxdb database: ${this.config.get('Butler-SOS.influxdbConfig.v3Config.database')}`
-                );
-                this.logger.info(
                     `CONFIG: Influxdb bucket name: ${this.config.get('Butler-SOS.influxdbConfig.v3Config.bucket')}`
                 );
                 this.logger.info(
@@ -876,7 +888,7 @@ Configuration File:
                 const token = this.config.get('Butler-SOS.influxdbConfig.v2Config.token');
 
                 try {
-                    this.influx = new InfluxDB({ url, token });
+                    this.influx = new InfluxDB2({ url, token });
                 } catch (err) {
                     this.logger.error(
                         `INFLUXDB2 INIT: Error creating InfluxDB 2 client: ${this.getErrorMessage(err)}`
@@ -884,14 +896,14 @@ Configuration File:
                     this.logger.error(`INFLUXDB2 INIT: Exiting.`);
                 }
             } else if (this.config.get('Butler-SOS.influxdbConfig.version') === 3) {
-                // Set up Influxdb v3 client (uses same client library as v2)
+                // Set up Influxdb v3 client (uses its own client library, NOT same as v2)
                 const url = `http://${this.config.get('Butler-SOS.influxdbConfig.host')}:${this.config.get(
                     'Butler-SOS.influxdbConfig.port'
                 )}`;
                 const token = this.config.get('Butler-SOS.influxdbConfig.v3Config.token');
 
                 try {
-                    this.influx = new InfluxDB({ url, token });
+                    this.influx = new InfluxDBClient3({ url, token });
                 } catch (err) {
                     this.logger.error(
                         `INFLUXDB3 INIT: Error creating InfluxDB 3 client: ${this.getErrorMessage(err)}`
@@ -1118,8 +1130,8 @@ Configuration File:
                         maxRetries: 2, // do not retry writes
 
                         // ... there are more write options that can be customized, see
-                        // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeoptions.html and
-                        // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeretryoptions.html
+                        // https://influxdata.github.io/influxdb-client-js/interfaces/_influxdata_influxdb-client.WriteOptions.html
+                        // https://influxdata.github.io/influxdb-client-js/interfaces/_influxdata_influxdb-client.WriteRetryOptions.html
                     };
 
                     try {
@@ -1145,7 +1157,6 @@ Configuration File:
         } else if (this.config.get('Butler-SOS.influxdbConfig.version') === 3) {
             // Get config
             const org = this.config.get('Butler-SOS.influxdbConfig.v3Config.org');
-            const database = this.config.get('Butler-SOS.influxdbConfig.v3Config.database');
             const bucketName = this.config.get('Butler-SOS.influxdbConfig.v3Config.bucket');
             const description = this.config.get('Butler-SOS.influxdbConfig.v3Config.description');
             const token = this.config.get('Butler-SOS.influxdbConfig.v3Config.token');
@@ -1157,7 +1168,6 @@ Configuration File:
                 this.influx &&
                 this.config.get('Butler-SOS.influxdbConfig.enable') === true &&
                 org?.length > 0 &&
-                database?.length > 0 &&
                 bucketName?.length > 0 &&
                 token?.length > 0 &&
                 retentionDuration?.length > 0
@@ -1166,9 +1176,9 @@ Configuration File:
             }
 
             if (enableInfluxdb) {
-                // For InfluxDB v3, we use the database directly
+                // For InfluxDB v3, we use the bucket directly
                 this.logger.info(
-                    `INFLUXDB3: Using organization "${org}" with database "${database}"`
+                    `INFLUXDB3: Using organization "${org}" with bucket "${bucketName}"`
                 );
 
                 // Create array of per-server writeAPI objects for v3

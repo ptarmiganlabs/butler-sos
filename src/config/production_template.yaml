@@ -514,6 +514,12 @@ Butler-SOS:
         host: influxdb.mycompany.com # InfluxDB host, hostname, FQDN or IP address
         port: 8086 # Port where InfluxDBdb is listening, usually 8086
         version: 1 # Is the InfluxDB instance version 1.x or 2.x? Valid values are 1 or 2
+        v3Config: # Settings for InfluxDB v3.x only, i.e. Butler-SOS.influxdbConfig.version=3
+            org: myorg
+            bucket: mybucket
+            description: Butler SOS metrics
+            token: mytoken
+            retentionDuration: 10d
         v2Config: # Settings for InfluxDB v2.x only, i.e. Butler-SOS.influxdbConfig.version=2
             org: myorg
             bucket: mybucket
@@ -525,7 +531,7 @@ Butler-SOS:
                 enable: false # Does influxdb instance require authentication (true/false)?
                 username: <username> # Username for Influxdb authentication. Mandatory if auth.enable=true
                 password: <password> # Password for Influxdb authentication. Mandatory if auth.enable=true
-            dbName: SenseOps
+            dbName: senseops
             # Default retention policy that should be created in InfluxDB when Butler SOS creates a new database there.
             # Any data older than retention policy threshold will be purged from InfluxDB.
             retentionPolicy:
