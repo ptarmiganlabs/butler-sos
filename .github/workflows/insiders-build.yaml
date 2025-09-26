@@ -435,3 +435,166 @@ jobs:
               with:
                   name: ${{ matrix.artifact_insider }}
                   path: ${{ matrix.artifact_insider }}
+
+    deploy-windows-insider:
+        needs: insiders-build
+        runs-on: ${{ vars.BUTLER_SOS_INSIDER_DEPLOY_RUNNER || 'host2-win' }}
+        if: success()
+        env:
+            BUTLER_SOS_INSIDER_SERVICE_NAME: ${{ vars.BUTLER_SOS_INSIDER_SERVICE_NAME || 'Butler SOS insiders build' }}
+            BUTLER_SOS_INSIDER_DEPLOY_PATH: ${{ vars.BUTLER_SOS_INSIDER_DEPLOY_PATH || 'C:\butler-sos-insider' }}
+            BUTLER_SOS_INSIDER_SERVICE_TIMEOUT: ${{ vars.BUTLER_SOS_INSIDER_SERVICE_TIMEOUT || '30' }}
+            BUTLER_SOS_INSIDER_DOWNLOAD_PATH: ${{ vars.BUTLER_SOS_INSIDER_DOWNLOAD_PATH || './download' }}
+        steps:
+            - name: Download Windows insider build artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: butler-sos--win-x64--${{ github.sha }}.zip
+                  path: ${{ env.BUTLER_SOS_INSIDER_DOWNLOAD_PATH }}
+
+            - name: Deploy Windows insider build
+              shell: pwsh
+              continue-on-error: true
+              run: |
+                  Write-Host "Starting deployment of Butler SOS insiders build..."
+                  Write-Host "Using configuration:"
+                  Write-Host "  Runner: ${{ runner.name }}"
+                  Write-Host "  Service Name: $env:BUTLER_SOS_INSIDER_SERVICE_NAME"
+                  Write-Host "  Deploy Path: $env:BUTLER_SOS_INSIDER_DEPLOY_PATH"
+                  Write-Host "  Service Timeout: $env:BUTLER_SOS_INSIDER_SERVICE_TIMEOUT seconds"
+                  Write-Host "  Download Path: $env:BUTLER_SOS_INSIDER_DOWNLOAD_PATH"
+
+                  # Define variables from environment
+                  $serviceName = $env:BUTLER_SOS_INSIDER_SERVICE_NAME
+                  $artifactPath = "$env:BUTLER_SOS_INSIDER_DOWNLOAD_PATH\butler-sos--win-x64--${{ github.sha }}.zip"
+                  $deployPath = $env:BUTLER_SOS_INSIDER_DEPLOY_PATH
+                  $serviceTimeout = [int]$env:BUTLER_SOS_INSIDER_SERVICE_TIMEOUT
+
+                  try {
+                      # Check if artifact exists
+                      if (-not (Test-Path $artifactPath)) {
+                          throw "Artifact not found at path: $artifactPath"
+                      }
+                      
+                      Write-Host "Artifact found: $artifactPath"
+                      
+                      # Stop the service if it exists
+                      Write-Host "Checking if service '$serviceName' exists..."
+                      $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+                      
+                      if ($service) {
+                          Write-Host "Service found. Current status: $($service.Status)"
+                          
+                          if ($service.Status -eq 'Running') {
+                              Write-Host "Stopping service '$serviceName'..."
+                              Stop-Service -Name $serviceName -Force -ErrorAction Stop
+                              
+                              # Wait for service to stop
+                              $timer = 0
+                              do {
+                                  Start-Sleep -Seconds 1
+                                  $timer++
+                                  $service = Get-Service -Name $serviceName
+                              } while ($service.Status -ne 'Stopped' -and $timer -lt $serviceTimeout)
+                              
+                              if ($service.Status -ne 'Stopped') {
+                                  throw "Failed to stop service within $serviceTimeout seconds"
+                              }
+                              
+                              Write-Host "Service stopped successfully"
+                          } else {
+                              Write-Host "Service is already stopped"
+                          }
+                      } else {
+                          Write-Host "Service '$serviceName' not found. Will continue with deployment."
+                      }
+                      
+                      # Create deployment directory if it doesn't exist
+                      if (-not (Test-Path $deployPath)) {
+                          Write-Host "Creating deployment directory: $deployPath"
+                          New-Item -ItemType Directory -Path $deployPath -Force
+                      }
+                      
+                      # Extract the zip file
+                      Write-Host "Extracting artifact to $deployPath..."
+                      Expand-Archive -Path $artifactPath -DestinationPath $deployPath -Force
+                      
+                      Write-Host "Deployment files extracted successfully"
+                      
+                      # List extracted contents
+                      Write-Host "Extracted files:"
+                      Get-ChildItem -Path $deployPath -Recurse | Format-Table Name, Length, LastWriteTime
+                      
+                      # Start the service if it exists
+                      if ($service) {
+                          Write-Host "Starting service '$serviceName'..."
+                          Start-Service -Name $serviceName -ErrorAction Stop
+                          
+                          # Wait for service to start
+                          $timer = 0
+                          do {
+                              Start-Sleep -Seconds 1
+                              $timer++
+                              $service = Get-Service -Name $serviceName
+                          } while ($service.Status -ne 'Running' -and $timer -lt $serviceTimeout)
+                          
+                          if ($service.Status -eq 'Running') {
+                              Write-Host "Service started successfully"
+                          } else {
+                              throw "Failed to start service within $serviceTimeout seconds. Service status: $($service.Status)"
+                          }
+                      } else {
+                          Write-Host "Service not found. Binary deployed but service needs to be configured manually."
+                      }
+                      
+                      Write-Host "✅ Deployment completed successfully!"
+                      
+                  } catch {
+                      Write-Host "❌ Deployment failed: $($_.Exception.Message)" -ForegroundColor Red
+                      Write-Host "Stack trace: $($_.ScriptStackTrace)" -ForegroundColor Red
+                      exit 1
+                  }
+
+            - name: Verify deployment
+              shell: pwsh
+              continue-on-error: true
+              run: |
+                  Write-Host "Verifying deployment..."
+
+                  $serviceName = $env:BUTLER_SOS_INSIDER_SERVICE_NAME
+                  $deployPath = $env:BUTLER_SOS_INSIDER_DEPLOY_PATH
+
+                  try {
+                      # Check if deployment directory exists and has files
+                      if (Test-Path $deployPath) {
+                          Write-Host "Deployment directory exists: $deployPath"
+                          $files = Get-ChildItem -Path $deployPath -Recurse
+                          Write-Host "Number of files in deployment: $($files.Count)"
+                          
+                          # Check for the main executable
+                          $executable = Get-ChildItem -Path $deployPath -Name "butler-sos.exe" -Recurse
+                          if ($executable) {
+                              Write-Host "✅ Main executable found: $executable"
+                          } else {
+                              Write-Host "⚠️  Main executable not found"
+                          }
+                      } else {
+                          Write-Host "❌ Deployment directory not found"
+                      }
+                      
+                      # Check service status
+                      $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+                      if ($service) {
+                          Write-Host "Service '$serviceName' status: $($service.Status)"
+                          if ($service.Status -eq 'Running') {
+                              Write-Host "✅ Service is running"
+                          } else {
+                              Write-Host "⚠️  Service is not running"
+                          }
+                      } else {
+                          Write-Host "⚠️  Service '$serviceName' not found"
+                      }
+                      
+                  } catch {
+                      Write-Host "❌ Verification failed: $($_.Exception.Message)" -ForegroundColor Red
+                  }
