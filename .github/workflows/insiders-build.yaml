@@ -463,13 +463,13 @@ jobs:
                   Write-Host "  Deploy Path: $env:BUTLER_SOS_INSIDER_DEPLOY_PATH"
                   Write-Host "  Service Timeout: $env:BUTLER_SOS_INSIDER_SERVICE_TIMEOUT seconds"
                   Write-Host "  Download Path: $env:BUTLER_SOS_INSIDER_DOWNLOAD_PATH"
-                  
+
                   # Define variables from environment
                   $serviceName = $env:BUTLER_SOS_INSIDER_SERVICE_NAME
                   $artifactPath = "$env:BUTLER_SOS_INSIDER_DOWNLOAD_PATH\butler-sos--win-x64--${{ github.sha }}.zip"
                   $deployPath = $env:BUTLER_SOS_INSIDER_DEPLOY_PATH
                   $serviceTimeout = [int]$env:BUTLER_SOS_INSIDER_SERVICE_TIMEOUT
-                  
+
                   try {
                       # Check if artifact exists
                       if (-not (Test-Path $artifactPath)) {
@@ -560,10 +560,10 @@ jobs:
               continue-on-error: true
               run: |
                   Write-Host "Verifying deployment..."
-                  
+
                   $serviceName = $env:BUTLER_SOS_INSIDER_SERVICE_NAME
                   $deployPath = $env:BUTLER_SOS_INSIDER_DEPLOY_PATH
-                  
+
                   try {
                       # Check if deployment directory exists and has files
                       if (Test-Path $deployPath) {
