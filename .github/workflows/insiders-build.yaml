@@ -438,19 +438,19 @@ jobs:
 
     deploy-windows-insider:
         needs: insiders-build
-        runs-on: ${{ secrets.INSIDER_DEPLOY_RUNNER || 'host2-win' }}
+        runs-on: ${{ vars.BUTLER_SOS_INSIDER_DEPLOY_RUNNER || 'host2-win' }}
         if: success()
         env:
-            INSIDER_SERVICE_NAME: ${{ secrets.INSIDER_SERVICE_NAME || 'Butler SOS insiders build' }}
-            INSIDER_DEPLOY_PATH: ${{ secrets.INSIDER_DEPLOY_PATH || 'C:\butler-sos-insider' }}
-            INSIDER_SERVICE_TIMEOUT: ${{ secrets.INSIDER_SERVICE_TIMEOUT || '30' }}
-            INSIDER_DOWNLOAD_PATH: ${{ secrets.INSIDER_DOWNLOAD_PATH || './download' }}
+            BUTLER_SOS_INSIDER_SERVICE_NAME: ${{ vars.BUTLER_SOS_INSIDER_SERVICE_NAME || 'Butler SOS insiders build' }}
+            BUTLER_SOS_INSIDER_DEPLOY_PATH: ${{ vars.BUTLER_SOS_INSIDER_DEPLOY_PATH || 'C:\butler-sos-insider' }}
+            BUTLER_SOS_INSIDER_SERVICE_TIMEOUT: ${{ vars.BUTLER_SOS_INSIDER_SERVICE_TIMEOUT || '30' }}
+            BUTLER_SOS_INSIDER_DOWNLOAD_PATH: ${{ vars.BUTLER_SOS_INSIDER_DOWNLOAD_PATH || './download' }}
         steps:
             - name: Download Windows insider build artifact
               uses: actions/download-artifact@v4
               with:
                   name: butler-sos--win-x64--${{ github.sha }}.zip
-                  path: ${{ env.INSIDER_DOWNLOAD_PATH }}
+                  path: ${{ env.BUTLER_SOS_INSIDER_DOWNLOAD_PATH }}
 
             - name: Deploy Windows insider build
               shell: pwsh
@@ -459,16 +459,16 @@ jobs:
                   Write-Host "Starting deployment of Butler SOS insiders build..."
                   Write-Host "Using configuration:"
                   Write-Host "  Runner: ${{ runner.name }}"
-                  Write-Host "  Service Name: $env:INSIDER_SERVICE_NAME"
-                  Write-Host "  Deploy Path: $env:INSIDER_DEPLOY_PATH"
-                  Write-Host "  Service Timeout: $env:INSIDER_SERVICE_TIMEOUT seconds"
-                  Write-Host "  Download Path: $env:INSIDER_DOWNLOAD_PATH"
+                  Write-Host "  Service Name: $env:BUTLER_SOS_INSIDER_SERVICE_NAME"
+                  Write-Host "  Deploy Path: $env:BUTLER_SOS_INSIDER_DEPLOY_PATH"
+                  Write-Host "  Service Timeout: $env:BUTLER_SOS_INSIDER_SERVICE_TIMEOUT seconds"
+                  Write-Host "  Download Path: $env:BUTLER_SOS_INSIDER_DOWNLOAD_PATH"
                   
                   # Define variables from environment
-                  $serviceName = $env:INSIDER_SERVICE_NAME
-                  $artifactPath = "$env:INSIDER_DOWNLOAD_PATH\butler-sos--win-x64--${{ github.sha }}.zip"
-                  $deployPath = $env:INSIDER_DEPLOY_PATH
-                  $serviceTimeout = [int]$env:INSIDER_SERVICE_TIMEOUT
+                  $serviceName = $env:BUTLER_SOS_INSIDER_SERVICE_NAME
+                  $artifactPath = "$env:BUTLER_SOS_INSIDER_DOWNLOAD_PATH\butler-sos--win-x64--${{ github.sha }}.zip"
+                  $deployPath = $env:BUTLER_SOS_INSIDER_DEPLOY_PATH
+                  $serviceTimeout = [int]$env:BUTLER_SOS_INSIDER_SERVICE_TIMEOUT
                   
                   try {
                       # Check if artifact exists
@@ -561,8 +561,8 @@ jobs:
               run: |
                   Write-Host "Verifying deployment..."
                   
-                  $serviceName = $env:INSIDER_SERVICE_NAME
-                  $deployPath = $env:INSIDER_DEPLOY_PATH
+                  $serviceName = $env:BUTLER_SOS_INSIDER_SERVICE_NAME
+                  $deployPath = $env:BUTLER_SOS_INSIDER_DEPLOY_PATH
                   
                   try {
                       # Check if deployment directory exists and has files

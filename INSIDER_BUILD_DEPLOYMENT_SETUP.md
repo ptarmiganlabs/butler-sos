@@ -14,50 +14,51 @@ The GitHub Actions workflow `insiders-build.yaml` now includes automatic deploym
 
 ## Manual Setup Required
 
-### 1. GitHub Secrets Configuration (Optional)
+### 1. GitHub Variables Configuration (Optional)
 
-The deployment workflow supports configurable properties via GitHub secrets. All have sensible defaults, so configuration is optional:
+The deployment workflow supports configurable properties via GitHub repository variables. All have sensible defaults, so configuration is optional:
 
-| Secret Name | Description | Default Value |
+| Variable Name | Description | Default Value |
 |-------------|-------------|---------------|
-| `INSIDER_DEPLOY_RUNNER` | GitHub runner name/label to use for deployment | `host2-win` |
-| `INSIDER_SERVICE_NAME` | Windows service name for Butler SOS | `Butler SOS insiders build` |
-| `INSIDER_DEPLOY_PATH` | Directory path where to deploy the binary | `C:\butler-sos-insider` |
-| `INSIDER_SERVICE_TIMEOUT` | Timeout in seconds for service stop/start operations | `30` |
-| `INSIDER_DOWNLOAD_PATH` | Temporary download path for artifacts | `./download` |
+| `BUTLER_SOS_INSIDER_DEPLOY_RUNNER` | GitHub runner name/label to use for deployment | `host2-win` |
+| `BUTLER_SOS_INSIDER_SERVICE_NAME` | Windows service name for Butler SOS | `Butler SOS insiders build` |
+| `BUTLER_SOS_INSIDER_DEPLOY_PATH` | Directory path where to deploy the binary | `C:\butler-sos-insider` |
+| `BUTLER_SOS_INSIDER_SERVICE_TIMEOUT` | Timeout in seconds for service stop/start operations | `30` |
+| `BUTLER_SOS_INSIDER_DOWNLOAD_PATH` | Temporary download path for artifacts | `./download` |
 
-**To configure GitHub secrets:**
+**To configure GitHub variables:**
 1. Go to your repository → Settings → Secrets and variables → Actions
-2. Click "New repository secret"
-3. Add any of the above secret names with your desired values
-4. The workflow will automatically use these values, falling back to defaults if not set
+2. Click on the "Variables" tab
+3. Click "New repository variable"
+4. Add any of the above variable names with your desired values
+5. The workflow will automatically use these values, falling back to defaults if not set
 
 **Example customization:**
 ```yaml
 # Set custom runner name
-INSIDER_DEPLOY_RUNNER: "my-custom-runner"
+BUTLER_SOS_INSIDER_DEPLOY_RUNNER: "my-custom-runner"
 
 # Use different service name
-INSIDER_SERVICE_NAME: "Butler SOS Testing Service"
+BUTLER_SOS_INSIDER_SERVICE_NAME: "Butler SOS Testing Service"
 
 # Deploy to different directory
-INSIDER_DEPLOY_PATH: "D:\Apps\butler-sos-test"
+BUTLER_SOS_INSIDER_DEPLOY_PATH: "D:\Apps\butler-sos-test"
 
 # Increase timeout for slower systems
-INSIDER_SERVICE_TIMEOUT: "60"
+BUTLER_SOS_INSIDER_SERVICE_TIMEOUT: "60"
 ```
 
 ### 2. GitHub Runner Configuration
 
-On the deployment server (default: `host2-win`, configurable via `INSIDER_DEPLOY_RUNNER` secret), ensure the GitHub runner is configured with:
+On the deployment server (default: `host2-win`, configurable via `BUTLER_SOS_INSIDER_DEPLOY_RUNNER` variable), ensure the GitHub runner is configured with:
 
 **Runner Labels:**
-- The runner must be labeled to match the `INSIDER_DEPLOY_RUNNER` secret value (default: `host2-win`)
+- The runner must be labeled to match the `BUTLER_SOS_INSIDER_DEPLOY_RUNNER` variable value (default: `host2-win`)
 
 **Permissions:**
 - The runner service account must have permission to:
   - Stop and start Windows services
-  - Write to the deployment directory (default: `C:\butler-sos-insider`, configurable via `INSIDER_DEPLOY_PATH`)
+  - Write to the deployment directory (default: `C:\butler-sos-insider`, configurable via `BUTLER_SOS_INSIDER_DEPLOY_PATH`)
   - Execute PowerShell scripts
 
 **PowerShell Execution Policy:**
@@ -68,11 +69,11 @@ Set-ExecutionPolicy RemoteSigned -Scope LocalMachine
 
 ### 3. Windows Service Setup
 
-Create a Windows service. The service name and deployment path can be customized via GitHub secrets (see section 1).
+Create a Windows service. The service name and deployment path can be customized via GitHub repository variables (see section 1).
 
 **Default values:**
-- Service Name: `"Butler SOS insiders build"` (configurable via `INSIDER_SERVICE_NAME`)
-- Deploy Path: `C:\butler-sos-insider` (configurable via `INSIDER_DEPLOY_PATH`)
+- Service Name: `"Butler SOS insiders build"` (configurable via `BUTLER_SOS_INSIDER_SERVICE_NAME`)
+- Deploy Path: `C:\butler-sos-insider` (configurable via `BUTLER_SOS_INSIDER_DEPLOY_PATH`)
 
 **Option A: Using NSSM (Non-Sucking Service Manager) - Recommended**
 
