@@ -438,25 +438,37 @@ jobs:
 
     deploy-windows-insider:
         needs: insiders-build
-        runs-on: host2-win
+        runs-on: ${{ secrets.INSIDER_DEPLOY_RUNNER || 'host2-win' }}
         if: success()
+        env:
+            INSIDER_SERVICE_NAME: ${{ secrets.INSIDER_SERVICE_NAME || 'Butler SOS insiders build' }}
+            INSIDER_DEPLOY_PATH: ${{ secrets.INSIDER_DEPLOY_PATH || 'C:\butler-sos-insider' }}
+            INSIDER_SERVICE_TIMEOUT: ${{ secrets.INSIDER_SERVICE_TIMEOUT || '30' }}
+            INSIDER_DOWNLOAD_PATH: ${{ secrets.INSIDER_DOWNLOAD_PATH || './download' }}
         steps:
             - name: Download Windows insider build artifact
               uses: actions/download-artifact@v4
               with:
                   name: butler-sos--win-x64--${{ github.sha }}.zip
-                  path: ./download
+                  path: ${{ env.INSIDER_DOWNLOAD_PATH }}
 
             - name: Deploy Windows insider build
               shell: pwsh
               continue-on-error: true
               run: |
                   Write-Host "Starting deployment of Butler SOS insiders build..."
+                  Write-Host "Using configuration:"
+                  Write-Host "  Runner: ${{ runner.name }}"
+                  Write-Host "  Service Name: $env:INSIDER_SERVICE_NAME"
+                  Write-Host "  Deploy Path: $env:INSIDER_DEPLOY_PATH"
+                  Write-Host "  Service Timeout: $env:INSIDER_SERVICE_TIMEOUT seconds"
+                  Write-Host "  Download Path: $env:INSIDER_DOWNLOAD_PATH"
                   
-                  # Define variables
-                  $serviceName = "Butler SOS insiders build"
-                  $artifactPath = ".\download\butler-sos--win-x64--${{ github.sha }}.zip"
-                  $deployPath = "C:\butler-sos-insider"
+                  # Define variables from environment
+                  $serviceName = $env:INSIDER_SERVICE_NAME
+                  $artifactPath = "$env:INSIDER_DOWNLOAD_PATH\butler-sos--win-x64--${{ github.sha }}.zip"
+                  $deployPath = $env:INSIDER_DEPLOY_PATH
+                  $serviceTimeout = [int]$env:INSIDER_SERVICE_TIMEOUT
                   
                   try {
                       # Check if artifact exists
@@ -478,16 +490,15 @@ jobs:
                               Stop-Service -Name $serviceName -Force -ErrorAction Stop
                               
                               # Wait for service to stop
-                              $timeout = 30
                               $timer = 0
                               do {
                                   Start-Sleep -Seconds 1
                                   $timer++
                                   $service = Get-Service -Name $serviceName
-                              } while ($service.Status -ne 'Stopped' -and $timer -lt $timeout)
+                              } while ($service.Status -ne 'Stopped' -and $timer -lt $serviceTimeout)
                               
                               if ($service.Status -ne 'Stopped') {
-                                  throw "Failed to stop service within $timeout seconds"
+                                  throw "Failed to stop service within $serviceTimeout seconds"
                               }
                               
                               Write-Host "Service stopped successfully"
@@ -520,18 +531,17 @@ jobs:
                           Start-Service -Name $serviceName -ErrorAction Stop
                           
                           # Wait for service to start
-                          $timeout = 30
                           $timer = 0
                           do {
                               Start-Sleep -Seconds 1
                               $timer++
                               $service = Get-Service -Name $serviceName
-                          } while ($service.Status -ne 'Running' -and $timer -lt $timeout)
+                          } while ($service.Status -ne 'Running' -and $timer -lt $serviceTimeout)
                           
                           if ($service.Status -eq 'Running') {
                               Write-Host "Service started successfully"
                           } else {
-                              throw "Failed to start service within $timeout seconds. Service status: $($service.Status)"
+                              throw "Failed to start service within $serviceTimeout seconds. Service status: $($service.Status)"
                           }
                       } else {
                           Write-Host "Service not found. Binary deployed but service needs to be configured manually."
@@ -551,8 +561,8 @@ jobs:
               run: |
                   Write-Host "Verifying deployment..."
                   
-                  $serviceName = "Butler SOS insiders build"
-                  $deployPath = "C:\butler-sos-insider"
+                  $serviceName = $env:INSIDER_SERVICE_NAME
+                  $deployPath = $env:INSIDER_DEPLOY_PATH
                   
                   try {
                       # Check if deployment directory exists and has files

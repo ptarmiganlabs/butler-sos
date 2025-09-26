@@ -14,17 +14,50 @@ The GitHub Actions workflow `insiders-build.yaml` now includes automatic deploym
 
 ## Manual Setup Required
 
-### 1. GitHub Runner Configuration
+### 1. GitHub Secrets Configuration (Optional)
 
-On the `host2-win` server, ensure the GitHub runner is configured with:
+The deployment workflow supports configurable properties via GitHub secrets. All have sensible defaults, so configuration is optional:
+
+| Secret Name | Description | Default Value |
+|-------------|-------------|---------------|
+| `INSIDER_DEPLOY_RUNNER` | GitHub runner name/label to use for deployment | `host2-win` |
+| `INSIDER_SERVICE_NAME` | Windows service name for Butler SOS | `Butler SOS insiders build` |
+| `INSIDER_DEPLOY_PATH` | Directory path where to deploy the binary | `C:\butler-sos-insider` |
+| `INSIDER_SERVICE_TIMEOUT` | Timeout in seconds for service stop/start operations | `30` |
+| `INSIDER_DOWNLOAD_PATH` | Temporary download path for artifacts | `./download` |
+
+**To configure GitHub secrets:**
+1. Go to your repository → Settings → Secrets and variables → Actions
+2. Click "New repository secret"
+3. Add any of the above secret names with your desired values
+4. The workflow will automatically use these values, falling back to defaults if not set
+
+**Example customization:**
+```yaml
+# Set custom runner name
+INSIDER_DEPLOY_RUNNER: "my-custom-runner"
+
+# Use different service name
+INSIDER_SERVICE_NAME: "Butler SOS Testing Service"
+
+# Deploy to different directory
+INSIDER_DEPLOY_PATH: "D:\Apps\butler-sos-test"
+
+# Increase timeout for slower systems
+INSIDER_SERVICE_TIMEOUT: "60"
+```
+
+### 2. GitHub Runner Configuration
+
+On the deployment server (default: `host2-win`, configurable via `INSIDER_DEPLOY_RUNNER` secret), ensure the GitHub runner is configured with:
 
 **Runner Labels:**
-- The runner must be labeled as `host2-win` (this matches the `runs-on` value in the workflow)
+- The runner must be labeled to match the `INSIDER_DEPLOY_RUNNER` secret value (default: `host2-win`)
 
 **Permissions:**
 - The runner service account must have permission to:
   - Stop and start Windows services
-  - Write to the deployment directory (`C:\butler-sos-insider`)
+  - Write to the deployment directory (default: `C:\butler-sos-insider`, configurable via `INSIDER_DEPLOY_PATH`)
   - Execute PowerShell scripts
 
 **PowerShell Execution Policy:**
@@ -33,9 +66,13 @@ On the `host2-win` server, ensure the GitHub runner is configured with:
 Set-ExecutionPolicy RemoteSigned -Scope LocalMachine
 ```
 
-### 2. Windows Service Setup
+### 3. Windows Service Setup
 
-Create a Windows service named exactly `"Butler SOS insiders build"`:
+Create a Windows service. The service name and deployment path can be customized via GitHub secrets (see section 1).
+
+**Default values:**
+- Service Name: `"Butler SOS insiders build"` (configurable via `INSIDER_SERVICE_NAME`)
+- Deploy Path: `C:\butler-sos-insider` (configurable via `INSIDER_DEPLOY_PATH`)
 
 **Option A: Using NSSM (Non-Sucking Service Manager) - Recommended**
 
@@ -219,7 +256,7 @@ New-Item -ItemType Directory -Path "C:\butler-sos-insider\logs" -Force
 Write-Host "Service '$serviceName' installed successfully with NSSM"
 ```
 
-### 3. Directory Setup
+### 4. Directory Setup
 
 Create the deployment directory with proper permissions:
 
