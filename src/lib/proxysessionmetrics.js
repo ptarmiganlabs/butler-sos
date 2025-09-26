@@ -192,7 +192,9 @@ function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
 
             resolve(userProxySessionsData);
         } catch (err) {
-            globals.logger.error(`PROXY SESSIONS: ${err}`);
+            globals.logger.error(
+                `PROXY SESSIONS: Error preparing user session metrics for server '${serverName}' (${host}), virtual proxy '${virtualProxy}': ${globals.getErrorMessage(err)}`
+            );
             reject();
         }
     });
@@ -314,7 +316,9 @@ export async function getProxySessionStatsFromSense(serverName, host, virtualPro
             }
         }
     } catch (err) {
-        globals.logger.error(`PROXY SESSIONS: Error when calling proxy session API: ${err}`);
+        globals.logger.error(
+            `PROXY SESSIONS: Error when calling proxy session API for server '${serverName}' (${host}), virtual proxy '${virtualProxy}': ${globals.getErrorMessage(err)}`
+        );
     }
 }
 
@@ -361,7 +365,9 @@ export function setupUserSessionsTimer() {
                             tags
                         );
                     } catch (err) {
-                        globals.logger.error(`PROXY SESSIONS: Error getting session stats: ${err}`);
+                        globals.logger.error(
+                            `PROXY SESSIONS: Error getting session stats for server '${server.serverName}' (${server.userSessions.host}), virtual proxy '${virtualProxy.virtualProxy}': ${globals.getErrorMessage(err)}`
+                        );
                     }
                 }
             }
