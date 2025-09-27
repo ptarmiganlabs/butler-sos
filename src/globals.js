@@ -143,7 +143,8 @@ class Settings {
             .version(this.appVersion)
             .name('butler-sos')
             .description(
-                `
+                `Version: ${this.appVersion}
+
 Butler SenseOps Stats ("Butler-SOS") is a tool publishing operational Qlik Sense metrics to InfluxDB, Prometheus, New Relic and other destinations.
 
 User events and log events can be forwarded from Sense to Butler SOS and then acted upon there.
