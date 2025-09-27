@@ -187,6 +187,20 @@ async function mainScript() {
             globals.logger.verbose(
                 'MAIN: ❤️  Thank you for supporting Butler SOS by allowing telemetry! ❤️'
             );
+        } else {
+            globals.logger.info('MAIN: Anonymous telemetry reporting is disabled.');
+            globals.logger.info(
+                'MAIN:     While not mandatory the telemetry data greatly helps the Butler SOS developers.'
+            );
+            globals.logger.info(
+                'MAIN:     It provides insights into which features are used most and what hardware/OSs are most used out there.'
+            );
+            globals.logger.info(
+                'MAIN:     This information makes it possible to focus development efforts where they will make most impact and be most valuable.'
+            );
+            globals.logger.info(
+                'MAIN:     ❤️ More info at https://butler.ptarmiganlabs.com/docs/about/telemetry/'
+            );
         }
     } catch (err) {
         globals.logger.error(`CONFIG: Error initiating host info: ${globals.getErrorMessage(err)}`);

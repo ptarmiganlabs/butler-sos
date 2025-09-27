@@ -6,6 +6,40 @@ import globals from '../globals.js';
 let posthogClient;
 
 /**
+ * Safely gets a configuration value with a default fallback
+ *
+ * @param {string} path - Configuration path
+ * @param {unknown} defaultValue - Default value to return if config doesn't exist or is invalid
+ * @returns {unknown} Configuration value or default
+ */
+function safeGetConfig(path, defaultValue = false) {
+    try {
+        return globals.config.has(path) ? globals.config.get(path) : defaultValue;
+    } catch (err) {
+        globals.logger?.debug(`TELEMETRY: Error getting config ${path}: ${err.message}`);
+        return defaultValue;
+    }
+}
+
+/**
+ * Safely accesses nested properties with a default fallback
+ *
+ * @param {object} obj - Object to access
+ * @param {string} path - Dot-separated path (e.g., 'si.os.platform')
+ * @param {unknown} defaultValue - Default value if path doesn't exist
+ * @returns {unknown} Property value or default
+ */
+function safeGetProperty(obj, path, defaultValue = 'unknown') {
+    try {
+        return path.split('.').reduce((current, key) => {
+            return current && current[key] !== undefined ? current[key] : defaultValue;
+        }, obj);
+    } catch (err) {
+        return defaultValue;
+    }
+}
+
+/**
  * Sends anonymous telemetry data to PostHog.
  *
  * This function collects information about the Butler SOS instance, its environment,
@@ -24,6 +58,19 @@ let posthogClient;
  */
 export const callRemoteURL = function reportTelemetry() {
     try {
+        // Check if telemetry is enabled before doing anything
+        if (safeGetConfig('Butler-SOS.anonTelemetry') !== true) {
+            globals.logger?.debug(
+                'TELEMETRY: Anonymous telemetry is disabled, skipping data collection'
+            );
+            return;
+        }
+
+        // Check if hostInfo is available
+        if (!globals.hostInfo) {
+            globals.logger?.debug('TELEMETRY: Host info not available, using fallback values');
+        }
+
         let heartbeat = false;
         let dockerHealthCheck = false;
         let uptimeMonitor = false;
@@ -54,154 +101,163 @@ export const callRemoteURL = function reportTelemetry() {
         let userSessionsEnable = false;
 
         // Gather info on what features are enabled/disabled
-        if (globals.config.get('Butler-SOS.heartbeat.enable') === true) {
+        if (safeGetConfig('Butler-SOS.heartbeat.enable') === true) {
             heartbeat = true;
         }
 
-        if (globals.config.get('Butler-SOS.dockerHealthCheck.enable') === true) {
+        if (safeGetConfig('Butler-SOS.dockerHealthCheck.enable') === true) {
             dockerHealthCheck = true;
         }
 
-        if (globals.config.get('Butler-SOS.uptimeMonitor.enable') === true) {
+        if (safeGetConfig('Butler-SOS.uptimeMonitor.enable') === true) {
             uptimeMonitor = true;
         }
 
-        if (globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.enable') === true) {
+        if (safeGetConfig('Butler-SOS.uptimeMonitor.storeNewRelic.enable') === true) {
             uptimeMonitorNewRelic = true;
         }
 
-        if (globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.enable') === true) {
+        if (safeGetConfig('Butler-SOS.qlikSenseEvents.eventCount.enable') === true) {
             eventCountEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.qlikSenseEvents.rejectedEventCount.enable') === true) {
+        if (safeGetConfig('Butler-SOS.qlikSenseEvents.rejectedEventCount.enable') === true) {
             rejectedEventCountEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.userEvents.enable') === true) {
+        if (safeGetConfig('Butler-SOS.userEvents.enable') === true) {
             userEventsEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.userEvents.sendToMQTT.enable') === true) {
+        if (safeGetConfig('Butler-SOS.userEvents.sendToMQTT.enable') === true) {
             userEventsMQTTEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.userEvents.sendToInfluxdb.enable') === true) {
+        if (safeGetConfig('Butler-SOS.userEvents.sendToInfluxdb.enable') === true) {
             userEventsInfluxDBEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.userEvents.sendToNewRelic.enable') === true) {
+        if (safeGetConfig('Butler-SOS.userEvents.sendToNewRelic.enable') === true) {
             userEventsNewRelicEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.logEvents.source.proxy.enable') === true) {
+        if (safeGetConfig('Butler-SOS.logEvents.source.proxy.enable') === true) {
             logEventsProxyEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.logEvents.source.scheduler.enable') === true) {
+        if (safeGetConfig('Butler-SOS.logEvents.source.scheduler.enable') === true) {
             logEventsSchedulerEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.logEvents.source.repository.enable') === true) {
+        if (safeGetConfig('Butler-SOS.logEvents.source.repository.enable') === true) {
             logEventsRepositoryEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.logEvents.sendToMQTT.enable') === true) {
+        if (safeGetConfig('Butler-SOS.logEvents.sendToMQTT.enable') === true) {
             logEventsMQTTEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.logEvents.sendToInfluxdb.enable') === true) {
+        if (safeGetConfig('Butler-SOS.logEvents.sendToInfluxdb.enable') === true) {
             logEventsInfluxDBEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.logEvents.sendToNewRelic.enable') === true) {
+        if (safeGetConfig('Butler-SOS.logEvents.sendToNewRelic.enable') === true) {
             logEventsNewRelicEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.logEvents.categorise.enable') === true) {
+        if (safeGetConfig('Butler-SOS.logEvents.categorise.enable') === true) {
             logEventCategoriseEnable = true;
         }
 
         // Get number of rules in the categorise rules array at Butler-SOS.logEvents.categorise.rules
         if (globals.config.has('Butler-SOS.logEvents.categorise.rules')) {
-            logEventCategoriseRuleCount = globals.config.get(
-                'Butler-SOS.logEvents.categorise.rules'
-            ).length;
+            const categoriseRules = globals.config.get('Butler-SOS.logEvents.categorise.rules');
+            // Ensure the config value is an array before calling .length
+            logEventCategoriseRuleCount = Array.isArray(categoriseRules)
+                ? categoriseRules.length
+                : 0;
         }
 
-        if (globals.config.get('Butler-SOS.logEvents.categorise.ruleDefault.enable') === true) {
+        if (safeGetConfig('Butler-SOS.logEvents.categorise.ruleDefault.enable') === true) {
             logEventCategoriseRuleDefaultEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.logEvents.enginePerformanceMonitor.enable') === true) {
+        if (safeGetConfig('Butler-SOS.logEvents.enginePerformanceMonitor.enable') === true) {
             logEventEnginePerformanceMonitorEnable = true;
         }
 
         if (
-            globals.config.get(
-                'Butler-SOS.logEvents.enginePerformanceMonitor.appNameLookup.enable'
-            ) === true
+            safeGetConfig('Butler-SOS.logEvents.enginePerformanceMonitor.appNameLookup.enable') ===
+            true
         ) {
             logEventEnginePerformanceMonitorNameLookupEnable = true;
         }
 
         if (
-            globals.config.get(
+            safeGetConfig(
                 'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.enable'
             ) === true
         ) {
             logEventEnginePerformanceMonitorTrackRejectedEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.mqttConfig.enable') === true) {
+        if (safeGetConfig('Butler-SOS.mqttConfig.enable') === true) {
             mqttEnable = true;
         }
 
         // Is New Relic enabled?
-        if (globals.config.get('Butler-SOS.newRelic.enable') === true) {
+        if (safeGetConfig('Butler-SOS.newRelic.enable') === true) {
             newRelicEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.prometheus.enable') === true) {
+        if (safeGetConfig('Butler-SOS.prometheus.enable') === true) {
             prometheusEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.influxdbConfig.enable') === true) {
+        if (safeGetConfig('Butler-SOS.influxdbConfig.enable') === true) {
             influxdbEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.appNames.enableAppNameExtract') === true) {
+        if (safeGetConfig('Butler-SOS.appNames.enableAppNameExtract') === true) {
             appNamesExtractEnable = true;
         }
 
-        if (globals.config.get('Butler-SOS.userSessions.enableSessionExtract') === true) {
+        if (safeGetConfig('Butler-SOS.userSessions.enableSessionExtract') === true) {
             userSessionsEnable = true;
         }
 
         // Build body that can be sent to PostHog
         const body = {
-            distinctId: globals.hostInfo.id,
+            distinctId: safeGetProperty(globals.hostInfo, 'id', 'unknown-host-id'),
             event: 'telemetry sent',
 
             properties: {
                 service: 'butler-sos',
-                serviceVersion: globals.appVersion,
+                serviceVersion: globals.appVersion || 'unknown',
 
-                system_id: globals.hostInfo.id,
-                system_arch: globals.hostInfo.si.os.arch,
-                system_platform: globals.hostInfo.si.os.platform,
-                system_release: globals.hostInfo.si.os.release,
-                system_distro: globals.hostInfo.si.os.distro,
-                system_codename: globals.hostInfo.si.os.codename,
-                system_virtual: globals.hostInfo.si.system.virtual,
-                system_isRunningInDocker: globals.hostInfo.isRunningInDocker,
-                system_nodeVersion: globals.hostInfo.node.nodeVersion,
+                system_id: safeGetProperty(globals.hostInfo, 'id', 'unknown-host-id'),
+                system_arch: safeGetProperty(globals.hostInfo, 'si.os.arch', 'unknown'),
+                system_platform: safeGetProperty(globals.hostInfo, 'si.os.platform', 'unknown'),
+                system_release: safeGetProperty(globals.hostInfo, 'si.os.release', 'unknown'),
+                system_distro: safeGetProperty(globals.hostInfo, 'si.os.distro', 'unknown'),
+                system_codename: safeGetProperty(globals.hostInfo, 'si.os.codename', 'unknown'),
+                system_virtual: safeGetProperty(globals.hostInfo, 'si.system.virtual', false),
+                system_isRunningInDocker: safeGetProperty(
+                    globals.hostInfo,
+                    'isRunningInDocker',
+                    false
+                ),
+                system_nodeVersion: safeGetProperty(
+                    globals.hostInfo,
+                    'node.nodeVersion',
+                    'unknown'
+                ),
 
                 feature_heartbeat: heartbeat,
                 feature_dockerHealthCheck: dockerHealthCheck,
                 feature_uptimeMonitor: uptimeMonitor,
                 feature_uptimeMonitor_storeNewRelic: uptimeMonitorNewRelic,
-                feature_udpServer: globals.config.get('Butler-SOS.userEvents.enable'),
+                feature_udpServer: safeGetConfig('Butler-SOS.userEvents.enable', false),
 
                 feature_eventCount: eventCountEnable,
                 feature_rejectedEventCount: rejectedEventCountEnable,
@@ -230,21 +286,32 @@ export const callRemoteURL = function reportTelemetry() {
                 feature_newRelic: newRelicEnable,
                 feature_prometheus: prometheusEnable,
                 feature_influxdb: influxdbEnable,
-                feature_influxdb_version: globals.config.get('Butler-SOS.influxdbConfig.version'),
+                feature_influxdb_version: safeGetConfig(
+                    'Butler-SOS.influxdbConfig.version',
+                    'unknown'
+                ),
                 feature_appNames: appNamesExtractEnable,
                 feature_userSessions: userSessionsEnable,
 
                 telemetry_json: {
                     system: {
-                        id: globals.hostInfo.id,
-                        arch: globals.hostInfo.si.os.arch,
-                        platform: globals.hostInfo.si.os.platform,
-                        release: globals.hostInfo.si.os.release,
-                        distro: globals.hostInfo.si.os.distro,
-                        codename: globals.hostInfo.si.os.codename,
-                        virtual: globals.hostInfo.si.system.virtual,
-                        isRunningInDocker: globals.hostInfo.isRunningInDocker,
-                        nodeVersion: globals.hostInfo.node.nodeVersion,
+                        id: safeGetProperty(globals.hostInfo, 'id', 'unknown-host-id'),
+                        arch: safeGetProperty(globals.hostInfo, 'si.os.arch', 'unknown'),
+                        platform: safeGetProperty(globals.hostInfo, 'si.os.platform', 'unknown'),
+                        release: safeGetProperty(globals.hostInfo, 'si.os.release', 'unknown'),
+                        distro: safeGetProperty(globals.hostInfo, 'si.os.distro', 'unknown'),
+                        codename: safeGetProperty(globals.hostInfo, 'si.os.codename', 'unknown'),
+                        virtual: safeGetProperty(globals.hostInfo, 'si.system.virtual', false),
+                        isRunningInDocker: safeGetProperty(
+                            globals.hostInfo,
+                            'isRunningInDocker',
+                            false
+                        ),
+                        nodeVersion: safeGetProperty(
+                            globals.hostInfo,
+                            'node.nodeVersion',
+                            'unknown'
+                        ),
                     },
                     enabledFeatures: {
                         feature: {
@@ -252,7 +319,7 @@ export const callRemoteURL = function reportTelemetry() {
                             dockerHealthCheck,
                             uptimeMonitor,
                             uptimeMonitorNewRelic,
-                            udpServer: globals.config.get('Butler-SOS.userEvents.enable'),
+                            udpServer: safeGetConfig('Butler-SOS.userEvents.enable', false),
                             eventCount: eventCountEnable,
                             rejectedEventCount: rejectedEventCountEnable,
                             userEvents: userEventsEnable,
@@ -278,8 +345,9 @@ export const callRemoteURL = function reportTelemetry() {
                             newRelic: newRelicEnable,
                             prometheus: prometheusEnable,
                             influxdb: influxdbEnable,
-                            influxdbVersion: globals.config.get(
-                                'Butler-SOS.influxdbConfig.version'
+                            influxdbVersion: safeGetConfig(
+                                'Butler-SOS.influxdbConfig.version',
+                                'unknown'
                             ),
                             appNames: appNamesExtractEnable,
                             userSessions: userSessionsEnable,
@@ -290,26 +358,32 @@ export const callRemoteURL = function reportTelemetry() {
         };
 
         // Send the telemetry to PostHog
-        posthogClient.capture(body);
-
-        globals.logger.debug(
-            'TELEMETRY: Sent anonymous telemetry. Thanks for contributing to making Butler SOS better!'
-        );
+        if (posthogClient) {
+            posthogClient.capture(body);
+            globals.logger?.debug(
+                'TELEMETRY: Sent anonymous telemetry. Thanks for contributing to making Butler SOS better!'
+            );
+        } else {
+            globals.logger?.warn('TELEMETRY: PostHog client not initialized, skipping telemetry');
+        }
     } catch (err) {
-        globals.logger.error('TELEMETRY: Could not send anonymous telemetry.');
-        globals.logger.error(
+        globals.logger?.error('TELEMETRY: Could not send anonymous telemetry.');
+        globals.logger?.error(
             '     While not mandatory the telemetry data greatly helps the Butler SOS developers.'
         );
-        globals.logger.error(
+        globals.logger?.error(
             '     It provides insights into which features are used most and what hardware/OSs are most used out there.'
         );
-        globals.logger.error(
+        globals.logger?.error(
             '     This information makes it possible to focus development efforts where they will make most impact and be most valuable.'
         );
-        globals.logger.error('❤️  Thank you for supporting Butler SOS by allowing telemetry! ❤️');
-        globals.logger.error('');
-        if (err.message) {
-            globals.logger.error(`TELEMETRY: ${err.message}`);
+        globals.logger?.error(
+            '     More info at https://butler.ptarmiganlabs.com/docs/about/telemetry/'
+        );
+        globals.logger?.error('❤️  Thank you for supporting Butler SOS by allowing telemetry! ❤️');
+        globals.logger?.error('');
+        if (err?.message) {
+            globals.logger?.error(`TELEMETRY: ${err.message}`);
         }
     }
 };
@@ -347,6 +421,11 @@ export function setupAnonUsageReportTimer(logger, hostInfo) {
         // Do an initial telemetry report
         callRemoteURL();
     } catch (err) {
-        logger.error(`TELEMETRY: ${err}`);
+        if (logger) {
+            logger.error(`TELEMETRY: ${err?.message || err}`);
+        } else {
+            // Fallback if logger is not available
+            console.error(`TELEMETRY: ${err?.message || err}`);
+        }
     }
 }
