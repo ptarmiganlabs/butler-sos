@@ -519,6 +519,26 @@ jobs:
                           New-Item -ItemType Directory -Path $deployPath -Force
                       }
                       
+                      # Clear log files before deployment to ensure fresh logs
+                      Write-Host "Clearing log files before deployment..."
+                      $currentDate = Get-Date -Format "yyyy-MM-dd"
+                      $serviceErrorLogPath = Join-Path $deployPath "service-error.log"
+                      $dailyLogPath = Join-Path $deployPath ".log\butler-sos.$currentDate.log"
+                      
+                      if (Test-Path $serviceErrorLogPath) {
+                          Write-Host "Clearing service-error.log..."
+                          Clear-Content -Path $serviceErrorLogPath -Force
+                      } else {
+                          Write-Host "service-error.log not found, will be created if needed"
+                      }
+                      
+                      if (Test-Path $dailyLogPath) {
+                          Write-Host "Clearing butler-sos.$currentDate.log..."
+                          Clear-Content -Path $dailyLogPath -Force
+                      } else {
+                          Write-Host "butler-sos.$currentDate.log not found, will be created if needed"
+                      }
+                      
                       # Extract the zip file
                       Write-Host "Extracting artifact to $deployPath..."
                       Expand-Archive -Path $artifactPath -DestinationPath $deployPath -Force
@@ -601,4 +621,78 @@ jobs:
                       
                   } catch {
                       Write-Host "❌ Verification failed: $($_.Exception.Message)" -ForegroundColor Red
+                  }
+
+            - name: Check for errors in log files
+              shell: powershell
+              continue-on-error: true
+              run: |
+                  Write-Host "Checking for errors in log files after deployment..."
+
+                  $deployPath = $env:BUTLER_SOS_INSIDER_DEPLOY_PATH
+                  $currentDate = Get-Date -Format "yyyy-MM-dd"
+                  $serviceErrorLogPath = Join-Path $deployPath "service-error.log"
+                  $dailyLogPath = Join-Path $deployPath ".log\butler-sos.$currentDate.log"
+
+                  # Wait a moment for the service to start and potentially log entries
+                  Write-Host "Waiting 30 seconds for service to initialize and create log entries..."
+                  Start-Sleep -Seconds 30
+
+                  $errorFound = $false
+
+                  try {
+                      # Check service-error.log
+                      Write-Host "Checking service-error.log..."
+                      if (Test-Path $serviceErrorLogPath) {
+                          $serviceErrorContent = Get-Content -Path $serviceErrorLogPath -ErrorAction SilentlyContinue
+                          if ($serviceErrorContent -and $serviceErrorContent.Count -gt 0) {
+                              Write-Host "❌ Errors found in service-error.log:" -ForegroundColor Red
+                              $serviceErrorContent | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
+                              $errorFound = $true
+                          } else {
+                              Write-Host "✅ service-error.log is empty (no errors)"
+                          }
+                      } else {
+                          Write-Host "✅ service-error.log does not exist (no errors)"
+                      }
+                      
+                      # Check daily log file for ERROR or FATAL entries
+                      Write-Host "Checking butler-sos.$currentDate.log for error/fatal entries..."
+                      if (Test-Path $dailyLogPath) {
+                          $dailyLogContent = Get-Content -Path $dailyLogPath -ErrorAction SilentlyContinue
+                          if ($dailyLogContent) {
+                              # Match both formats: "error:" and "ERROR" (case-insensitive)
+                              $errorEntries = $dailyLogContent | Where-Object { $_ -match '(?i)\b(error|fatal)[\s:]' }
+                              if ($errorEntries -and $errorEntries.Count -gt 0) {
+                                  Write-Host "❌ Error/Fatal entries found in butler-sos.$currentDate.log:" -ForegroundColor Red
+                                  $errorEntries | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
+                                  $errorFound = $true
+                              } else {
+                                  Write-Host "✅ No error/fatal entries found in butler-sos.$currentDate.log"
+                              }
+                              
+                              Write-Host "Log file summary:"
+                              Write-Host "  Total lines: $($dailyLogContent.Count)"
+                              Write-Host "  info entries: $(($dailyLogContent | Where-Object { $_ -match '(?i)\binfo[\s:]' }).Count)"
+                              Write-Host "  warn entries: $(($dailyLogContent | Where-Object { $_ -match '(?i)\bwarn[\s:]' }).Count)"
+                              Write-Host "  error entries: $(($dailyLogContent | Where-Object { $_ -match '(?i)\berror[\s:]' }).Count)"
+                              Write-Host "  fatal entries: $(($dailyLogContent | Where-Object { $_ -match '(?i)\bfatal[\s:]' }).Count)"
+                          } else {
+                              Write-Host "✅ butler-sos.$currentDate.log is empty or has no content yet"
+                          }
+                      } else {
+                          Write-Host "ℹ️  butler-sos.$currentDate.log does not exist yet"
+                      }
+                      
+                      if ($errorFound) {
+                          Write-Host "❌ Errors detected in log files - deployment may have issues" -ForegroundColor Red
+                          # Don't fail the build, but make it visible
+                          Write-Host "::warning::Errors found in log files after deployment"
+                      } else {
+                          Write-Host "✅ No errors found in log files - deployment appears successful"
+                      }
+                      
+                  } catch {
+                      Write-Host "❌ Failed to check log files: $($_.Exception.Message)" -ForegroundColor Red
+                      Write-Host "::warning::Unable to check log files for errors"
                   }
