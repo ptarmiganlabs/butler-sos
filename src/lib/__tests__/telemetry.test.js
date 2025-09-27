@@ -54,6 +54,7 @@ describe('telemetry', () => {
         // Setup default config values
         globals.config.get.mockImplementation((path) => {
             // Default returns for general settings
+            if (path === 'Butler-SOS.anonTelemetry') return true; // Telemetry enabled by default
             if (path === 'Butler-SOS.heartbeat.enable') return true;
             if (path === 'Butler-SOS.dockerHealthCheck.enable') return false;
             if (path === 'Butler-SOS.uptimeMonitor.enable') return true;
@@ -89,7 +90,40 @@ describe('telemetry', () => {
         });
 
         globals.config.has.mockImplementation((path) => {
-            if (path === 'Butler-SOS.logEvents.categorise.rules') return true;
+            // Return true for all paths that have mocked values in config.get
+            const mockedPaths = [
+                'Butler-SOS.anonTelemetry',
+                'Butler-SOS.heartbeat.enable',
+                'Butler-SOS.dockerHealthCheck.enable',
+                'Butler-SOS.uptimeMonitor.enable',
+                'Butler-SOS.uptimeMonitor.storeNewRelic.enable',
+                'Butler-SOS.qlikSenseEvents.eventCount.enable',
+                'Butler-SOS.qlikSenseEvents.rejectedEventCount.enable',
+                'Butler-SOS.userEvents.enable',
+                'Butler-SOS.userEvents.sendToMQTT.enable',
+                'Butler-SOS.userEvents.sendToInfluxdb.enable',
+                'Butler-SOS.userEvents.sendToNewRelic.enable',
+                'Butler-SOS.logEvents.source.proxy.enable',
+                'Butler-SOS.logEvents.source.scheduler.enable',
+                'Butler-SOS.logEvents.source.repository.enable',
+                'Butler-SOS.logEvents.sendToMQTT.enable',
+                'Butler-SOS.logEvents.sendToInfluxdb.enable',
+                'Butler-SOS.logEvents.sendToNewRelic.enable',
+                'Butler-SOS.logEvents.categorise.enable',
+                'Butler-SOS.logEvents.categorise.rules',
+                'Butler-SOS.logEvents.categorise.ruleDefault.enable',
+                'Butler-SOS.logEvents.enginePerformanceMonitor.enable',
+                'Butler-SOS.logEvents.enginePerformanceMonitor.appNameLookup.enable',
+                'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.enable',
+                'Butler-SOS.mqttConfig.enable',
+                'Butler-SOS.newRelic.enable',
+                'Butler-SOS.prometheus.enable',
+                'Butler-SOS.influxdbConfig.enable',
+                'Butler-SOS.influxdbConfig.version',
+                'Butler-SOS.appNames.enableAppNameExtract',
+                'Butler-SOS.userSessions.enableSessionExtract',
+            ];
+            return mockedPaths.includes(path);
         });
 
         // Store the original mock implementation
@@ -256,7 +290,10 @@ describe('telemetry', () => {
 
     test('should handle configuration with all features enabled', () => {
         // Setup mock config where all relevant features are enabled
+        globals.config.has.mockReturnValue(true);
         globals.config.get.mockImplementation((path) => {
+            // Enable telemetry first
+            if (path === 'Butler-SOS.anonTelemetry') return true;
             // Return true for all feature paths to simulate all features being enabled
             if (path.includes('.enable')) return true;
             if (path === 'Butler-SOS.influxdbConfig.version') return 'v2';
@@ -275,10 +312,17 @@ describe('telemetry', () => {
         };
         PostHog.mockImplementationOnce(() => mockPostHogInstance);
 
-        // Setup PostHog client
+        // Setup PostHog client by calling setupAnonUsageReportTimer first
         setupAnonUsageReportTimer(globals.logger, globals.hostInfo);
 
+        // Clear the capture calls from setup (it calls callRemoteURL internally)
+        mockPostHogInstance.capture.mockClear();
+
+        // Call callRemoteURL to trigger telemetry
+        callRemoteURL();
+
         // Verify that capture was called with all features enabled
+        expect(mockPostHogInstance.capture).toHaveBeenCalledTimes(1);
         const captureData = mockPostHogInstance.capture.mock.calls[0][0];
         const properties = captureData.properties;
 
@@ -304,7 +348,10 @@ describe('telemetry', () => {
 
     test('should handle configuration with all features disabled', () => {
         // Setup mock config where all relevant features are disabled
+        globals.config.has.mockReturnValue(true);
         globals.config.get.mockImplementation((path) => {
+            // Enable telemetry first so we can test the feature detection
+            if (path === 'Butler-SOS.anonTelemetry') return true;
             // Return false for all feature paths to simulate all features being disabled
             if (path.includes('.enable')) return false;
             if (path === 'Butler-SOS.influxdbConfig.version') return 'v2';
@@ -323,10 +370,17 @@ describe('telemetry', () => {
         };
         PostHog.mockImplementationOnce(() => mockPostHogInstance);
 
-        // Setup PostHog client
+        // Setup PostHog client by calling setupAnonUsageReportTimer first
         setupAnonUsageReportTimer(globals.logger, globals.hostInfo);
 
+        // Clear the capture calls from setup (it calls callRemoteURL internally)
+        mockPostHogInstance.capture.mockClear();
+
+        // Call callRemoteURL to trigger telemetry
+        callRemoteURL();
+
         // Verify that capture was called with all features disabled
+        expect(mockPostHogInstance.capture).toHaveBeenCalledTimes(1);
         const captureData = mockPostHogInstance.capture.mock.calls[0][0];
         const properties = captureData.properties;
 
@@ -357,16 +411,29 @@ describe('telemetry', () => {
             return true;
         });
 
+        // Setup mock config get to enable telemetry
+        globals.config.get.mockImplementation((path) => {
+            if (path === 'Butler-SOS.anonTelemetry') return true;
+            return 'mock-value';
+        });
+
         // Create a fresh mock instance
         const mockPostHogInstance = {
             capture: jest.fn(),
         };
         PostHog.mockImplementationOnce(() => mockPostHogInstance);
 
-        // Setup PostHog client
+        // Setup PostHog client by calling setupAnonUsageReportTimer first
         setupAnonUsageReportTimer(globals.logger, globals.hostInfo);
 
+        // Clear the capture calls from setup (it calls callRemoteURL internally)
+        mockPostHogInstance.capture.mockClear();
+
+        // Call callRemoteURL to trigger telemetry
+        callRemoteURL();
+
         // Verify that capture was called with rules not existing
+        expect(mockPostHogInstance.capture).toHaveBeenCalledTimes(1);
         const captureData = mockPostHogInstance.capture.mock.calls[0][0];
         const properties = captureData.properties;
 
@@ -374,7 +441,7 @@ describe('telemetry', () => {
         expect(properties.feature_logEventCategoriseRuleCount).toBe(0);
     });
 
-    test('should handle errors with missing hostInfo properties', () => {
+    test('should handle missing hostInfo properties gracefully', () => {
         // Save the original hostInfo
         const originalHostInfo = globals.hostInfo;
 
@@ -388,11 +455,12 @@ describe('telemetry', () => {
             },
         };
 
-        // Mock logger to capture errors
-        const mockLogger = {
-            debug: jest.fn(),
-            error: jest.fn(),
-        };
+        // Setup mock config to enable telemetry
+        globals.config.has.mockReturnValue(true);
+        globals.config.get.mockImplementation((path) => {
+            if (path === 'Butler-SOS.anonTelemetry') return true;
+            return 'mock-value';
+        });
 
         // Create a fresh mock instance
         const mockPostHogInstance = {
@@ -401,23 +469,76 @@ describe('telemetry', () => {
         PostHog.mockImplementationOnce(() => mockPostHogInstance);
 
         try {
-            // Setup with incomplete hostInfo in globals
-            // setupAnonUsageReportTimer(mockLogger, globals.hostInfo);
+            // Setup PostHog client by calling setupAnonUsageReportTimer first
+            setupAnonUsageReportTimer(globals.logger, globals.hostInfo);
 
-            // Now call callRemoteURL directly to trigger the error
+            // Clear the capture calls from setup (it calls callRemoteURL internally)
+            mockPostHogInstance.capture.mockClear();
+
+            // Now call callRemoteURL directly
             callRemoteURL();
 
-            // posthogClient.capture should NOT be called due to the error
-            expect(mockPostHogInstance.capture).not.toHaveBeenCalled();
+            // posthogClient.capture SHOULD be called with safe default values
+            expect(mockPostHogInstance.capture).toHaveBeenCalledTimes(1);
 
-            // Verify error logging in case of property access errors
-            expect(globals.logger.error).toHaveBeenCalledWith(
+            // Verify the capture data uses default values for missing properties
+            const captureData = mockPostHogInstance.capture.mock.calls[0][0];
+            const properties = captureData.properties;
+
+            // Should have the available properties
+            expect(properties.system_id).toBe('test-host');
+            expect(properties.system_isRunningInDocker).toBe(false);
+            expect(properties.system_nodeVersion).toBe('16.14.0');
+
+            // Should have default values for missing properties
+            expect(properties.system_arch).toBe('unknown');
+            expect(properties.system_platform).toBe('unknown');
+            expect(properties.system_release).toBe('unknown');
+            expect(properties.system_distro).toBe('unknown');
+            expect(properties.system_codename).toBe('unknown');
+            expect(properties.system_virtual).toBe(false); // Boolean default, not 'unknown'
+
+            // Should NOT log an error since the function handles missing properties gracefully
+            expect(globals.logger.error).not.toHaveBeenCalledWith(
                 expect.stringContaining('TELEMETRY: Could not send anonymous telemetry.')
             );
         } finally {
             // Restore the original hostInfo
             globals.hostInfo = originalHostInfo;
         }
+    });
+
+    test('should not send data to PostHog when telemetry is disabled', () => {
+        // Setup mock config where telemetry is disabled
+        globals.config.get.mockImplementation((path) => {
+            if (path === 'Butler-SOS.anonTelemetry') return false; // Telemetry disabled
+            // Return true for other paths to ensure the disable is specifically for telemetry
+            if (path === 'Butler-SOS.heartbeat.enable') return true;
+            return true;
+        });
+
+        // Create a fresh mock instance
+        const mockPostHogInstance = {
+            capture: jest.fn(),
+        };
+        PostHog.mockImplementationOnce(() => mockPostHogInstance);
+
+        // Setup PostHog client first
+        setupAnonUsageReportTimer(globals.logger, globals.hostInfo);
+
+        // Clear any setup calls
+        mockPostHogInstance.capture.mockClear();
+
+        // Now call callRemoteURL directly - should NOT send data
+        callRemoteURL();
+
+        // Verify that capture was NOT called since telemetry is disabled
+        expect(mockPostHogInstance.capture).not.toHaveBeenCalled();
+
+        // Verify debug message was logged
+        expect(globals.logger.debug).toHaveBeenCalledWith(
+            'TELEMETRY: Anonymous telemetry is disabled, skipping data collection'
+        );
     });
 
     test('should log an appropriate message when telemetry is successfully sent', () => {
