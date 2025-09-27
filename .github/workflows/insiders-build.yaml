@@ -523,20 +523,42 @@ jobs:
                       Write-Host "Clearing log files before deployment..."
                       $currentDate = Get-Date -Format "yyyy-MM-dd"
                       $serviceErrorLogPath = Join-Path $deployPath "service-error.log"
-                      $dailyLogPath = Join-Path $deployPath ".log\butler-sos.$currentDate.log"
+                      $dailyLogPath = Join-Path $deployPath "log\butler-sos.$currentDate.log"
+                      
+                      Write-Host "Deploy path: $deployPath"
+                      Write-Host "Current date: $currentDate"
+                      Write-Host "Service error log path: $serviceErrorLogPath"
+                      Write-Host "Daily log path: $dailyLogPath"
+                      
+                      # Check if log directory exists
+                      $logDirectory = Join-Path $deployPath "log"
+                      Write-Host "Log directory path: $logDirectory"
+                      if (Test-Path $logDirectory) {
+                          Write-Host "✅ log directory exists"
+                          Write-Host "Contents of log directory:"
+                          Get-ChildItem -Path $logDirectory -Force | ForEach-Object { Write-Host "  $_" }
+                      } else {
+                          Write-Host "⚠️  log directory does not exist"
+                      }
                       
                       if (Test-Path $serviceErrorLogPath) {
+                          Write-Host "✅ Found service-error.log at: $serviceErrorLogPath"
                           Write-Host "Clearing service-error.log..."
                           Clear-Content -Path $serviceErrorLogPath -Force
+                          Write-Host "✅ service-error.log cleared"
                       } else {
-                          Write-Host "service-error.log not found, will be created if needed"
+                          Write-Host "⚠️  service-error.log not found at: $serviceErrorLogPath"
+                          Write-Host "Will be created if needed by the service"
                       }
                       
                       if (Test-Path $dailyLogPath) {
+                          Write-Host "✅ Found daily log file at: $dailyLogPath"
                           Write-Host "Clearing butler-sos.$currentDate.log..."
                           Clear-Content -Path $dailyLogPath -Force
+                          Write-Host "✅ butler-sos.$currentDate.log cleared"
                       } else {
-                          Write-Host "butler-sos.$currentDate.log not found, will be created if needed"
+                          Write-Host "⚠️  Daily log file not found at: $dailyLogPath"
+                          Write-Host "Will be created if needed by the service"
                       }
                       
                       # Extract the zip file
@@ -632,7 +654,12 @@ jobs:
                   $deployPath = $env:BUTLER_SOS_INSIDER_DEPLOY_PATH
                   $currentDate = Get-Date -Format "yyyy-MM-dd"
                   $serviceErrorLogPath = Join-Path $deployPath "service-error.log"
-                  $dailyLogPath = Join-Path $deployPath ".log\butler-sos.$currentDate.log"
+                  $dailyLogPath = Join-Path $deployPath "log\butler-sos.$currentDate.log"
+
+                  Write-Host "Deploy path: $deployPath"
+                  Write-Host "Current date: $currentDate"
+                  Write-Host "Service error log path: $serviceErrorLogPath"
+                  Write-Host "Daily log path: $dailyLogPath"
 
                   # Wait a moment for the service to start and potentially log entries
                   Write-Host "Waiting 30 seconds for service to initialize and create log entries..."
@@ -642,8 +669,9 @@ jobs:
 
                   try {
                       # Check service-error.log
-                      Write-Host "Checking service-error.log..."
+                      Write-Host "Checking for service-error.log at: $serviceErrorLogPath"
                       if (Test-Path $serviceErrorLogPath) {
+                          Write-Host "✅ Found service-error.log"
                           $serviceErrorContent = Get-Content -Path $serviceErrorLogPath -ErrorAction SilentlyContinue
                           if ($serviceErrorContent -and $serviceErrorContent.Count -gt 0) {
                               Write-Host "❌ Errors found in service-error.log:" -ForegroundColor Red
@@ -653,12 +681,13 @@ jobs:
                               Write-Host "✅ service-error.log is empty (no errors)"
                           }
                       } else {
-                          Write-Host "✅ service-error.log does not exist (no errors)"
+                          Write-Host "⚠️  service-error.log does not exist at: $serviceErrorLogPath"
                       }
                       
                       # Check daily log file for error or fatal entries
-                      Write-Host "Checking butler-sos.$currentDate.log for error/fatal entries..."
+                      Write-Host "Checking for daily log file at: $dailyLogPath"
                       if (Test-Path $dailyLogPath) {
+                          Write-Host "✅ Found daily log file"
                           $dailyLogContent = Get-Content -Path $dailyLogPath -ErrorAction SilentlyContinue
                           if ($dailyLogContent) {
                               # Match both formats: "error:" and "ERROR" (case-insensitive)
@@ -678,10 +707,10 @@ jobs:
                               Write-Host "  error entries: $(($dailyLogContent | Where-Object { $_ -match "(?i)\berror[\s:]" }).Count)"
                               Write-Host "  fatal entries: $(($dailyLogContent | Where-Object { $_ -match "(?i)\bfatal[\s:]" }).Count)"
                           } else {
-                              Write-Host "✅ butler-sos.$currentDate.log is empty or has no content yet"
+                              Write-Host "✅ Daily log file is empty or has no content yet"
                           }
                       } else {
-                          Write-Host "ℹ️  butler-sos.$currentDate.log does not exist yet"
+                          Write-Host "⚠️  Daily log file does not exist at: $dailyLogPath"
                       }
                       
                       if ($errorFound) {
