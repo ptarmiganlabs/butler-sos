@@ -656,13 +656,13 @@ jobs:
                           Write-Host "✅ service-error.log does not exist (no errors)"
                       }
                       
-                      # Check daily log file for ERROR or FATAL entries
+                      # Check daily log file for error or fatal entries
                       Write-Host "Checking butler-sos.$currentDate.log for error/fatal entries..."
                       if (Test-Path $dailyLogPath) {
                           $dailyLogContent = Get-Content -Path $dailyLogPath -ErrorAction SilentlyContinue
                           if ($dailyLogContent) {
                               # Match both formats: "error:" and "ERROR" (case-insensitive)
-                              $errorEntries = $dailyLogContent | Where-Object { $_ -match '(?i)\b(error|fatal)[\s:]' }
+                              $errorEntries = $dailyLogContent | Where-Object { $_ -match "(?i)\b(error|fatal)[\s:]" }
                               if ($errorEntries -and $errorEntries.Count -gt 0) {
                                   Write-Host "❌ Error/Fatal entries found in butler-sos.$currentDate.log:" -ForegroundColor Red
                                   $errorEntries | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
@@ -673,10 +673,10 @@ jobs:
                               
                               Write-Host "Log file summary:"
                               Write-Host "  Total lines: $($dailyLogContent.Count)"
-                              Write-Host "  info entries: $(($dailyLogContent | Where-Object { $_ -match '(?i)\binfo[\s:]' }).Count)"
-                              Write-Host "  warn entries: $(($dailyLogContent | Where-Object { $_ -match '(?i)\bwarn[\s:]' }).Count)"
-                              Write-Host "  error entries: $(($dailyLogContent | Where-Object { $_ -match '(?i)\berror[\s:]' }).Count)"
-                              Write-Host "  fatal entries: $(($dailyLogContent | Where-Object { $_ -match '(?i)\bfatal[\s:]' }).Count)"
+                              Write-Host "  info entries: $(($dailyLogContent | Where-Object { $_ -match "(?i)\binfo[\s:]" }).Count)"
+                              Write-Host "  warn entries: $(($dailyLogContent | Where-Object { $_ -match "(?i)\bwarn[\s:]" }).Count)"
+                              Write-Host "  error entries: $(($dailyLogContent | Where-Object { $_ -match "(?i)\berror[\s:]" }).Count)"
+                              Write-Host "  fatal entries: $(($dailyLogContent | Where-Object { $_ -match "(?i)\bfatal[\s:]" }).Count)"
                           } else {
                               Write-Host "✅ butler-sos.$currentDate.log is empty or has no content yet"
                           }
