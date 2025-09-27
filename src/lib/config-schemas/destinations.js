@@ -316,6 +316,18 @@ export const destinationsSchema = {
             },
             port: { type: 'number' },
             version: { type: 'number' },
+            v3Config: {
+                type: 'object',
+                properties: {
+                    org: { type: 'string' },
+                    bucket: { type: 'string' },
+                    description: { type: 'string' },
+                    token: { type: 'string' },
+                    retentionDuration: { type: 'string' },
+                },
+                required: ['org', 'bucket', 'description', 'token', 'retentionDuration'],
+                additionalProperties: false,
+            },
             v2Config: {
                 type: 'object',
                 properties: {
