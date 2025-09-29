@@ -148,7 +148,8 @@ jobs:
                       # Summary
                       if ($errorFound) {
                           Write-Host "❌ ERRORS DETECTED - Taking action!" -ForegroundColor Red
-                          Write-Host "Total error entries found: $($allErrorEntries.Count)" -ForegroundColor Red
+                          $totalErrors = $allErrorEntries.Count
+                          Write-Host "Total error entries found: $totalErrors" -ForegroundColor Red
                           
                           # Export error data for email step
                           $errorData = @{
@@ -189,9 +190,9 @@ jobs:
                   } catch {
                       $errorMsg = $_.Exception.Message
                       $stackTrace = $_.Exception.StackTrace
-                      Write-Host "❌ Failed to check log files: $errorMsg" -ForegroundColor Red
-                      Write-Host "Stack trace: $stackTrace" -ForegroundColor Red
-                      Write-Host "::error::Log monitoring failed - $errorMsg"
+                      Write-Host ("❌ Failed to check log files: " + $errorMsg) -ForegroundColor Red
+                      Write-Host ("Stack trace: " + $stackTrace) -ForegroundColor Red
+                      Write-Host ("::error::Log monitoring failed - " + $errorMsg)
                       exit 1
                   }
 
@@ -226,11 +227,13 @@ jobs:
                                   Write-Host "✅ Service stopped successfully"
                                   "service_stopped=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                               } else {
-                                  Write-Host "⚠️  Service did not stop within $timeout seconds. Status: $($service.Status)" -ForegroundColor Yellow
+                                  $serviceStatus = $service.Status
+                                  Write-Host "⚠️  Service did not stop within $timeout seconds. Status: $serviceStatus" -ForegroundColor Yellow
                                   "service_stopped=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                               }
                           } else {
-                              Write-Host "ℹ️  Service was not running. Current status: $($service.Status)"
+                              $serviceStatus = $service.Status
+                              Write-Host "ℹ️  Service was not running. Current status: $serviceStatus"
                               "service_stopped=not_running" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                           }
                       } else {
@@ -240,7 +243,7 @@ jobs:
                       
                   } catch {
                       $errorMsg = $_.Exception.Message
-                      Write-Host "❌ Failed to stop service: $errorMsg" -ForegroundColor Red
+                      Write-Host ("❌ Failed to stop service: " + $errorMsg) -ForegroundColor Red
                       Write-Host "::warning::Failed to stop Butler SOS service"
                       "service_stopped=failed" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                   }
@@ -322,8 +325,8 @@ jobs:
                       
                   } catch {
                       $errorMsg = $_.Exception.Message
-                      Write-Host "❌ Failed to send error alert email: $errorMsg" -ForegroundColor Red
-                      Write-Host "::warning::Email alert failed - $errorMsg"
+                      Write-Host ("❌ Failed to send error alert email: " + $errorMsg) -ForegroundColor Red
+                      Write-Host ("::warning::Email alert failed - " + $errorMsg)
                   }
 
                   Write-Host "📊 Monitoring workflow completed"
