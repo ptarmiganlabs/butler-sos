@@ -231,7 +231,7 @@ jobs:
               shell: powershell
               continue-on-error: true
               run: |
-                  Write-Host "📧 Sending error alert email..."
+                  Write-Host "Sending error alert email..."
 
                   try {
                       # Load error data from previous step
@@ -246,7 +246,7 @@ jobs:
                       # Check if email script exists on server
                       $emailScript = "D:\tools\scripts\insiders-build-monitor\Send-ErrorAlert.ps1"
                       if (-not (Test-Path $emailScript)) {
-                          Write-Host "⚠️  Email script not found at: $emailScript" -ForegroundColor Yellow
+                          Write-Host "WARNING: Email script not found at: $emailScript" -ForegroundColor Yellow
                           Write-Host "Cannot send email alert - script deployment needed"
                           Write-Host "::warning::Email script not found on server"
                           exit 0
@@ -287,10 +287,10 @@ jobs:
                               $emailParams.Password = $env:SMTP_PASSWORD
                               Write-Host "SMTP Password configured: [HIDDEN]"
                           } else {
-                              Write-Host "⚠️  SMTP_PASSWORD not set"
+                              Write-Host "WARNING: SMTP_PASSWORD not set"
                           }
                       } else {
-                          Write-Host "⚠️  SMTP_USERNAME not set"
+                          Write-Host "WARNING: SMTP_USERNAME not set"
                       }
                       
                       # Debug email parameters
@@ -328,15 +328,15 @@ jobs:
                           Write-Host "--- End Script Output ---"
                           
                           if ($LASTEXITCODE -eq 0) {
-                              Write-Host "✅ Error alert email sent successfully!"
+                              Write-Host "SUCCESS: Error alert email sent successfully!"
                               "email_sent=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                           } else {
-                              Write-Host "❌ Email script returned exit code: $LASTEXITCODE"
+                              Write-Host "ERROR: Email script returned exit code: $LASTEXITCODE"
                               "email_sent=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                           }
                       } catch {
                           $_.Exception.Message | Out-File -FilePath $errorLogPath -Encoding UTF8
-                          Write-Host "❌ Exception while running email script: $($_.Exception.Message)"
+                          Write-Host "ERROR: Exception while running email script: $($_.Exception.Message)"
                           Write-Host "Error details saved to: $errorLogPath"
                           "email_sent=error" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                       }
@@ -346,11 +346,11 @@ jobs:
                       
                   } catch {
                       $errorMsg = $_.Exception.Message
-                      Write-Host ("❌ Failed to send error alert email: " + $errorMsg) -ForegroundColor Red
+                      Write-Host ("ERROR: Failed to send error alert email: " + $errorMsg) -ForegroundColor Red
                       Write-Host ("::warning::Email alert failed - " + $errorMsg)
                   }
 
-                  Write-Host "📊 Monitoring workflow completed"
+                  Write-Host "Monitoring workflow completed"
                   Write-Host "Summary:"
                   Write-Host "  - Errors found: ${{ steps.monitor-logs.outputs.errors_found }}"
                   Write-Host "  - Error count: ${{ steps.monitor-logs.outputs.error_count }}"
