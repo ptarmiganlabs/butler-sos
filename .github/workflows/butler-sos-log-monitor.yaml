@@ -86,13 +86,13 @@ jobs:
                           $currentDayContent = Get-Content -Path $currentDayLogPath -ErrorAction SilentlyContinue
                           if ($currentDayContent) {
                               $currentTotalLines = $currentDayContent.Count
-                              $currentInfoCount = ($currentDayContent | Where-Object { $_ -match "(?i)\binfo[\s:]" }).Count
-                              $currentWarnCount = ($currentDayContent | Where-Object { $_ -match "(?i)\bwarn[\s:]" }).Count
-                              $currentErrorCount = ($currentDayContent | Where-Object { $_ -match "(?i)\berror[\s:]" }).Count
-                              $currentFatalCount = ($currentDayContent | Where-Object { $_ -match "(?i)\bfatal[\s:]" }).Count
+                              $currentInfoCount = ($currentDayContent | Where-Object { $_ -match '(?i)\binfo[\s:]' }).Count
+                              $currentWarnCount = ($currentDayContent | Where-Object { $_ -match '(?i)\bwarn[\s:]' }).Count
+                              $currentErrorCount = ($currentDayContent | Where-Object { $_ -match '(?i)\berror[\s:]' }).Count
+                              $currentFatalCount = ($currentDayContent | Where-Object { $_ -match '(?i)\bfatal[\s:]' }).Count
                               
                               # Check for error/fatal entries
-                              $errorEntries = $currentDayContent | Where-Object { $_ -match "(?i)\b(error|fatal)[\s:]" }
+                              $errorEntries = $currentDayContent | Where-Object { $_ -match '(?i)\b(error|fatal)[\s:]' }
                               if ($errorEntries -and $errorEntries.Count -gt 0) {
                                   Write-Host "❌ Error/Fatal entries found in current day log:" -ForegroundColor Red
                                   $errorEntries | ForEach-Object { 
@@ -119,13 +119,13 @@ jobs:
                           $previousDayContent = Get-Content -Path $previousDayLogPath -ErrorAction SilentlyContinue
                           if ($previousDayContent) {
                               $previousTotalLines = $previousDayContent.Count
-                              $previousInfoCount = ($previousDayContent | Where-Object { $_ -match "(?i)\binfo[\s:]" }).Count
-                              $previousWarnCount = ($previousDayContent | Where-Object { $_ -match "(?i)\bwarn[\s:]" }).Count
-                              $previousErrorCount = ($previousDayContent | Where-Object { $_ -match "(?i)\berror[\s:]" }).Count
-                              $previousFatalCount = ($previousDayContent | Where-Object { $_ -match "(?i)\bfatal[\s:]" }).Count
+                              $previousInfoCount = ($previousDayContent | Where-Object { $_ -match '(?i)\binfo[\s:]' }).Count
+                              $previousWarnCount = ($previousDayContent | Where-Object { $_ -match '(?i)\bwarn[\s:]' }).Count
+                              $previousErrorCount = ($previousDayContent | Where-Object { $_ -match '(?i)\berror[\s:]' }).Count
+                              $previousFatalCount = ($previousDayContent | Where-Object { $_ -match '(?i)\bfatal[\s:]' }).Count
                               
                               # Check for error/fatal entries
-                              $errorEntries = $previousDayContent | Where-Object { $_ -match "(?i)\b(error|fatal)[\s:]" }
+                              $errorEntries = $previousDayContent | Where-Object { $_ -match '(?i)\b(error|fatal)[\s:]' }
                               if ($errorEntries -and $errorEntries.Count -gt 0) {
                                   Write-Host "❌ Error/Fatal entries found in previous day log:" -ForegroundColor Red
                                   $errorEntries | ForEach-Object { 
@@ -177,7 +177,8 @@ jobs:
                           
                           # Set GitHub Actions output
                           "errors_found=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-                          "error_count=$($allErrorEntries.Count)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                          $errorCount = $allErrorEntries.Count
+                          "error_count=$errorCount" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                           
                       } else {
                           Write-Host "✅ No errors found in any log files - system appears healthy" -ForegroundColor Green
@@ -186,9 +187,11 @@ jobs:
                       }
 
                   } catch {
-                      Write-Host "❌ Failed to check log files: $($_.Exception.Message)" -ForegroundColor Red
-                      Write-Host "Stack trace: $($_.Exception.StackTrace)" -ForegroundColor Red
-                      Write-Host "::error::Log monitoring failed - $($_.Exception.Message)"
+                      $errorMsg = $_.Exception.Message
+                      $stackTrace = $_.Exception.StackTrace
+                      Write-Host "❌ Failed to check log files: $errorMsg" -ForegroundColor Red
+                      Write-Host "Stack trace: $stackTrace" -ForegroundColor Red
+                      Write-Host "::error::Log monitoring failed - $errorMsg"
                       exit 1
                   }
 
@@ -236,7 +239,8 @@ jobs:
                       }
                       
                   } catch {
-                      Write-Host "❌ Failed to stop service: $($_.Exception.Message)" -ForegroundColor Red
+                      $errorMsg = $_.Exception.Message
+                      Write-Host "❌ Failed to stop service: $errorMsg" -ForegroundColor Red
                       Write-Host "::warning::Failed to stop Butler SOS service"
                       "service_stopped=failed" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                   }
@@ -317,8 +321,9 @@ jobs:
                       Remove-Item -Path $errorDataPath -Force -ErrorAction SilentlyContinue
                       
                   } catch {
-                      Write-Host "❌ Failed to send error alert email: $($_.Exception.Message)" -ForegroundColor Red
-                      Write-Host "::warning::Email alert failed - $($_.Exception.Message)"
+                      $errorMsg = $_.Exception.Message
+                      Write-Host "❌ Failed to send error alert email: $errorMsg" -ForegroundColor Red
+                      Write-Host "::warning::Email alert failed - $errorMsg"
                   }
 
                   Write-Host "📊 Monitoring workflow completed"
