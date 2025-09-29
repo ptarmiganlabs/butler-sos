@@ -1,0 +1,328 @@
+name: butler-sos-log-monitor
+on:
+    schedule:
+        # Run twice daily at 08:00 and 20:00 UTC
+        - cron: '0 8,20 * * *'
+    workflow_dispatch: # Allow manual triggering for testing
+
+jobs:
+    monitor-logs:
+        runs-on: ${{ vars.BUTLER_SOS_INSIDER_DEPLOY_RUNNER || 'host2-win' }}
+        env:
+            BUTLER_SOS_INSIDER_SERVICE_NAME: ${{ vars.BUTLER_SOS_INSIDER_SERVICE_NAME || 'Butler SOS insiders build' }}
+            BUTLER_SOS_INSIDER_DEPLOY_PATH: ${{ vars.BUTLER_SOS_INSIDER_DEPLOY_PATH || 'C:\butler-sos-insider' }}
+            SMTP_SERVER: ${{ vars.SMTP_SERVER }}
+            SMTP_PORT: ${{ vars.SMTP_PORT || '587' }}
+            EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+            EMAIL_TO: ${{ vars.EMAIL_TO }}
+            SERVER_NAME: ${{ vars.SERVER_NAME || 'Butler SOS Insider Server' }}
+            SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+            SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+
+        steps:
+            - name: Check Butler SOS log files for errors
+              id: monitor-logs
+              shell: powershell
+              continue-on-error: false
+              run: |
+                  Write-Host "🔍 Starting Butler SOS log monitoring..."
+                  Write-Host "Monitor run time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')"
+                  Write-Host "Server: $env:SERVER_NAME"
+                  Write-Host "Service: $env:BUTLER_SOS_INSIDER_SERVICE_NAME"
+                  Write-Host "Deploy path: $env:BUTLER_SOS_INSIDER_DEPLOY_PATH"
+
+                  $deployPath = $env:BUTLER_SOS_INSIDER_DEPLOY_PATH
+                  $serviceName = $env:BUTLER_SOS_INSIDER_SERVICE_NAME
+                  $currentDate = Get-Date -Format "yyyy-MM-dd"
+                  $previousDate = (Get-Date).AddDays(-1).ToString("yyyy-MM-dd")
+
+                  # Define log file paths
+                  $serviceErrorLogPath = Join-Path $deployPath "service-error.log"
+                  $currentDayLogPath = Join-Path $deployPath "log\butler-sos.$currentDate.log"
+                  $previousDayLogPath = Join-Path $deployPath "log\butler-sos.$previousDate.log"
+
+                  Write-Host "Checking log files:"
+                  Write-Host "  Service error log: $serviceErrorLogPath"
+                  Write-Host "  Current day log: $currentDayLogPath"
+                  Write-Host "  Previous day log: $previousDayLogPath"
+
+                  $errorFound = $false
+                  $allErrorEntries = @()
+                  $currentTotalLines = 0
+                  $currentInfoCount = 0
+                  $currentWarnCount = 0
+                  $currentErrorCount = 0
+                  $currentFatalCount = 0
+                  $previousTotalLines = 0
+                  $previousInfoCount = 0
+                  $previousWarnCount = 0
+                  $previousErrorCount = 0
+                  $previousFatalCount = 0
+
+                  try {
+                      # Check service-error.log
+                      Write-Host "📋 Checking service-error.log..."
+                      if (Test-Path $serviceErrorLogPath) {
+                          Write-Host "✅ Found service-error.log"
+                          $serviceErrorContent = Get-Content -Path $serviceErrorLogPath -ErrorAction SilentlyContinue
+                          if ($serviceErrorContent -and $serviceErrorContent.Count -gt 0) {
+                              Write-Host "❌ Errors found in service-error.log:" -ForegroundColor Red
+                              $serviceErrorContent | ForEach-Object { 
+                                  Write-Host "  $_" -ForegroundColor Red 
+                                  $allErrorEntries += "SERVICE-ERROR: $_"
+                              }
+                              $errorFound = $true
+                          } else {
+                              Write-Host "✅ service-error.log is empty"
+                          }
+                      } else {
+                          Write-Host "ℹ️  service-error.log does not exist"
+                      }
+                      
+                      # Check current day log file
+                      Write-Host "📋 Checking current day log file..."
+                      if (Test-Path $currentDayLogPath) {
+                          Write-Host "✅ Found current day log file"
+                          $currentDayContent = Get-Content -Path $currentDayLogPath -ErrorAction SilentlyContinue
+                          if ($currentDayContent) {
+                              $currentTotalLines = $currentDayContent.Count
+                              $currentInfoCount = ($currentDayContent | Where-Object { $_ -match "(?i)\binfo[\s:]" }).Count
+                              $currentWarnCount = ($currentDayContent | Where-Object { $_ -match "(?i)\bwarn[\s:]" }).Count
+                              $currentErrorCount = ($currentDayContent | Where-Object { $_ -match "(?i)\berror[\s:]" }).Count
+                              $currentFatalCount = ($currentDayContent | Where-Object { $_ -match "(?i)\bfatal[\s:]" }).Count
+                              
+                              # Check for error/fatal entries
+                              $errorEntries = $currentDayContent | Where-Object { $_ -match "(?i)\b(error|fatal)[\s:]" }
+                              if ($errorEntries -and $errorEntries.Count -gt 0) {
+                                  Write-Host "❌ Error/Fatal entries found in current day log:" -ForegroundColor Red
+                                  $errorEntries | ForEach-Object { 
+                                      Write-Host "  $_" -ForegroundColor Red 
+                                      $allErrorEntries += "CURRENT-DAY: $_"
+                                  }
+                                  $errorFound = $true
+                              } else {
+                                  Write-Host "✅ No error/fatal entries in current day log"
+                              }
+                              
+                              Write-Host "Current day log stats: Total=$currentTotalLines, Info=$currentInfoCount, Warn=$currentWarnCount, Error=$currentErrorCount, Fatal=$currentFatalCount"
+                          } else {
+                              Write-Host "ℹ️  Current day log file is empty"
+                          }
+                      } else {
+                          Write-Host "ℹ️  Current day log file does not exist"
+                      }
+
+                      # Check previous day log file
+                      Write-Host "📋 Checking previous day log file..."
+                      if (Test-Path $previousDayLogPath) {
+                          Write-Host "✅ Found previous day log file"
+                          $previousDayContent = Get-Content -Path $previousDayLogPath -ErrorAction SilentlyContinue
+                          if ($previousDayContent) {
+                              $previousTotalLines = $previousDayContent.Count
+                              $previousInfoCount = ($previousDayContent | Where-Object { $_ -match "(?i)\binfo[\s:]" }).Count
+                              $previousWarnCount = ($previousDayContent | Where-Object { $_ -match "(?i)\bwarn[\s:]" }).Count
+                              $previousErrorCount = ($previousDayContent | Where-Object { $_ -match "(?i)\berror[\s:]" }).Count
+                              $previousFatalCount = ($previousDayContent | Where-Object { $_ -match "(?i)\bfatal[\s:]" }).Count
+                              
+                              # Check for error/fatal entries
+                              $errorEntries = $previousDayContent | Where-Object { $_ -match "(?i)\b(error|fatal)[\s:]" }
+                              if ($errorEntries -and $errorEntries.Count -gt 0) {
+                                  Write-Host "❌ Error/Fatal entries found in previous day log:" -ForegroundColor Red
+                                  $errorEntries | ForEach-Object { 
+                                      Write-Host "  $_" -ForegroundColor Red 
+                                      $allErrorEntries += "PREVIOUS-DAY: $_"
+                                  }
+                                  $errorFound = $true
+                              } else {
+                                  Write-Host "✅ No error/fatal entries in previous day log"
+                              }
+                              
+                              Write-Host "Previous day log stats: Total=$previousTotalLines, Info=$previousInfoCount, Warn=$previousWarnCount, Error=$previousErrorCount, Fatal=$previousFatalCount"
+                          } else {
+                              Write-Host "ℹ️  Previous day log file is empty"
+                          }
+                      } else {
+                          Write-Host "ℹ️  Previous day log file does not exist"
+                      }
+
+                      # Summary
+                      if ($errorFound) {
+                          Write-Host "❌ ERRORS DETECTED - Taking action!" -ForegroundColor Red
+                          Write-Host "Total error entries found: $($allErrorEntries.Count)" -ForegroundColor Red
+                          
+                          # Export error data for email step
+                          $errorData = @{
+                              ErrorFound = $true
+                              ErrorEntries = $allErrorEntries
+                              CurrentLogPath = $currentDayLogPath
+                              PreviousLogPath = $previousDayLogPath
+                              ServiceErrorLogPath = $serviceErrorLogPath
+                              CurrentTotalLines = $currentTotalLines
+                              CurrentInfoCount = $currentInfoCount
+                              CurrentWarnCount = $currentWarnCount
+                              CurrentErrorCount = $currentErrorCount
+                              CurrentFatalCount = $currentFatalCount
+                              PreviousTotalLines = $previousTotalLines
+                              PreviousInfoCount = $previousInfoCount
+                              PreviousWarnCount = $previousWarnCount
+                              PreviousErrorCount = $previousErrorCount
+                              PreviousFatalCount = $previousFatalCount
+                          }
+                          
+                          # Save error data to file for next step
+                          $errorDataJson = $errorData | ConvertTo-Json -Depth 10
+                          $errorDataPath = Join-Path $env:TEMP "butler-sos-error-data.json"
+                          $errorDataJson | Out-File -FilePath $errorDataPath -Encoding UTF8
+                          Write-Host "Error data saved to: $errorDataPath"
+                          
+                          # Set GitHub Actions output
+                          "errors_found=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                          "error_count=$($allErrorEntries.Count)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                          
+                      } else {
+                          Write-Host "✅ No errors found in any log files - system appears healthy" -ForegroundColor Green
+                          "errors_found=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                          "error_count=0" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                      }
+
+                  } catch {
+                      Write-Host "❌ Failed to check log files: $($_.Exception.Message)" -ForegroundColor Red
+                      Write-Host "Stack trace: $($_.Exception.StackTrace)" -ForegroundColor Red
+                      Write-Host "::error::Log monitoring failed - $($_.Exception.Message)"
+                      exit 1
+                  }
+
+            - name: Stop Butler SOS service if errors found
+              id: stop-service
+              if: steps.monitor-logs.outputs.errors_found == 'true'
+              shell: powershell
+              continue-on-error: true
+              run: |
+                  Write-Host "🛑 Stopping Butler SOS service due to detected errors..."
+
+                  $serviceName = $env:BUTLER_SOS_INSIDER_SERVICE_NAME
+
+                  try {
+                      $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+                      
+                      if ($service) {
+                          if ($service.Status -eq 'Running') {
+                              Write-Host "Stopping service '$serviceName'..."
+                              Stop-Service -Name $serviceName -Force -ErrorAction Stop
+                              
+                              # Wait for service to stop
+                              $timer = 0
+                              $timeout = 30
+                              do {
+                                  Start-Sleep -Seconds 1
+                                  $timer++
+                                  $service = Get-Service -Name $serviceName
+                              } while ($service.Status -ne 'Stopped' -and $timer -lt $timeout)
+                              
+                              if ($service.Status -eq 'Stopped') {
+                                  Write-Host "✅ Service stopped successfully"
+                                  "service_stopped=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                              } else {
+                                  Write-Host "⚠️  Service did not stop within $timeout seconds. Status: $($service.Status)" -ForegroundColor Yellow
+                                  "service_stopped=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                              }
+                          } else {
+                              Write-Host "ℹ️  Service was not running. Current status: $($service.Status)"
+                              "service_stopped=not_running" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                          }
+                      } else {
+                          Write-Host "⚠️  Service '$serviceName' not found" -ForegroundColor Yellow
+                          "service_stopped=not_found" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                      }
+                      
+                  } catch {
+                      Write-Host "❌ Failed to stop service: $($_.Exception.Message)" -ForegroundColor Red
+                      Write-Host "::warning::Failed to stop Butler SOS service"
+                      "service_stopped=failed" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                  }
+
+            - name: Send error alert email
+              id: send-email
+              if: steps.monitor-logs.outputs.errors_found == 'true'
+              shell: powershell
+              continue-on-error: true
+              run: |
+                  Write-Host "📧 Sending error alert email..."
+
+                  try {
+                      # Load error data from previous step
+                      $errorDataPath = Join-Path $env:TEMP "butler-sos-error-data.json"
+                      if (-not (Test-Path $errorDataPath)) {
+                          throw "Error data file not found: $errorDataPath"
+                      }
+                      
+                      $errorDataJson = Get-Content -Path $errorDataPath -Raw
+                      $errorData = $errorDataJson | ConvertFrom-Json
+                      
+                      # Check if email script exists on server
+                      $emailScript = "D:\tools\scripts\insiders-build-monitor\Send-ErrorAlert.ps1"
+                      if (-not (Test-Path $emailScript)) {
+                          Write-Host "⚠️  Email script not found at: $emailScript" -ForegroundColor Yellow
+                          Write-Host "Cannot send email alert - script deployment needed"
+                          Write-Host "::warning::Email script not found on server"
+                          exit 0
+                      }
+                      
+                      # Prepare email parameters
+                      $emailParams = @{
+                          SmtpServer = $env:SMTP_SERVER
+                          SmtpPort = [int]$env:SMTP_PORT
+                          From = $env:EMAIL_FROM
+                          To = $env:EMAIL_TO
+                          ServerName = $env:SERVER_NAME
+                          ServiceName = $env:BUTLER_SOS_INSIDER_SERVICE_NAME
+                          ErrorEntries = $errorData.ErrorEntries
+                          CurrentLogPath = $errorData.CurrentLogPath
+                          PreviousLogPath = $errorData.PreviousLogPath
+                          ServiceErrorLogPath = $errorData.ServiceErrorLogPath
+                          CurrentTotalLines = $errorData.CurrentTotalLines
+                          CurrentInfoCount = $errorData.CurrentInfoCount
+                          CurrentWarnCount = $errorData.CurrentWarnCount
+                          CurrentErrorCount = $errorData.CurrentErrorCount
+                          CurrentFatalCount = $errorData.CurrentFatalCount
+                          PreviousTotalLines = $errorData.PreviousTotalLines
+                          PreviousInfoCount = $errorData.PreviousInfoCount
+                          PreviousWarnCount = $errorData.PreviousWarnCount
+                          PreviousErrorCount = $errorData.PreviousErrorCount
+                          PreviousFatalCount = $errorData.PreviousFatalCount
+                          TemplatePath = "D:\tools\scripts\insiders-build-monitor\butler-sos-email-template-error-alert.html"
+                          UseSSL = $true
+                      }
+                      
+                      # Add credentials if available (PowerShell 5.1 compatible)
+                      if ($env:SMTP_USERNAME) {
+                          $emailParams.Username = $env:SMTP_USERNAME
+                          if ($env:SMTP_PASSWORD) {
+                              # Use plain text password for PS 5.1 compatibility
+                              $emailParams.Password = $env:SMTP_PASSWORD
+                          }
+                      }
+                      
+                      Write-Host "Calling Send-ErrorAlert.ps1..."
+                      $result = & $emailScript @emailParams
+                      
+                      if ($result) {
+                          Write-Host "✅ Error alert email sent successfully!"
+                      } else {
+                          Write-Host "❌ Failed to send error alert email"
+                          Write-Host "::warning::Email sending failed"
+                      }
+                      
+                      # Clean up
+                      Remove-Item -Path $errorDataPath -Force -ErrorAction SilentlyContinue
+                      
+                  } catch {
+                      Write-Host "❌ Failed to send error alert email: $($_.Exception.Message)" -ForegroundColor Red
+                      Write-Host "::warning::Email alert failed - $($_.Exception.Message)"
+                  }
+
+                  Write-Host "📊 Monitoring workflow completed"
+                  Write-Host "Summary:"
+                  Write-Host "  - Errors found: ${{ steps.monitor-logs.outputs.errors_found }}"
+                  Write-Host "  - Error count: ${{ steps.monitor-logs.outputs.error_count }}"
+                  Write-Host "  - Service stopped: ${{ steps.stop-service.outputs.service_stopped }}"
