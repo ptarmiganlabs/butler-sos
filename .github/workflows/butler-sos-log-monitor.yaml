@@ -147,6 +147,31 @@ jobs:
                       $errorCount = $allErrorEntries.Count
                       Write-Host "Total errors: $errorCount"
                       
+                      # Prepare error data for email step
+                      $errorData = @{
+                          ErrorFound = $true
+                          ErrorEntries = $allErrorEntries
+                          CurrentLogPath = $currentDayLogPath
+                          PreviousLogPath = $previousDayLogPath
+                          ServiceErrorLogPath = $serviceErrorLogPath
+                          CurrentTotalLines = 0
+                          CurrentInfoCount = 0
+                          CurrentWarnCount = 0
+                          CurrentErrorCount = 0
+                          CurrentFatalCount = 0
+                          PreviousTotalLines = 0
+                          PreviousInfoCount = 0
+                          PreviousWarnCount = 0
+                          PreviousErrorCount = 0
+                          PreviousFatalCount = 0
+                      }
+                      
+                      # Save error data to file for email step
+                      $errorDataJson = $errorData | ConvertTo-Json -Depth 10
+                      $errorDataPath = Join-Path $env:TEMP "butler-sos-error-data.json"
+                      $errorDataJson | Out-File -FilePath $errorDataPath -Encoding UTF8
+                      Write-Host "Error data saved to: $errorDataPath"
+                      
                       "errors_found=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                       "error_count=$errorCount" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                   } else {
