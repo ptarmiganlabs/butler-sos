@@ -186,50 +186,43 @@ jobs:
               shell: powershell
               continue-on-error: true
               run: |
-                  Write-Host "🛑 Stopping Butler SOS service due to detected errors..."
+                  Write-Host "Stopping Butler SOS service due to detected errors..."
 
                   $serviceName = $env:BUTLER_SOS_INSIDER_SERVICE_NAME
+                  Write-Host "Service name: $serviceName"
 
-                  try {
-                      $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
-                      
-                      if ($service) {
-                          if ($service.Status -eq 'Running') {
-                              Write-Host ("Stopping service: " + $serviceName)
+                  $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+
+                  if ($service) {
+                      Write-Host "Service found"
+                      if ($service.Status -eq 'Running') {
+                          Write-Host "Service is running, stopping it..."
+                          try {
                               Stop-Service -Name $serviceName -Force -ErrorAction Stop
+                              Write-Host "Service stop command issued"
                               
-                              # Wait for service to stop
-                              $timer = 0
-                              $timeout = 30
-                              do {
-                                  Start-Sleep -Seconds 1
-                                  $timer++
-                                  $service = Get-Service -Name $serviceName
-                              } while ($service.Status -ne 'Stopped' -and $timer -lt $timeout)
+                              # Simple wait
+                              Start-Sleep -Seconds 5
+                              $service = Get-Service -Name $serviceName
                               
                               if ($service.Status -eq 'Stopped') {
-                                  Write-Host "✅ Service stopped successfully"
+                                  Write-Host "Service stopped successfully"
                                   "service_stopped=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                               } else {
-                                  $serviceStatus = $service.Status
-                                  Write-Host "⚠️  Service did not stop within $timeout seconds. Status: $serviceStatus" -ForegroundColor Yellow
-                                  "service_stopped=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                                  Write-Host "Service may not have stopped completely"
+                                  "service_stopped=partial" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                               }
-                          } else {
-                              $serviceStatus = $service.Status
-                              Write-Host "ℹ️  Service was not running. Current status: $serviceStatus"
-                              "service_stopped=not_running" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                          } catch {
+                              Write-Host "Failed to stop service"
+                              "service_stopped=failed" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                           }
                       } else {
-                          Write-Host ("Service not found: " + $serviceName) -ForegroundColor Yellow
-                          "service_stopped=not_found" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                          Write-Host "Service was not running"
+                          "service_stopped=not_running" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                       }
-                      
-                  } catch {
-                      $errorMsg = $_.Exception.Message
-                      Write-Host ("❌ Failed to stop service: " + $errorMsg) -ForegroundColor Red
-                      Write-Host "::warning::Failed to stop Butler SOS service"
-                      "service_stopped=failed" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+                  } else {
+                      Write-Host "Service not found"
+                      "service_stopped=not_found" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                   }
 
             - name: Send error alert email
