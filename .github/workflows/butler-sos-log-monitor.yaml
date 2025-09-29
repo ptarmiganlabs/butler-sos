@@ -195,7 +195,7 @@ jobs:
                       
                       if ($service) {
                           if ($service.Status -eq 'Running') {
-                              Write-Host "Stopping service '$serviceName'..."
+                              Write-Host ("Stopping service: " + $serviceName)
                               Stop-Service -Name $serviceName -Force -ErrorAction Stop
                               
                               # Wait for service to stop
@@ -221,7 +221,7 @@ jobs:
                               "service_stopped=not_running" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                           }
                       } else {
-                          Write-Host "⚠️  Service '$serviceName' not found" -ForegroundColor Yellow
+                          Write-Host ("Service not found: " + $serviceName) -ForegroundColor Yellow
                           "service_stopped=not_found" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                       }
                       
