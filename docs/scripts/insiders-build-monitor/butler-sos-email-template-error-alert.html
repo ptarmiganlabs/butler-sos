@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Butler SOS Error Alert</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background-color: #dc3545;
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            margin: -30px -30px 30px -30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .alert-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .summary {
+            background-color: #f8f9fa;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .details {
+            margin: 20px 0;
+        }
+        .details h3 {
+            color: #495057;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+        .log-entry {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 12px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .error-entry {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info-box {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .info-box h4 {
+            margin-top: 0;
+            color: #0c5460;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            font-size: 12px;
+            color: #6c757d;
+            text-align: center;
+        }
+        .action-taken {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .action-taken h4 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .stats-table th,
+        .stats-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .stats-table th {
+            background-color: #e9ecef;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="alert-icon">⚠️</div>
+            <h1>Butler SOS Error Alert</h1>
+            <p>Errors detected in log files</p>
+        </div>
+
+        <div class="summary">
+            <h3>🔍 Summary</h3>
+            <p><strong>{{ERROR_COUNT}}</strong> error(s) found in Butler SOS log files</p>
+            <p><strong>Detection Time:</strong> {{DETECTION_TIME}}</p>
+            <p><strong>Server:</strong> {{SERVER_NAME}}</p>
+            <p><strong>Service:</strong> {{SERVICE_NAME}}</p>
+        </div>
+
+        <div class="action-taken">
+            <h4>🛑 Action Taken</h4>
+            <p>The Butler SOS service has been <strong>stopped</strong> to prevent further issues. Manual intervention is required to:</p>
+            <ul>
+                <li>Investigate the root cause of the errors</li>
+                <li>Fix any configuration or connectivity issues</li>
+                <li>Restart the service when ready</li>
+            </ul>
+        </div>
+
+        <div class="details">
+            <h3>📋 Log File Analysis</h3>
+            
+            <h4>Files Checked:</h4>
+            <ul>
+                <li><strong>Current Day:</strong> {{CURRENT_LOG_PATH}}</li>
+                <li><strong>Previous Day:</strong> {{PREVIOUS_LOG_PATH}}</li>
+                <li><strong>Service Error Log:</strong> {{SERVICE_ERROR_LOG_PATH}}</li>
+            </ul>
+
+            <h4>Log Statistics:</h4>
+            <table class="stats-table">
+                <tr>
+                    <th>Log Type</th>
+                    <th>Total Lines</th>
+                    <th>Info</th>
+                    <th>Warnings</th>
+                    <th>Errors</th>
+                    <th>Fatal</th>
+                </tr>
+                <tr>
+                    <td>Current Day</td>
+                    <td>{{CURRENT_TOTAL_LINES}}</td>
+                    <td>{{CURRENT_INFO_COUNT}}</td>
+                    <td>{{CURRENT_WARN_COUNT}}</td>
+                    <td>{{CURRENT_ERROR_COUNT}}</td>
+                    <td>{{CURRENT_FATAL_COUNT}}</td>
+                </tr>
+                <tr>
+                    <td>Previous Day</td>
+                    <td>{{PREVIOUS_TOTAL_LINES}}</td>
+                    <td>{{PREVIOUS_INFO_COUNT}}</td>
+                    <td>{{PREVIOUS_WARN_COUNT}}</td>
+                    <td>{{PREVIOUS_ERROR_COUNT}}</td>
+                    <td>{{PREVIOUS_FATAL_COUNT}}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="details">
+            <h3>🚨 Error Details</h3>
+            {{ERROR_ENTRIES}}
+        </div>
+
+        <div class="info-box">
+            <h4>ℹ️ Next Steps</h4>
+            <ol>
+                <li>Review the error messages above to identify the root cause</li>
+                <li>Check system connectivity (InfluxDB, network, etc.)</li>
+                <li>Review Butler SOS configuration files</li>
+                <li>Fix any identified issues</li>
+                <li>Restart the Butler SOS service manually when ready</li>
+                <li>Monitor log files to ensure errors are resolved</li>
+            </ol>
+        </div>
+
+        <div class="footer">
+            <p>This alert was generated automatically by the Butler SOS monitoring workflow.</p>
+            <p>Generated on {{GENERATION_TIME}} by GitHub Actions</p>
+        </div>
+    </div>
+</body>
+</html>
