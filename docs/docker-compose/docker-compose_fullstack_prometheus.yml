@@ -1,16 +1,19 @@
 # docker-compose_fullstack_prometheus.yml
-version: "3.3"
 services:
     butler-sos:
         image: ptarmiganlabs/butler-sos:latest
         container_name: butler-sos
         restart: always
+        ports:
+            - "9997:9997"   # UDP user events
+            - "9996:9996"   # UDP log events
+            - "9842:9842"   # Prometheus metrics
+            - "3100:3100"   # Config file visualization
         volumes:
             # Make config file and log files accessible outside of container
             - "./config:/nodeapp/config"
             - "./log:/nodeapp/log"
-        environment:
-            - "NODE_ENV=production_prometheus" # Means that Butler SOS will read config data from production_prometheus.yaml
+        command: ["node", "src/butler-sos.js", "-c", "/nodeapp/config/production_prometheus.yaml"]
         logging:
             driver: "json-file"
             options:
