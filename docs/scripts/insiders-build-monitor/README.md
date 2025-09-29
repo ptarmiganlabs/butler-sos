@@ -57,6 +57,20 @@ Generic script for sending service error alerts using customizable HTML template
 - `TemplatePath` (required): Full path to the HTML email template file
 - Various log statistics parameters for the email template
 
+#### `Test-Email.ps1`
+
+Convenient test script for quickly testing the email functionality. Automatically detects PowerShell version and uses the appropriate email script.
+
+**Parameters:**
+
+- `From` (required): Sender email address
+- `To` (required): Recipient email address
+- `Username` (required): SMTP authentication username
+- `Password` (required): SMTP authentication password
+- `SmtpServer` (optional): SMTP server (default: smtp.gmail.com)
+- `SmtpPort` (optional): SMTP port (default: 587)
+- `TestHtml` (optional): Send HTML formatted test email instead of plain text
+
 ### Email Template
 
 #### Template Structure
@@ -198,15 +212,29 @@ Run the workflow manually using GitHub Actions:
 Test the PowerShell scripts locally:
 
 ```powershell
-# Test email sending (PowerShell 5.1)
-.\Send-Email-PS51.ps1 -SmtpServer "smtp.example.com" -SmtpPort 587 -From "test@example.com" -To "admin@example.com" -Subject "Test" -Body "Test message" -UseSSL
+# Quick test using the Test-Email.ps1 script (Plain Text)
+.\Test-Email.ps1 -From "your-email@gmail.com" -To "recipient@example.com" -Username "your-email@gmail.com" -Password "your-app-password"
+
+# Quick test using the Test-Email.ps1 script (HTML)
+.\Test-Email.ps1 -From "your-email@gmail.com" -To "recipient@example.com" -Username "your-email@gmail.com" -Password "your-app-password" -TestHtml
+
+# Test basic email sending (PowerShell 5.1)
+.\Send-Email-PS51.ps1 -SmtpServer "smtp.gmail.com" -SmtpPort 587 -From "your-email@gmail.com" -To "recipient@example.com" -Subject "Test Email" -Body "This is a test message" -Username "your-email@gmail.com" -Password "your-app-password" -UseSSL
+
+# Test HTML email sending (PowerShell 5.1)
+.\Send-Email-PS51.ps1 -SmtpServer "smtp.gmail.com" -SmtpPort 587 -From "your-email@gmail.com" -To "recipient@example.com" -Subject "HTML Test Email" -Body "<h1>Test HTML Email</h1><p>This is a <strong>test HTML message</strong> with <em>formatting</em>.</p>" -Username "your-email@gmail.com" -Password "your-app-password" -UseSSL -IsBodyHtml
 
 # Test email sending (PowerShell 7+)
-.\Send-Email-Modern.ps1 -SmtpServer "smtp.example.com" -SmtpPort 587 -From "test@example.com" -To "admin@example.com" -Subject "Test" -Body "Test message" -UseSSL
+.\Send-Email-Modern.ps1 -SmtpServer "smtp.gmail.com" -SmtpPort 587 -From "your-email@gmail.com" -To "recipient@example.com" -Subject "Test Email" -Body "This is a test message" -Username "your-email@gmail.com" -Password (ConvertTo-SecureString "your-app-password" -AsPlainText -Force) -UseSSL
 
-# Test error alert (requires error data and template path)
-.\Send-ErrorAlert.ps1 -SmtpServer "smtp.example.com" -SmtpPort 587 -From "test@example.com" -To "admin@example.com" -ServerName "Test Server" -ServiceName "Test Service" -ErrorEntries @("Test error 1", "Test error 2") -TemplatePath ".\butler-sos-email-template-error-alert.html" -UseSSL
+# Test complete error alert system (requires error data and template path)
+.\Send-ErrorAlert.ps1 -SmtpServer "smtp.gmail.com" -SmtpPort 587 -From "your-email@gmail.com" -To "recipient@example.com" -ServerName "Test Server" -ServiceName "Test Service" -ErrorEntries @("Test error 1", "Test error 2") -TemplatePath ".\butler-sos-email-template-error-alert.html" -Username "your-email@gmail.com" -Password "your-app-password" -UseSSL
+
+# Test encoding fix with special template
+.\Send-ErrorAlert.ps1 -SmtpServer "smtp.gmail.com" -SmtpPort 587 -From "your-email@gmail.com" -To "recipient@example.com" -ServerName "Test Server" -ServiceName "Test Service" -ErrorEntries @("ERROR: Connection failed", "ERROR: Invalid configuration") -TemplatePath ".\test-encoding-template.html" -Username "your-email@gmail.com" -Password "your-app-password" -UseSSL
 ```
+
+**Note**: Replace `your-email@gmail.com` with your actual Gmail address and `your-app-password` with your Gmail App Password. For Gmail, always use an App Password, not your regular Gmail password.
 
 ## Troubleshooting
 
@@ -216,6 +244,7 @@ Test the PowerShell scripts locally:
 2. **SMTP authentication fails**: Check SMTP credentials in GitHub secrets
 3. **Service stop fails**: Verify service name in repository variables
 4. **Log files not found**: Check deployment path and log directory structure
+5. **Mangled characters in emails**: HTML template encoding issues - see Email Encoding section below
 
 ### Workflow Logs
 
@@ -226,9 +255,33 @@ All actions are logged in GitHub Actions workflow logs with detailed output incl
 - Service stop attempts
 - Email sending results
 
+**Email Script Debugging Logs**: When email sending fails, detailed logs are saved to `D:\tools\scripts\insiders-build-monitor\logs\`:
+
+- `email-output.log` - Complete script output and parameters
+- `email-error.log` - Exception details and stack traces
+
+These log files are overwritten on each run to help with debugging email delivery issues.
+
 ### Email Delivery Issues
 
 - Check SMTP server settings and credentials
 - Verify firewall allows outbound SMTP connections
 - Check email server logs for delivery status
 - Test SMTP settings with a simple email first
+
+### Email Encoding Issues
+
+If emails display garbled characters or corrupted emojis (like "âš¡" instead of "⚡"):
+
+1. **Use HTML entities instead of Unicode emojis** in templates:
+    - Instead of `⚡` use `&#9889;`
+    - Instead of `🚨` use `&#128680;`
+    - Instead of `⚠️` use `&#9888;&#65039;`
+
+2. **Test with the encoding test template**:
+
+    ```powershell
+    .\Send-ErrorAlert.ps1 -SmtpServer "smtp.gmail.com" -SmtpPort 587 -From "your@gmail.com" -To "recipient@example.com" -ServerName "Test" -ServiceName "Test" -ErrorEntries @("Test error") -TemplatePath ".\test-encoding-template.html" -Username "your@gmail.com" -Password "app-password" -UseSSL
+    ```
+
+3. **Ensure UTF-8 encoding**: The scripts now include explicit UTF-8 encoding for both templates and email content
