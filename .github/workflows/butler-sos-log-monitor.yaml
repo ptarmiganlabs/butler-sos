@@ -188,12 +188,15 @@ jobs:
                       }
 
                   } catch {
-                      $errorMsg = $_.Exception.Message
-                      $stackTrace = $_.Exception.StackTrace
-                      Write-Host ("❌ Failed to check log files: " + $errorMsg) -ForegroundColor Red
-                      Write-Host ("Stack trace: " + $stackTrace) -ForegroundColor Red
-                      Write-Host ("::error::Log monitoring failed - " + $errorMsg)
-                      exit 1
+                    # Log FULL exception details for debugging
+                    Write-Host ("Full exception: " + $_.Exception.ToString()) -ForegroundColor Red
+
+                    $errorMsg = $_.Exception.Message
+                    $stack = $_.Exception.StackTrace
+                    Write-Host ("❌ Failed to check log files: " + $errorMsg) -ForegroundColor Red
+                    Write-Host ("Stack trace: " + $stack) -ForegroundColor Red
+                    Write-Host ("::error::Log monitoring failed - " + $errorMsg)
+                    exit 1
                   }
 
             - name: Stop Butler SOS service if errors found
