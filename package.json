@@ -92,7 +92,7 @@
         "jsdoc-to-markdown": "^9.1.2",
         "license-checker-rseidelsohn": "^4.4.2",
         "lockfile-lint": "^4.14.1",
-        "npm-check-updates": "^18.3.0",
+        "npm-check-updates": "^19.0.0",
         "prettier": "^3.6.2",
         "snyk": "^1.1299.1"
     }
