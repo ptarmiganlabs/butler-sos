@@ -71,6 +71,76 @@ jobs:
                       Write-Host "service-error.log does not exist"
                   }
 
+                  # Check current day log file
+                  Write-Host "Checking current day log file..."
+                  if (Test-Path $currentDayLogPath) {
+                      Write-Host "Found current day log file"
+                      $currentDayContent = Get-Content -Path $currentDayLogPath -ErrorAction SilentlyContinue
+                      if ($currentDayContent) {
+                          $totalLines = $currentDayContent.Count
+                          Write-Host "Current day log has $totalLines lines"
+                          
+                          # Check for ERROR or FATAL entries (case-insensitive, simple approach)
+                          $errorLines = @()
+                          foreach ($line in $currentDayContent) {
+                              $upperLine = $line.ToUpper()
+                              if ($upperLine.Contains("ERROR") -or $upperLine.Contains("FATAL")) {
+                                  $errorLines += $line
+                              }
+                          }
+                          
+                          if ($errorLines.Count -gt 0) {
+                              Write-Host "Found $($errorLines.Count) error/fatal entries in current day log:" -ForegroundColor Red
+                              foreach ($errorLine in $errorLines) {
+                                  Write-Host "  $errorLine" -ForegroundColor Red
+                                  $allErrorEntries += "CURRENT-DAY: $errorLine"
+                              }
+                              $errorFound = $true
+                          } else {
+                              Write-Host "No error/fatal entries in current day log"
+                          }
+                      } else {
+                          Write-Host "Current day log file is empty"
+                      }
+                  } else {
+                      Write-Host "Current day log file does not exist"
+                  }
+
+                  # Check previous day log file  
+                  Write-Host "Checking previous day log file..."
+                  if (Test-Path $previousDayLogPath) {
+                      Write-Host "Found previous day log file"
+                      $previousDayContent = Get-Content -Path $previousDayLogPath -ErrorAction SilentlyContinue
+                      if ($previousDayContent) {
+                          $totalLines = $previousDayContent.Count
+                          Write-Host "Previous day log has $totalLines lines"
+                          
+                          # Check for ERROR or FATAL entries (case-insensitive, simple approach)
+                          $errorLines = @()
+                          foreach ($line in $previousDayContent) {
+                              $upperLine = $line.ToUpper()
+                              if ($upperLine.Contains("ERROR") -or $upperLine.Contains("FATAL")) {
+                                  $errorLines += $line
+                              }
+                          }
+                          
+                          if ($errorLines.Count -gt 0) {
+                              Write-Host "Found $($errorLines.Count) error/fatal entries in previous day log:" -ForegroundColor Red
+                              foreach ($errorLine in $errorLines) {
+                                  Write-Host "  $errorLine" -ForegroundColor Red
+                                  $allErrorEntries += "PREVIOUS-DAY: $errorLine"
+                              }
+                              $errorFound = $true
+                          } else {
+                              Write-Host "No error/fatal entries in previous day log"
+                          }
+                      } else {
+                          Write-Host "Previous day log file is empty"
+                      }
+                  } else {
+                      Write-Host "Previous day log file does not exist"
+                  }
+
                   # Set outputs based on results
                   if ($errorFound) {
                       Write-Host "ERRORS DETECTED!" -ForegroundColor Red
