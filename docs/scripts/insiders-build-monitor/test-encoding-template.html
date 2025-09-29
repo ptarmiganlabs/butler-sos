@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Encoding Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #dc3545;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+        }
+        .content {
+            padding: 20px;
+            background-color: #f8f9fa;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>&#9888;&#65039; Encoding Test</h1>
+        <p>Testing HTML entity encoding</p>
+    </div>
+
+    <div class="content">
+        <h3>&#128680; Error Test</h3>
+        <p>This email tests proper HTML entity encoding instead of Unicode emojis.</p>
+        
+        <p><strong>HTML Entities Used:</strong></p>
+        <ul>
+            <li>&#9888;&#65039; Warning Sign (&#38;&#35;9888;&#38;&#35;65039;)</li>
+            <li>&#128680; Siren (&#38;&#35;128680;)</li>
+            <li>&#128269; Magnifying Glass (&#38;&#35;128269;)</li>
+            <li>&#8505;&#65039; Information (&#38;&#35;8505;&#38;&#35;65039;)</li>
+        </ul>
+        
+        <p><strong>Server:</strong> {{SERVER_NAME}}</p>
+        <p><strong>Service:</strong> {{SERVICE_NAME}}</p>
+        <p><strong>Error Count:</strong> {{ERROR_COUNT}}</p>
+        
+        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 4px;">
+            {{ERROR_ENTRIES}}
+        </div>
+    </div>
+
+    <p><em>Generated at: {{GENERATION_TIME}}</em></p>
+</body>
+</html>

@@ -38,6 +38,20 @@ param(
     [string]$Priority = "Normal"
 )
 
+Write-Host "=== Send-Email-PS51.ps1 Starting ==="
+Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)"
+Write-Host "SMTP Server: $SmtpServer"
+Write-Host "SMTP Port: $SmtpPort"
+Write-Host "From: $From"
+Write-Host "To: $To"
+Write-Host "Subject: $Subject"
+Write-Host "Body Length: $($Body.Length)"
+Write-Host "Has Username: $([bool]$Username)"
+Write-Host "Has Password: $([bool]$Password)"
+Write-Host "Use SSL: $UseSSL"
+Write-Host "Is Body HTML: $IsBodyHtml"
+Write-Host "Priority: $Priority"
+
 # PowerShell 5.1 compatible function to convert plain text password to SecureString
 function ConvertTo-SecureStringPS51 {
     param([string]$PlainTextPassword)
@@ -82,6 +96,10 @@ try {
     $mailMessage.Subject = $Subject
     $mailMessage.Body = $Body
     $mailMessage.IsBodyHtml = $IsBodyHtml.IsPresent
+    
+    # Set UTF-8 encoding for proper character support
+    $mailMessage.BodyEncoding = [System.Text.Encoding]::UTF8
+    $mailMessage.SubjectEncoding = [System.Text.Encoding]::UTF8
     
     # Set priority
     switch ($Priority.ToLower()) {

@@ -77,6 +77,15 @@ param(
 )
 
 try {
+    Write-Host "=== Send-ErrorAlert.ps1 Starting ==="
+    Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)"
+    Write-Host "SMTP Server: $SmtpServer"
+    Write-Host "SMTP Port: $SmtpPort"
+    Write-Host "From: $From"
+    Write-Host "To: $To"
+    Write-Host "Template Path: $TemplatePath"
+    Write-Host "Error Entries Count: $($ErrorEntries.Count)"
+    
     Write-Host "Preparing service error alert email..."
     
     # Read email template
@@ -85,7 +94,7 @@ try {
     }
     
     Write-Host "Loading email template from: $TemplatePath"
-    $template = Get-Content -Path $TemplatePath -Raw
+    $template = Get-Content -Path $TemplatePath -Raw -Encoding UTF8
     
     # Prepare error entries HTML
     $errorEntriesHtml = ""
@@ -96,8 +105,11 @@ try {
         $errorEntriesHtml = "<h4>Found $errorCount error(s):</h4>`n"
         
         foreach ($entry in $ErrorEntries) {
-            $errorEntriesHtml += "<div class='log-entry error-entry'>$([System.Web.HttpUtility]::HtmlEncode($entry))</div>`n"
+            # Simple HTML encoding without System.Web dependency
+            $encodedEntry = $entry -replace "&", "&amp;" -replace "<", "&lt;" -replace ">", "&gt;" -replace '"', "&quot;"
+            $errorEntriesHtml += "<div class='log-entry error-entry'>$encodedEntry</div>`n"
         }
+        Write-Host "Processed $errorCount error entries for email"
     }
     else {
         $errorEntriesHtml = "<p>No specific error entries to display.</p>"
@@ -129,7 +141,7 @@ try {
     $emailBody = $emailBody -replace "{{GENERATION_TIME}}", $generationTime
     
     # Create subject
-    $subject = "🚨 Service Error Alert - $errorCount error(s) detected on $ServerName"
+    $subject = "ALERT: Service Error Alert - $errorCount error(s) detected on $ServerName"
     
     # Call the appropriate Send-Email script based on PowerShell version
     $scriptDir = Split-Path $TemplatePath -Parent
@@ -150,6 +162,15 @@ try {
     }
     
     Write-Host "Calling email script: $sendEmailScript"
+    Write-Host "Email parameters:"
+    Write-Host "  Subject: $subject"
+    Write-Host "  Body length: $($emailBody.Length) characters"
+    Write-Host "  IsBodyHtml: True"
+    Write-Host "  Priority: High"
+    if ($Username) { Write-Host "  Using authentication with username: $Username" }
+    if ($UseSSL) { Write-Host "  Using SSL" }
+    
+    Write-Host "Executing email script..."
     
     $params = @{
         SmtpServer = $SmtpServer
@@ -167,6 +188,7 @@ try {
     if ($UseSSL) { $params.UseSSL = $true }
     
     $result = & $sendEmailScript @params
+    Write-Host "Email script returned: $result"
     
     if ($result) {
         Write-Host "✅ Service error alert sent successfully!"
