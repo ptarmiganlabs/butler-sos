@@ -47,6 +47,22 @@ param(
     [int]$TimeoutSeconds = 30
 )
 
+Write-Host "=== Send-Email-Modern.ps1 Starting ==="
+Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)"
+Write-Host "SMTP Server: $SmtpServer"
+Write-Host "SMTP Port: $SmtpPort"
+Write-Host "From: $From"
+Write-Host "To: $To"
+Write-Host "Subject: $Subject"
+Write-Host "Body Length: $($Body.Length)"
+Write-Host "Has Username: $([bool]$Username)"
+Write-Host "Has Password: $([bool]$Password)"
+Write-Host "Has Credential: $([bool]$Credential)"
+Write-Host "Use SSL: $UseSSL"
+Write-Host "Is Body HTML: $IsBodyHtml"
+Write-Host "Priority: $Priority"
+Write-Host "Timeout: $TimeoutSeconds seconds"
+
 # Modern PowerShell function using Send-MailMessage with enhanced error handling
 function Send-EmailModern {
     param(
@@ -164,6 +180,10 @@ try {
         $mailMessage.Subject = $Subject
         $mailMessage.Body = $Body
         $mailMessage.IsBodyHtml = $IsBodyHtml.IsPresent
+        
+        # Set UTF-8 encoding for proper character support
+        $mailMessage.BodyEncoding = [System.Text.Encoding]::UTF8
+        $mailMessage.SubjectEncoding = [System.Text.Encoding]::UTF8
         
         # Set priority
         $mailMessage.Priority = switch ($Priority.ToLower()) {
