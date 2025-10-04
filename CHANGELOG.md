@@ -1,5 +1,48 @@
 # Changelog
 
+## [13.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v12.0.1...butler-sos-v13.0.0) (2025-09-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* -c / --configfile option is now mandatory
+
+### Features
+
+* -c / --configfile option is now mandatory ([b5a3c91](https://github.com/ptarmiganlabs/butler-sos/commit/b5a3c9178f16819a399fe83cdafdef14fcdb349f))
+* Add version info to description of the binary, shown when started with no command line options ([720a8db](https://github.com/ptarmiganlabs/butler-sos/commit/720a8db661d6ba7517c88df2c0839074d7362d6f))
+* **build:** Inject git SHA and date into package.json for versioning in insidier's builds ([ffcc8ba](https://github.com/ptarmiganlabs/butler-sos/commit/ffcc8ba498a867a0080a171629052af524443b65))
+* **telemetry:** Enhance telemetry messaging for user clarity and support ([8f05c3c](https://github.com/ptarmiganlabs/butler-sos/commit/8f05c3cd1f1a63be21d72c00fc8b891ca12fbf72))
+
+
+### Bug Fixes
+
+* **telemetry:** Make telemetry handling and error management more robust ([c03e92a](https://github.com/ptarmiganlabs/butler-sos/commit/c03e92ae04aafcf1acaeb27cffeea9fec5cec73f))
+
+
+### Miscellaneous
+
+* **deps:** update actions/checkout action to v5 ([27e77ab](https://github.com/ptarmiganlabs/butler-sos/commit/27e77abff03890dce19ca1e53745ee03472a6c8d))
+* **deps:** update actions/checkout action to v5 ([b746fa4](https://github.com/ptarmiganlabs/butler-sos/commit/b746fa43f837a9bd4236bdd2c907d504bcc7ff8e))
+* **deps:** update actions/download-artifact action to v5 ([9946680](https://github.com/ptarmiganlabs/butler-sos/commit/9946680e3000cd037d5ff04235ecfd57b32871f8))
+* **deps:** update actions/download-artifact action to v5 ([43859ac](https://github.com/ptarmiganlabs/butler-sos/commit/43859ac1e3b7b4a607d3f5333803433537ea3312))
+* **deps:** update actions/setup-node action to v5 ([a3d4270](https://github.com/ptarmiganlabs/butler-sos/commit/a3d42707f94389eb4fdbdc1f95ea11b995a920ed))
+* **deps:** update actions/setup-node action to v5 ([43cd744](https://github.com/ptarmiganlabs/butler-sos/commit/43cd744a6d05e9e561c24290e94ba72f22a23e02))
+* **deps:** update dependency eslint-plugin-jsdoc to v60.4.1 ([e158e57](https://github.com/ptarmiganlabs/butler-sos/commit/e158e573acd03889017a7d7e29288f3607a44992))
+* **deps:** update dependency eslint-plugin-jsdoc to v60.4.1 ([5e6fe40](https://github.com/ptarmiganlabs/butler-sos/commit/5e6fe40d700898d59e7bdacd1b637bb02458053d))
+* **deps:** update google/osv-scanner-action action to v2.2.2 ([76449d8](https://github.com/ptarmiganlabs/butler-sos/commit/76449d812fc0536aabf9118c8113de81b9f4a8d3))
+* **deps:** update google/osv-scanner-action action to v2.2.2 ([46f22b3](https://github.com/ptarmiganlabs/butler-sos/commit/46f22b34fb54705314d28ba902ffa62447b23a1f))
+* **deps:** update influxdb docker tag to v1.12.2 ([b1eee8d](https://github.com/ptarmiganlabs/butler-sos/commit/b1eee8d561f54156e664a19ecd99df5a6a75efb0))
+* **deps:** update influxdb docker tag to v1.12.2 ([1798e11](https://github.com/ptarmiganlabs/butler-sos/commit/1798e11e8654fad90674835e840005dc73b15777))
+* enhance CI/CD pipeline with improved monitoring of insider builds ([b3363e1](https://github.com/ptarmiganlabs/butler-sos/commit/b3363e1ac5316527a1578a14ad5ecfc3f48f0a58))
+* update dependencies in package.json ([d48e98d](https://github.com/ptarmiganlabs/butler-sos/commit/d48e98d1a2ea93a1efcbbf929f4c320f86af4dc8))
+
+
+### Refactoring
+
+* improve and make error logging more consistent ([7137608](https://github.com/ptarmiganlabs/butler-sos/commit/71376082015bc1bd97ec66fcfbb76e1e178fa1a8))
+* improve andf make error logging more consistent ([37a5bc3](https://github.com/ptarmiganlabs/butler-sos/commit/37a5bc3a422141c6863c52280d359eac67edd9e6))
+
 ## [12.0.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v12.0.0...butler-sos-v12.0.1) (2025-07-31)
 
 
