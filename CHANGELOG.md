@@ -1,5 +1,12 @@
 # Changelog
 
+## [13.0.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v13.0.0...butler-sos-v13.0.1) (2025-10-04)
+
+
+### Bug Fixes
+
+* Not captured log events from QSEoW due to bug introduced in recent refactoring of the codebase ([b3db037](https://github.com/ptarmiganlabs/butler-sos/commit/b3db037be336631057905ac19ea3db5dfd6be034))
+
 ## [13.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v12.0.1...butler-sos-v13.0.0) (2025-09-29)
 
 
