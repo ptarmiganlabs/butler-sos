@@ -31,8 +31,10 @@ import { processQixPerfEvent } from './handlers/qix-perf-handler.js';
  */
 export async function messageEventHandler(message, _remote) {
     try {
+        globals.logger.silly(`LOG EVENT (raw): ${message.toString()}`);
+
         // Parse the message
-        const msgParts = message.toString().split('\t');
+        const msgParts = message.toString().split(';');
 
         // Check if any of the log event sources are enabled in the configuration
         if (

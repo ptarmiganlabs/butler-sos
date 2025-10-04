@@ -46,7 +46,7 @@ export async function messageEventHandler(message, _remote) {
         // Open connection
         // Close connection
 
-        globals.logger.debug(`USER EVENT (raw): ${message.toString()}`);
+        globals.logger.silly(`USER EVENT (raw): ${message.toString()}`);
 
         // First 7 fields are separated by ;
         // 8th field (message) can contain ; and single quotes. Handle with care
