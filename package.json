@@ -74,7 +74,7 @@
         "systeminformation": "^5.27.10",
         "ua-parser-js": "^2.0.5",
         "uuid": "^13.0.0",
-        "winston": "^3.17.0",
+        "winston": "^3.18.3",
         "winston-daily-rotate-file": "^5.0.0"
     },
     "devDependencies": {
