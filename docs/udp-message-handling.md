@@ -27,8 +27,10 @@ Butler-SOS:
 **How it works:**
 - Messages are processed with a maximum of `maxConcurrent` operations at once
 - Additional messages are queued up to `maxSize`
-- When the queue is full, messages are dropped according to `dropStrategy`
+- When the queue is full, incoming messages are dropped (current implementation drops the incoming message; the `dropStrategy` setting is validated but not yet fully implemented due to limitations of the underlying p-queue library)
 - Dropped messages are logged and counted in metrics
+
+**Note on dropStrategy:** Due to the architecture of the p-queue library, the full oldest/newest drop strategy is not currently implemented. When the queue is full, the current incoming message is dropped. The `dropStrategy` configuration is validated and logged for future enhancement when a custom queue implementation can be used.
 
 ### Rate Limiting
 

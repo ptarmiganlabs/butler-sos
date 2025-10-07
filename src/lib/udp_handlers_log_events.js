@@ -30,7 +30,7 @@ export function udpInitLogEventServer() {
 
     // Error handler for UDP socket
     globals.udpServerLogEvents.socket.on('error', (err) => {
-        globals.logger.error(`UDP LOG EVENTS: Socket error: ${err.message}`);
+        globals.logger.error(`UDP LOG EVENTS: Socket error: ${globals.getErrorMessage(err)}`);
     });
 
     // Close handler for UDP socket

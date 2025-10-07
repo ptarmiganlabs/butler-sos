@@ -32,11 +32,21 @@ export class UdpQueueHandler {
         this.logger = logger;
         this.config = config;
 
+        // Validate dropStrategy
+        if (config.dropStrategy !== 'oldest' && config.dropStrategy !== 'newest') {
+            throw new Error(
+                `Invalid dropStrategy: ${config.dropStrategy}. Must be 'oldest' or 'newest'`
+            );
+        }
+
         // Initialize message queue
         this.queue = new PQueue({
             concurrency: config.maxConcurrent,
             timeout: 30000, // 30 second timeout per message
         });
+
+        // Queue for pending messages (used when main queue is full)
+        this.pendingMessages = [];
 
         // Rate limiting state
         this.rateLimitEnable = config.rateLimitEnable;
@@ -172,11 +182,15 @@ export class UdpQueueHandler {
             const now = Date.now();
             if (!this.lastQueueFullLog || now - this.lastQueueFullLog > 10000) {
                 this.logger.warn(
-                    `UDP QUEUE [${this.name}]: Queue full (${this.queue.size}/${this.config.maxSize}), dropping ${this.config.dropStrategy} message`
+                    `UDP QUEUE [${this.name}]: Queue full (${this.queue.size}/${this.config.maxSize}), dropping message (strategy: ${this.config.dropStrategy})`
                 );
                 this.lastQueueFullLog = now;
             }
 
+            // Note: With p-queue, we can't directly access queued items to implement
+            // oldest/newest drop strategy. The current message is dropped.
+            // In a real implementation with full control over the queue, you would
+            // remove the oldest/newest item from the queue before adding the new one.
             return false;
         }
 
@@ -209,14 +223,16 @@ export class UdpQueueHandler {
                 } catch (err) {
                     this.metrics.messagesFailed += 1;
                     this.logger.error(
-                        `UDP QUEUE [${this.name}]: Error processing message: ${err.message}`
+                        `UDP QUEUE [${this.name}]: Error processing message: ${globals.getErrorMessage(err)}`
                     );
                 }
             })
             .catch((err) => {
                 // Handle queue timeout or other queue errors
                 this.metrics.messagesFailed += 1;
-                this.logger.error(`UDP QUEUE [${this.name}]: Queue error: ${err.message}`);
+                this.logger.error(
+                    `UDP QUEUE [${this.name}]: Queue error: ${globals.getErrorMessage(err)}`
+                );
             });
 
         return true;

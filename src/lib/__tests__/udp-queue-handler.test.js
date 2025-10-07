@@ -66,6 +66,24 @@ describe('UdpQueueHandler', () => {
                 expect.stringContaining('TestQueue')
             );
         });
+
+        test('should throw error for invalid dropStrategy', () => {
+            const config = {
+                name: 'TestQueue',
+                maxConcurrent: 5,
+                maxSize: 100,
+                dropStrategy: 'invalid',
+                rateLimitEnable: true,
+                maxMessagesPerMinute: 300,
+                violationLogThrottle: 60,
+                maxMessageSize: 65507,
+                backpressureThreshold: 80,
+            };
+
+            expect(() => new UdpQueueHandler(config, mockLogger)).toThrow(
+                /Invalid dropStrategy/
+            );
+        });
     });
 
     describe('sanitizeField', () => {
