@@ -90,6 +90,20 @@ describe('config-file-schema', () => {
                     udpServerConfig: {
                         serverHost: 'localhost',
                         portUserActivityEvents: 9999,
+                        messageQueue: {
+                            maxConcurrent: 5,
+                            maxSize: 100,
+                            dropStrategy: 'oldest',
+                        },
+                        rateLimit: {
+                            enable: true,
+                            maxMessagesPerMinute: 300,
+                            violationLogThrottle: 60,
+                        },
+                        maxMessageSize: 65507,
+                        backpressure: {
+                            threshold: 80,
+                        },
                     },
                     tags: null,
                 },
@@ -106,6 +120,20 @@ describe('config-file-schema', () => {
                     udpServerConfig: {
                         serverHost: 'localhost',
                         portLogEvents: 9998,
+                        messageQueue: {
+                            maxConcurrent: 5,
+                            maxSize: 100,
+                            dropStrategy: 'oldest',
+                        },
+                        rateLimit: {
+                            enable: true,
+                            maxMessagesPerMinute: 300,
+                            violationLogThrottle: 60,
+                        },
+                        maxMessageSize: 65507,
+                        backpressure: {
+                            threshold: 80,
+                        },
                     },
                     source: {
                         engine: {

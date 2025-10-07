@@ -1944,3 +1944,166 @@ export async function storeRejectedEventCountInfluxDB() {
         }
     }
 }
+
+/**
+ * Store UDP queue metrics in InfluxDB
+ *
+ * @description
+ * This function reads metrics from the UDP queue handlers and stores them in InfluxDB.
+ * Metrics include messages received, processed, dropped, queue utilization, and processing times.
+ *
+ * @returns {Promise<void>}
+ * @throws {Error} Error if unable to get write API or write data to InfluxDB
+ */
+export async function storeUdpQueueMetricsInfluxDB() {
+    // Get metrics from queue handlers
+    const userEventsMetrics = globals.udpQueueHandlerUserEvents?.getMetrics();
+    const logEventsMetrics = globals.udpQueueHandlerLogEvents?.getMetrics();
+
+    // Combine metrics
+    const allMetrics = [];
+    if (userEventsMetrics) allMetrics.push(userEventsMetrics);
+    if (logEventsMetrics) allMetrics.push(logEventsMetrics);
+
+    if (allMetrics.length === 0) {
+        globals.logger.verbose('UDP QUEUE METRICS INFLUXDB: No queue metrics to store');
+        return;
+    }
+
+    if (globals.config.get('Butler-SOS.influxdbConfig.version') === 1) {
+        // Build array of data points to send to InfluxDB v1
+        const points = [];
+
+        const measurementName = globals.config.get(
+            'Butler-SOS.qlikSenseEvents.eventCount.influxdb.measurementName'
+        );
+
+        for (const metrics of allMetrics) {
+            // Queue status point
+            const queuePoint = {
+                measurement: `${measurementName}_queue`,
+                tags: {
+                    queue_name: metrics.name,
+                },
+                fields: {
+                    queue_size: metrics.queue.currentSize,
+                    queue_max_size: metrics.queue.maxSize,
+                    queue_utilization_pct: metrics.queue.utilizationPercent,
+                    queue_pending: metrics.queue.pendingCount,
+                    messages_received: metrics.messages.received,
+                    messages_queued: metrics.messages.queued,
+                    messages_processed: metrics.messages.processed,
+                    messages_failed: metrics.messages.failed,
+                    messages_dropped_total: metrics.dropped.total,
+                    messages_dropped_rate_limit: metrics.dropped.rateLimit,
+                    messages_dropped_queue_full: metrics.dropped.queueFull,
+                    messages_dropped_size: metrics.dropped.messageSize,
+                    processing_time_avg_ms: metrics.processingTime.avgMs,
+                    processing_time_p95_ms: metrics.processingTime.p95Ms,
+                    processing_time_max_ms: metrics.processingTime.maxMs,
+                    rate_limit_current: metrics.rateLimit.currentRate,
+                    backpressure_active: metrics.backpressure ? 1 : 0,
+                },
+            };
+
+            // Add static tags from config file
+            if (
+                globals.config.has('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') &&
+                globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') !==
+                    null &&
+                globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags').length > 0
+            ) {
+                const configTags = globals.config.get(
+                    'Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags'
+                );
+                for (const item of configTags) {
+                    queuePoint.tags[item.name] = item.value;
+                }
+            }
+
+            points.push(queuePoint);
+        }
+
+        try {
+            globals.influx.writePoints(points);
+            globals.logger.verbose(
+                'UDP QUEUE METRICS INFLUXDB: Sent Butler SOS UDP queue metrics to InfluxDB'
+            );
+        } catch (err) {
+            globals.logger.error(
+                `UDP QUEUE METRICS INFLUXDB: Error saving data to InfluxDB v1! ${err}`
+            );
+        }
+    } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 2) {
+        // Create new write API object
+        const writeOptions = {
+            flushInterval: 5000,
+            maxRetries: 2,
+        };
+
+        try {
+            const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
+            const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
+
+            const writeApi = globals.influx.getWriteApi(org, bucketName, 'ns', writeOptions);
+
+            if (!writeApi) {
+                globals.logger.warn(
+                    'UDP QUEUE METRICS INFLUXDB: Influxdb write API object not found. Data will not be sent to InfluxDB'
+                );
+                return;
+            }
+
+            const measurementName = globals.config.get(
+                'Butler-SOS.qlikSenseEvents.eventCount.influxdb.measurementName'
+            );
+
+            for (const metrics of allMetrics) {
+                const point = new Point(`${measurementName}_queue`)
+                    .tag('queue_name', metrics.name)
+                    .intField('queue_size', metrics.queue.currentSize)
+                    .intField('queue_max_size', metrics.queue.maxSize)
+                    .floatField('queue_utilization_pct', metrics.queue.utilizationPercent)
+                    .intField('queue_pending', metrics.queue.pendingCount)
+                    .intField('messages_received', metrics.messages.received)
+                    .intField('messages_queued', metrics.messages.queued)
+                    .intField('messages_processed', metrics.messages.processed)
+                    .intField('messages_failed', metrics.messages.failed)
+                    .intField('messages_dropped_total', metrics.dropped.total)
+                    .intField('messages_dropped_rate_limit', metrics.dropped.rateLimit)
+                    .intField('messages_dropped_queue_full', metrics.dropped.queueFull)
+                    .intField('messages_dropped_size', metrics.dropped.messageSize)
+                    .intField('processing_time_avg_ms', metrics.processingTime.avgMs)
+                    .intField('processing_time_p95_ms', metrics.processingTime.p95Ms)
+                    .intField('processing_time_max_ms', metrics.processingTime.maxMs)
+                    .intField('rate_limit_current', metrics.rateLimit.currentRate)
+                    .intField('backpressure_active', metrics.backpressure ? 1 : 0);
+
+                // Add static tags from config file
+                if (
+                    globals.config.has('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') &&
+                    globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') !==
+                        null &&
+                    globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags')
+                        .length > 0
+                ) {
+                    const configTags = globals.config.get(
+                        'Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags'
+                    );
+                    for (const item of configTags) {
+                        point.tag(item.name, item.value);
+                    }
+                }
+
+                writeApi.writePoint(point);
+            }
+
+            await writeApi.flush();
+            globals.logger.verbose(
+                'UDP QUEUE METRICS INFLUXDB: Sent Butler SOS UDP queue metrics to InfluxDB'
+            );
+        } catch (err) {
+            globals.logger.error(`UDP QUEUE METRICS INFLUXDB: Error getting write API: ${err}`);
+        }
+    }
+}
