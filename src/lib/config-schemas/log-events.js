@@ -22,8 +22,47 @@ export const logEventsSchema = {
                         format: 'hostname',
                     },
                     portLogEvents: { type: 'number' },
+                    messageQueue: {
+                        type: 'object',
+                        properties: {
+                            maxConcurrent: { type: 'number', minimum: 1 },
+                            maxSize: { type: 'number', minimum: 1 },
+                            dropStrategy: {
+                                type: 'string',
+                                enum: ['oldest', 'newest'],
+                            },
+                        },
+                        required: ['maxConcurrent', 'maxSize', 'dropStrategy'],
+                        additionalProperties: false,
+                    },
+                    rateLimit: {
+                        type: 'object',
+                        properties: {
+                            enable: { type: 'boolean' },
+                            maxMessagesPerMinute: { type: 'number', minimum: 1 },
+                            violationLogThrottle: { type: 'number', minimum: 1 },
+                        },
+                        required: ['enable', 'maxMessagesPerMinute', 'violationLogThrottle'],
+                        additionalProperties: false,
+                    },
+                    maxMessageSize: { type: 'number', minimum: 1, maximum: 65507 },
+                    backpressure: {
+                        type: 'object',
+                        properties: {
+                            threshold: { type: 'number', minimum: 1, maximum: 100 },
+                        },
+                        required: ['threshold'],
+                        additionalProperties: false,
+                    },
                 },
-                required: ['serverHost', 'portLogEvents'],
+                required: [
+                    'serverHost',
+                    'portLogEvents',
+                    'messageQueue',
+                    'rateLimit',
+                    'maxMessageSize',
+                    'backpressure',
+                ],
                 additionalProperties: false,
             },
             tags: {

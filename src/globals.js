@@ -17,6 +17,7 @@ import sea from './lib/sea-wrapper.js';
 
 import { getServerTags } from './lib/servertags.js';
 import { UdpEvents } from './lib/udp-event.js';
+import { UdpQueueHandler } from './lib/udp-queue-handler.js';
 import { verifyConfigFileSchema, verifyAppConfig } from './lib/config-file-verify.js';
 
 let instance = null;
@@ -533,6 +534,92 @@ Configuration File:
             this.rejectedEvents = new UdpEvents(this.logger);
         } else {
             this.rejectedEvents = null;
+        }
+
+        // ------------------------------------
+        // Initialize UDP queue handlers
+        try {
+            // User events queue handler
+            if (this.config.get('Butler-SOS.userEvents.enable') === true) {
+                this.udpQueueHandlerUserEvents = new UdpQueueHandler(
+                    {
+                        name: 'UserEvents',
+                        maxConcurrent: this.config.get(
+                            'Butler-SOS.userEvents.udpServerConfig.messageQueue.maxConcurrent'
+                        ),
+                        maxSize: this.config.get(
+                            'Butler-SOS.userEvents.udpServerConfig.messageQueue.maxSize'
+                        ),
+                        dropStrategy: this.config.get(
+                            'Butler-SOS.userEvents.udpServerConfig.messageQueue.dropStrategy'
+                        ),
+                        rateLimitEnable: this.config.get(
+                            'Butler-SOS.userEvents.udpServerConfig.rateLimit.enable'
+                        ),
+                        maxMessagesPerMinute: this.config.get(
+                            'Butler-SOS.userEvents.udpServerConfig.rateLimit.maxMessagesPerMinute'
+                        ),
+                        violationLogThrottle: this.config.get(
+                            'Butler-SOS.userEvents.udpServerConfig.rateLimit.violationLogThrottle'
+                        ),
+                        maxMessageSize: this.config.get(
+                            'Butler-SOS.userEvents.udpServerConfig.maxMessageSize'
+                        ),
+                        backpressureThreshold: this.config.get(
+                            'Butler-SOS.userEvents.udpServerConfig.backpressure.threshold'
+                        ),
+                    },
+                    this.logger
+                );
+            } else {
+                this.udpQueueHandlerUserEvents = null;
+            }
+
+            // Log events queue handler
+            if (
+                this.config.get('Butler-SOS.logEvents.source.engine.enable') === true ||
+                this.config.get('Butler-SOS.logEvents.source.proxy.enable') === true ||
+                this.config.get('Butler-SOS.logEvents.source.repository.enable') === true ||
+                this.config.get('Butler-SOS.logEvents.source.scheduler.enable') === true ||
+                this.config.get('Butler-SOS.logEvents.source.qixPerf.enable') === true
+            ) {
+                this.udpQueueHandlerLogEvents = new UdpQueueHandler(
+                    {
+                        name: 'LogEvents',
+                        maxConcurrent: this.config.get(
+                            'Butler-SOS.logEvents.udpServerConfig.messageQueue.maxConcurrent'
+                        ),
+                        maxSize: this.config.get(
+                            'Butler-SOS.logEvents.udpServerConfig.messageQueue.maxSize'
+                        ),
+                        dropStrategy: this.config.get(
+                            'Butler-SOS.logEvents.udpServerConfig.messageQueue.dropStrategy'
+                        ),
+                        rateLimitEnable: this.config.get(
+                            'Butler-SOS.logEvents.udpServerConfig.rateLimit.enable'
+                        ),
+                        maxMessagesPerMinute: this.config.get(
+                            'Butler-SOS.logEvents.udpServerConfig.rateLimit.maxMessagesPerMinute'
+                        ),
+                        violationLogThrottle: this.config.get(
+                            'Butler-SOS.logEvents.udpServerConfig.rateLimit.violationLogThrottle'
+                        ),
+                        maxMessageSize: this.config.get(
+                            'Butler-SOS.logEvents.udpServerConfig.maxMessageSize'
+                        ),
+                        backpressureThreshold: this.config.get(
+                            'Butler-SOS.logEvents.udpServerConfig.backpressure.threshold'
+                        ),
+                    },
+                    this.logger
+                );
+            } else {
+                this.udpQueueHandlerLogEvents = null;
+            }
+        } catch (err) {
+            this.logger.error(
+                `CONFIG: Error setting up UDP queue handlers: ${this.getErrorMessage(err)}`
+            );
         }
 
         // ------------------------------------

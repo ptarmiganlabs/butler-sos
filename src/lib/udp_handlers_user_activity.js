@@ -19,5 +19,22 @@ export function udpInitUserActivityServer() {
     globals.udpServerUserActivity.socket.on('listening', listeningEventHandler);
 
     // Handler for UDP messages relating to user activity events
-    globals.udpServerUserActivity.socket.on('message', messageEventHandler);
+    // Wrap with queue handler if available
+    if (globals.udpQueueHandlerUserEvents) {
+        globals.udpServerUserActivity.socket.on('message', (message, remote) => {
+            globals.udpQueueHandlerUserEvents.addMessage(message, remote, messageEventHandler);
+        });
+    } else {
+        globals.udpServerUserActivity.socket.on('message', messageEventHandler);
+    }
+
+    // Error handler for UDP socket
+    globals.udpServerUserActivity.socket.on('error', (err) => {
+        globals.logger.error(`UDP USER EVENTS: Socket error: ${err.message}`);
+    });
+
+    // Close handler for UDP socket
+    globals.udpServerUserActivity.socket.on('close', () => {
+        globals.logger.warn('UDP USER EVENTS: Socket closed');
+    });
 }

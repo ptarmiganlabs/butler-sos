@@ -120,6 +120,17 @@ Butler-SOS:
         udpServerConfig:
             serverHost: <IP or FQDN> # Host/IP where user event server will listen for events from Sense
             portUserActivityEvents: 9997 # Port on which user event server will listen for events from Sense
+            messageQueue:
+                maxConcurrent: 5 # Max messages processing simultaneously
+                maxSize: 100 # Max queued messages before dropping
+                dropStrategy: oldest # Drop 'oldest' or 'newest' messages when queue is full
+            rateLimit:
+                enable: true # Enable rate limiting to prevent message flooding
+                maxMessagesPerMinute: 300 # Max messages per minute (~5 per second)
+                violationLogThrottle: 60 # Log rate limit violations once per N seconds
+            maxMessageSize: 65507 # Max UDP datagram size in bytes
+            backpressure:
+                threshold: 80 # Backpressure warning at N% queue utilization
         tags: # Tags are added to the data before it's stored in InfluxDB
             # - name: env
             #   value: DEV
@@ -157,6 +168,17 @@ Butler-SOS:
         udpServerConfig:
             serverHost: <IP or FQDN> # Host/IP where log event server will listen for events from Sense
             portLogEvents: 9996 # Port on which log event server will listen for events from Sense
+            messageQueue:
+                maxConcurrent: 5 # Max messages processing simultaneously
+                maxSize: 100 # Max queued messages before dropping
+                dropStrategy: oldest # Drop 'oldest' or 'newest' messages when queue is full
+            rateLimit:
+                enable: true # Enable rate limiting to prevent message flooding
+                maxMessagesPerMinute: 300 # Max messages per minute (~5 per second)
+                violationLogThrottle: 60 # Log rate limit violations once per N seconds
+            maxMessageSize: 65507 # Max UDP datagram size in bytes
+            backpressure:
+                threshold: 80 # Backpressure warning at N% queue utilization
         tags:
             # - name: env
             #   value: DEV

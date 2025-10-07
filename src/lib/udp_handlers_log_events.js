@@ -19,5 +19,22 @@ export function udpInitLogEventServer() {
     globals.udpServerLogEvents.socket.on('listening', listeningEventHandler);
 
     // Handler for UDP messages relating to log events
-    globals.udpServerLogEvents.socket.on('message', messageEventHandler);
+    // Wrap with queue handler if available
+    if (globals.udpQueueHandlerLogEvents) {
+        globals.udpServerLogEvents.socket.on('message', (message, remote) => {
+            globals.udpQueueHandlerLogEvents.addMessage(message, remote, messageEventHandler);
+        });
+    } else {
+        globals.udpServerLogEvents.socket.on('message', messageEventHandler);
+    }
+
+    // Error handler for UDP socket
+    globals.udpServerLogEvents.socket.on('error', (err) => {
+        globals.logger.error(`UDP LOG EVENTS: Socket error: ${err.message}`);
+    });
+
+    // Close handler for UDP socket
+    globals.udpServerLogEvents.socket.on('close', () => {
+        globals.logger.warn('UDP LOG EVENTS: Socket closed');
+    });
 }
