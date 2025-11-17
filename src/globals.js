@@ -17,6 +17,7 @@ import sea from './lib/sea-wrapper.js';
 
 import { getServerTags } from './lib/servertags.js';
 import { UdpEvents } from './lib/udp-event.js';
+import { UdpQueueManager } from './lib/udp-queue-manager.js';
 import { verifyConfigFileSchema, verifyAppConfig } from './lib/config-file-verify.js';
 
 let instance = null;
@@ -516,6 +517,44 @@ Configuration File:
         } catch (err) {
             this.logger.error(
                 `CONFIG: Setting up UDP log events listener: ${this.getErrorMessage(err)}`
+            );
+        }
+
+        // ------------------------------------
+        // Initialize UDP queue managers
+        try {
+            // User activity queue manager
+            const userActivityQueueConfig = {
+                messageQueue: this.config.get('Butler-SOS.userEvents.udpServerConfig.messageQueue'),
+                rateLimit: this.config.get('Butler-SOS.userEvents.udpServerConfig.rateLimit'),
+                maxMessageSize: this.config.get(
+                    'Butler-SOS.userEvents.udpServerConfig.maxMessageSize'
+                ),
+            };
+            this.udpQueueManagerUserActivity = new UdpQueueManager(
+                userActivityQueueConfig,
+                this.logger,
+                'user_events'
+            );
+
+            // Log events queue manager
+            const logEventsQueueConfig = {
+                messageQueue: this.config.get('Butler-SOS.logEvents.udpServerConfig.messageQueue'),
+                rateLimit: this.config.get('Butler-SOS.logEvents.udpServerConfig.rateLimit'),
+                maxMessageSize: this.config.get(
+                    'Butler-SOS.logEvents.udpServerConfig.maxMessageSize'
+                ),
+            };
+            this.udpQueueManagerLogEvents = new UdpQueueManager(
+                logEventsQueueConfig,
+                this.logger,
+                'log_events'
+            );
+
+            this.logger.info('CONFIG: UDP queue managers initialized');
+        } catch (err) {
+            this.logger.error(
+                `CONFIG: Error initializing UDP queue managers: ${this.getErrorMessage(err)}`
             );
         }
 

@@ -34,8 +34,77 @@ export const userEventsSchema = {
                         format: 'hostname',
                     },
                     portUserActivityEvents: { type: 'number' },
+                    messageQueue: {
+                        type: 'object',
+                        properties: {
+                            maxConcurrent: { type: 'number', default: 10 },
+                            maxSize: { type: 'number', default: 200 },
+                            dropStrategy: {
+                                type: 'string',
+                                enum: ['oldest', 'newest'],
+                                default: 'oldest',
+                            },
+                            backpressureThreshold: { type: 'number', default: 80 },
+                        },
+                        required: [
+                            'maxConcurrent',
+                            'maxSize',
+                            'dropStrategy',
+                            'backpressureThreshold',
+                        ],
+                        additionalProperties: false,
+                    },
+                    rateLimit: {
+                        type: 'object',
+                        properties: {
+                            enable: { type: 'boolean', default: false },
+                            maxMessagesPerMinute: { type: 'number', default: 600 },
+                        },
+                        required: ['enable', 'maxMessagesPerMinute'],
+                        additionalProperties: false,
+                    },
+                    maxMessageSize: { type: 'number', default: 65507 },
+                    queueMetrics: {
+                        type: 'object',
+                        properties: {
+                            influxdb: {
+                                type: 'object',
+                                properties: {
+                                    enable: { type: 'boolean', default: false },
+                                    writeFrequency: { type: 'number', default: 20000 },
+                                    measurementName: {
+                                        type: 'string',
+                                        default: 'user_events_queue',
+                                    },
+                                    tags: {
+                                        type: ['array', 'null'],
+                                        items: {
+                                            type: 'object',
+                                            properties: {
+                                                name: { type: 'string' },
+                                                value: { type: 'string' },
+                                            },
+                                            required: ['name', 'value'],
+                                            additionalProperties: false,
+                                        },
+                                    },
+                                },
+                                required: ['enable', 'writeFrequency', 'measurementName', 'tags'],
+                                additionalProperties: false,
+                            },
+                        },
+                        required: ['influxdb'],
+                        additionalProperties: false,
+                    },
                 },
-                required: ['serverHost', 'portUserActivityEvents'],
+                required: [
+                    'serverHost',
+                    'portUserActivityEvents',
+                    'messageQueue',
+                    'rateLimit',
+                    'maxMessageSize',
+                    'queueMetrics',
+                ],
                 additionalProperties: false,
             },
             tags: {

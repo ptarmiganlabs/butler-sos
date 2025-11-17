@@ -120,6 +120,26 @@ Butler-SOS:
         udpServerConfig:
             serverHost: <IP or FQDN> # Host/IP where user event server will listen for events from Sense
             portUserActivityEvents: 9997 # Port on which user event server will listen for events from Sense
+            # Message queue settings for handling incoming UDP messages
+            messageQueue:
+                maxConcurrent: 10 # Max number of messages being processed simultaneously (default: 10)
+                maxSize: 200 # Max queue size before messages are dropped (default: 200)
+                dropStrategy: oldest # Drop 'oldest' or 'newest' messages when queue is full (default: oldest)
+                backpressureThreshold: 80 # Warn when queue utilization reaches this % (default: 80)
+            # Rate limiting to prevent message flooding
+            rateLimit:
+                enable: false # Enable rate limiting (default: false)
+                maxMessagesPerMinute: 600 # Max messages per minute, ~10/sec (default: 600)
+            maxMessageSize: 65507 # Max UDP message size in bytes (default: 65507, UDP max)
+            # Queue metrics storage in InfluxDB
+            queueMetrics:
+                influxdb:
+                    enable: false # Store queue metrics in InfluxDB (default: false)
+                    writeFrequency: 20000 # How often to write metrics, milliseconds (default: 20000)
+                    measurementName: user_events_queue # InfluxDB measurement name (default: user_events_queue)
+                    tags: # Optional tags added to queue metrics
+                        # - name: env
+                        #   value: prod
         tags: # Tags are added to the data before it's stored in InfluxDB
             # - name: env
             #   value: DEV
@@ -157,6 +177,26 @@ Butler-SOS:
         udpServerConfig:
             serverHost: <IP or FQDN> # Host/IP where log event server will listen for events from Sense
             portLogEvents: 9996 # Port on which log event server will listen for events from Sense
+            # Message queue settings for handling incoming UDP messages
+            messageQueue:
+                maxConcurrent: 10 # Max number of messages being processed simultaneously (default: 10)
+                maxSize: 200 # Max queue size before messages are dropped (default: 200)
+                dropStrategy: oldest # Drop 'oldest' or 'newest' messages when queue is full (default: oldest)
+                backpressureThreshold: 80 # Warn when queue utilization reaches this % (default: 80)
+            # Rate limiting to prevent message flooding
+            rateLimit:
+                enable: false # Enable rate limiting (default: false)
+                maxMessagesPerMinute: 600 # Max messages per minute, ~10/sec (default: 600)
+            maxMessageSize: 65507 # Max UDP message size in bytes (default: 65507, UDP max)
+            # Queue metrics storage in InfluxDB
+            queueMetrics:
+                influxdb:
+                    enable: false # Store queue metrics in InfluxDB (default: false)
+                    writeFrequency: 20000 # How often to write metrics, milliseconds (default: 20000)
+                    measurementName: log_events_queue # InfluxDB measurement name (default: log_events_queue)
+                    tags: # Optional tags added to queue metrics
+                        # - name: env
+                        #   value: prod
         tags:
             # - name: env
             #   value: DEV

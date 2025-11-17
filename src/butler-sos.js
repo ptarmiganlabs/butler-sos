@@ -24,6 +24,7 @@ import { setupAnonUsageReportTimer } from './lib/telemetry.js';
 import { setupPromClient } from './lib/prom-client.js';
 import { setupConfigVisServer } from './lib/config-visualise.js';
 import { setupUdpEventsStorage } from './lib/udp-event.js';
+import { setupUdpQueueMetricsStorage } from './lib/post-to-influxdb.js';
 
 // Suppress experimental warnings
 // https://stackoverflow.com/questions/55778283/how-to-disable-warnings-when-node-is-launched-via-a-global-shell-script
@@ -327,6 +328,9 @@ async function mainScript() {
         globals.logger.verbose('MAIN: Rejected events storage enabled');
         await setupUdpEventsStorage();
     }
+
+    // Set up UDP queue metrics storage, if enabled
+    setupUdpQueueMetricsStorage();
 }
 
 mainScript();

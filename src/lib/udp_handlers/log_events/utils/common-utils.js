@@ -39,6 +39,7 @@ export function formatUserFields(msgObj) {
         // Combine them into a single field
         msgObj.user_full = `${msgObj.user_directory}\\${msgObj.user_id}`;
     } else if (
+        msgObj.user_full &&
         msgObj.user_full !== '' &&
         msgObj.user_directory === '' &&
         msgObj.user_id === '' &&
