@@ -124,7 +124,6 @@ Butler-SOS:
             messageQueue:
                 maxConcurrent: 10 # Max number of messages being processed simultaneously (default: 10)
                 maxSize: 200 # Max queue size before messages are dropped (default: 200)
-                dropStrategy: oldest # Drop 'oldest' or 'newest' messages when queue is full (default: oldest)
                 backpressureThreshold: 80 # Warn when queue utilization reaches this % (default: 80)
             # Rate limiting to prevent message flooding
             rateLimit:
@@ -181,7 +180,6 @@ Butler-SOS:
             messageQueue:
                 maxConcurrent: 10 # Max number of messages being processed simultaneously (default: 10)
                 maxSize: 200 # Max queue size before messages are dropped (default: 200)
-                dropStrategy: oldest # Drop 'oldest' or 'newest' messages when queue is full (default: oldest)
                 backpressureThreshold: 80 # Warn when queue utilization reaches this % (default: 80)
             # Rate limiting to prevent message flooding
             rateLimit:

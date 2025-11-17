@@ -2019,7 +2019,7 @@ export async function postUserEventQueueMetricsToInfluxdb() {
             }
 
             try {
-                globals.influx.writePoints([point]);
+                await globals.influx.writePoints([point]);
                 globals.logger.verbose(
                     'USER EVENT QUEUE METRICS INFLUXDB: Sent queue metrics data to InfluxDB v1'
                 );
@@ -2172,7 +2172,7 @@ export async function postLogEventQueueMetricsToInfluxdb() {
             }
 
             try {
-                globals.influx.writePoints([point]);
+                await globals.influx.writePoints([point]);
                 globals.logger.verbose(
                     'LOG EVENT QUEUE METRICS INFLUXDB: Sent queue metrics data to InfluxDB v1'
                 );

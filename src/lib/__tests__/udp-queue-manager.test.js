@@ -64,7 +64,6 @@ describe('UdpQueueManager', () => {
             messageQueue: {
                 maxConcurrent: 5,
                 maxSize: 10,
-                dropStrategy: 'oldest',
                 backpressureThreshold: 80,
             },
             rateLimit: {

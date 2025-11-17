@@ -46,12 +46,7 @@ export const userEventsSchema = {
                             },
                             backpressureThreshold: { type: 'number', default: 80 },
                         },
-                        required: [
-                            'maxConcurrent',
-                            'maxSize',
-                            'dropStrategy',
-                            'backpressureThreshold',
-                        ],
+                        required: ['maxConcurrent', 'maxSize', 'backpressureThreshold'],
                         additionalProperties: false,
                     },
                     rateLimit: {

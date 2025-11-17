@@ -93,7 +93,6 @@ describe('config-file-schema', () => {
                         messageQueue: {
                             maxConcurrent: 10,
                             maxSize: 200,
-                            dropStrategy: 'oldest',
                             backpressureThreshold: 80,
                         },
                         rateLimit: {
@@ -128,7 +127,6 @@ describe('config-file-schema', () => {
                         messageQueue: {
                             maxConcurrent: 10,
                             maxSize: 200,
-                            dropStrategy: 'oldest',
                             backpressureThreshold: 80,
                         },
                         rateLimit: {
