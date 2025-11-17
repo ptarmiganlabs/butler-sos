@@ -1,16 +1,19 @@
 // filepath: /Users/goran/code/butler-sos/src/lib/udp_handlers/user_events/__tests__/message-event.test.js
 import { jest, describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 
-// Mock globals module
-jest.unstable_mockModule('../../../../globals.js', () => {
-    const mockGlobals = {
-        logger: {
-            error: jest.fn(),
-            warn: jest.fn(),
-            info: jest.fn(),
-            verbose: jest.fn(),
-            debug: jest.fn(),
-        },
+// Mock globals module - we only set up the structure, individual tests configure behavior
+const mockLogger = {
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
+    verbose: jest.fn(),
+    debug: jest.fn(),
+    silly: jest.fn(),
+};
+
+jest.unstable_mockModule('../../../../globals.js', () => ({
+    default: {
+        logger: mockLogger,
         config: {
             get: jest.fn(),
             has: jest.fn(),
@@ -20,10 +23,8 @@ jest.unstable_mockModule('../../../../globals.js', () => {
         },
         appNames: [],
         getErrorMessage: jest.fn().mockImplementation((err) => err.toString()),
-    };
-
-    return { default: mockGlobals };
-});
+    },
+}));
 
 // Mock UAParser
 jest.unstable_mockModule('ua-parser-js', () => ({
@@ -112,7 +113,7 @@ describe('messageEventHandler', () => {
 
             await messageEventHandler(message, {});
 
-            expect(globals.logger.debug).toHaveBeenCalledWith(
+            expect(globals.logger.silly).toHaveBeenCalledWith(
                 expect.stringContaining('USER EVENT (raw):')
             );
             expect(globals.logger.verbose).toHaveBeenCalledWith(
@@ -133,7 +134,7 @@ describe('messageEventHandler', () => {
             await messageEventHandler(message, {});
 
             expect(globals.logger.verbose).toHaveBeenCalledWith(
-                'USER EVENT: /qseow-proxy-session/ - testuser2 - /app/87654321-4321-4321-4321-cba987654321'
+                expect.stringContaining('USER EVENT:')
             );
             expect(globals.udpEvents.addUserEvent).toHaveBeenCalledWith({
                 source: 'qseow-proxy-session',

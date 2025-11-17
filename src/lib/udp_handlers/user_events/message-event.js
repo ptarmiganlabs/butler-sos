@@ -3,6 +3,7 @@ import { UAParser } from 'ua-parser-js';
 
 // Load global variables and functions
 import globals from '../../../globals.js';
+import { sanitizeField } from '../../udp-queue-manager.js';
 import { postUserEventToInfluxdb } from '../../post-to-influxdb.js';
 import { postUserEventToNewRelic } from '../../post-to-new-relic.js';
 import { postUserEventToMQTT } from '../../post-to-mqtt.js';
@@ -120,14 +121,14 @@ export async function messageEventHandler(message, _remote) {
         let msgObj;
         if (msg[0] === 'qseow-proxy-connection' || msg[0] === 'qseow-proxy-session') {
             msgObj = {
-                messageType: msg[0],
-                host: msg[1],
-                command: msg[2],
-                user_directory: msg[3],
-                user_id: msg[4],
-                origin: msg[5],
-                context: msg[6],
-                message: msg[7],
+                messageType: sanitizeField(msg[0], 100),
+                host: sanitizeField(msg[1], 100),
+                command: sanitizeField(msg[2], 100),
+                user_directory: sanitizeField(msg[3], 100),
+                user_id: sanitizeField(msg[4], 100),
+                origin: sanitizeField(msg[5], 200),
+                context: sanitizeField(msg[6], 500),
+                message: sanitizeField(msg[7], 1000),
             };
 
             // Different log events deliver QSEoW user directory/user differently.

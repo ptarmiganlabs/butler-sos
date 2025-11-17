@@ -163,6 +163,23 @@ class RateLimiter {
 }
 
 /**
+ * Sanitize input field by removing control characters and limiting length
+ *
+ * @param {string} field - Field to sanitize
+ * @param {number} maxLength - Maximum length (default: 500)
+ * @returns {string} Sanitized field
+ */
+export function sanitizeField(field, maxLength = 500) {
+    if (typeof field !== 'string') {
+        return String(field).slice(0, maxLength);
+    }
+
+    return field
+        .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+        .slice(0, maxLength);
+}
+
+/**
  * UDP Queue Manager
  * Manages message queue, rate limiting, metrics tracking, and input validation
  */
@@ -223,23 +240,6 @@ export class UdpQueueManager {
         // Drop tracking for logging
         this.droppedSinceLastLog = 0;
         this.lastDropLog = Date.now();
-    }
-
-    /**
-     * Sanitize input field by removing control characters and limiting length
-     *
-     * @param {string} field - Field to sanitize
-     * @param {number} maxLength - Maximum length (default: 500)
-     * @returns {string} Sanitized field
-     */
-    sanitizeField(field, maxLength = 500) {
-        if (typeof field !== 'string') {
-            return String(field).slice(0, maxLength);
-        }
-
-        return field
-            .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
-            .slice(0, maxLength);
     }
 
     /**

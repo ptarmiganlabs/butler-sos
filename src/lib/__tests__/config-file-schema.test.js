@@ -90,6 +90,25 @@ describe('config-file-schema', () => {
                     udpServerConfig: {
                         serverHost: 'localhost',
                         portUserActivityEvents: 9999,
+                        messageQueue: {
+                            maxConcurrent: 10,
+                            maxSize: 200,
+                            dropStrategy: 'oldest',
+                            backpressureThreshold: 80,
+                        },
+                        rateLimit: {
+                            enable: false,
+                            maxMessagesPerMinute: 600,
+                        },
+                        maxMessageSize: 65507,
+                        queueMetrics: {
+                            influxdb: {
+                                enable: false,
+                                writeFrequency: 20000,
+                                measurementName: 'user_events_queue',
+                                tags: [],
+                            },
+                        },
                     },
                     tags: null,
                 },
@@ -106,6 +125,25 @@ describe('config-file-schema', () => {
                     udpServerConfig: {
                         serverHost: 'localhost',
                         portLogEvents: 9998,
+                        messageQueue: {
+                            maxConcurrent: 10,
+                            maxSize: 200,
+                            dropStrategy: 'oldest',
+                            backpressureThreshold: 80,
+                        },
+                        rateLimit: {
+                            enable: false,
+                            maxMessagesPerMinute: 600,
+                        },
+                        maxMessageSize: 65507,
+                        queueMetrics: {
+                            influxdb: {
+                                enable: false,
+                                writeFrequency: 20000,
+                                measurementName: 'log_events_queue',
+                                tags: [],
+                            },
+                        },
                     },
                     source: {
                         engine: {
