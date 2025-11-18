@@ -167,7 +167,10 @@ export function processQixPerfEvent(msg) {
         session_id: uuidRegex.test(msg[12]) ? msg[12] : '',
         app_id: uuidRegex.test(msg[13]) ? msg[13] : '',
         app_name: sanitizeField(eventAppName, 200),
-        request_id: sanitizeField(msg[14], 50), // Request ID is an integer >= 0, set to -99 otherwise
+        request_id:
+            Number.isInteger(parseInt(msg[14], 10)) && parseInt(msg[14], 10) >= 0
+                ? parseInt(msg[14], 10)
+                : -99, // Request ID is an integer >= 0, set to -99 otherwise
         method: sanitizeField(msg[15], 100),
         // Processtime in float milliseconds
         process_time: parseFloat(msg[16]),

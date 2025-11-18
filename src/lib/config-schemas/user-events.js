@@ -39,11 +39,7 @@ export const userEventsSchema = {
                         properties: {
                             maxConcurrent: { type: 'number', default: 10 },
                             maxSize: { type: 'number', default: 200 },
-                            dropStrategy: {
-                                type: 'string',
-                                enum: ['oldest', 'newest'],
-                                default: 'oldest',
-                            },
+
                             backpressureThreshold: { type: 'number', default: 80 },
                         },
                         required: ['maxConcurrent', 'maxSize', 'backpressureThreshold'],
