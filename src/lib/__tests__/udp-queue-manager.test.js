@@ -334,8 +334,8 @@ describe('UdpQueueManager', () => {
             }
             await Promise.all(promises);
 
-            // Check backpressure
-            await queueManager.checkBackpressure();
+            // Check backpressure with queue size of 8 (80% threshold)
+            await queueManager.checkBackpressure(8);
 
             expect(mockLogger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('Backpressure detected')
@@ -345,7 +345,8 @@ describe('UdpQueueManager', () => {
         it('should clear backpressure when utilization drops', async () => {
             queueManager.backpressureActive = true;
 
-            await queueManager.checkBackpressure();
+            // Check backpressure with queue size of 0 (below 80% of threshold)
+            await queueManager.checkBackpressure(0);
 
             expect(mockLogger.info).toHaveBeenCalledWith(
                 expect.stringContaining('Backpressure cleared')
