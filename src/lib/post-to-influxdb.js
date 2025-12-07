@@ -2285,10 +2285,16 @@ export function setupUdpQueueMetricsStorage() {
         );
 
         intervalIds.userEvents = setInterval(async () => {
-            globals.logger.verbose(
-                'UDP QUEUE METRICS: Timer for storing user event queue metrics to InfluxDB triggered'
-            );
-            await postUserEventQueueMetricsToInfluxdb();
+            try {
+                globals.logger.verbose(
+                    'UDP QUEUE METRICS: Timer for storing user event queue metrics to InfluxDB triggered'
+                );
+                await postUserEventQueueMetricsToInfluxdb();
+            } catch (err) {
+                globals.logger.error(
+                    `UDP QUEUE METRICS: Error storing user event queue metrics to InfluxDB: ${err && err.stack ? err.stack : err}`
+                );
+            }
         }, writeFrequency);
 
         globals.logger.info(
