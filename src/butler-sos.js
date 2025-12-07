@@ -326,11 +326,11 @@ async function mainScript() {
     // Set up rejected user/log events storage, if enabled
     if (globals.config.get('Butler-SOS.qlikSenseEvents.rejectedEventCount.enable') === true) {
         globals.logger.verbose('MAIN: Rejected events storage enabled');
-        await setupUdpEventsStorage();
+        const udpEventsStorageIntervalId = setupUdpEventsStorage();
     }
 
     // Set up UDP queue metrics storage, if enabled
-    setupUdpQueueMetricsStorage();
+    const udpQueueMetricsIntervalIds = setupUdpQueueMetricsStorage();
 }
 
 mainScript();
