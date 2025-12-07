@@ -15,7 +15,7 @@ export class UdpEvents {
     /**
      * Creates a new UdpEvents instance.
      *
-     * @param {object} logger - The logger object to use for logging
+     * @param {object} logger - Logger instance with error, debug, info, and verbose methods
      */
     constructor(logger) {
         this.logger = logger;
@@ -51,7 +51,6 @@ export class UdpEvents {
      * @param {string} event.host - The host where the event originated
      * @param {string} event.subsystem - The subsystem that generated the event
      * @returns {Promise<void>}
-     * @throws {Error} If the event object doesn't have the required properties
      */
     async addLogEvent(event) {
         // Ensure the passed event is an object with properties:
@@ -159,7 +158,6 @@ export class UdpEvents {
      * @param {string} event.host - The host where the event originated
      * @param {string} event.subsystem - The subsystem that generated the event
      * @returns {Promise<void>}
-     * @throws {Error} If the event object doesn't have the required properties
      */
     async addUserEvent(event) {
         // Ensure the passed event is an object with properties:
@@ -211,7 +209,7 @@ export class UdpEvents {
     /**
      * Retrieves all tracked log events.
      *
-     * @returns {Promise<Array>} Array of tracked log events
+     * @returns {Promise<Array<{source: string, host: string, subsystem: string, counter: number}>>} Array of tracked log events
      */
     async getLogEvents() {
         const release = await this.logMutex.acquire();
@@ -226,7 +224,7 @@ export class UdpEvents {
     /**
      * Retrieves all tracked rejected log events.
      *
-     * @returns {Promise<Array>} Array of tracked rejected log events
+     * @returns {Promise<Array<{source: string, counter: number, appId?: string, appName?: string, method?: string, objectType?: string, processTime?: number}>>} Array of tracked rejected log events
      */
     async getRejectedLogEvents() {
         const release = await this.rejectedLogMutex.acquire();
@@ -240,7 +238,7 @@ export class UdpEvents {
     /**
      * Retrieves all tracked user events.
      *
-     * @returns {Promise<Array>} Array of tracked user events
+     * @returns {Promise<Array<{source: string, host: string, subsystem: string, counter: number}>>} Array of tracked user events
      */
     async getUserEvents() {
         const release = await this.userMutex.acquire();
@@ -267,7 +265,6 @@ export class UdpEvents {
      * @param {string} [event.objectType] - The object type (for performance log events)
      * @param {number} [event.processTime] - The process time (for performance log events)
      * @returns {Promise<void>}
-     * @throws {Error} If the event object doesn't have the required properties
      */
     async addRejectedLogEvent(event) {
         // Ensure the passed event is an object with properties:
@@ -361,7 +358,7 @@ export class UdpEvents {
  * 2. Stores rejected event counts to InfluxDB
  * 3. Clears event counters after they've been stored
  *
- * @param {Function} [callbackForTest] - Optional callback function used for testing
+ * @param {() => void} [callbackForTest] - Optional callback function used for testing
  * @returns {number|undefined} The interval ID if the timer was set up, or undefined if disabled
  */
 export function setupUdpEventsStorage(callbackForTest) {
