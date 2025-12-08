@@ -30,6 +30,7 @@ jest.unstable_mockModule('../../globals.js', () => ({
 jest.unstable_mockModule('../post-to-influxdb.js', () => ({
     storeRejectedEventCountInfluxDB: jest.fn(),
     storeEventCountInfluxDB: jest.fn(),
+    storeUdpQueueMetricsInfluxDB: jest.fn(),
 }));
 
 jest.useFakeTimers();

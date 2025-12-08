@@ -1,7 +1,11 @@
 import { Mutex } from 'async-mutex';
 
 import globals from '../globals.js';
-import { storeRejectedEventCountInfluxDB, storeEventCountInfluxDB } from './post-to-influxdb.js';
+import {
+    storeRejectedEventCountInfluxDB,
+    storeEventCountInfluxDB,
+    storeUdpQueueMetricsInfluxDB,
+} from './post-to-influxdb.js';
 
 /**
  * Class for tracking counts of UDP events received from Qlik Sense.
@@ -386,6 +390,9 @@ export function setupUdpEventsStorage(callbackForTest) {
 
             // Store rejected event counts
             await storeRejectedEventCountInfluxDB();
+
+            // Store UDP queue metrics
+            await storeUdpQueueMetricsInfluxDB();
 
             // Clear event counts
             globals.logger.debug('clearing event counters');
