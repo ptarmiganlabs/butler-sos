@@ -484,7 +484,7 @@ Configuration File:
             // Prepare to listen on port X for incoming UDP connections regarding user activity events
             this.udpServerUserActivity.socket = dgram.createSocket({
                 type: 'udp4',
-                reuseAddr: true,
+                reuseAddr: false,
             });
 
             this.udpServerUserActivity.portUserActivity = this.config.get(
@@ -508,7 +508,7 @@ Configuration File:
             // Prepare to listen on port X for incoming UDP connections regarding user activity events
             this.udpServerLogEvents.socket = dgram.createSocket({
                 type: 'udp4',
-                reuseAddr: true,
+                reuseAddr: false,
             });
 
             this.udpServerLogEvents.port = this.config.get(

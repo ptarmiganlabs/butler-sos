@@ -226,7 +226,9 @@ async function mainScript() {
     if (
         globals.config.get('Butler-SOS.logEvents.source.repository.enable') ||
         globals.config.get('Butler-SOS.logEvents.source.scheduler.enable') ||
-        globals.config.get('Butler-SOS.logEvents.source.proxy.enable')
+        globals.config.get('Butler-SOS.logEvents.source.proxy.enable') ||
+        globals.config.get('Butler-SOS.logEvents.source.engine.enable') ||
+        globals.config.get('Butler-SOS.logEvents.source.qixPerf.enable')
     ) {
         udpInitLogEventServer();
 

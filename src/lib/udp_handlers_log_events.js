@@ -22,6 +22,14 @@ export function udpInitLogEventServer() {
     // Handler for UDP messages relating to log events
     globals.udpServerLogEvents.socket.on('message', async (message, remote) => {
         try {
+            globals.logger.debug(`[UDP LOG EVENT MSG] !!! RAW MESSAGE EVENT !!!`);
+            globals.logger.debug(`[UDP LOG EVENT MSG] From:  ${remote.address}:${remote.port}`);
+            globals.logger.debug(`[UDP LOG EVENT MSG] Length: ${message.length} bytes`);
+            globals.logger.debug(
+                `[UDP LOG EVENT MSG] First 200 chars: ${message.toString().substring(0, 200)}`
+            );
+            globals.logger.debug(`[UDP LOG EVENT MSG] ---`);
+
             // Get queue manager
             const queueManager = globals.udpQueueManagerLogEvents;
 
