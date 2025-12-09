@@ -4,6 +4,7 @@
 
 import globals from '../../../../globals.js';
 import { isoDateRegex, uuidRegex, formatUserFields } from '../utils/common-utils.js';
+import { sanitizeField } from '../../../udp-queue-manager.js';
 
 /**
  * Process engine log events
@@ -54,26 +55,26 @@ export function processEngineEvent(msg) {
     // session_id: uuid
     // app_id: uuid
     const msgObj = {
-        source: msg[0],
+        source: sanitizeField(msg[0], 100),
         log_row:
             Number.isInteger(parseInt(msg[1], 10)) && parseInt(msg[1], 10) > 0
                 ? parseInt(msg[1], 10)
                 : -1,
-        ts_iso: isoDateRegex.test(msg[2]) ? msg[2] : '',
-        ts_local: isoDateRegex.test(msg[3]) ? msg[3] : '',
-        level: msg[4],
-        host: msg[5],
-        subsystem: msg[6],
-        windows_user: msg[7],
-        message: msg[8],
+        ts_iso: isoDateRegex.test(msg[2]) ? sanitizeField(msg[2], 50) : '',
+        ts_local: isoDateRegex.test(msg[3]) ? sanitizeField(msg[3], 50) : '',
+        level: sanitizeField(msg[4], 20),
+        host: sanitizeField(msg[5], 100),
+        subsystem: sanitizeField(msg[6], 200),
+        windows_user: sanitizeField(msg[7], 100),
+        message: sanitizeField(msg[8], 1000),
         proxy_session_id: uuidRegex.test(msg[9]) ? msg[9] : '',
-        user_directory: msg[10],
-        user_id: msg[11],
-        engine_ts: msg[12],
+        user_directory: sanitizeField(msg[10], 100),
+        user_id: sanitizeField(msg[11], 100),
+        engine_ts: sanitizeField(msg[12], 50),
         process_id: uuidRegex.test(msg[13]) ? msg[13] : '',
-        engine_exe_version: msg[14],
-        server_started: msg[15],
-        entry_type: msg[16],
+        engine_exe_version: sanitizeField(msg[14], 50),
+        server_started: sanitizeField(msg[15], 50),
+        entry_type: sanitizeField(msg[16], 50),
         session_id: uuidRegex.test(msg[17]) ? msg[17] : '',
         app_id: uuidRegex.test(msg[18]) ? msg[18] : '',
     };

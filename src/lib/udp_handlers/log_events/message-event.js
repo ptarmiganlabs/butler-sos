@@ -126,6 +126,10 @@ export async function messageEventHandler(message, _remote) {
                 globals.logger.debug('LOG EVENT: Calling log event New Relic posting method');
                 postLogEventToNewRelic(msgObj);
             }
+        } else {
+            globals.logger.debug(
+                `LOG EVENT: Log event source not recognized or not enabled in configuration, skipping message: ${msgParts[0]}`
+            );
         }
     } catch (err) {
         globals.logger.error(`LOG EVENT: Error handling message: ${globals.getErrorMessage(err)}`);

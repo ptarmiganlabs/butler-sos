@@ -4,6 +4,7 @@
 
 import globals from '../../../../globals.js';
 import { isoDateRegex, formatUserFields } from '../utils/common-utils.js';
+import { sanitizeField } from '../../../udp-queue-manager.js';
 
 /**
  * Process proxy log events
@@ -33,22 +34,22 @@ export function processProxyEvent(msg) {
     globals.logger.verbose(`LOG EVENT: ${msg[0]}:${msg[5]}:${msg[4]}, ${msg[6]}, Msg: ${msg[8]}`);
 
     const msgObj = {
-        source: msg[0],
+        source: sanitizeField(msg[0], 100),
         log_row: Number.isInteger(parseInt(msg[1], 10)) ? parseInt(msg[1], 10) : -1,
-        ts_iso: isoDateRegex.test(msg[2]) ? msg[2] : '',
-        ts_local: isoDateRegex.test(msg[3]) ? msg[3] : '',
-        level: msg[4],
-        host: msg[5],
-        subsystem: msg[6],
-        windows_user: msg[7],
-        message: msg[8],
-        exception_message: msg[9],
-        user_directory: msg[10],
-        user_id: msg[11],
-        command: msg[12],
-        result_code: msg[13],
-        origin: msg[14],
-        context: msg[15],
+        ts_iso: isoDateRegex.test(msg[2]) ? sanitizeField(msg[2], 50) : '',
+        ts_local: isoDateRegex.test(msg[3]) ? sanitizeField(msg[3], 50) : '',
+        level: sanitizeField(msg[4], 20),
+        host: sanitizeField(msg[5], 100),
+        subsystem: sanitizeField(msg[6], 200),
+        windows_user: sanitizeField(msg[7], 100),
+        message: sanitizeField(msg[8], 1000),
+        exception_message: sanitizeField(msg[9], 1000),
+        user_directory: sanitizeField(msg[10], 100),
+        user_id: sanitizeField(msg[11], 100),
+        command: sanitizeField(msg[12], 200),
+        result_code: sanitizeField(msg[13], 50),
+        origin: sanitizeField(msg[14], 200),
+        context: sanitizeField(msg[15], 200),
     };
 
     formatUserFields(msgObj);

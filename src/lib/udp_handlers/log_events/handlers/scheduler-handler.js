@@ -4,6 +4,7 @@
 
 import globals from '../../../../globals.js';
 import { isoDateRegex, uuidRegex, formatUserFields } from '../utils/common-utils.js';
+import { sanitizeField } from '../../../udp-queue-manager.js';
 
 /**
  * Process scheduler log events
@@ -35,21 +36,21 @@ export function processSchedulerEvent(msg) {
     globals.logger.verbose(`LOG EVENT: ${msg[0]}:${msg[5]}:${msg[4]}, ${msg[6]}, Msg: ${msg[8]}`);
 
     const msgObj = {
-        source: msg[0],
+        source: sanitizeField(msg[0], 100),
         log_row: Number.isInteger(parseInt(msg[1], 10)) ? parseInt(msg[1], 10) : -1,
-        ts_iso: isoDateRegex.test(msg[2]) ? msg[2] : '',
-        ts_local: isoDateRegex.test(msg[3]) ? msg[3] : '',
-        level: msg[4],
-        host: msg[5],
-        subsystem: msg[6],
-        windows_user: msg[7],
-        message: msg[8],
-        exception_message: msg[9],
-        user_directory: msg[10],
-        user_id: msg[11],
-        user_full: msg[12],
-        task_name: msg[13],
-        app_name: msg[14],
+        ts_iso: isoDateRegex.test(msg[2]) ? sanitizeField(msg[2], 50) : '',
+        ts_local: isoDateRegex.test(msg[3]) ? sanitizeField(msg[3], 50) : '',
+        level: sanitizeField(msg[4], 20),
+        host: sanitizeField(msg[5], 100),
+        subsystem: sanitizeField(msg[6], 200),
+        windows_user: sanitizeField(msg[7], 100),
+        message: sanitizeField(msg[8], 1000),
+        exception_message: sanitizeField(msg[9], 1000),
+        user_directory: sanitizeField(msg[10], 100),
+        user_id: sanitizeField(msg[11], 100),
+        user_full: sanitizeField(msg[12], 200),
+        task_name: sanitizeField(msg[13], 200),
+        app_name: sanitizeField(msg[14], 200),
         task_id: uuidRegex.test(msg[15]) ? msg[15] : '',
         app_id: uuidRegex.test(msg[16]) ? msg[16] : '',
         execution_id: uuidRegex.test(msg[17]) ? msg[17] : '',

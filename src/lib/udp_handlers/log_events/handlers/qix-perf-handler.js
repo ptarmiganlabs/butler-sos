@@ -5,6 +5,7 @@
 import globals from '../../../../globals.js';
 import { uuidRegex, formatUserFields } from '../utils/common-utils.js';
 import { processAppSpecificFilters, processAllAppsFilters } from '../filters/qix-perf-filters.js';
+import { sanitizeField } from '../../../udp-queue-manager.js';
 
 /**
  * Process QIX performance log events
@@ -151,23 +152,26 @@ export function processQixPerfEvent(msg) {
     // Event matches filters in the configuration. Continue.
     // Build the event object
     const msgObj = {
-        source: msg[0],
+        source: sanitizeField(msg[0], 100),
         log_row: Number.isInteger(parseInt(msg[1], 10)) ? parseInt(msg[1], 10) : -1,
-        ts_iso: msg[2],
-        ts_local: msg[3],
-        level: msg[4],
-        host: msg[5],
-        subsystem: msg[6],
-        windows_user: msg[7],
+        ts_iso: sanitizeField(msg[2], 50),
+        ts_local: sanitizeField(msg[3], 50),
+        level: sanitizeField(msg[4], 20),
+        host: sanitizeField(msg[5], 100),
+        subsystem: sanitizeField(msg[6], 200),
+        windows_user: sanitizeField(msg[7], 100),
         proxy_session_id: uuidRegex.test(msg[8]) ? msg[8] : '',
-        user_directory: msg[9],
-        user_id: msg[10],
-        engine_ts: msg[11],
+        user_directory: sanitizeField(msg[9], 100),
+        user_id: sanitizeField(msg[10], 100),
+        engine_ts: sanitizeField(msg[11], 50),
         session_id: uuidRegex.test(msg[12]) ? msg[12] : '',
         app_id: uuidRegex.test(msg[13]) ? msg[13] : '',
-        app_name: eventAppName,
-        request_id: msg[14], // Request ID is an integer >= 0, set to -99 otherwise
-        method: msg[15],
+        app_name: sanitizeField(eventAppName, 200),
+        request_id:
+            Number.isInteger(parseInt(msg[14], 10)) && parseInt(msg[14], 10) >= 0
+                ? parseInt(msg[14], 10)
+                : -99, // Request ID is an integer >= 0, set to -99 otherwise
+        method: sanitizeField(msg[15], 100),
         // Processtime in float milliseconds
         process_time: parseFloat(msg[16]),
         work_time: parseFloat(msg[17]),
@@ -176,7 +180,7 @@ export function processQixPerfEvent(msg) {
         traverse_time: parseFloat(msg[20]),
         // Handle is either -1 or a number. Set to -99 if not a number
         handle: Number.isInteger(parseInt(msg[21], 10)) ? parseInt(msg[21], 10) : -99,
-        object_id: msg[22],
+        object_id: sanitizeField(msg[22], 100),
         // Positive integer, set to -1 if not am integer >= 0
         net_ram:
             Number.isInteger(parseInt(msg[23], 10)) && parseInt(msg[23], 10) >= 0
@@ -186,8 +190,8 @@ export function processQixPerfEvent(msg) {
             Number.isInteger(parseInt(msg[24], 10)) && parseInt(msg[24], 10) >= 0
                 ? parseInt(msg[24], 10)
                 : -1,
-        object_type: msg[25],
-        event_activity_source: eventActivitySource,
+        object_type: sanitizeField(msg[25], 100),
+        event_activity_source: sanitizeField(eventActivitySource, 50),
     };
 
     formatUserFields(msgObj);
