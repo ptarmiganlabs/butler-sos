@@ -1,5 +1,30 @@
 # Changelog
 
+## [14.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v13.0.0...butler-sos-v14.0.0) (2025-12-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* **events:** Add proper queue for incoming log and user events
+
+### Features
+
+* Enhance logging for incoming UDP log events ([02858c2](https://github.com/ptarmiganlabs/butler-sos/commit/02858c2ed3ce77cbf3c82dd1d0e137154a6b6feb))
+* **events:** Add proper queue for incoming log and user events ([22fdc30](https://github.com/ptarmiganlabs/butler-sos/commit/22fdc30a5be9f33aa28ada0544fccd652e912202))
+* **events:** Sanitize all incoming event data before using it ([e536f0e](https://github.com/ptarmiganlabs/butler-sos/commit/e536f0e18f406cbe7946efd6664c1b3994d2d326))
+
+
+### Bug Fixes
+
+* Not captured log events from QSEoW due to bug introduced in recent refactoring of the codebase ([b3db037](https://github.com/ptarmiganlabs/butler-sos/commit/b3db037be336631057905ac19ea3db5dfd6be034))
+
+
+### Miscellaneous
+
+* **deps:** update dependencies in package.json ([26ccb62](https://github.com/ptarmiganlabs/butler-sos/commit/26ccb629b8131b33dd2e6964a6ecf557d8b9bd9b))
+* **deps:** Update dependencies to latest versions ([49195b9](https://github.com/ptarmiganlabs/butler-sos/commit/49195b906bfeac4221cccdc6e15d2d27cbb01700))
+* **workflows:** update action versions in CI configuration files ([ad4f3e8](https://github.com/ptarmiganlabs/butler-sos/commit/ad4f3e8b1ccbf76ec38723f2b4d75a61d0732f56))
+
 ## [13.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v12.0.1...butler-sos-v13.0.0) (2025-09-29)
 
 
