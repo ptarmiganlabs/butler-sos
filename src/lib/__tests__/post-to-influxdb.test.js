@@ -1,6 +1,6 @@
 import { jest, describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 
-// Mock the InfluxDB client
+// Mock the InfluxDB v2 client
 jest.unstable_mockModule('@influxdata/influxdb-client', () => ({
     Point: jest.fn().mockImplementation(() => ({
         tag: jest.fn().mockReturnThis(),
@@ -10,6 +10,19 @@ jest.unstable_mockModule('@influxdata/influxdb-client', () => ({
         uintField: jest.fn().mockReturnThis(),
         booleanField: jest.fn().mockReturnThis(), // <-- add this line
         timestamp: jest.fn().mockReturnThis(),
+    })),
+}));
+
+// Mock the InfluxDB v3 client
+jest.unstable_mockModule('@influxdata/influxdb3-client', () => ({
+    Point: jest.fn().mockImplementation(() => ({
+        setTag: jest.fn().mockReturnThis(),
+        setFloatField: jest.fn().mockReturnThis(),
+        setIntegerField: jest.fn().mockReturnThis(),
+        setStringField: jest.fn().mockReturnThis(),
+        setBooleanField: jest.fn().mockReturnThis(),
+        timestamp: jest.fn().mockReturnThis(),
+        toLineProtocol: jest.fn().mockReturnValue('mock-line-protocol'),
     })),
 }));
 
@@ -239,10 +252,10 @@ describe('post-to-influxdb', () => {
                 if (key === 'Butler-SOS.qlikSenseEvents.eventCount.influxdb.measurementName') {
                     return 'events_log';
                 }
-                if (key === 'Butler-SOS.influxdbConfig.v3Config.org') return 'test-org';
                 if (key === 'Butler-SOS.influxdbConfig.v3Config.database') return 'test-database';
                 return undefined;
             });
+            globals.config.has = jest.fn().mockReturnValue(false);
             const mockLogEvents = [
                 {
                     source: 'test-source',
@@ -259,7 +272,9 @@ describe('post-to-influxdb', () => {
                     origin: 'test-origin',
                     context: 'test-context',
                     sessionId: 'test-session',
-                    rawEvent: 'test-raw'
+                    rawEvent: 'test-raw',
+                    level: 'INFO',
+                    log_row: '1',
                 },
             ];
             globals.udpEvents = {
@@ -267,19 +282,14 @@ describe('post-to-influxdb', () => {
                 getUserEvents: jest.fn().mockResolvedValue([]),
             };
             globals.options = { instanceTag: 'test-instance' };
-            // Mock v3 writeApi
-            globals.influx.getWriteApi = jest.fn().mockReturnValue({
-                writePoint: jest.fn(),
-            });
+            // Mock v3 client write method
+            globals.influx.write = jest.fn().mockResolvedValue(undefined);
 
             // Execute
             await influxdb.storeEventCountInfluxDB();
 
             // Verify
-            expect(globals.influx.getWriteApi).toHaveBeenCalled();
-            // The writeApi mock's writePoint should be called
-            const writeApi = globals.influx.getWriteApi.mock.results[0].value;
-            expect(writeApi.writePoint).toHaveBeenCalled();
+            expect(globals.influx.write).toHaveBeenCalled();
             expect(globals.logger.verbose).toHaveBeenCalledWith(
                 expect.stringContaining(
                     'EVENT COUNT INFLUXDB: Sent Butler SOS event count data to InfluxDB'
@@ -294,10 +304,10 @@ describe('post-to-influxdb', () => {
                 if (key === 'Butler-SOS.qlikSenseEvents.eventCount.influxdb.measurementName') {
                     return 'events_user';
                 }
-                if (key === 'Butler-SOS.influxdbConfig.v3Config.org') return 'test-org';
                 if (key === 'Butler-SOS.influxdbConfig.v3Config.database') return 'test-database';
                 return undefined;
             });
+            globals.config.has = jest.fn().mockReturnValue(false);
             const mockUserEvents = [
                 {
                     source: 'test-source',
@@ -314,7 +324,7 @@ describe('post-to-influxdb', () => {
                     origin: 'test-origin',
                     context: 'test-context',
                     sessionId: 'test-session',
-                    rawEvent: 'test-raw'
+                    rawEvent: 'test-raw',
                 },
             ];
             globals.udpEvents = {
@@ -322,19 +332,14 @@ describe('post-to-influxdb', () => {
                 getUserEvents: jest.fn().mockResolvedValue(mockUserEvents),
             };
             globals.options = { instanceTag: 'test-instance' };
-            // Mock v3 writeApi
-            globals.influx.getWriteApi = jest.fn().mockReturnValue({
-                writePoint: jest.fn(),
-            });
+            // Mock v3 client write method
+            globals.influx.write = jest.fn().mockResolvedValue(undefined);
 
             // Execute
             await influxdb.storeEventCountInfluxDB();
 
             // Verify
-            expect(globals.influx.getWriteApi).toHaveBeenCalled();
-            // The writeApi mock's writePoint should be called
-            const writeApi = globals.influx.getWriteApi.mock.results[0].value;
-            expect(writeApi.writePoint).toHaveBeenCalled();
+            expect(globals.influx.write).toHaveBeenCalled();
             expect(globals.logger.verbose).toHaveBeenCalledWith(
                 expect.stringContaining(
                     'EVENT COUNT INFLUXDB: Sent Butler SOS event count data to InfluxDB'
@@ -719,23 +724,34 @@ describe('post-to-influxdb', () => {
                 if (key === 'Butler-SOS.influxdbConfig.includeFields.loadedDocs') return false;
                 if (key === 'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') return false;
                 if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
+                if (key === 'Butler-SOS.influxdbConfig.v3Config.database') return 'test-database';
                 return undefined;
             });
+            // Mock v3 client write method
+            const mockWrite = jest.fn().mockResolvedValue(undefined);
             globals.influxWriteApi = [
                 {
                     serverName: 'testserver',
-                    writeAPI: {
-                        writePoints: jest.fn(),
-                    },
+                    writeAPI: mockWrite,
+                    database: 'test-database',
                 },
             ];
+            globals.influx = {
+                write: mockWrite,
+            };
             const serverName = 'testserver';
             const host = 'testhost';
             const serverTags = { host: 'testhost', server_name: 'testserver' };
             const healthBody = {
                 version: '1.0.0',
                 started: '20220801T121212.000Z',
-                apps: { active_docs: [], loaded_docs: [], in_memory_docs: [], calls: 100, selections: 50 },
+                apps: {
+                    active_docs: [],
+                    loaded_docs: [],
+                    in_memory_docs: [],
+                    calls: 100,
+                    selections: 50,
+                },
                 cache: { added: 0, hits: 10, lookups: 15, replaced: 2, bytes_added: 1000 },
                 cpu: { total: 25 },
                 mem: { committed: 1000, allocated: 800, free: 200 },
@@ -745,7 +761,7 @@ describe('post-to-influxdb', () => {
 
             await influxdb.postHealthMetricsToInfluxdb(serverName, host, healthBody, serverTags);
 
-            expect(globals.influxWriteApi[0].writeAPI.writePoints).toHaveBeenCalled();
+            expect(mockWrite).toHaveBeenCalled();
         });
     });
 

@@ -718,9 +718,6 @@ Configuration File:
                 );
             } else if (this.config.get('Butler-SOS.influxdbConfig.version') === 3) {
                 this.logger.info(
-                    `CONFIG: Influxdb organisation: ${this.config.get('Butler-SOS.influxdbConfig.v3Config.org')}`
-                );
-                this.logger.info(
                     `CONFIG: Influxdb database name: ${this.config.get('Butler-SOS.influxdbConfig.v3Config.database')}`
                 );
                 this.logger.info(
@@ -897,13 +894,45 @@ Configuration File:
                 }
             } else if (this.config.get('Butler-SOS.influxdbConfig.version') === 3) {
                 // Set up Influxdb v3 client (uses its own client library, NOT same as v2)
-                const url = `http://${this.config.get('Butler-SOS.influxdbConfig.host')}:${this.config.get(
-                    'Butler-SOS.influxdbConfig.port'
-                )}`;
+                const hostName = this.config.get('Butler-SOS.influxdbConfig.host');
+                const port = this.config.get('Butler-SOS.influxdbConfig.port');
+                const host = `http://${hostName}:${port}`;
                 const token = this.config.get('Butler-SOS.influxdbConfig.v3Config.token');
+                const database = this.config.get('Butler-SOS.influxdbConfig.v3Config.database');
 
                 try {
-                    this.influx = new InfluxDBClient3({ url, token });
+                    this.influx = new InfluxDBClient3({ host, token, database });
+
+                    // Test connection by executing a simple query
+                    this.logger.info(`INFLUXDB3 INIT: Testing connection to InfluxDB v3...`);
+                    try {
+                        // Execute a simple query to test the connection
+                        const testQuery = `SELECT 1 as test LIMIT 1`;
+                        const queryResult = this.influx.query(testQuery, database);
+
+                        // Try to get first result (this will throw if connection fails)
+                        const iterator = queryResult[Symbol.asyncIterator]();
+                        await iterator.next();
+
+                        // Connection successful - log details
+                        const tokenPreview = token.substring(0, 4) + '***';
+                        this.logger.info(`INFLUXDB3 INIT: Connection successful!`);
+                        this.logger.info(`INFLUXDB3 INIT:   Host: ${hostName}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Port: ${port}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Database: ${database}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Token: ${tokenPreview}`);
+                    } catch (testErr) {
+                        this.logger.warn(
+                            `INFLUXDB3 INIT: Could not test connection (this may be normal): ${this.getErrorMessage(testErr)}`
+                        );
+                        // Still log the configuration
+                        const tokenPreview = token.substring(0, 4) + '***';
+                        this.logger.info(`INFLUXDB3 INIT: Client created with:`);
+                        this.logger.info(`INFLUXDB3 INIT:   Host: ${hostName}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Port: ${port}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Database: ${database}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Token: ${tokenPreview}`);
+                    }
                 } catch (err) {
                     this.logger.error(
                         `INFLUXDB3 INIT: Error creating InfluxDB 3 client: ${this.getErrorMessage(err)}`
@@ -1156,7 +1185,6 @@ Configuration File:
             }
         } else if (this.config.get('Butler-SOS.influxdbConfig.version') === 3) {
             // Get config
-            const org = this.config.get('Butler-SOS.influxdbConfig.v3Config.org');
             const databaseName = this.config.get('Butler-SOS.influxdbConfig.v3Config.database');
             const description = this.config.get('Butler-SOS.influxdbConfig.v3Config.description');
             const token = this.config.get('Butler-SOS.influxdbConfig.v3Config.token');
@@ -1167,7 +1195,6 @@ Configuration File:
             if (
                 this.influx &&
                 this.config.get('Butler-SOS.influxdbConfig.enable') === true &&
-                org?.length > 0 &&
                 databaseName?.length > 0 &&
                 token?.length > 0 &&
                 retentionDuration?.length > 0
@@ -1176,52 +1203,23 @@ Configuration File:
             }
 
             if (enableInfluxdb) {
-                // For InfluxDB v3, we use the database directly
-                this.logger.info(
-                    `INFLUXDB3: Using organization "${org}" with database "${databaseName}"`
-                );
+                // For InfluxDB v3, we use client.write() directly (no getWriteApi method in v3)
+                this.logger.info(`INFLUXDB3: Using database "${databaseName}"`);
 
-                // Create array of per-server writeAPI objects for v3
-                // Each object has two properties: host and writeAPI, where host can be used as key later on
+                // For v3, we store the client itself and call write() directly
+                // The influxWriteApi array will contain objects with client and database info
                 this.serverList.forEach((server) => {
                     // Get per-server tags
                     const tags = getServerTags(this.logger, server);
 
-                    // advanced write options for InfluxDB v3
-                    const writeOptions = {
-                        /* default tags to add to every point */
-                        defaultTags: tags,
-
-                        /* maximum time in millis to keep points in an unflushed batch, 0 means don't periodically flush */
-                        flushInterval: 5000,
-
-                        /* the count of internally-scheduled retries upon write failure, the delays between write attempts follow an exponential backoff strategy if there is no Retry-After HTTP header */
-                        maxRetries: 2, // do not retry writes
-
-                        // ... there are more write options that can be customized, see
-                        // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeoptions.html and
-                        // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeretryoptions.html
-                    };
-
-                    try {
-                        // For InfluxDB v3, we use database instead of bucket
-                        const serverWriteApi = this.influx.getWriteApi(
-                            org,
-                            databaseName,
-                            'ns',
-                            writeOptions
-                        );
-
-                        // Save to global variable, using serverName as key
-                        this.influxWriteApi.push({
-                            serverName: server.serverName,
-                            writeAPI: serverWriteApi,
-                        });
-                    } catch (err) {
-                        this.logger.error(
-                            `INFLUXDB3: Error getting write API: ${this.getErrorMessage(err)}`
-                        );
-                    }
+                    // Store client info and tags for this server
+                    // v3 uses client.write() directly, not getWriteApi()
+                    this.influxWriteApi.push({
+                        serverName: server.serverName,
+                        writeAPI: this.influx, // Store the client itself
+                        database: databaseName,
+                        defaultTags: tags, // Store tags for later use
+                    });
                 });
             }
         }

@@ -98,6 +98,10 @@ function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
                         .uintField('session_count', userProxySessionsData.sessionCount)
                         .stringField('session_user_id_list', userProxySessionsData.uniqueUserList),
                 ];
+            } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 3) {
+                // Create empty array for InfluxDB v3
+                // Individual session datapoints will be added later
+                userProxySessionsData.datapointInfluxdb = [];
             }
 
             // Prometheus specific.
@@ -184,9 +188,15 @@ function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
                             .stringField('session_id', bodyItem.SessionId)
                             .stringField('user_directory', bodyItem.UserDirectory)
                             .stringField('user_id', bodyItem.UserId);
+                    } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 3) {
+                        // For v3, session details are not stored as individual points
+                        // Only summary data is stored, so we skip individual session datapoints
+                        sessionDatapoint = null;
                     }
 
-                    userProxySessionsData.datapointInfluxdb.push(sessionDatapoint);
+                    if (sessionDatapoint) {
+                        userProxySessionsData.datapointInfluxdb.push(sessionDatapoint);
+                    }
                 }
             }
 

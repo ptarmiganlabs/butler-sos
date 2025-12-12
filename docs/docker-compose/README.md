@@ -89,7 +89,6 @@ Butler-SOS:
         host: influxdb-v3
         port: 8086
         v3Config:
-            org: butler-sos
             database: butler-sos
             token: butlersos-token
             description: Butler SOS metrics

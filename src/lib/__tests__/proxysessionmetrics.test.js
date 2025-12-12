@@ -116,9 +116,8 @@ jest.unstable_mockModule('../prom-client.js', () => ({
 }));
 
 // Import the module under test
-const { setupUserSessionsTimer, getProxySessionStatsFromSense } = await import(
-    '../proxysessionmetrics.js'
-);
+const { setupUserSessionsTimer, getProxySessionStatsFromSense } =
+    await import('../proxysessionmetrics.js');
 
 describe('proxysessionmetrics', () => {
     let proxysessionmetrics;

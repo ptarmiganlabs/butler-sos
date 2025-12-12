@@ -319,13 +319,12 @@ export const destinationsSchema = {
             v3Config: {
                 type: 'object',
                 properties: {
-                    org: { type: 'string' },
                     database: { type: 'string' },
                     description: { type: 'string' },
                     token: { type: 'string' },
                     retentionDuration: { type: 'string' },
                 },
-                required: ['org', 'database', 'description', 'token', 'retentionDuration'],
+                required: ['database', 'description', 'token', 'retentionDuration'],
                 additionalProperties: false,
             },
             v2Config: {
