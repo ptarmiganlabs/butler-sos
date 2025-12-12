@@ -320,12 +320,12 @@ export const destinationsSchema = {
                 type: 'object',
                 properties: {
                     org: { type: 'string' },
-                    bucket: { type: 'string' },
+                    database: { type: 'string' },
                     description: { type: 'string' },
                     token: { type: 'string' },
                     retentionDuration: { type: 'string' },
                 },
-                required: ['org', 'bucket', 'description', 'token', 'retentionDuration'],
+                required: ['org', 'database', 'description', 'token', 'retentionDuration'],
                 additionalProperties: false,
             },
             v2Config: {

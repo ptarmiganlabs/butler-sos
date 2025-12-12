@@ -90,7 +90,6 @@ Butler-SOS:
         port: 8086
         v3Config:
             org: butler-sos
-            bucket: butler-sos
             database: butler-sos
             token: butlersos-token
             description: Butler SOS metrics

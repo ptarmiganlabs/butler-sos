@@ -721,7 +721,7 @@ Configuration File:
                     `CONFIG: Influxdb organisation: ${this.config.get('Butler-SOS.influxdbConfig.v3Config.org')}`
                 );
                 this.logger.info(
-                    `CONFIG: Influxdb bucket name: ${this.config.get('Butler-SOS.influxdbConfig.v3Config.bucket')}`
+                    `CONFIG: Influxdb database name: ${this.config.get('Butler-SOS.influxdbConfig.v3Config.database')}`
                 );
                 this.logger.info(
                     `CONFIG: Influxdb retention policy duration: ${this.config.get('Butler-SOS.influxdbConfig.v3Config.retentionDuration')}`
@@ -1157,7 +1157,7 @@ Configuration File:
         } else if (this.config.get('Butler-SOS.influxdbConfig.version') === 3) {
             // Get config
             const org = this.config.get('Butler-SOS.influxdbConfig.v3Config.org');
-            const bucketName = this.config.get('Butler-SOS.influxdbConfig.v3Config.bucket');
+            const databaseName = this.config.get('Butler-SOS.influxdbConfig.v3Config.database');
             const description = this.config.get('Butler-SOS.influxdbConfig.v3Config.description');
             const token = this.config.get('Butler-SOS.influxdbConfig.v3Config.token');
             const retentionDuration = this.config.get(
@@ -1168,7 +1168,7 @@ Configuration File:
                 this.influx &&
                 this.config.get('Butler-SOS.influxdbConfig.enable') === true &&
                 org?.length > 0 &&
-                bucketName?.length > 0 &&
+                databaseName?.length > 0 &&
                 token?.length > 0 &&
                 retentionDuration?.length > 0
             ) {
@@ -1176,9 +1176,9 @@ Configuration File:
             }
 
             if (enableInfluxdb) {
-                // For InfluxDB v3, we use the bucket directly
+                // For InfluxDB v3, we use the database directly
                 this.logger.info(
-                    `INFLUXDB3: Using organization "${org}" with bucket "${bucketName}"`
+                    `INFLUXDB3: Using organization "${org}" with database "${databaseName}"`
                 );
 
                 // Create array of per-server writeAPI objects for v3
@@ -1207,7 +1207,7 @@ Configuration File:
                         // For InfluxDB v3, we use database instead of bucket
                         const serverWriteApi = this.influx.getWriteApi(
                             org,
-                            database,
+                            databaseName,
                             'ns',
                             writeOptions
                         );

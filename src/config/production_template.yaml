@@ -513,10 +513,10 @@ Butler-SOS:
         # Items below are mandatory if influxdbConfig.enable=true
         host: influxdb.mycompany.com # InfluxDB host, hostname, FQDN or IP address
         port: 8086 # Port where InfluxDBdb is listening, usually 8086
-        version: 1 # Is the InfluxDB instance version 1.x or 2.x? Valid values are 1 or 2
+        version: 1 # Is the InfluxDB instance version 1.x or 2.x? Valid values are 1, 2, or 3
         v3Config: # Settings for InfluxDB v3.x only, i.e. Butler-SOS.influxdbConfig.version=3
             org: myorg
-            bucket: mybucket
+            database: mydatabase
             description: Butler SOS metrics
             token: mytoken
             retentionDuration: 10d
