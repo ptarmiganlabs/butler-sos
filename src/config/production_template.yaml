@@ -510,6 +510,9 @@ Butler-SOS:
     # Influx db config parameters
     influxdbConfig:
         enable: true
+        # Feature flag to enable refactored InfluxDB code (recommended for better maintainability)
+        # Set to true to use the new modular implementation, false for legacy code
+        useRefactoredCode: false
         # Items below are mandatory if influxdbConfig.enable=true
         host: influxdb.mycompany.com # InfluxDB host, hostname, FQDN or IP address
         port: 8086 # Port where InfluxDBdb is listening, usually 8086

@@ -310,6 +310,7 @@ export const destinationsSchema = {
         type: 'object',
         properties: {
             enable: { type: 'boolean' },
+            useRefactoredCode: { type: 'boolean' },
             host: {
                 type: 'string',
                 format: 'hostname',

@@ -88,7 +88,7 @@ jest.unstable_mockModule('../../globals.js', () => ({
 
 // Mock dependent modules
 const mockPostProxySessionsToInfluxdb = jest.fn().mockResolvedValue();
-jest.unstable_mockModule('../post-to-influxdb.js', () => ({
+jest.unstable_mockModule('../influxdb/index.js', () => ({
     postProxySessionsToInfluxdb: mockPostProxySessionsToInfluxdb,
 }));
 
