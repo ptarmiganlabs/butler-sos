@@ -1,6 +1,6 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeToInfluxV3WithRetry } from '../shared/utils.js';
 
 /**
  * Store event count in InfluxDB v3
@@ -80,7 +80,10 @@ export async function storeEventCountInfluxDBV3() {
                 point.setTag(key, tags[key]);
             });
 
-            await globals.influx.write(point.toLineProtocol(), database);
+            await writeToInfluxV3WithRetry(
+                async () => await globals.influx.write(point.toLineProtocol(), database),
+                'Log event count'
+            );
             globals.logger.debug(`EVENT COUNT INFLUXDB V3: Wrote log event data to InfluxDB v3`);
         }
 
@@ -124,7 +127,10 @@ export async function storeEventCountInfluxDBV3() {
                 point.setTag(key, tags[key]);
             });
 
-            await globals.influx.write(point.toLineProtocol(), database);
+            await writeToInfluxV3WithRetry(
+                async () => await globals.influx.write(point.toLineProtocol(), database),
+                'User event count'
+            );
             globals.logger.debug(`EVENT COUNT INFLUXDB V3: Wrote user event data to InfluxDB v3`);
         }
 
@@ -234,7 +240,10 @@ export async function storeRejectedEventCountInfluxDBV3() {
 
         // Write to InfluxDB
         for (const point of points) {
-            await globals.influx.write(point.toLineProtocol(), database);
+            await writeToInfluxV3WithRetry(
+                async () => await globals.influx.write(point.toLineProtocol(), database),
+                'Rejected event count'
+            );
         }
         globals.logger.debug(`REJECT LOG EVENT INFLUXDB V3: Wrote data to InfluxDB v3`);
 

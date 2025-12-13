@@ -189,3 +189,98 @@ export function applyTagsToPoint3(point, tags) {
 
     return point;
 }
+
+/**
+ * Writes data to InfluxDB v3 with retry logic and exponential backoff.
+ *
+ * This function attempts to write data to InfluxDB v3 with configurable retry logic.
+ * If a write fails due to timeout or network issues, it will retry up to maxRetries times
+ * with exponential backoff between attempts.
+ *
+ * @param {Function} writeFn - Async function that performs the write operation
+ * @param {string} context - Description of what's being written (for logging)
+ * @param {object} options - Retry options
+ * @param {number} options.maxRetries - Maximum number of retry attempts (default: 3)
+ * @param {number} options.initialDelayMs - Initial delay before first retry in ms (default: 1000)
+ * @param {number} options.maxDelayMs - Maximum delay between retries in ms (default: 10000)
+ * @param {number} options.backoffMultiplier - Multiplier for exponential backoff (default: 2)
+ *
+ * @returns {Promise<void>} Promise that resolves when write succeeds or rejects after all retries fail
+ *
+ * @throws {Error} The last error encountered after all retries are exhausted
+ */
+export async function writeToInfluxV3WithRetry(writeFn, context, options = {}) {
+    const {
+        maxRetries = 3,
+        initialDelayMs = 1000,
+        maxDelayMs = 10000,
+        backoffMultiplier = 2,
+    } = options;
+
+    let lastError;
+    let attempt = 0;
+
+    while (attempt <= maxRetries) {
+        try {
+            await writeFn();
+
+            // Log success if this was a retry
+            if (attempt > 0) {
+                globals.logger.info(
+                    `INFLUXDB V3 RETRY: ${context} - Write succeeded on attempt ${attempt + 1}/${maxRetries + 1}`
+                );
+            }
+
+            return; // Success!
+        } catch (err) {
+            lastError = err;
+            attempt++;
+
+            // Check if this is a timeout error - check constructor name and message
+            const errorName = err.constructor?.name || err.name || '';
+            const errorMessage = err.message || '';
+            const isTimeoutError =
+                errorName === 'RequestTimedOutError' ||
+                errorMessage.includes('timeout') ||
+                errorMessage.includes('timed out') ||
+                errorMessage.includes('Request timed out');
+
+            // Log the error type for debugging
+            globals.logger.debug(
+                `INFLUXDB V3 RETRY: ${context} - Error caught: ${errorName}, message: ${errorMessage}, isTimeout: ${isTimeoutError}`
+            );
+
+            // Don't retry on non-timeout errors - fail immediately
+            if (!isTimeoutError) {
+                globals.logger.warn(
+                    `INFLUXDB V3 WRITE: ${context} - Non-timeout error (${errorName}), not retrying: ${globals.getErrorMessage(err)}`
+                );
+                throw err;
+            }
+
+            // This is a timeout error - check if we have retries left
+            if (attempt <= maxRetries) {
+                // Calculate delay with exponential backoff
+                const delayMs = Math.min(
+                    initialDelayMs * Math.pow(backoffMultiplier, attempt - 1),
+                    maxDelayMs
+                );
+
+                globals.logger.warn(
+                    `INFLUXDB V3 RETRY: ${context} - Timeout (${errorName}) on attempt ${attempt}/${maxRetries + 1}, retrying in ${delayMs}ms...`
+                );
+
+                // Wait before retrying
+                await new Promise((resolve) => setTimeout(resolve, delayMs));
+            } else {
+                // All retries exhausted
+                globals.logger.error(
+                    `INFLUXDB V3 RETRY: ${context} - All ${maxRetries + 1} attempts failed. Last error: ${globals.getErrorMessage(err)}`
+                );
+            }
+        }
+    }
+
+    // All retries failed, throw the last error
+    throw lastError;
+}

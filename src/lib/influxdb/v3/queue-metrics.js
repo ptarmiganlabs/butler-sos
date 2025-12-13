@@ -1,6 +1,6 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeToInfluxV3WithRetry } from '../shared/utils.js';
 
 /**
  * Store user event queue metrics to InfluxDB v3
@@ -77,7 +77,10 @@ export async function postUserEventQueueMetricsToInfluxdbV3() {
             }
         }
 
-        await globals.influx.write(point.toLineProtocol(), database);
+        await writeToInfluxV3WithRetry(
+            async () => await globals.influx.write(point.toLineProtocol(), database),
+            'User event queue metrics'
+        );
 
         globals.logger.verbose(
             'USER EVENT QUEUE METRICS INFLUXDB V3: Sent queue metrics data to InfluxDB v3'
@@ -165,7 +168,10 @@ export async function postLogEventQueueMetricsToInfluxdbV3() {
             }
         }
 
-        await globals.influx.write(point.toLineProtocol(), database);
+        await writeToInfluxV3WithRetry(
+            async () => await globals.influx.write(point.toLineProtocol(), database),
+            'Log event queue metrics'
+        );
 
         globals.logger.verbose(
             'LOG EVENT QUEUE METRICS INFLUXDB V3: Sent queue metrics data to InfluxDB v3'

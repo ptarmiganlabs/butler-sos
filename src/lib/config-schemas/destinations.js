@@ -324,6 +324,18 @@ export const destinationsSchema = {
                     description: { type: 'string' },
                     token: { type: 'string' },
                     retentionDuration: { type: 'string' },
+                    timeout: {
+                        type: 'number',
+                        description: 'Socket timeout for write operations in milliseconds',
+                        default: 10000,
+                        minimum: 1000,
+                    },
+                    queryTimeout: {
+                        type: 'number',
+                        description: 'gRPC timeout for query operations in milliseconds',
+                        default: 60000,
+                        minimum: 1000,
+                    },
                 },
                 required: ['database', 'description', 'token', 'retentionDuration'],
                 additionalProperties: false,

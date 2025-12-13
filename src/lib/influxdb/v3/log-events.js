@@ -1,6 +1,6 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeToInfluxV3WithRetry } from '../shared/utils.js';
 
 /**
  * Post log event to InfluxDB v3
@@ -195,7 +195,10 @@ export async function postLogEventToInfluxdbV3(msg) {
             }
         }
 
-        await globals.influx.write(point.toLineProtocol(), database);
+        await writeToInfluxV3WithRetry(
+            async () => await globals.influx.write(point.toLineProtocol(), database),
+            'Log event'
+        );
 
         globals.logger.debug(`LOG EVENT INFLUXDB V3: Wrote data to InfluxDB v3`);
 
