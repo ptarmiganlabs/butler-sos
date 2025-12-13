@@ -900,8 +900,25 @@ Configuration File:
                 const token = this.config.get('Butler-SOS.influxdbConfig.v3Config.token');
                 const database = this.config.get('Butler-SOS.influxdbConfig.v3Config.database');
 
+                // Get timeout settings with defaults
+                const timeout = this.config.has('Butler-SOS.influxdbConfig.v3Config.timeout')
+                    ? this.config.get('Butler-SOS.influxdbConfig.v3Config.timeout')
+                    : 10000; // Default 10 seconds for socket timeout
+
+                const queryTimeout = this.config.has(
+                    'Butler-SOS.influxdbConfig.v3Config.queryTimeout'
+                )
+                    ? this.config.get('Butler-SOS.influxdbConfig.v3Config.queryTimeout')
+                    : 60000; // Default 60 seconds for gRPC query timeout
+
                 try {
-                    this.influx = new InfluxDBClient3({ host, token, database });
+                    this.influx = new InfluxDBClient3({
+                        host,
+                        token,
+                        database,
+                        timeout,
+                        queryTimeout,
+                    });
 
                     // Test connection by executing a simple query
                     this.logger.info(`INFLUXDB3 INIT: Testing connection to InfluxDB v3...`);
@@ -921,6 +938,8 @@ Configuration File:
                         this.logger.info(`INFLUXDB3 INIT:   Port: ${port}`);
                         this.logger.info(`INFLUXDB3 INIT:   Database: ${database}`);
                         this.logger.info(`INFLUXDB3 INIT:   Token: ${tokenPreview}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Socket timeout: ${timeout}ms`);
+                        this.logger.info(`INFLUXDB3 INIT:   Query timeout: ${queryTimeout}ms`);
                     } catch (testErr) {
                         this.logger.warn(
                             `INFLUXDB3 INIT: Could not test connection (this may be normal): ${this.getErrorMessage(testErr)}`
@@ -932,6 +951,8 @@ Configuration File:
                         this.logger.info(`INFLUXDB3 INIT:   Port: ${port}`);
                         this.logger.info(`INFLUXDB3 INIT:   Database: ${database}`);
                         this.logger.info(`INFLUXDB3 INIT:   Token: ${tokenPreview}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Socket timeout: ${timeout}ms`);
+                        this.logger.info(`INFLUXDB3 INIT:   Query timeout: ${queryTimeout}ms`);
                     }
                 } catch (err) {
                     this.logger.error(
