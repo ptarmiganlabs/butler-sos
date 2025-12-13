@@ -1,5 +1,5 @@
 import globals from '../../../globals.js';
-import { postLogEventToInfluxdb } from '../../post-to-influxdb.js';
+import { postLogEventToInfluxdb } from '../../influxdb/index.js';
 import { postLogEventToNewRelic } from '../../post-to-new-relic.js';
 import { postLogEventToMQTT } from '../../post-to-mqtt.js';
 import { categoriseLogEvent } from '../../log-event-categorise.js';

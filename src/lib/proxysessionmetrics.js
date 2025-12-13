@@ -6,10 +6,12 @@ import https from 'https';
 import path from 'path';
 import axios from 'axios';
 import { Point } from '@influxdata/influxdb-client';
+import { Point as Point3 } from '@influxdata/influxdb3-client';
 
 import globals from '../globals.js';
-import { postProxySessionsToInfluxdb } from './post-to-influxdb.js';
+import { postProxySessionsToInfluxdb } from './influxdb/index.js';
 import { postProxySessionsToNewRelic } from './post-to-new-relic.js';
+import { applyTagsToPoint3 } from './influxdb/shared/utils.js';
 import { postUserSessionsToMQTT } from './post-to-mqtt.js';
 import { getServerTags } from './servertags.js';
 import { saveUserSessionMetricsToPrometheus } from './prom-client.js';
@@ -98,6 +100,19 @@ function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
                         .uintField('session_count', userProxySessionsData.sessionCount)
                         .stringField('session_user_id_list', userProxySessionsData.uniqueUserList),
                 ];
+            } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 3) {
+                // Create data points for InfluxDB v3
+                const summaryPoint = new Point3('user_session_summary')
+                    .setIntegerField('session_count', userProxySessionsData.sessionCount)
+                    .setStringField('session_user_id_list', userProxySessionsData.uniqueUserList);
+                applyTagsToPoint3(summaryPoint, userProxySessionsData.tags);
+
+                const listPoint = new Point3('user_session_list')
+                    .setIntegerField('session_count', userProxySessionsData.sessionCount)
+                    .setStringField('session_user_id_list', userProxySessionsData.uniqueUserList);
+                applyTagsToPoint3(listPoint, userProxySessionsData.tags);
+
+                userProxySessionsData.datapointInfluxdb = [summaryPoint, listPoint];
             }
 
             // Prometheus specific.
@@ -184,9 +199,24 @@ function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
                             .stringField('session_id', bodyItem.SessionId)
                             .stringField('user_directory', bodyItem.UserDirectory)
                             .stringField('user_id', bodyItem.UserId);
+                    } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 3) {
+                        // Create data point for InfluxDB v3
+                        sessionDatapoint = new Point3('user_session_details')
+                            .setStringField('session_id', bodyItem.SessionId)
+                            .setStringField('user_directory', bodyItem.UserDirectory)
+                            .setStringField('user_id', bodyItem.UserId);
+                        // Apply all tags including server tags and session-specific tags
+                        applyTagsToPoint3(sessionDatapoint, userProxySessionsData.tags);
+                        // Add individual session tags
+                        sessionDatapoint
+                            .setTag('user_session_id', bodyItem.SessionId)
+                            .setTag('user_session_user_directory', bodyItem.UserDirectory)
+                            .setTag('user_session_user_id', bodyItem.UserId);
                     }
 
-                    userProxySessionsData.datapointInfluxdb.push(sessionDatapoint);
+                    if (sessionDatapoint) {
+                        userProxySessionsData.datapointInfluxdb.push(sessionDatapoint);
+                    }
                 }
             }
 

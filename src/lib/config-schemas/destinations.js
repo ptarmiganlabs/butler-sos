@@ -310,12 +310,36 @@ export const destinationsSchema = {
         type: 'object',
         properties: {
             enable: { type: 'boolean' },
+            useRefactoredCode: { type: 'boolean' },
             host: {
                 type: 'string',
                 format: 'hostname',
             },
             port: { type: 'number' },
             version: { type: 'number' },
+            v3Config: {
+                type: 'object',
+                properties: {
+                    database: { type: 'string' },
+                    description: { type: 'string' },
+                    token: { type: 'string' },
+                    retentionDuration: { type: 'string' },
+                    timeout: {
+                        type: 'number',
+                        description: 'Socket timeout for write operations in milliseconds',
+                        default: 10000,
+                        minimum: 1000,
+                    },
+                    queryTimeout: {
+                        type: 'number',
+                        description: 'gRPC timeout for query operations in milliseconds',
+                        default: 60000,
+                        minimum: 1000,
+                    },
+                },
+                required: ['database', 'description', 'token', 'retentionDuration'],
+                additionalProperties: false,
+            },
             v2Config: {
                 type: 'object',
                 properties: {

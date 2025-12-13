@@ -20,9 +20,8 @@ jest.unstable_mockModule('../../globals.js', () => ({
 const globals = (await import('../../globals.js')).default;
 
 // Import the module under test
-const { postHealthToMQTT, postUserSessionsToMQTT, postUserEventToMQTT } = await import(
-    '../post-to-mqtt.js'
-);
+const { postHealthToMQTT, postUserSessionsToMQTT, postUserEventToMQTT } =
+    await import('../post-to-mqtt.js');
 
 describe('post-to-mqtt', () => {
     beforeEach(() => {

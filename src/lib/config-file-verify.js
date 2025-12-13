@@ -169,10 +169,10 @@ export async function verifyAppConfig(cfg) {
     // Verify values of specific config entries
 
     // If InfluxDB is enabled, check if the version is valid
-    // Valid values: 1 and 2
+    // Valid values: 1, 2, and 3
     if (cfg.get('Butler-SOS.influxdbConfig.enable') === true) {
         const influxdbVersion = cfg.get('Butler-SOS.influxdbConfig.version');
-        if (influxdbVersion !== 1 && influxdbVersion !== 2) {
+        if (influxdbVersion !== 1 && influxdbVersion !== 2 && influxdbVersion !== 3) {
             console.error(
                 `VERIFY CONFIG FILE ERROR: Butler-SOS.influxdbConfig.enable (=InfluxDB version) ${influxdbVersion} is invalid. Exiting.`
             );
