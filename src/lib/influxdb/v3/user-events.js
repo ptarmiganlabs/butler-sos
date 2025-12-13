@@ -3,6 +3,20 @@ import globals from '../../../globals.js';
 import { isInfluxDbEnabled } from '../shared/utils.js';
 
 /**
+ * Sanitize tag values for InfluxDB line protocol.
+ * Remove or replace characters that cause parsing issues.
+ *
+ * @param {string} value - The value to sanitize
+ * @returns {string} - The sanitized value
+ */
+function sanitizeTagValue(value) {
+    if (!value) return value;
+    return String(value)
+        .replace(/[<>\\]/g, '')
+        .replace(/\s+/g, '-');
+}
+
+/**
  * Posts a user event to InfluxDB v3.
  *
  * @param {object} msg - The event to be posted to InfluxDB. The object should contain the following properties:
@@ -26,7 +40,17 @@ export async function postUserEventToInfluxdbV3(msg) {
 
     const database = globals.config.get('Butler-SOS.influxdbConfig.v3Config.database');
 
+    // Validate required fields
+    if (!msg.host || !msg.command || !msg.user_directory || !msg.user_id || !msg.origin) {
+        globals.logger.warn(
+            `USER EVENT INFLUXDB V3: Missing required fields in user event message: ${JSON.stringify(msg)}`
+        );
+        return;
+    }
+
     // Create a new point with the data to be written to InfluxDB v3
+    // NOTE: InfluxDB v3 does not allow the same name for both tags and fields,
+    // unlike v1/v2. Fields use different names with _field suffix where needed.
     const point = new Point3('user_events')
         .setTag('host', msg.host)
         .setTag('event_action', msg.command)
@@ -34,17 +58,17 @@ export async function postUserEventToInfluxdbV3(msg) {
         .setTag('userDirectory', msg.user_directory)
         .setTag('userId', msg.user_id)
         .setTag('origin', msg.origin)
-        .setStringField('userFull', `${msg.user_directory}\\${msg.user_id}`)
-        .setStringField('userId', msg.user_id);
+        .setStringField('userFull_field', `${msg.user_directory}\\${msg.user_id}`)
+        .setStringField('userId_field', msg.user_id);
 
     // Add app id and name to tags and fields if available
     if (msg?.appId) {
         point.setTag('appId', msg.appId);
-        point.setStringField('appId', msg.appId);
+        point.setStringField('appId_field', msg.appId);
     }
     if (msg?.appName) {
         point.setTag('appName', msg.appName);
-        point.setStringField('appName', msg.appName);
+        point.setStringField('appName_field', msg.appName);
     }
 
     // Add user agent info to tags if available
@@ -75,12 +99,20 @@ export async function postUserEventToInfluxdbV3(msg) {
 
     // Write to InfluxDB
     try {
+        // Convert point to line protocol and write directly
         await globals.influx.write(point.toLineProtocol(), database);
         globals.logger.debug(`USER EVENT INFLUXDB V3: Wrote data to InfluxDB v3`);
     } catch (err) {
         globals.logger.error(
             `USER EVENT INFLUXDB V3: Error saving user event to InfluxDB v3! ${globals.getErrorMessage(err)}`
         );
+        // Log the line protocol for debugging
+        try {
+            const lineProtocol = point.toLineProtocol();
+            globals.logger.debug(`USER EVENT INFLUXDB V3: Failed line protocol: ${lineProtocol}`);
+        } catch (e) {
+            // Ignore errors in debug logging
+        }
     }
 
     globals.logger.verbose('USER EVENT INFLUXDB V3: Sent Butler SOS user event data to InfluxDB');

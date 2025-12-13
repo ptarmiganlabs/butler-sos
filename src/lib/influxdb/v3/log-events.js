@@ -47,7 +47,8 @@ export async function postLogEventToInfluxdbV3(msg) {
 
         // Handle each message type with its specific fields
         if (msg.source === 'qseow-engine') {
-            // Engine fields: message, exception_message, command, result_code, origin, context, session_id, raw_event
+            // Engine fields: message, exception_message, command, result_code_field, origin, context, session_id, raw_event
+            // NOTE: result_code uses _field suffix to avoid conflict with result_code tag
             point = new Point3('log_event')
                 .setTag('host', msg.host)
                 .setTag('level', msg.level)
@@ -57,7 +58,7 @@ export async function postLogEventToInfluxdbV3(msg) {
                 .setStringField('message', msg.message)
                 .setStringField('exception_message', msg.exception_message || '')
                 .setStringField('command', msg.command || '')
-                .setStringField('result_code', msg.result_code || '')
+                .setStringField('result_code_field', msg.result_code || '')
                 .setStringField('origin', msg.origin || '')
                 .setStringField('context', msg.context || '')
                 .setStringField('session_id', msg.session_id || '')
@@ -76,7 +77,8 @@ export async function postLogEventToInfluxdbV3(msg) {
             if (msg?.engine_exe_version?.length > 0)
                 point.setTag('engine_exe_version', msg.engine_exe_version);
         } else if (msg.source === 'qseow-proxy') {
-            // Proxy fields: message, exception_message, command, result_code, origin, context, raw_event
+            // Proxy fields: message, exception_message, command, result_code_field, origin, context, raw_event
+            // NOTE: result_code uses _field suffix to avoid conflict with result_code tag
             point = new Point3('log_event')
                 .setTag('host', msg.host)
                 .setTag('level', msg.level)
@@ -86,7 +88,7 @@ export async function postLogEventToInfluxdbV3(msg) {
                 .setStringField('message', msg.message)
                 .setStringField('exception_message', msg.exception_message || '')
                 .setStringField('command', msg.command || '')
-                .setStringField('result_code', msg.result_code || '')
+                .setStringField('result_code_field', msg.result_code || '')
                 .setStringField('origin', msg.origin || '')
                 .setStringField('context', msg.context || '')
                 .setStringField('raw_event', JSON.stringify(msg));
@@ -97,7 +99,8 @@ export async function postLogEventToInfluxdbV3(msg) {
             if (msg?.user_id?.length > 0) point.setTag('user_id', msg.user_id);
             if (msg?.result_code?.length > 0) point.setTag('result_code', msg.result_code);
         } else if (msg.source === 'qseow-scheduler') {
-            // Scheduler fields: message, exception_message, app_name, app_id, execution_id, raw_event
+            // Scheduler fields: message, exception_message, app_name_field, app_id_field, execution_id, raw_event
+            // NOTE: app_name and app_id use _field suffix to avoid conflict with conditional tags
             point = new Point3('log_event')
                 .setTag('host', msg.host)
                 .setTag('level', msg.level)
@@ -106,8 +109,8 @@ export async function postLogEventToInfluxdbV3(msg) {
                 .setTag('subsystem', msg.subsystem || 'n/a')
                 .setStringField('message', msg.message)
                 .setStringField('exception_message', msg.exception_message || '')
-                .setStringField('app_name', msg.app_name || '')
-                .setStringField('app_id', msg.app_id || '')
+                .setStringField('app_name_field', msg.app_name || '')
+                .setStringField('app_id_field', msg.app_id || '')
                 .setStringField('execution_id', msg.execution_id || '')
                 .setStringField('raw_event', JSON.stringify(msg));
 
@@ -118,7 +121,8 @@ export async function postLogEventToInfluxdbV3(msg) {
             if (msg?.task_id?.length > 0) point.setTag('task_id', msg.task_id);
             if (msg?.task_name?.length > 0) point.setTag('task_name', msg.task_name);
         } else if (msg.source === 'qseow-repository') {
-            // Repository fields: message, exception_message, command, result_code, origin, context, raw_event
+            // Repository fields: message, exception_message, command, result_code_field, origin, context, raw_event
+            // NOTE: result_code uses _field suffix to avoid conflict with result_code tag
             point = new Point3('log_event')
                 .setTag('host', msg.host)
                 .setTag('level', msg.level)
@@ -128,7 +132,7 @@ export async function postLogEventToInfluxdbV3(msg) {
                 .setStringField('message', msg.message)
                 .setStringField('exception_message', msg.exception_message || '')
                 .setStringField('command', msg.command || '')
-                .setStringField('result_code', msg.result_code || '')
+                .setStringField('result_code_field', msg.result_code || '')
                 .setStringField('origin', msg.origin || '')
                 .setStringField('context', msg.context || '')
                 .setStringField('raw_event', JSON.stringify(msg));
@@ -151,7 +155,7 @@ export async function postLogEventToInfluxdbV3(msg) {
                 .setTag('proxy_session_id', msg.proxy_session_id || '-1')
                 .setTag('session_id', msg.session_id || '-1')
                 .setTag('event_activity_source', msg.event_activity_source || '<Unknown>')
-                .setStringField('app_id', msg.app_id || '')
+                .setStringField('app_id_field', msg.app_id || '')
                 .setFloatField('process_time', msg.process_time)
                 .setFloatField('work_time', msg.work_time)
                 .setFloatField('lock_time', msg.lock_time)
@@ -192,6 +196,7 @@ export async function postLogEventToInfluxdbV3(msg) {
         }
 
         await globals.influx.write(point.toLineProtocol(), database);
+
         globals.logger.debug(`LOG EVENT INFLUXDB V3: Wrote data to InfluxDB v3`);
 
         globals.logger.verbose('LOG EVENT INFLUXDB V3: Sent Butler SOS log event data to InfluxDB');

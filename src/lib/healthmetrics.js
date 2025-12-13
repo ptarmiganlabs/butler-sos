@@ -7,7 +7,7 @@ import https from 'https';
 import axios from 'axios';
 
 import globals from '../globals.js';
-import { postHealthMetricsToInfluxdb } from './post-to-influxdb.js';
+import { postHealthMetricsToInfluxdb } from './influxdb/index.js';
 import { postHealthMetricsToNewRelic } from './post-to-new-relic.js';
 import { postHealthToMQTT } from './post-to-mqtt.js';
 import { getServerHeaders } from './serverheaders.js';
@@ -101,6 +101,10 @@ export function getHealthStatsFromSense(serverName, host, tags, headers) {
                     globals.logger.debug('HEALTH: Calling HEALTH metrics Prometheus method');
                     saveHealthMetricsToPrometheus(host, response.data, tags);
                 }
+            } else {
+                globals.logger.error(
+                    `HEALTH: Received non-200 response code (${response.status}) from server '${serverName}' (${host})`
+                );
             }
         })
         .catch((err) => {

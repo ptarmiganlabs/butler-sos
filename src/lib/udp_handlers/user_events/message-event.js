@@ -4,7 +4,7 @@ import { UAParser } from 'ua-parser-js';
 // Load global variables and functions
 import globals from '../../../globals.js';
 import { sanitizeField } from '../../udp-queue-manager.js';
-import { postUserEventToInfluxdb } from '../../post-to-influxdb.js';
+import { postUserEventToInfluxdb } from '../../influxdb/index.js';
 import { postUserEventToNewRelic } from '../../post-to-new-relic.js';
 import { postUserEventToMQTT } from '../../post-to-mqtt.js';
 
