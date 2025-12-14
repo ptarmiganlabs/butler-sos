@@ -102,7 +102,7 @@ export async function postUserEventToInfluxdbV3(msg) {
         // Convert point to line protocol and write directly with retry logic
         await writeToInfluxV3WithRetry(
             async () => await globals.influx.write(point.toLineProtocol(), database),
-            'User event'
+            `User event for ${msg.host}`
         );
         globals.logger.debug(`USER EVENT INFLUXDB V3: Wrote data to InfluxDB v3`);
     } catch (err) {

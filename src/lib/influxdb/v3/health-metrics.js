@@ -196,7 +196,7 @@ export async function postHealthMetricsToInfluxdbV3(serverName, host, body, serv
             applyTagsToPoint3(point, serverTags);
             await writeToInfluxV3WithRetry(
                 async () => await globals.influx.write(point.toLineProtocol(), database),
-                'Health metrics'
+                `Health metrics for ${host}`
             );
         }
         globals.logger.debug(`HEALTH METRICS V3: Wrote data to InfluxDB v3`);

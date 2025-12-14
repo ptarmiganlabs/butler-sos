@@ -197,7 +197,7 @@ export async function postLogEventToInfluxdbV3(msg) {
 
         await writeToInfluxV3WithRetry(
             async () => await globals.influx.write(point.toLineProtocol(), database),
-            'Log event'
+            `Log event for ${msg.host}`
         );
 
         globals.logger.debug(`LOG EVENT INFLUXDB V3: Wrote data to InfluxDB v3`);
