@@ -3,6 +3,7 @@ import qrsInteract from 'qrs-interact';
 import clonedeep from 'lodash.clonedeep';
 
 import globals from '../globals.js';
+import { logError } from './log-error.js';
 
 /**
  * Retrieves application names from the Qlik Repository Service (QRS) API.
@@ -57,10 +58,10 @@ export function getAppNames() {
             })
             .catch((err) => {
                 // Return error msg
-                globals.logger.error(`APP NAMES: Error getting app names: ${err}`);
+                logError('APP NAMES: Error getting app names', err);
             });
     } catch (err) {
-        globals.globals.logger.error(`APP NAMES: ${err}`);
+        logError('APP NAMES', err);
     }
 }
 

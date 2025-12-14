@@ -25,6 +25,7 @@ import { setupPromClient } from './lib/prom-client.js';
 import { setupConfigVisServer } from './lib/config-visualise.js';
 import { setupUdpEventsStorage } from './lib/udp-event.js';
 import { setupUdpQueueMetricsStorage } from './lib/influxdb/index.js';
+import { logError } from './lib/log-error.js';
 
 // Suppress experimental warnings
 // https://stackoverflow.com/questions/55778283/how-to-disable-warnings-when-node-is-launched-via-a-global-shell-script
@@ -204,7 +205,7 @@ async function mainScript() {
             );
         }
     } catch (err) {
-        globals.logger.error(`CONFIG: Error initiating host info: ${globals.getErrorMessage(err)}`);
+        logError('CONFIG: Error initiating host info', err);
     }
 
     // Set up UDP handler for user activity/events

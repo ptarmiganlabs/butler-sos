@@ -1,4 +1,5 @@
 import globals from '../../../globals.js';
+import { logError } from '../../log-error.js';
 import { getFormattedTime, processAppDocuments } from '../shared/utils.js';
 
 /**
@@ -150,7 +151,7 @@ export async function storeHealthMetricsV1(serverTags, body) {
             `INFLUXDB V1 HEALTH METRICS: Stored health data from server: ${serverTags.server_name}`
         );
     } catch (err) {
-        globals.logger.error(`INFLUXDB V1 HEALTH METRICS: Error saving health data: ${err}`);
+        logError('INFLUXDB V1 HEALTH METRICS: Error saving health data', err);
         throw err;
     }
 }

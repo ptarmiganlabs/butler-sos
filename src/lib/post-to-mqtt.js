@@ -1,4 +1,5 @@
 import globals from '../globals.js';
+import { logError } from './log-error.js';
 
 /**
  * Posts health metrics from Qlik Sense engine healthcheck API to MQTT.
@@ -231,7 +232,7 @@ export function postUserEventToMQTT(msg) {
             globals.mqttClient.publish(topic, JSON.stringify(payload));
         }
     } catch (err) {
-        globals.logger.error(`USER EVENT MQTT: Failed posting message to MQTT ${err}.`);
+        logError('USER EVENT MQTT: Failed posting message to MQTT', err);
     }
 }
 
@@ -296,6 +297,6 @@ export function postLogEventToMQTT(msg) {
             globals.mqttClient.publish(baseTopic, JSON.stringify(msg));
         }
     } catch (err) {
-        globals.logger.error(`LOG EVENT MQTT: Failed posting message to MQTT ${err}.`);
+        logError('LOG EVENT MQTT: Failed posting message to MQTT', err);
     }
 }

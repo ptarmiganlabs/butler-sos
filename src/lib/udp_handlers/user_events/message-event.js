@@ -7,6 +7,7 @@ import { sanitizeField } from '../../udp-queue-manager.js';
 import { postUserEventToInfluxdb } from '../../influxdb/index.js';
 import { postUserEventToNewRelic } from '../../post-to-new-relic.js';
 import { postUserEventToMQTT } from '../../post-to-mqtt.js';
+import { logError } from '../../log-error.js';
 
 /**
  * Handler for UDP messages relating to user events from Qlik Sense Proxy service.
@@ -237,8 +238,6 @@ export async function messageEventHandler(message, _remote) {
             postUserEventToNewRelic(msgObj);
         }
     } catch (err) {
-        globals.logger.error(
-            `USER EVENT: Error processing user activity event: ${globals.getErrorMessage(err)}`
-        );
+        logError('USER EVENT: Error processing user activity event', err);
     }
 }

@@ -28,7 +28,11 @@ import {
 import { OrgsAPI, BucketsAPI } from '@influxdata/influxdb-client-apis';
 
 // v3
-import { InfluxDBClient as InfluxDBClient3, Point as Point3 } from '@influxdata/influxdb3-client';
+import {
+    InfluxDBClient as InfluxDBClient3,
+    Point as Point3,
+    setLogger as setInfluxV3Logger,
+} from '@influxdata/influxdb3-client';
 
 import { fileURLToPath } from 'url';
 import sea from './lib/sea-wrapper.js';
@@ -893,6 +897,18 @@ Configuration File:
                     this.logger.error(`INFLUXDB2 INIT: Exiting.`);
                 }
             } else if (this.config.get('Butler-SOS.influxdbConfig.version') === 3) {
+                // Configure InfluxDB v3 client logger to suppress internal error messages
+                // The retry logic in Butler SOS provides better error handling
+                setInfluxV3Logger({
+                    error: () => {
+                        // Suppress InfluxDB client library error messages
+                        // Butler SOS retry logic and logging handles errors
+                    },
+                    warn: () => {
+                        // Suppress InfluxDB client library warning messages
+                    },
+                });
+
                 // Set up Influxdb v3 client (uses its own client library, NOT same as v2)
                 const hostName = this.config.get('Butler-SOS.influxdbConfig.host');
                 const port = this.config.get('Butler-SOS.influxdbConfig.port');

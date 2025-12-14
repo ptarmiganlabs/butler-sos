@@ -1,4 +1,5 @@
 import globals from '../../../globals.js';
+import { logError } from '../../log-error.js';
 
 /**
  * Store user event queue metrics to InfluxDB v1
@@ -71,7 +72,7 @@ export async function storeUserEventQueueMetricsV1() {
 
         globals.logger.verbose('USER EVENT QUEUE METRICS V1: Sent queue metrics data to InfluxDB');
     } catch (err) {
-        globals.logger.error(`USER EVENT QUEUE METRICS V1: Error saving data: ${err}`);
+        logError('USER EVENT QUEUE METRICS V1: Error saving data', err);
         throw err;
     }
 }
@@ -145,7 +146,7 @@ export async function storeLogEventQueueMetricsV1() {
 
         globals.logger.verbose('LOG EVENT QUEUE METRICS V1: Sent queue metrics data to InfluxDB');
     } catch (err) {
-        globals.logger.error(`LOG EVENT QUEUE METRICS V1: Error saving data: ${err}`);
+        logError('LOG EVENT QUEUE METRICS V1: Error saving data', err);
         throw err;
     }
 }

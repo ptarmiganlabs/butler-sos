@@ -1,4 +1,5 @@
 import globals from '../globals.js';
+import { logError } from './log-error.js';
 
 /**
  * Extracts HTTP headers from a server configuration object.
@@ -33,7 +34,7 @@ export function getServerHeaders(server) {
 
         return headers;
     } catch (err) {
-        globals.logger.error(`SERVERTAGS: ${err}`);
+        logError('SERVERTAGS', err);
         return [];
     }
 }

@@ -16,6 +16,7 @@ import { postUserSessionsToMQTT } from './post-to-mqtt.js';
 import { getServerTags } from './servertags.js';
 import { saveUserSessionMetricsToPrometheus } from './prom-client.js';
 import { getCertificates, createCertificateOptions } from './cert-utils.js';
+import { logError } from './log-error.js';
 
 /**
  * Prepares user session metrics data for storage/forwarding to various destinations.
@@ -346,8 +347,9 @@ export async function getProxySessionStatsFromSense(serverName, host, virtualPro
             }
         }
     } catch (err) {
-        globals.logger.error(
-            `PROXY SESSIONS: Error when calling proxy session API for server '${serverName}' (${host}), virtual proxy '${virtualProxy}': ${globals.getErrorMessage(err)}`
+        logError(
+            `PROXY SESSIONS: Error when calling proxy session API for server '${serverName}' (${host}), virtual proxy '${virtualProxy}'`,
+            err
         );
     }
 }

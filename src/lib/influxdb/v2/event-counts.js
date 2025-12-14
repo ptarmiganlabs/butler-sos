@@ -1,5 +1,6 @@
 import { Point } from '@influxdata/influxdb-client';
 import globals from '../../../globals.js';
+import { logError } from '../../log-error.js';
 
 /**
  * Store event counts to InfluxDB v2
@@ -103,7 +104,7 @@ export async function storeEventCountV2() {
 
         globals.logger.verbose('EVENT COUNT V2: Sent event count data to InfluxDB');
     } catch (err) {
-        globals.logger.error(`EVENT COUNT V2: Error saving data: ${err}`);
+        logError('EVENT COUNT V2: Error saving data', err);
         throw err;
     }
 }
@@ -210,7 +211,7 @@ export async function storeRejectedEventCountV2() {
             'REJECTED EVENT COUNT V2: Sent rejected event count data to InfluxDB'
         );
     } catch (err) {
-        globals.logger.error(`REJECTED EVENT COUNT V2: Error saving data: ${err}`);
+        logError('REJECTED EVENT COUNT V2: Error saving data', err);
         throw err;
     }
 }

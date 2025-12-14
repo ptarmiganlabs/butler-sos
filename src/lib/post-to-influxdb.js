@@ -2,6 +2,7 @@ import { Point } from '@influxdata/influxdb-client';
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 
 import globals from '../globals.js';
+import { logError } from './log-error.js';
 
 const sessionAppPrefix = 'SessionApp';
 const MIN_TIMESTAMP_LENGTH = 15;
@@ -2028,7 +2029,7 @@ export async function storeEventCountInfluxDB() {
         try {
             globals.influx.writePoints(points);
         } catch (err) {
-            globals.logger.error(`EVENT COUNT INFLUXDB: Error saving data to InfluxDB v1! ${err}`);
+            logError('EVENT COUNT INFLUXDB: Error saving data to InfluxDB v1!', err);
             return;
         }
 
@@ -2150,7 +2151,7 @@ export async function storeEventCountInfluxDB() {
                 'EVENT COUNT INFLUXDB: Sent Butler SOS event count data to InfluxDB'
             );
         } catch (err) {
-            globals.logger.error(`EVENT COUNT INFLUXDB: Error getting write API: ${err}`);
+            logError('EVENT COUNT INFLUXDB: Error getting write API', err);
         }
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 3) {
         const database = globals.config.get('Butler-SOS.influxdbConfig.v3Config.database');
@@ -2252,7 +2253,7 @@ export async function storeEventCountInfluxDB() {
                 'EVENT COUNT INFLUXDB: Sent Butler SOS event count data to InfluxDB'
             );
         } catch (err) {
-            globals.logger.error(`EVENT COUNT INFLUXDB: Error getting write API: ${err}`);
+            logError('EVENT COUNT INFLUXDB: Error getting write API', err);
         }
     }
 }
@@ -2494,7 +2495,7 @@ export async function storeRejectedEventCountInfluxDB() {
                 'REJECT LOG EVENT INFLUXDB: Sent Butler SOS rejected event count data to InfluxDB'
             );
         } catch (err) {
-            globals.logger.error(`REJECTED LOG EVENT INFLUXDB: Error getting write API: ${err}`);
+            logError('REJECTED LOG EVENT INFLUXDB: Error getting write API', err);
         }
     } else if (globals.config.get('Butler-SOS.influxdbConfig.version') === 3) {
         const database = globals.config.get('Butler-SOS.influxdbConfig.v3Config.database');
@@ -2573,7 +2574,7 @@ export async function storeRejectedEventCountInfluxDB() {
                 'REJECT LOG EVENT INFLUXDB: Sent Butler SOS rejected event count data to InfluxDB'
             );
         } catch (err) {
-            globals.logger.error(`REJECTED LOG EVENT INFLUXDB: Error getting write API: ${err}`);
+            logError('REJECTED LOG EVENT INFLUXDB: Error getting write API', err);
         }
     }
 }

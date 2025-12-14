@@ -1,4 +1,5 @@
 import globals from '../../../globals.js';
+import { logError } from '../../log-error.js';
 
 /**
  * Store user event to InfluxDB v1
@@ -66,7 +67,7 @@ export async function storeUserEventV1(msg) {
 
         globals.logger.verbose('USER EVENT V1: Sent user event data to InfluxDB');
     } catch (err) {
-        globals.logger.error(`USER EVENT V1: Error saving user event: ${err}`);
+        logError('USER EVENT V1: Error saving user event', err);
         throw err;
     }
 }

@@ -1,4 +1,5 @@
 import globals from '../globals.js';
+import { logError } from './log-error.js';
 
 /**
  * Categorizes log events based on configured rules.
@@ -118,7 +119,7 @@ export function categoriseLogEvent(logLevel, logMessage) {
         // Return the log event category and the action taken
         return { category: uniqueCategories, actionTaken: 'categorised' };
     } catch (err) {
-        globals.logger.error(`LOG EVENT CATEGORISATION: Error processing log event: ${err}`);
+        logError('LOG EVENT CATEGORISATION: Error processing log event', err);
         return null;
     }
 }

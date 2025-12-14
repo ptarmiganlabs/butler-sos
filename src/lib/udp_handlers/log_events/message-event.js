@@ -3,6 +3,7 @@ import { postLogEventToInfluxdb } from '../../influxdb/index.js';
 import { postLogEventToNewRelic } from '../../post-to-new-relic.js';
 import { postLogEventToMQTT } from '../../post-to-mqtt.js';
 import { categoriseLogEvent } from '../../log-event-categorise.js';
+import { logError } from '../../log-error.js';
 
 // Import handlers for different log event sources
 import { processEngineEvent } from './handlers/engine-handler.js';
@@ -132,6 +133,6 @@ export async function messageEventHandler(message, _remote) {
             );
         }
     } catch (err) {
-        globals.logger.error(`LOG EVENT: Error handling message: ${globals.getErrorMessage(err)}`);
+        logError('LOG EVENT: Error handling message', err);
     }
 }

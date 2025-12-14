@@ -365,11 +365,14 @@ describe('post-to-influxdb', () => {
             // Execute
             await influxdb.storeEventCountInfluxDB();
 
-            // Verify
+            // Verify - logError creates TWO log calls: message + stack trace
             expect(globals.logger.error).toHaveBeenCalledWith(
                 expect.stringContaining(
-                    'EVENT COUNT INFLUXDB: Error saving data to InfluxDB v1! Error: Test error'
+                    'EVENT COUNT INFLUXDB: Error saving data to InfluxDB v1!: Test error'
                 )
+            );
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Stack trace: Error: Test error')
             );
         });
 

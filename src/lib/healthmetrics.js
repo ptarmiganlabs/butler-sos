@@ -14,6 +14,7 @@ import { getServerHeaders } from './serverheaders.js';
 import { getServerTags } from './servertags.js';
 import { saveHealthMetricsToPrometheus } from './prom-client.js';
 import { getCertificates, createCertificateOptions } from './cert-utils.js';
+import { logError } from './log-error.js';
 
 /**
  * Retrieves health statistics from Qlik Sense server via the engine healthcheck API.
@@ -108,8 +109,9 @@ export function getHealthStatsFromSense(serverName, host, tags, headers) {
             }
         })
         .catch((err) => {
-            globals.logger.error(
-                `HEALTH: Error when calling health check API for server '${serverName}' (${host}): ${globals.getErrorMessage(err)}`
+            logError(
+                `HEALTH: Error when calling health check API for server '${serverName}' (${host})`,
+                err
             );
         });
 }
