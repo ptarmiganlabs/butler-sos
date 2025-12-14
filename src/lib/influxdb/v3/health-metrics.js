@@ -201,6 +201,9 @@ export async function postHealthMetricsToInfluxdbV3(serverName, host, body, serv
         }
         globals.logger.debug(`HEALTH METRICS V3: Wrote data to InfluxDB v3`);
     } catch (err) {
+        // Track error count
+        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', serverName);
+
         globals.logger.error(
             `HEALTH METRICS V3: Error saving health data to InfluxDB v3! ${globals.getErrorMessage(err)}`
         );

@@ -351,6 +351,9 @@ export async function postHealthMetricsToNewRelic(_host, body, tags) {
             }
         }
     } catch (error) {
+        // Track error count
+        await globals.errorTracker.incrementError('NEW_RELIC_POST', '');
+
         // handle error
         logError('HEALTH METRICS NEW RELIC: Error sending proxy sessions', error);
     }
@@ -512,6 +515,9 @@ export async function postProxySessionsToNewRelic(userSessions) {
             }
         }
     } catch (error) {
+        // Track error count
+        await globals.errorTracker.incrementError('NEW_RELIC_POST', '');
+
         // handle error
         logError('PROXY SESSIONS NEW RELIC: Error sending proxy sessions', error);
     }

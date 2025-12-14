@@ -52,6 +52,9 @@ export async function postProxySessionsToInfluxdbV3(userSessions) {
             globals.logger.warn('PROXY SESSIONS V3: No datapoints to write to InfluxDB v3');
         }
     } catch (err) {
+        // Track error count
+        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', userSessions.serverName);
+
         globals.logger.error(
             `PROXY SESSIONS V3: Error saving user session data to InfluxDB v3! ${globals.getErrorMessage(err)}`
         );

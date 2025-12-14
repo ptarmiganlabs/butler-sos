@@ -109,6 +109,9 @@ export function getHealthStatsFromSense(serverName, host, tags, headers) {
             }
         })
         .catch((err) => {
+            // Track error count
+            globals.errorTracker.incrementError('HEALTH_API', serverName);
+
             logError(
                 `HEALTH: Error when calling health check API for server '${serverName}' (${host})`,
                 err

@@ -151,6 +151,9 @@ export async function storeHealthMetricsV1(serverTags, body) {
             `INFLUXDB V1 HEALTH METRICS: Stored health data from server: ${serverTags.server_name}`
         );
     } catch (err) {
+        // Track error count
+        await globals.errorTracker.incrementError('INFLUXDB_V1_WRITE', serverTags.server_name);
+
         logError('INFLUXDB V1 HEALTH METRICS: Error saving health data', err);
         throw err;
     }

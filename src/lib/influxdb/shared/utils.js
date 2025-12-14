@@ -277,6 +277,9 @@ export async function writeToInfluxV3WithRetry(writeFn, context, options = {}) {
                 globals.logger.error(
                     `INFLUXDB V3 RETRY: ${context} - All ${maxRetries + 1} attempts failed. Last error: ${globals.getErrorMessage(err)}`
                 );
+
+                // Track error count (final failure after all retries)
+                await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', '');
             }
         }
     }

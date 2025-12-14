@@ -106,6 +106,9 @@ export async function postUserEventToInfluxdbV3(msg) {
         );
         globals.logger.debug(`USER EVENT INFLUXDB V3: Wrote data to InfluxDB v3`);
     } catch (err) {
+        // Track error count
+        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', '');
+
         globals.logger.error(
             `USER EVENT INFLUXDB V3: Error saving user event to InfluxDB v3! ${globals.getErrorMessage(err)}`
         );

@@ -347,6 +347,9 @@ export async function getProxySessionStatsFromSense(serverName, host, virtualPro
             }
         }
     } catch (err) {
+        // Track error count
+        await globals.errorTracker.incrementError('PROXY_API', serverName);
+
         logError(
             `PROXY SESSIONS: Error when calling proxy session API for server '${serverName}' (${host}), virtual proxy '${virtualProxy}'`,
             err

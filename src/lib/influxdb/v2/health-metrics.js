@@ -140,6 +140,9 @@ export async function storeHealthMetricsV2(serverName, host, body) {
 
         globals.logger.verbose(`HEALTH METRICS V2: Stored health data from server: ${serverName}`);
     } catch (err) {
+        // Track error count
+        await globals.errorTracker.incrementError('INFLUXDB_V2_WRITE', serverName);
+
         globals.logger.error(
             `HEALTH METRICS V2: Error saving health data: ${globals.getErrorMessage(err)}`
         );

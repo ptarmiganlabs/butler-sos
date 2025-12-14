@@ -40,6 +40,7 @@ import sea from './lib/sea-wrapper.js';
 import { getServerTags } from './lib/servertags.js';
 import { UdpEvents } from './lib/udp-event.js';
 import { UdpQueueManager } from './lib/udp-queue-manager.js';
+import { ErrorTracker, setupErrorCounterReset } from './lib/error-tracker.js';
 import { verifyConfigFileSchema, verifyAppConfig } from './lib/config-file-verify.js';
 
 let instance = null;
@@ -592,6 +593,14 @@ Configuration File:
         } else {
             this.rejectedEvents = null;
         }
+
+        // ------------------------------------
+        // Track API error counts
+        this.errorTracker = new ErrorTracker(this.logger);
+        this.logger.info('ERROR TRACKER: Initialized error tracking with daily UTC reset');
+
+        // Setup midnight UTC reset timer for error counters
+        setupErrorCounterReset();
 
         // ------------------------------------
         // Get info on what servers to monitor
