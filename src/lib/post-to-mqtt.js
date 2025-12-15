@@ -1,4 +1,5 @@
 import globals from '../globals.js';
+import { logError } from './log-error.js';
 
 /**
  * Posts health metrics from Qlik Sense engine healthcheck API to MQTT.
@@ -131,9 +132,9 @@ export function postUserSessionsToMQTT(host, virtualProxy, body) {
  * @param {string} [msg.appId] - Optional app ID
  * @param {string} [msg.appName] - Optional app name
  * @param {object} [msg.ua] - Optional user agent information
- * @returns {void}
+ * @returns {Promise<void>}
  */
-export function postUserEventToMQTT(msg) {
+export async function postUserEventToMQTT(msg) {
     try {
         // Create payload
         const payload = {
@@ -231,7 +232,10 @@ export function postUserEventToMQTT(msg) {
             globals.mqttClient.publish(topic, JSON.stringify(payload));
         }
     } catch (err) {
-        globals.logger.error(`USER EVENT MQTT: Failed posting message to MQTT ${err}.`);
+        // Track error count
+        await globals.errorTracker.incrementError('MQTT_PUBLISH', '');
+
+        logError('USER EVENT MQTT: Failed posting message to MQTT', err);
     }
 }
 
@@ -248,9 +252,9 @@ export function postUserEventToMQTT(msg) {
  * @param {string} msg.message - The log message content
  * @param {string} [msg.timestamp] - The timestamp of the log event
  * @param {string} [msg.hostname] - The hostname where the log event occurred
- * @returns {void}
+ * @returns {Promise<void>}
  */
-export function postLogEventToMQTT(msg) {
+export async function postLogEventToMQTT(msg) {
     try {
         // Get MQTT root topic
         let baseTopic = globals.config.get('Butler-SOS.logEvents.sendToMQTT.baseTopic');
@@ -296,6 +300,9 @@ export function postLogEventToMQTT(msg) {
             globals.mqttClient.publish(baseTopic, JSON.stringify(msg));
         }
     } catch (err) {
-        globals.logger.error(`LOG EVENT MQTT: Failed posting message to MQTT ${err}.`);
+        // Track error count
+        await globals.errorTracker.incrementError('MQTT_PUBLISH', '');
+
+        logError('LOG EVENT MQTT: Failed posting message to MQTT', err);
     }
 }

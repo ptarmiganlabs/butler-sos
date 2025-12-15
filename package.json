@@ -1,10 +1,11 @@
 {
     "name": "butler-sos",
     "version": "14.0.0",
-    "description": "Butler SenseOps Stats (\"Butler SOS\") is a tool that publishes operational Qlik Sense metrics to Influxdb, Prometheus, New Relic and MQTT.",
+    "description": "Butler SenseOps Stats (\"Butler SOS\") is a tool that publishes operational Qlik Sense metrics to InfluxDB (v1, v2, v3), Prometheus, New Relic and MQTT.",
     "main": "butler-sos.js",
     "scripts": {
         "build": "npx jsdoc-to-markdown 'src/**/*.js' > docs/src-code-overview.md",
+        "build:docker": "docker build -t butler-sos:latest .",
         "butler-sos": "node src/butler-sos.js",
         "jest": "node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js",
         "test": "node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js && snyk test && npm run format",
@@ -52,6 +53,7 @@
         "@fastify/static": "^8.3.0",
         "@influxdata/influxdb-client": "^1.35.0",
         "@influxdata/influxdb-client-apis": "^1.35.0",
+        "@influxdata/influxdb3-client": "^1.4.0",
         "ajv": "^8.17.1",
         "ajv-keywords": "^5.1.0",
         "async-mutex": "^0.5.0",
@@ -81,7 +83,7 @@
     "devDependencies": {
         "@babel/eslint-parser": "^7.28.5",
         "@babel/plugin-syntax-import-assertions": "^7.27.1",
-        "@eslint/js": "^9.39.1",
+        "@eslint/js": "^9.39.2",
         "audit-ci": "^7.1.0",
         "esbuild": "^0.27.1",
         "eslint-config-prettier": "^10.1.8",
@@ -89,7 +91,7 @@
         "eslint-plugin-jsdoc": "^61.5.0",
         "eslint-plugin-prettier": "^5.5.4",
         "globals": "^16.5.0",
-        "jest": "^30.1.3",
+        "jest": "^30.2.0",
         "jsdoc-to-markdown": "^9.1.3",
         "license-checker-rseidelsohn": "^4.4.2",
         "lockfile-lint": "^4.14.1",

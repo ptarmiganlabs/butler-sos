@@ -1,6 +1,7 @@
 // Load global variables and functions
 import globals from '../globals.js';
 import { listeningEventHandler, messageEventHandler } from './udp_handlers/user_events/index.js';
+import { logError } from './log-error.js';
 
 // --------------------------------------------------------
 // Set up UDP server for acting on Sense user activity events
@@ -49,15 +50,13 @@ export function udpInitUserActivityServer() {
                 globals.logger.debug(`[UDP Queue] User activity message dropped due to full queue`);
             }
         } catch (err) {
-            globals.logger.error(
-                `[UDP Queue] Error handling user activity message: ${globals.getErrorMessage(err)}`
-            );
+            logError('[UDP Queue] Error handling user activity message', err);
         }
     });
 
     // Handler for UDP server errors
     globals.udpServerUserActivity.socket.on('error', (err) => {
-        globals.logger.error(`[UDP] User activity server error: ${globals.getErrorMessage(err)}`);
+        logError('[UDP] User activity server error', err);
     });
 
     // Handler for UDP server close event

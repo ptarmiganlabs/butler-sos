@@ -5,6 +5,7 @@ import sea from './sea-wrapper.js';
 import handlebars from 'handlebars';
 
 import globals from '../globals.js';
+import { logError } from './log-error.js';
 
 // Define MIME types for different file extensions
 const MIME_TYPES = {
@@ -90,7 +91,7 @@ export async function prepareFile(filePath, encoding) {
             stream = Readable.from([content]);
         }
     } catch (err) {
-        globals.logger.error(`FILE PREP: Error preparing file: ${err.message}`);
+        logError('FILE PREP: Error preparing file', err);
         exists = false;
     }
 
@@ -116,7 +117,7 @@ export function compileTemplate(templateContent, data) {
         const template = handlebars.compile(templateContent);
         return template(data);
     } catch (err) {
-        globals.logger.error(`FILE PREP: Error compiling handlebars template: ${err.message}`);
+        logError('FILE PREP: Error compiling handlebars template', err);
         throw err;
     }
 }

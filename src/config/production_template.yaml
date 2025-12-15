@@ -63,12 +63,12 @@ Butler-SOS:
                         enable: true # Should Butler SOS' uptime (how long since it was started) be sent to New Relic?
             attribute:
                 static: # Static attributes/dimensions to attach to the data sent to New Relic.
-                    # - name: metricType
-                    #   value: butler-sos-uptime
-                    # - name: qs_service
-                    #   value: butler-sos
-                    # - name: qs_environment
-                    #   value: prod
+                    - name: metricType
+                      value: butler-sos-uptime
+                    - name: qs_service
+                      value: butler-sos
+                    - name: qs_env
+                      value: dev
                 dynamic:
                     butlerVersion:
                         enable: true # Should the Butler SOS version be included in the data sent to New Relic?
@@ -97,10 +97,8 @@ Butler-SOS:
             influxdb:
                 measurementName: event_count # Name of the InfluxDB measurement where event count is stored
                 tags: # Tags are added to the data before it's stored in InfluxDB
-                    # - name: env
-                    #   value: DEV
-                    # - name: foo
-                    #   value: bar
+                    - name: qs_env
+                      value: dev
         rejectedEventCount: # Rejected events are events that are received from Sense, that are correctly formatted,
             # but that are rejected by Butler SOS based on the configuration in this file.
             # An example of a rejected event is a performance log event that is filtered out by Butler SOS.
@@ -137,13 +135,11 @@ Butler-SOS:
                     writeFrequency: 20000 # How often to write metrics, milliseconds (default: 20000)
                     measurementName: user_events_queue # InfluxDB measurement name (default: user_events_queue)
                     tags: # Optional tags added to queue metrics
-                        # - name: env
-                        #   value: prod
+                        - name: qs_env
+                          value: dev
         tags: # Tags are added to the data before it's stored in InfluxDB
-            # - name: env
-            #   value: DEV
-            # - name: foo
-            #   value: bar
+            - name: qs_env
+              value: dev
         sendToMQTT:
             enable: false # Set to true if user events should be forwarded as MQTT messages
             postTo: # Control when and to which MQTT topics messages are sent
@@ -193,13 +189,11 @@ Butler-SOS:
                     writeFrequency: 20000 # How often to write metrics, milliseconds (default: 20000)
                     measurementName: log_events_queue # InfluxDB measurement name (default: log_events_queue)
                     tags: # Optional tags added to queue metrics
-                        # - name: env
-                        #   value: prod
+                        - name: qs_env
+                          value: dev
         tags:
-            # - name: env
-            #   value: DEV
-            # - name: foo
-            #   value: bar
+            - name: qs_env
+              value: dev
         source:
             engine:
                 enable: false # Should log events from the engine service be handled?
@@ -283,10 +277,8 @@ Butler-SOS:
             trackRejectedEvents:
                 enable: false # Should events that are rejected by the app performance monitor be tracked?
                 tags: # Tags are added to the data before it's stored in InfluxDB
-                    # - name: env
-                    #   value: DEV
-                    # - name: foo
-                    #   value: bar
+                    - name: qs_env
+                      value: dev
             monitorFilter: # What objects should be monitored? Entire apps or just specific object(s) within some specific app(s)?
                 # Two kinds of monitoring can be done:
                 # 1) Monitor all apps, except those listed for exclusion. This is defined in the allApps section.
@@ -438,10 +430,10 @@ Butler-SOS:
                 #   value: Header value
             attribute:
                 static: # Static attributes/dimensions to attach to the events sent to New Relic.
-                    # - name: service
-                    #   value: butler-sos
-                    # - name: environment
-                    #   value: prod
+                    - name: qs_env
+                      value: dev
+                    - name: service
+                      value: butler-sos
                 dynamic:
                     butlerSosVersion:
                         enable: true # Should the Butler SOS version be included in the events sent to New Relic?
@@ -492,10 +484,10 @@ Butler-SOS:
                         enable: true
             attribute:
                 static: # Static attributes/dimensions to attach to the data sent to New Relic.
-                    # - name: service
-                    #   value: butler-sos
-                    # - name: environment
-                    #   value: prod
+                    - name: qs_env
+                      value: dev
+                    - name: service
+                      value: butler-sos
                 dynamic:
                     butlerSosVersion:
                         enable: true # Should the Butler SOS version be included in the data sent to New Relic?
@@ -510,10 +502,20 @@ Butler-SOS:
     # Influx db config parameters
     influxdbConfig:
         enable: true
+        # Feature flag to enable refactored InfluxDB code (recommended for better maintainability)
+        # Set to true to use the new modular implementation, false for legacy code
+        useRefactoredCode: false
         # Items below are mandatory if influxdbConfig.enable=true
         host: influxdb.mycompany.com # InfluxDB host, hostname, FQDN or IP address
         port: 8086 # Port where InfluxDBdb is listening, usually 8086
-        version: 1 # Is the InfluxDB instance version 1.x or 2.x? Valid values are 1 or 2
+        version: 1 # Is the InfluxDB instance version 1.x or 2.x? Valid values are 1, 2, or 3
+        v3Config: # Settings for InfluxDB v3.x only, i.e. Butler-SOS.influxdbConfig.version=3
+            database: mydatabase
+            description: Butler SOS metrics
+            token: mytoken
+            retentionDuration: 10d
+            timeout: 10000 # Optional: Socket timeout in milliseconds (default: 10000)
+            queryTimeout: 60000 # Optional: Query timeout in milliseconds (default: 60000)
         v2Config: # Settings for InfluxDB v2.x only, i.e. Butler-SOS.influxdbConfig.version=2
             org: myorg
             bucket: mybucket
@@ -525,7 +527,7 @@ Butler-SOS:
                 enable: false # Does influxdb instance require authentication (true/false)?
                 username: <username> # Username for Influxdb authentication. Mandatory if auth.enable=true
                 password: <password> # Password for Influxdb authentication. Mandatory if auth.enable=true
-            dbName: SenseOps
+            dbName: senseops
             # Default retention policy that should be created in InfluxDB when Butler SOS creates a new database there.
             # Any data older than retention policy threshold will be purged from InfluxDB.
             retentionPolicy:

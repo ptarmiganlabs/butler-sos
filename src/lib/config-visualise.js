@@ -8,6 +8,7 @@ import * as yaml from 'js-yaml';
 import globals from '../globals.js';
 import configObfuscate from './config-obfuscate.js';
 import { prepareFile, compileTemplate } from './file-prep.js';
+import { logError } from './log-error.js';
 
 /**
  * Serves the custom 404 error page
@@ -46,7 +47,7 @@ async function serve404Page(request, reply) {
         // Send 404 response with custom page
         reply.code(404).header('Content-Type', 'text/html; charset=utf-8').send(renderedHtml);
     } catch (err) {
-        globals.logger.error(`CONFIG VIS: Error serving 404 page: ${err.message}`);
+        logError('CONFIG VIS: Error serving 404 page', err);
         reply.code(404).send({ error: 'Page not found' });
     }
 }
@@ -184,7 +185,7 @@ export async function setupConfigVisServer(logger, config) {
                     `CONFIG VIS: Directory contents of "${STATIC_PATH}": ${dirContents}`
                 );
             } catch (err) {
-                globals.logger.error(`CONFIG VIS: Error reading static directory: ${err.message}`);
+                logError('CONFIG VIS: Error reading static directory', err);
             }
 
             const htmlDir = path.resolve(STATIC_PATH, 'configvis');
@@ -253,7 +254,7 @@ export async function setupConfigVisServer(logger, config) {
                     .header('Content-Type', 'text/html; charset=utf-8')
                     .send(renderedText);
             } catch (err) {
-                globals.logger.error(`CONFIG VIS: Error serving home page: ${err.message}`);
+                logError('CONFIG VIS: Error serving home page', err);
                 reply.code(500).send({ error: 'Internal server error' });
             }
         });
@@ -268,7 +269,7 @@ export async function setupConfigVisServer(logger, config) {
                     globals.logger.error(
                         `CONFIG VIS: Could not set up config visualisation server on ${address}`
                     );
-                    globals.logger.error(`CONFIG VIS: ${globals.getErrorMessage(err)}`);
+                    logError('CONFIG VIS', err);
                     configVisServer.log.error(err);
                     process.exit(1);
                 }

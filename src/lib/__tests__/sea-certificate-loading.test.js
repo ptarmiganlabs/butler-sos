@@ -28,9 +28,8 @@ const fs = (await import('fs')).default;
 const globals = (await import('../../globals.js')).default;
 
 // Import modules under test
-const { getCertificates: getCertificatesUtil, createCertificateOptions } = await import(
-    '../cert-utils.js'
-);
+const { getCertificates: getCertificatesUtil, createCertificateOptions } =
+    await import('../cert-utils.js');
 
 describe('Certificate loading', () => {
     const mockCertificateOptions = {

@@ -1,0 +1,152 @@
+import globals from '../../../globals.js';
+import { logError } from '../../log-error.js';
+
+/**
+ * Store user event queue metrics to InfluxDB v1
+ *
+ * @returns {Promise<void>}
+ */
+export async function storeUserEventQueueMetricsV1() {
+    try {
+        // Check if queue metrics are enabled
+        if (
+            !globals.config.get(
+                'Butler-SOS.userEvents.udpServerConfig.queueMetrics.influxdb.enable'
+            )
+        ) {
+            return;
+        }
+
+        // Get metrics from queue manager
+        const queueManager = globals.udpQueueManagerUserActivity;
+        if (!queueManager) {
+            globals.logger.warn('USER EVENT QUEUE METRICS V1: Queue manager not initialized');
+            return;
+        }
+
+        const metrics = await queueManager.getMetrics();
+
+        // Get configuration
+        const measurementName = globals.config.get(
+            'Butler-SOS.userEvents.udpServerConfig.queueMetrics.influxdb.measurementName'
+        );
+        const configTags = globals.config.get(
+            'Butler-SOS.userEvents.udpServerConfig.queueMetrics.influxdb.tags'
+        );
+
+        const point = {
+            measurement: measurementName,
+            tags: {
+                queue_type: 'user_events',
+                host: globals.hostInfo.hostname,
+            },
+            fields: {
+                queue_size: metrics.queueSize,
+                queue_max_size: metrics.queueMaxSize,
+                queue_utilization_pct: metrics.queueUtilizationPct,
+                queue_pending: metrics.queuePending,
+                messages_received: metrics.messagesReceived,
+                messages_queued: metrics.messagesQueued,
+                messages_processed: metrics.messagesProcessed,
+                messages_failed: metrics.messagesFailed,
+                messages_dropped_total: metrics.messagesDroppedTotal,
+                messages_dropped_rate_limit: metrics.messagesDroppedRateLimit,
+                messages_dropped_queue_full: metrics.messagesDroppedQueueFull,
+                messages_dropped_size: metrics.messagesDroppedSize,
+                processing_time_avg_ms: metrics.processingTimeAvgMs,
+                processing_time_p95_ms: metrics.processingTimeP95Ms,
+                processing_time_max_ms: metrics.processingTimeMaxMs,
+                rate_limit_current: metrics.rateLimitCurrent,
+                backpressure_active: metrics.backpressureActive,
+            },
+        };
+
+        // Add static tags from config file
+        if (configTags && configTags.length > 0) {
+            for (const item of configTags) {
+                point.tags[item.name] = item.value;
+            }
+        }
+
+        await globals.influx.writePoints([point]);
+
+        globals.logger.verbose('USER EVENT QUEUE METRICS V1: Sent queue metrics data to InfluxDB');
+    } catch (err) {
+        logError('USER EVENT QUEUE METRICS V1: Error saving data', err);
+        throw err;
+    }
+}
+
+/**
+ * Store log event queue metrics to InfluxDB v1
+ *
+ * @returns {Promise<void>}
+ */
+export async function storeLogEventQueueMetricsV1() {
+    try {
+        // Check if queue metrics are enabled
+        if (
+            !globals.config.get('Butler-SOS.logEvents.udpServerConfig.queueMetrics.influxdb.enable')
+        ) {
+            return;
+        }
+
+        // Get metrics from queue manager
+        const queueManager = globals.udpQueueManagerLogEvents;
+        if (!queueManager) {
+            globals.logger.warn('LOG EVENT QUEUE METRICS V1: Queue manager not initialized');
+            return;
+        }
+
+        const metrics = await queueManager.getMetrics();
+
+        // Get configuration
+        const measurementName = globals.config.get(
+            'Butler-SOS.logEvents.udpServerConfig.queueMetrics.influxdb.measurementName'
+        );
+        const configTags = globals.config.get(
+            'Butler-SOS.logEvents.udpServerConfig.queueMetrics.influxdb.tags'
+        );
+
+        const point = {
+            measurement: measurementName,
+            tags: {
+                queue_type: 'log_events',
+                host: globals.hostInfo.hostname,
+            },
+            fields: {
+                queue_size: metrics.queueSize,
+                queue_max_size: metrics.queueMaxSize,
+                queue_utilization_pct: metrics.queueUtilizationPct,
+                queue_pending: metrics.queuePending,
+                messages_received: metrics.messagesReceived,
+                messages_queued: metrics.messagesQueued,
+                messages_processed: metrics.messagesProcessed,
+                messages_failed: metrics.messagesFailed,
+                messages_dropped_total: metrics.messagesDroppedTotal,
+                messages_dropped_rate_limit: metrics.messagesDroppedRateLimit,
+                messages_dropped_queue_full: metrics.messagesDroppedQueueFull,
+                messages_dropped_size: metrics.messagesDroppedSize,
+                processing_time_avg_ms: metrics.processingTimeAvgMs,
+                processing_time_p95_ms: metrics.processingTimeP95Ms,
+                processing_time_max_ms: metrics.processingTimeMaxMs,
+                rate_limit_current: metrics.rateLimitCurrent,
+                backpressure_active: metrics.backpressureActive,
+            },
+        };
+
+        // Add static tags from config file
+        if (configTags && configTags.length > 0) {
+            for (const item of configTags) {
+                point.tags[item.name] = item.value;
+            }
+        }
+
+        await globals.influx.writePoints([point]);
+
+        globals.logger.verbose('LOG EVENT QUEUE METRICS V1: Sent queue metrics data to InfluxDB');
+    } catch (err) {
+        logError('LOG EVENT QUEUE METRICS V1: Error saving data', err);
+        throw err;
+    }
+}

@@ -1,6 +1,7 @@
 // Load global variables and functions
 import globals from '../globals.js';
 import { listeningEventHandler, messageEventHandler } from './udp_handlers/log_events/index.js';
+import { logError } from './log-error.js';
 
 // --------------------------------------------------------
 // Set up UDP server for acting on Sense log events
@@ -57,15 +58,13 @@ export function udpInitLogEventServer() {
                 globals.logger.debug(`[UDP Queue] Log event message dropped due to full queue`);
             }
         } catch (err) {
-            globals.logger.error(
-                `[UDP Queue] Error handling log event message: ${globals.getErrorMessage(err)}`
-            );
+            logError('[UDP Queue] Error handling log event message', err);
         }
     });
 
     // Handler for UDP server errors
     globals.udpServerLogEvents.socket.on('error', (err) => {
-        globals.logger.error(`[UDP] Log events server error: ${globals.getErrorMessage(err)}`);
+        logError('[UDP] Log events server error', err);
     });
 
     // Handler for UDP server close event
