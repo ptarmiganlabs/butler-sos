@@ -159,10 +159,20 @@ export function getInfluxDbVersion() {
 /**
  * Checks if the refactored InfluxDB code path should be used.
  *
+ * For v3: Always returns true (legacy code removed)
+ * For v1/v2: Uses feature flag for gradual migration
+ *
  * @returns {boolean} True if refactored code should be used
  */
 export function useRefactoredInfluxDb() {
-    // Feature flag to enable/disable refactored code path
+    const version = getInfluxDbVersion();
+
+    // v3 always uses refactored code (legacy implementation removed)
+    if (version === 3) {
+        return true;
+    }
+
+    // v1/v2 use feature flag for gradual migration
     // Default to false for backward compatibility
     return globals.config.get('Butler-SOS.influxdbConfig.useRefactoredCode') === true;
 }
