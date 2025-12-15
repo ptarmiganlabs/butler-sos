@@ -73,7 +73,7 @@ export async function messageEventHandler(message, _remote) {
                     msgObj = processSchedulerEvent(msgParts);
                     break;
                 case 'qseow-qix-perf':
-                    msgObj = processQixPerfEvent(msgParts);
+                    msgObj = await processQixPerfEvent(msgParts);
                     // If null is returned, it means the event should be skipped
                     if (msgObj === null) {
                         return;
@@ -81,7 +81,50 @@ export async function messageEventHandler(message, _remote) {
                     break;
                 default:
                     globals.logger.warn(`LOG EVENT: Unknown source: ${msgParts[0]}`);
+
+                    // Is logging of event counts enabled?
+                    if (
+                        globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.enable') === true
+                    ) {
+                        // Increase counter for unknown log events
+                        await globals.udpEvents.addLogEvent({
+                            source: 'Unknown',
+                            host: 'Unknown',
+                            subsystem: 'Unknown',
+                        });
+                    }
+
                     return;
+            }
+
+            // Add counter for received log events
+            // Is logging of event counts enabled?
+            if (globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.enable') === true) {
+                globals.logger.debug(
+                    `LOG EVENT: Received message that is a recognised log event: ${msgParts[0]}`
+                );
+
+                // Get source, host and subsystem if they exist, otherwise set to 'Unknown'
+                let source = 'Unknown';
+                let host = 'Unknown';
+                let subsystem = 'Unknown';
+
+                if (msgObj.source.length > 0) {
+                    source = msgObj.source;
+                }
+                if (msgObj.host.length > 0) {
+                    host = msgObj.host;
+                }
+                if (msgObj.subsystem.length > 0) {
+                    subsystem = msgObj.subsystem;
+                }
+
+                // Increase counter for log events
+                await globals.udpEvents.addLogEvent({
+                    source: source,
+                    host: host,
+                    subsystem: subsystem,
+                });
             }
 
             // If message parsing was done and categorisation is enabled, categorise the log event
@@ -131,6 +174,35 @@ export async function messageEventHandler(message, _remote) {
             globals.logger.debug(
                 `LOG EVENT: Log event source not recognized or not enabled in configuration, skipping message: ${msgParts[0]}`
             );
+
+            // Is logging of event counts enabled?
+            if (globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.enable') === true) {
+                // Get source, host and subsystem if they exist, otherwise set to 'Unknown'
+                let source = 'Unknown';
+                let host = 'Unknown';
+                let subsystem = 'Unknown';
+
+                if (msgParts.length > 0) {
+                    source = msgParts[0].toLowerCase().replace('/', '').replace('/', '');
+                }
+                if (msgParts.length > 1) {
+                    host = msgParts[1];
+                }
+                if (msgParts.length > 5) {
+                    subsystem = msgParts[5];
+                }
+
+                globals.logger.warn(
+                    `LOG EVENT: Received message that is an unrecognized log event: ${source}`
+                );
+
+                // Increase counter for log events
+                await globals.udpEvents.addLogEvent({
+                    source: source,
+                    host: host,
+                    subsystem: subsystem,
+                });
+            }
         }
     } catch (err) {
         logError('LOG EVENT: Error handling message', err);
