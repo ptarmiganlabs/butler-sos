@@ -21,6 +21,9 @@ jest.unstable_mockModule('../../globals.js', () => ({
         config: {
             get: jest.fn(),
         },
+        errorTracker: {
+            incrementError: jest.fn().mockResolvedValue(),
+        },
         certPath: 'cert/path',
         keyPath: 'key/path',
     },
