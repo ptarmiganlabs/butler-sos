@@ -174,20 +174,28 @@ export async function storeRejectedEventCountInfluxDB() {
  * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
  */
 export async function postUserEventQueueMetricsToInfluxdb() {
-    const version = getInfluxDbVersion();
+    try {
+        const version = getInfluxDbVersion();
 
-    if (version === 1) {
-        return storeUserEventQueueMetricsV1();
-    }
-    if (version === 2) {
-        return storeUserEventQueueMetricsV2();
-    }
-    if (version === 3) {
-        return postUserEventQueueMetricsToInfluxdbV3();
-    }
+        if (version === 1) {
+            return storeUserEventQueueMetricsV1();
+        }
+        if (version === 2) {
+            return storeUserEventQueueMetricsV2();
+        }
+        if (version === 3) {
+            return postUserEventQueueMetricsToInfluxdbV3();
+        }
 
-    globals.logger.debug(`INFLUXDB FACTORY: Unknown InfluxDB version: v${version}`);
-    throw new Error(`InfluxDB v${version} not supported`);
+        globals.logger.debug(`INFLUXDB FACTORY: Unknown InfluxDB version: v${version}`);
+        throw new Error(`InfluxDB v${version} not supported`);
+    } catch (err) {
+        globals.logger.error(
+            `INFLUXDB FACTORY: Error in postUserEventQueueMetricsToInfluxdb: ${err.message}`
+        );
+        globals.logger.debug(`INFLUXDB FACTORY: Error stack: ${err.stack}`);
+        throw err;
+    }
 }
 
 /**
@@ -196,20 +204,28 @@ export async function postUserEventQueueMetricsToInfluxdb() {
  * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
  */
 export async function postLogEventQueueMetricsToInfluxdb() {
-    const version = getInfluxDbVersion();
+    try {
+        const version = getInfluxDbVersion();
 
-    if (version === 1) {
-        return storeLogEventQueueMetricsV1();
-    }
-    if (version === 2) {
-        return storeLogEventQueueMetricsV2();
-    }
-    if (version === 3) {
-        return postLogEventQueueMetricsToInfluxdbV3();
-    }
+        if (version === 1) {
+            return storeLogEventQueueMetricsV1();
+        }
+        if (version === 2) {
+            return storeLogEventQueueMetricsV2();
+        }
+        if (version === 3) {
+            return postLogEventQueueMetricsToInfluxdbV3();
+        }
 
-    globals.logger.debug(`INFLUXDB FACTORY: Unknown InfluxDB version: v${version}`);
-    throw new Error(`InfluxDB v${version} not supported`);
+        globals.logger.debug(`INFLUXDB FACTORY: Unknown InfluxDB version: v${version}`);
+        throw new Error(`InfluxDB v${version} not supported`);
+    } catch (err) {
+        globals.logger.error(
+            `INFLUXDB FACTORY: Error in postLogEventQueueMetricsToInfluxdb: ${err.message}`
+        );
+        globals.logger.debug(`INFLUXDB FACTORY: Error stack: ${err.stack}`);
+        throw err;
+    }
 }
 
 /**
