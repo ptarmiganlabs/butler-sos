@@ -23,6 +23,9 @@ jest.unstable_mockModule('../../globals.js', () => ({
             verbose: jest.fn(),
             debug: jest.fn(),
         },
+        errorTracker: {
+            incrementError: jest.fn(),
+        },
         config: {
             get: jest.fn(),
             has: jest.fn(),

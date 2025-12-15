@@ -52,6 +52,9 @@ jest.unstable_mockModule('../../globals.js', () => ({
             debug: jest.fn(),
             error: jest.fn(),
         },
+        errorTracker: {
+            incrementError: jest.fn(),
+        },
         config: {
             get: jest.fn().mockImplementation((path) => {
                 if (path === 'Butler-SOS.cert.clientCert') return '/path/to/cert.pem';
