@@ -34,7 +34,6 @@
             "type": "build",
             "section": "Miscellaneous",
             "hidden": false
-        }
         },
         {
             "type": "test",
