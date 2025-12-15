@@ -35,6 +35,12 @@
             "section": "Miscellaneous",
             "hidden": false
         }
+        },
+        {
+            "type": "test",
+            "section": "Miscellaneous",
+            "hidden": false
+        }
     ],
     "packages": {
         ".": {
