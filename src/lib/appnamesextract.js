@@ -57,10 +57,18 @@ export function getAppNames() {
                 globals.logger.verbose('APP NAMES: Done getting app names from repository db');
             })
             .catch((err) => {
+                // Track error count
+                const hostname = globals.config.get('Butler-SOS.appNames.hostIP');
+                globals.errorTracker.incrementError('APP_NAMES_EXTRACT', hostname || '');
+
                 // Return error msg
                 logError('APP NAMES: Error getting app names', err);
             });
     } catch (err) {
+        // Track error count
+        const hostname = globals.config.get('Butler-SOS.appNames.hostIP');
+        globals.errorTracker.incrementError('APP_NAMES_EXTRACT', hostname || '');
+
         logError('APP NAMES', err);
     }
 }
