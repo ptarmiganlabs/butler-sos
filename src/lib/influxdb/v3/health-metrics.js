@@ -5,7 +5,7 @@ import {
     processAppDocuments,
     isInfluxDbEnabled,
     applyTagsToPoint3,
-    writeToInfluxV3WithRetry,
+    writeToInfluxWithRetry,
 } from '../shared/utils.js';
 
 /**
@@ -194,9 +194,11 @@ export async function postHealthMetricsToInfluxdbV3(serverName, host, body, serv
         for (const point of points) {
             // Apply server tags to each point
             applyTagsToPoint3(point, serverTags);
-            await writeToInfluxV3WithRetry(
+            await writeToInfluxWithRetry(
                 async () => await globals.influx.write(point.toLineProtocol(), database),
-                `Health metrics for ${host}`
+                `Health metrics for ${host}`,
+                'v3',
+                serverName
             );
         }
         globals.logger.debug(`HEALTH METRICS V3: Wrote data to InfluxDB v3`);

@@ -95,9 +95,21 @@ describe('InfluxDB v3 Shared Utils', () => {
             expect(result).toBe(false);
         });
 
-        test('should return false when feature flag is undefined for v1/v2', () => {
+        test('should return true for v1 even when feature flag is undefined (v1 always uses refactored code)', () => {
             globals.config.get.mockImplementation((key) => {
                 if (key === 'Butler-SOS.influxdbConfig.version') return 1;
+                if (key === 'Butler-SOS.influxdbConfig.useRefactoredCode') return undefined;
+                return undefined;
+            });
+
+            const result = utils.useRefactoredInfluxDb();
+
+            expect(result).toBe(true);
+        });
+
+        test('should return false when feature flag is undefined for v2', () => {
+            globals.config.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.influxdbConfig.version') return 2;
                 if (key === 'Butler-SOS.influxdbConfig.useRefactoredCode') return undefined;
                 return undefined;
             });
@@ -129,11 +141,11 @@ describe('InfluxDB v3 Shared Utils', () => {
         });
     });
 
-    describe('writeToInfluxV3WithRetry', () => {
+    describe('writeToInfluxWithRetry', () => {
         test('should successfully write on first attempt', async () => {
             const writeFn = jest.fn().mockResolvedValue();
 
-            await utils.writeToInfluxV3WithRetry(writeFn, 'Test context');
+            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '');
 
             expect(writeFn).toHaveBeenCalledTimes(1);
             expect(globals.logger.error).not.toHaveBeenCalled();
@@ -145,14 +157,14 @@ describe('InfluxDB v3 Shared Utils', () => {
 
             const writeFn = jest.fn().mockRejectedValueOnce(timeoutError).mockResolvedValueOnce();
 
-            await utils.writeToInfluxV3WithRetry(writeFn, 'Test context', {
+            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {
                 maxRetries: 3,
                 initialDelayMs: 10,
             });
 
             expect(writeFn).toHaveBeenCalledTimes(2);
             expect(globals.logger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('INFLUXDB V3 RETRY: Test context - Timeout')
+                expect.stringContaining('INFLUXDB V3 RETRY: Test context - Retryable')
             );
         });
 
@@ -166,7 +178,7 @@ describe('InfluxDB v3 Shared Utils', () => {
                 .mockRejectedValueOnce(timeoutError)
                 .mockResolvedValueOnce();
 
-            await utils.writeToInfluxV3WithRetry(writeFn, 'Test context', {
+            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {
                 maxRetries: 3,
                 initialDelayMs: 10,
             });
@@ -183,7 +195,7 @@ describe('InfluxDB v3 Shared Utils', () => {
             globals.errorTracker = { incrementError: jest.fn().mockResolvedValue() };
 
             await expect(
-                utils.writeToInfluxV3WithRetry(writeFn, 'Test context', {
+                utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {
                     maxRetries: 2,
                     initialDelayMs: 10,
                 })
@@ -199,12 +211,13 @@ describe('InfluxDB v3 Shared Utils', () => {
             );
         });
 
-        test('should throw non-timeout error immediately without retry', async () => {
-            const nonTimeoutError = new Error('Connection refused');
-            const writeFn = jest.fn().mockRejectedValue(nonTimeoutError);
+        test('should throw non-retryable error immediately without retry', async () => {
+            const nonRetryableError = new Error('Connection refused');
+            const writeFn = jest.fn().mockRejectedValue(nonRetryableError);
+            globals.errorTracker = { incrementError: jest.fn().mockResolvedValue() };
 
             await expect(
-                utils.writeToInfluxV3WithRetry(writeFn, 'Test context', {
+                utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {
                     maxRetries: 3,
                     initialDelayMs: 10,
                 })
@@ -212,7 +225,7 @@ describe('InfluxDB v3 Shared Utils', () => {
 
             expect(writeFn).toHaveBeenCalledTimes(1);
             expect(globals.logger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('INFLUXDB V3 WRITE: Test context - Non-timeout error')
+                expect.stringContaining('INFLUXDB V3 WRITE: Test context - Non-retryable error')
             );
         });
 
@@ -221,7 +234,7 @@ describe('InfluxDB v3 Shared Utils', () => {
 
             const writeFn = jest.fn().mockRejectedValueOnce(timeoutError).mockResolvedValueOnce();
 
-            await utils.writeToInfluxV3WithRetry(writeFn, 'Test context', {
+            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {
                 maxRetries: 3,
                 initialDelayMs: 10,
             });
@@ -237,7 +250,7 @@ describe('InfluxDB v3 Shared Utils', () => {
 
             const writeFn = jest.fn().mockRejectedValueOnce(timeoutError).mockResolvedValueOnce();
 
-            await utils.writeToInfluxV3WithRetry(writeFn, 'Test context', {
+            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {
                 maxRetries: 3,
                 initialDelayMs: 10,
             });

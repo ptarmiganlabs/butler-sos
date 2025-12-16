@@ -45,7 +45,7 @@ jest.unstable_mockModule('@influxdata/influxdb3-client', () => ({
 // Mock shared utils
 jest.unstable_mockModule('../shared/utils.js', () => ({
     isInfluxDbEnabled: jest.fn(),
-    writeToInfluxV3WithRetry: jest.fn(),
+    writeToInfluxWithRetry: jest.fn(),
 }));
 
 describe('InfluxDB v3 Queue Metrics', () => {
@@ -66,7 +66,7 @@ describe('InfluxDB v3 Queue Metrics', () => {
 
         // Setup default mocks
         utils.isInfluxDbEnabled.mockReturnValue(true);
-        utils.writeToInfluxV3WithRetry.mockResolvedValue();
+        utils.writeToInfluxWithRetry.mockResolvedValue();
     });
 
     describe('postUserEventQueueMetricsToInfluxdbV3', () => {
@@ -76,7 +76,7 @@ describe('InfluxDB v3 Queue Metrics', () => {
             await queueMetrics.postUserEventQueueMetricsToInfluxdbV3();
 
             expect(Point3).not.toHaveBeenCalled();
-            expect(utils.writeToInfluxV3WithRetry).not.toHaveBeenCalled();
+            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
         });
 
         test('should warn when queue manager is not initialized', async () => {
@@ -99,7 +99,7 @@ describe('InfluxDB v3 Queue Metrics', () => {
             await queueMetrics.postUserEventQueueMetricsToInfluxdbV3();
 
             expect(Point3).not.toHaveBeenCalled();
-            expect(utils.writeToInfluxV3WithRetry).not.toHaveBeenCalled();
+            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
         });
 
         test('should successfully write queue metrics', async () => {
@@ -150,9 +150,11 @@ describe('InfluxDB v3 Queue Metrics', () => {
             await queueMetrics.postUserEventQueueMetricsToInfluxdbV3();
 
             expect(Point3).toHaveBeenCalledWith('user_events_queue');
-            expect(utils.writeToInfluxV3WithRetry).toHaveBeenCalledWith(
+            expect(utils.writeToInfluxWithRetry).toHaveBeenCalledWith(
                 expect.any(Function),
-                'User event queue metrics'
+                'User event queue metrics',
+                'v3',
+                'user-events-queue'
             );
             expect(globals.logger.verbose).toHaveBeenCalledWith(
                 'USER EVENT QUEUE METRICS INFLUXDB V3: Sent queue metrics data to InfluxDB v3'
@@ -189,7 +191,7 @@ describe('InfluxDB v3 Queue Metrics', () => {
             await queueMetrics.postLogEventQueueMetricsToInfluxdbV3();
 
             expect(Point3).not.toHaveBeenCalled();
-            expect(utils.writeToInfluxV3WithRetry).not.toHaveBeenCalled();
+            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
         });
 
         test('should warn when queue manager is not initialized', async () => {
@@ -252,9 +254,11 @@ describe('InfluxDB v3 Queue Metrics', () => {
             await queueMetrics.postLogEventQueueMetricsToInfluxdbV3();
 
             expect(Point3).toHaveBeenCalledWith('log_events_queue');
-            expect(utils.writeToInfluxV3WithRetry).toHaveBeenCalledWith(
+            expect(utils.writeToInfluxWithRetry).toHaveBeenCalledWith(
                 expect.any(Function),
-                'Log event queue metrics'
+                'Log event queue metrics',
+                'v3',
+                'log-events-queue'
             );
             expect(globals.logger.verbose).toHaveBeenCalledWith(
                 'LOG EVENT QUEUE METRICS INFLUXDB V3: Sent queue metrics data to InfluxDB v3'
@@ -305,7 +309,7 @@ describe('InfluxDB v3 Queue Metrics', () => {
                 clearMetrics: jest.fn(),
             };
 
-            utils.writeToInfluxV3WithRetry.mockRejectedValue(new Error('Write failed'));
+            utils.writeToInfluxWithRetry.mockRejectedValue(new Error('Write failed'));
 
             await queueMetrics.postLogEventQueueMetricsToInfluxdbV3();
 

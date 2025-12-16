@@ -1,6 +1,6 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxV3WithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
 
 /**
  * Store event count in InfluxDB v3
@@ -80,9 +80,11 @@ export async function storeEventCountInfluxDBV3() {
                 point.setTag(key, tags[key]);
             });
 
-            await writeToInfluxV3WithRetry(
+            await writeToInfluxWithRetry(
                 async () => await globals.influx.write(point.toLineProtocol(), database),
-                'Log event counts'
+                'Log event counts',
+                'v3',
+                'log-events'
             );
             globals.logger.debug(`EVENT COUNT INFLUXDB V3: Wrote log event data to InfluxDB v3`);
         }
@@ -127,9 +129,11 @@ export async function storeEventCountInfluxDBV3() {
                 point.setTag(key, tags[key]);
             });
 
-            await writeToInfluxV3WithRetry(
+            await writeToInfluxWithRetry(
                 async () => await globals.influx.write(point.toLineProtocol(), database),
-                'User event counts'
+                'User event counts',
+                'v3',
+                'user-events'
             );
             globals.logger.debug(`EVENT COUNT INFLUXDB V3: Wrote user event data to InfluxDB v3`);
         }
@@ -240,9 +244,11 @@ export async function storeRejectedEventCountInfluxDBV3() {
 
         // Write to InfluxDB
         for (const point of points) {
-            await writeToInfluxV3WithRetry(
+            await writeToInfluxWithRetry(
                 async () => await globals.influx.write(point.toLineProtocol(), database),
-                'Rejected event counts'
+                'Rejected event counts',
+                'v3',
+                'rejected-events'
             );
         }
         globals.logger.debug(`REJECT LOG EVENT INFLUXDB V3: Wrote data to InfluxDB v3`);

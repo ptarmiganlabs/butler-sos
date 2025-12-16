@@ -1,6 +1,6 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxV3WithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
 
 /**
  * Posts proxy sessions data to InfluxDB v3.
@@ -40,9 +40,11 @@ export async function postProxySessionsToInfluxdbV3(userSessions) {
     try {
         if (userSessions.datapointInfluxdb && userSessions.datapointInfluxdb.length > 0) {
             for (const point of userSessions.datapointInfluxdb) {
-                await writeToInfluxV3WithRetry(
+                await writeToInfluxWithRetry(
                     async () => await globals.influx.write(point.toLineProtocol(), database),
-                    `Proxy sessions for ${userSessions.host}/${userSessions.virtualProxy}`
+                    `Proxy sessions for ${userSessions.host}/${userSessions.virtualProxy}`,
+                    'v3',
+                    userSessions.host
                 );
             }
             globals.logger.debug(

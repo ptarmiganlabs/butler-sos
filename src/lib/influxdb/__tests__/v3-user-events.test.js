@@ -30,7 +30,7 @@ jest.unstable_mockModule('../../../globals.js', () => ({
 // Mock shared utils
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
-    writeToInfluxV3WithRetry: jest.fn(),
+    writeToInfluxWithRetry: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -64,7 +64,7 @@ describe('v3/user-events', () => {
         // Setup default mocks
         globals.config.get.mockReturnValue('test-db');
         utils.isInfluxDbEnabled.mockReturnValue(true);
-        utils.writeToInfluxV3WithRetry.mockResolvedValue();
+        utils.writeToInfluxWithRetry.mockResolvedValue();
     });
 
     describe('postUserEventToInfluxdbV3', () => {
@@ -81,7 +81,7 @@ describe('v3/user-events', () => {
 
             await postUserEventToInfluxdbV3(msg);
 
-            expect(utils.writeToInfluxV3WithRetry).not.toHaveBeenCalled();
+            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
         });
 
         test('should warn and return early when required fields are missing', async () => {
@@ -96,7 +96,7 @@ describe('v3/user-events', () => {
             expect(globals.logger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('Missing required fields')
             );
-            expect(utils.writeToInfluxV3WithRetry).not.toHaveBeenCalled();
+            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
         });
 
         test('should successfully write user event with all fields', async () => {
@@ -117,7 +117,7 @@ describe('v3/user-events', () => {
 
             await postUserEventToInfluxdbV3(msg);
 
-            expect(utils.writeToInfluxV3WithRetry).toHaveBeenCalled();
+            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
             expect(mockPoint.setTag).toHaveBeenCalledWith('host', 'server1');
             expect(mockPoint.setTag).toHaveBeenCalledWith('event_action', 'OpenApp');
             expect(mockPoint.setTag).toHaveBeenCalledWith('userDirectory', 'DOMAIN');
@@ -136,7 +136,7 @@ describe('v3/user-events', () => {
 
             await postUserEventToInfluxdbV3(msg);
 
-            expect(utils.writeToInfluxV3WithRetry).toHaveBeenCalled();
+            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
             expect(mockPoint.setTag).toHaveBeenCalledWith('host', 'server1');
             expect(mockPoint.setTag).toHaveBeenCalledWith('event_action', 'CreateApp');
         });
@@ -152,7 +152,7 @@ describe('v3/user-events', () => {
 
             await postUserEventToInfluxdbV3(msg);
 
-            expect(utils.writeToInfluxV3WithRetry).toHaveBeenCalled();
+            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
         });
 
         test('should handle write errors', async () => {
@@ -165,7 +165,7 @@ describe('v3/user-events', () => {
             };
 
             const writeError = new Error('Write failed');
-            utils.writeToInfluxV3WithRetry.mockRejectedValue(writeError);
+            utils.writeToInfluxWithRetry.mockRejectedValue(writeError);
 
             await postUserEventToInfluxdbV3(msg);
 
@@ -199,7 +199,7 @@ describe('v3/user-events', () => {
 
             await postUserEventToInfluxdbV3(msg);
 
-            expect(utils.writeToInfluxV3WithRetry).toHaveBeenCalled();
+            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
             expect(mockPoint.setTag).toHaveBeenCalledWith('uaBrowserName', 'Chrome');
             expect(mockPoint.setTag).toHaveBeenCalledWith('uaBrowserMajorVersion', '96');
             expect(mockPoint.setTag).toHaveBeenCalledWith('uaOsName', 'Windows');
@@ -219,7 +219,7 @@ describe('v3/user-events', () => {
 
             await postUserEventToInfluxdbV3(msg);
 
-            expect(utils.writeToInfluxV3WithRetry).toHaveBeenCalled();
+            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
             expect(mockPoint.setTag).toHaveBeenCalledWith('appId', 'abc-123-def');
             expect(mockPoint.setStringField).toHaveBeenCalledWith('appId_field', 'abc-123-def');
             expect(mockPoint.setTag).toHaveBeenCalledWith('appName', 'Sales Dashboard');

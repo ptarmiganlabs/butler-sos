@@ -17,12 +17,13 @@ Tests for shared utility functions used across v3 implementations.
 - `getInfluxDbVersion()` - Returns configured InfluxDB version
 - `useRefactoredInfluxDb()` - Feature flag checking (true/false/undefined)
 - `isInfluxDbEnabled()` - Validates InfluxDB initialization
-- `writeToInfluxV3WithRetry()` - Comprehensive retry logic tests:
+- `writeToInfluxWithRetry()` - Comprehensive unified retry logic tests for all InfluxDB versions:
     - Success on first attempt
     - Single retry on timeout with success
     - Multiple retries (2 attempts) before success
     - Max retries exceeded (throws after all attempts)
-    - Non-timeout errors throw immediately without retry
+    - Non-retryable errors throw immediately without retry
+    - Network error detection (ETIMEDOUT, ECONNREFUSED, etc.)
     - Timeout detection from error.name
     - Timeout detection from error message content
     - Timeout detection from constructor.name

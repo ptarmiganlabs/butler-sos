@@ -26,7 +26,7 @@ jest.unstable_mockModule('../../../globals.js', () => ({
 // Mock shared utils
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
-    writeToInfluxV3WithRetry: jest.fn(),
+    writeToInfluxWithRetry: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -58,7 +58,7 @@ describe('v3/butler-memory', () => {
         // Setup default mocks
         globals.config.get.mockReturnValue('test-db');
         utils.isInfluxDbEnabled.mockReturnValue(true);
-        utils.writeToInfluxV3WithRetry.mockResolvedValue();
+        utils.writeToInfluxWithRetry.mockResolvedValue();
     });
 
     describe('postButlerSOSMemoryUsageToInfluxdbV3', () => {
@@ -75,7 +75,7 @@ describe('v3/butler-memory', () => {
 
             await postButlerSOSMemoryUsageToInfluxdbV3(memory);
 
-            expect(utils.writeToInfluxV3WithRetry).not.toHaveBeenCalled();
+            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
         });
 
         test('should successfully write memory usage metrics', async () => {
@@ -95,7 +95,7 @@ describe('v3/butler-memory', () => {
             expect(mockPoint.setFloatField).toHaveBeenCalledWith('heap_total', 200.75);
             expect(mockPoint.setFloatField).toHaveBeenCalledWith('external', 50.25);
             expect(mockPoint.setFloatField).toHaveBeenCalledWith('process_memory', 250.5);
-            expect(utils.writeToInfluxV3WithRetry).toHaveBeenCalled();
+            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
         });
 
         test('should handle write errors', async () => {
@@ -108,7 +108,7 @@ describe('v3/butler-memory', () => {
             };
 
             const writeError = new Error('Write failed');
-            utils.writeToInfluxV3WithRetry.mockRejectedValue(writeError);
+            utils.writeToInfluxWithRetry.mockRejectedValue(writeError);
 
             await postButlerSOSMemoryUsageToInfluxdbV3(memory);
 

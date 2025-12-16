@@ -33,7 +33,7 @@ const mockUtils = {
     processAppDocuments: jest.fn(),
     isInfluxDbEnabled: jest.fn(),
     applyTagsToPoint3: jest.fn(),
-    writeToInfluxV3WithRetry: jest.fn(),
+    writeToInfluxWithRetry: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -86,7 +86,7 @@ describe('v3/health-metrics', () => {
             sessionAppNames: ['SessionApp1'],
         });
         utils.isInfluxDbEnabled.mockReturnValue(true);
-        utils.writeToInfluxV3WithRetry.mockResolvedValue();
+        utils.writeToInfluxWithRetry.mockResolvedValue();
         utils.applyTagsToPoint3.mockImplementation(() => {});
 
         // Setup influxWriteApi
@@ -145,7 +145,7 @@ describe('v3/health-metrics', () => {
 
         await postHealthMetricsToInfluxdbV3('test-server', 'test-host', body, {});
 
-        expect(utils.writeToInfluxV3WithRetry).not.toHaveBeenCalled();
+        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
     });
 
     test('should warn and return when influxWriteApi is not initialized', async () => {
@@ -157,7 +157,7 @@ describe('v3/health-metrics', () => {
         expect(globals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Influxdb write API object not initialized')
         );
-        expect(utils.writeToInfluxV3WithRetry).not.toHaveBeenCalled();
+        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
     });
 
     test('should warn and return when writeApi not found for server', async () => {
@@ -168,7 +168,7 @@ describe('v3/health-metrics', () => {
         expect(globals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Influxdb write API object not found for host test-host')
         );
-        expect(utils.writeToInfluxV3WithRetry).not.toHaveBeenCalled();
+        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
     });
 
     test('should process and write all health metrics successfully', async () => {
@@ -199,7 +199,7 @@ describe('v3/health-metrics', () => {
         expect(utils.applyTagsToPoint3).toHaveBeenCalledTimes(8);
 
         // Should write all 8 measurements
-        expect(utils.writeToInfluxV3WithRetry).toHaveBeenCalledTimes(8);
+        expect(utils.writeToInfluxWithRetry).toHaveBeenCalledTimes(8);
     });
 
     test('should call getFormattedTime with started timestamp', async () => {
@@ -228,7 +228,7 @@ describe('v3/health-metrics', () => {
     test('should handle write errors with error tracking', async () => {
         const body = createMockBody();
         const writeError = new Error('Write failed');
-        utils.writeToInfluxV3WithRetry.mockRejectedValue(writeError);
+        utils.writeToInfluxWithRetry.mockRejectedValue(writeError);
 
         await postHealthMetricsToInfluxdbV3('test-server', 'test-host', body, {});
 

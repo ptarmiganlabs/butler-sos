@@ -29,7 +29,7 @@ jest.unstable_mockModule('../../../globals.js', () => ({
 // Mock shared utils
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
-    writeToInfluxV3WithRetry: jest.fn(),
+    writeToInfluxWithRetry: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -62,7 +62,7 @@ describe('v3/sessions', () => {
         globals.config.get.mockReturnValue('test-db');
         globals.influx.write.mockResolvedValue();
         utils.isInfluxDbEnabled.mockReturnValue(true);
-        utils.writeToInfluxV3WithRetry.mockImplementation(async (fn) => await fn());
+        utils.writeToInfluxWithRetry.mockImplementation(async (fn) => await fn());
     });
 
     describe('postProxySessionsToInfluxdbV3', () => {
