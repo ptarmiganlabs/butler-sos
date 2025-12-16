@@ -15,7 +15,6 @@ Tests for shared utility functions used across v3 implementations.
 **Test Scenarios:**
 
 - `getInfluxDbVersion()` - Returns configured InfluxDB version
-- `useRefactoredInfluxDb()` - Feature flag checking (true/false/undefined)
 - `isInfluxDbEnabled()` - Validates InfluxDB initialization
 - `writeToInfluxWithRetry()` - Comprehensive unified retry logic tests for all InfluxDB versions:
     - Success on first attempt
