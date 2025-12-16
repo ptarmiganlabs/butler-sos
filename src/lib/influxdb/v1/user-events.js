@@ -1,16 +1,40 @@
 import globals from '../../../globals.js';
-import { logError } from '../../log-error.js';
+import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
 
 /**
- * Store user event to InfluxDB v1
+ * Posts a user event to InfluxDB v1.
  *
- * @param {object} msg - User event message
- * @returns {Promise<void>}
+ * User events track user interactions with Qlik Sense, such as opening apps,
+ * starting sessions, creating connections, etc.
+ *
+ * @param {object} msg - The event to be posted to InfluxDB. The object should contain the following properties:
+ *   - host: The hostname of the Qlik Sense server that the user event originated from.
+ *   - command: The command (e.g. OpenApp, CreateApp, etc.) that the user event corresponds to.
+ *   - user_directory: The user directory of the user who triggered the event.
+ *   - user_id: The user ID of the user who triggered the event.
+ *   - origin: The origin of the event (e.g. Qlik Sense, QlikView, etc.).
+ *   - appId: The ID of the app that the event corresponds to (if applicable).
+ *   - appName: The name of the app that the event corresponds to (if applicable).
+ *   - ua: An object containing user agent information (if available).
+ * @returns {Promise<void>} A promise that resolves when the event has been posted to InfluxDB.
  */
 export async function storeUserEventV1(msg) {
-    try {
-        globals.logger.debug(`USER EVENT V1: ${JSON.stringify(msg)}`);
+    globals.logger.debug(`USER EVENT V1: ${JSON.stringify(msg)}`);
 
+    // Only write to InfluxDB if the global influx object has been initialized
+    if (!isInfluxDbEnabled()) {
+        return;
+    }
+
+    // Validate required fields
+    if (!msg.host || !msg.command || !msg.user_directory || !msg.user_id || !msg.origin) {
+        globals.logger.warn(
+            `USER EVENT V1: Missing required fields in user event message: ${JSON.stringify(msg)}`
+        );
+        return;
+    }
+
+    try {
         // First prepare tags relating to the actual user event, then add tags defined in the config file
         // The config file tags can for example be used to separate data from DEV/TEST/PROD environments
         const tags = {
@@ -63,11 +87,19 @@ export async function storeUserEventV1(msg) {
             `USER EVENT V1: Influxdb datapoint: ${JSON.stringify(datapoint, null, 2)}`
         );
 
-        await globals.influx.writePoints(datapoint);
+        // Write with retry logic
+        await writeToInfluxWithRetry(
+            async () => await globals.influx.writePoints(datapoint),
+            'User event',
+            'v1',
+            msg.host
+        );
 
         globals.logger.verbose('USER EVENT V1: Sent user event data to InfluxDB');
     } catch (err) {
-        logError('USER EVENT V1: Error saving user event', err);
+        globals.logger.error(
+            `USER EVENT V1: Error saving user event: ${globals.getErrorMessage(err)}`
+        );
         throw err;
     }
 }

@@ -1,12 +1,28 @@
 import globals from '../../../globals.js';
+import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
 
 /**
- * Store Butler SOS memory usage to InfluxDB v1
+ * Posts Butler SOS memory usage metrics to InfluxDB v1.
  *
- * @param {object} memory - Memory usage data
- * @returns {Promise<void>}
+ * This function captures memory usage metrics from the Butler SOS process itself
+ * and stores them in InfluxDB v1.
+ *
+ * @param {object} memory - Memory usage data object
+ * @param {string} memory.instanceTag - Instance identifier tag
+ * @param {number} memory.heapUsedMByte - Heap used in MB
+ * @param {number} memory.heapTotalMByte - Total heap size in MB
+ * @param {number} memory.externalMemoryMByte - External memory usage in MB
+ * @param {number} memory.processMemoryMByte - Process memory usage in MB
+ * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
  */
 export async function storeButlerMemoryV1(memory) {
+    globals.logger.debug(`MEMORY USAGE V1: Memory usage ${JSON.stringify(memory, null, 2)}`);
+
+    // Only write to InfluxDB if the global influx object has been initialized
+    if (!isInfluxDbEnabled()) {
+        return;
+    }
+
     try {
         const butlerVersion = globals.appVersion;
 
@@ -34,7 +50,13 @@ export async function storeButlerMemoryV1(memory) {
             )}`
         );
 
-        await globals.influx.writePoints(datapoint);
+        // Write with retry logic
+        await writeToInfluxWithRetry(
+            async () => await globals.influx.writePoints(datapoint),
+            'Memory usage metrics',
+            'v1',
+            '' // No specific error category for butler memory
+        );
 
         globals.logger.verbose('MEMORY USAGE V1: Sent Butler SOS memory usage data to InfluxDB');
     } catch (err) {

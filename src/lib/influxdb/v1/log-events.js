@@ -1,29 +1,44 @@
 import globals from '../../../globals.js';
-import { logError } from '../../log-error.js';
+import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
 
 /**
- * Store log event to InfluxDB v1
- * Handles log events from different Sense sources
+ * Post log event to InfluxDB v1
  *
- * @param {object} msg - Log event message
- * @returns {Promise<void>}
+ * @description
+ * Handles log events from 5 different Qlik Sense sources:
+ * - qseow-engine: Engine log events
+ * - qseow-proxy: Proxy log events
+ * - qseow-scheduler: Scheduler log events
+ * - qseow-repository: Repository log events
+ * - qseow-qix-perf: QIX performance metrics
+ *
+ * Each source has specific fields and tags that are written to InfluxDB.
+ *
+ * @param {object} msg - The log event message
+ * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
+ * @throws {Error} Error if unable to write data to InfluxDB
  */
 export async function storeLogEventV1(msg) {
+    globals.logger.debug(`LOG EVENT V1: ${JSON.stringify(msg)}`);
+
+    // Only write to InfluxDB if the global influx object has been initialized
+    if (!isInfluxDbEnabled()) {
+        return;
+    }
+
+    // Verify the message source is valid
+    if (
+        msg.source !== 'qseow-engine' &&
+        msg.source !== 'qseow-proxy' &&
+        msg.source !== 'qseow-scheduler' &&
+        msg.source !== 'qseow-repository' &&
+        msg.source !== 'qseow-qix-perf'
+    ) {
+        globals.logger.warn(`LOG EVENT V1: Unsupported log event source: ${msg.source}`);
+        return;
+    }
+
     try {
-        globals.logger.debug(`LOG EVENT V1: ${JSON.stringify(msg)}`);
-
-        // Check if this is a supported source
-        if (
-            msg.source !== 'qseow-engine' &&
-            msg.source !== 'qseow-proxy' &&
-            msg.source !== 'qseow-scheduler' &&
-            msg.source !== 'qseow-repository' &&
-            msg.source !== 'qseow-qix-perf'
-        ) {
-            globals.logger.warn(`LOG EVENT V1: Unsupported log event source: ${msg.source}`);
-            return;
-        }
-
         let tags;
         let fields;
 
@@ -201,11 +216,19 @@ export async function storeLogEventV1(msg) {
             `LOG EVENT V1: Influxdb datapoint: ${JSON.stringify(datapoint, null, 2)}`
         );
 
-        await globals.influx.writePoints(datapoint);
+        // Write with retry logic
+        await writeToInfluxWithRetry(
+            async () => await globals.influx.writePoints(datapoint),
+            `Log event from ${msg.source}`,
+            'v1',
+            msg.host
+        );
 
         globals.logger.verbose('LOG EVENT V1: Sent log event data to InfluxDB');
     } catch (err) {
-        logError('LOG EVENT V1: Error saving log event', err);
+        globals.logger.error(
+            `LOG EVENT V1: Error saving log event: ${globals.getErrorMessage(err)}`
+        );
         throw err;
     }
 }

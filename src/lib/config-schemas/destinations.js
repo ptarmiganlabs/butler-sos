@@ -310,7 +310,11 @@ export const destinationsSchema = {
         type: 'object',
         properties: {
             enable: { type: 'boolean' },
-            useRefactoredCode: { type: 'boolean' },
+            useRefactoredCode: {
+                type: 'boolean',
+                description:
+                    'Whether to use refactored InfluxDB code. Only applies to v2 (v1 and v3 always use refactored code)',
+            },
             host: {
                 type: 'string',
                 format: 'hostname',

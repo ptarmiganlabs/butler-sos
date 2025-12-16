@@ -27,7 +27,7 @@ jest.unstable_mockModule('../shared/utils.js', () => ({
     processAppDocuments: jest.fn(),
     isInfluxDbEnabled: jest.fn(),
     applyTagsToPoint3: jest.fn(),
-    writeToInfluxV3WithRetry: jest.fn(),
+    writeToInfluxWithRetry: jest.fn(),
 }));
 
 // Mock v3 implementations
