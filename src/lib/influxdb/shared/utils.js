@@ -157,29 +157,6 @@ export function getInfluxDbVersion() {
 }
 
 /**
- * Checks if the refactored InfluxDB code path should be used.
- *
- * For v1: Always returns true (legacy code removed)
- * For v3: Always returns true (legacy code removed)
- * For v2: Uses feature flag for gradual migration
- *
- * @returns {boolean} True if refactored code should be used
- */
-export function useRefactoredInfluxDb() {
-    const version = getInfluxDbVersion();
-
-    // v1 always uses refactored code (legacy implementation removed)
-    // v3 always uses refactored code (legacy implementation removed)
-    if (version === 1 || version === 3) {
-        return true;
-    }
-
-    // v2 uses feature flag for gradual migration
-    // Default to false for backward compatibility
-    return globals.config.get('Butler-SOS.influxdbConfig.useRefactoredCode') === true;
-}
-
-/**
  * Applies tags from a tags object to an InfluxDB Point3 object.
  * This is needed for v3 as it doesn't have automatic default tags like v2.
  *

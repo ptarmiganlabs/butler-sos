@@ -22,7 +22,6 @@ jest.unstable_mockModule('../../../globals.js', () => ({
 // Mock shared utils
 jest.unstable_mockModule('../shared/utils.js', () => ({
     getInfluxDbVersion: jest.fn(),
-    useRefactoredInfluxDb: jest.fn(),
     getFormattedTime: jest.fn(),
     processAppDocuments: jest.fn(),
     isInfluxDbEnabled: jest.fn(),

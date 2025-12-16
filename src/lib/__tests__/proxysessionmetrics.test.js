@@ -138,7 +138,7 @@ describe('proxysessionmetrics', () => {
         // Get mocked modules
         axios = (await import('axios')).default;
         globals = (await import('../../globals.js')).default;
-        influxdb = await import('../post-to-influxdb.js');
+        influxdb = await import('../influxdb/index.js');
         newRelic = await import('../post-to-new-relic.js');
         mqtt = await import('../post-to-mqtt.js');
         servertags = await import('../servertags.js');

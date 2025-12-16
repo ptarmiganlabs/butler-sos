@@ -58,68 +58,6 @@ describe('InfluxDB v3 Shared Utils', () => {
         });
     });
 
-    describe('useRefactoredInfluxDb', () => {
-        test('should always return true for InfluxDB v3 (legacy code removed)', () => {
-            globals.config.get.mockImplementation((key) => {
-                if (key === 'Butler-SOS.influxdbConfig.version') return 3;
-                if (key === 'Butler-SOS.influxdbConfig.useRefactoredCode') return false;
-                return undefined;
-            });
-
-            const result = utils.useRefactoredInfluxDb();
-
-            expect(result).toBe(true);
-        });
-
-        test('should return true when feature flag is enabled for v1/v2', () => {
-            globals.config.get.mockImplementation((key) => {
-                if (key === 'Butler-SOS.influxdbConfig.version') return 1;
-                if (key === 'Butler-SOS.influxdbConfig.useRefactoredCode') return true;
-                return undefined;
-            });
-
-            const result = utils.useRefactoredInfluxDb();
-
-            expect(result).toBe(true);
-        });
-
-        test('should return false when feature flag is disabled for v1/v2', () => {
-            globals.config.get.mockImplementation((key) => {
-                if (key === 'Butler-SOS.influxdbConfig.version') return 2;
-                if (key === 'Butler-SOS.influxdbConfig.useRefactoredCode') return false;
-                return undefined;
-            });
-
-            const result = utils.useRefactoredInfluxDb();
-
-            expect(result).toBe(false);
-        });
-
-        test('should return true for v1 even when feature flag is undefined (v1 always uses refactored code)', () => {
-            globals.config.get.mockImplementation((key) => {
-                if (key === 'Butler-SOS.influxdbConfig.version') return 1;
-                if (key === 'Butler-SOS.influxdbConfig.useRefactoredCode') return undefined;
-                return undefined;
-            });
-
-            const result = utils.useRefactoredInfluxDb();
-
-            expect(result).toBe(true);
-        });
-
-        test('should return false when feature flag is undefined for v2', () => {
-            globals.config.get.mockImplementation((key) => {
-                if (key === 'Butler-SOS.influxdbConfig.version') return 2;
-                if (key === 'Butler-SOS.influxdbConfig.useRefactoredCode') return undefined;
-                return undefined;
-            });
-
-            const result = utils.useRefactoredInfluxDb();
-
-            expect(result).toBe(false);
-        });
-    });
-
     describe('isInfluxDbEnabled', () => {
         test('should return true when client exists', () => {
             globals.influx = { write: jest.fn() };
