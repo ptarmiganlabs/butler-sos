@@ -31,6 +31,7 @@ jest.unstable_mockModule('../../../globals.js', () => ({
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV3: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -65,6 +66,7 @@ describe('v3/user-events', () => {
         globals.config.get.mockReturnValue('test-db');
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeToInfluxWithRetry.mockResolvedValue();
+        utils.writeBatchToInfluxV3.mockResolvedValue();
     });
 
     describe('postUserEventToInfluxdbV3', () => {
@@ -117,7 +119,7 @@ describe('v3/user-events', () => {
 
             await postUserEventToInfluxdbV3(msg);
 
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
             expect(mockPoint.setTag).toHaveBeenCalledWith('host', 'server1');
             expect(mockPoint.setTag).toHaveBeenCalledWith('event_action', 'OpenApp');
             expect(mockPoint.setTag).toHaveBeenCalledWith('userDirectory', 'DOMAIN');
@@ -136,7 +138,7 @@ describe('v3/user-events', () => {
 
             await postUserEventToInfluxdbV3(msg);
 
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
             expect(mockPoint.setTag).toHaveBeenCalledWith('host', 'server1');
             expect(mockPoint.setTag).toHaveBeenCalledWith('event_action', 'CreateApp');
         });
@@ -152,7 +154,7 @@ describe('v3/user-events', () => {
 
             await postUserEventToInfluxdbV3(msg);
 
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
         });
 
         test('should handle write errors', async () => {
@@ -165,7 +167,7 @@ describe('v3/user-events', () => {
             };
 
             const writeError = new Error('Write failed');
-            utils.writeToInfluxWithRetry.mockRejectedValue(writeError);
+            utils.writeBatchToInfluxV3.mockRejectedValue(writeError);
 
             await postUserEventToInfluxdbV3(msg);
 
@@ -199,7 +201,7 @@ describe('v3/user-events', () => {
 
             await postUserEventToInfluxdbV3(msg);
 
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
             expect(mockPoint.setTag).toHaveBeenCalledWith('uaBrowserName', 'Chrome');
             expect(mockPoint.setTag).toHaveBeenCalledWith('uaBrowserMajorVersion', '96');
             expect(mockPoint.setTag).toHaveBeenCalledWith('uaOsName', 'Windows');
@@ -219,7 +221,7 @@ describe('v3/user-events', () => {
 
             await postUserEventToInfluxdbV3(msg);
 
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
             expect(mockPoint.setTag).toHaveBeenCalledWith('appId', 'abc-123-def');
             expect(mockPoint.setStringField).toHaveBeenCalledWith('appId_field', 'abc-123-def');
             expect(mockPoint.setTag).toHaveBeenCalledWith('appName', 'Sales Dashboard');

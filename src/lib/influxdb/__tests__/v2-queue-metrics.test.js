@@ -42,6 +42,7 @@ jest.unstable_mockModule('@influxdata/influxdb-client', () => ({
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV2: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -76,6 +77,7 @@ describe('v2/queue-metrics', () => {
             if (path.includes('queueMetrics.influxdb.tags'))
                 return [{ name: 'env', value: 'prod' }];
             if (path.includes('enable')) return true;
+            if (path === 'Butler-SOS.influxdbConfig.maxBatchSize') return 100;
             return undefined;
         });
         globals.config.has.mockReturnValue(true);
@@ -84,7 +86,7 @@ describe('v2/queue-metrics', () => {
         globals.udpQueueManagerLogEvents = mockQueueManager;
 
         utils.isInfluxDbEnabled.mockReturnValue(true);
-        utils.writeToInfluxWithRetry.mockImplementation(async (cb) => await cb());
+        utils.writeBatchToInfluxV2.mockResolvedValue();
 
         mockWriteApi.writePoint.mockResolvedValue(undefined);
         mockWriteApi.close.mockResolvedValue(undefined);
@@ -114,7 +116,7 @@ describe('v2/queue-metrics', () => {
         test('should return early when InfluxDB disabled', async () => {
             utils.isInfluxDbEnabled.mockReturnValue(false);
             await storeUserEventQueueMetricsV2();
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
         });
 
         test('should return early when feature disabled', async () => {
@@ -123,13 +125,13 @@ describe('v2/queue-metrics', () => {
                 return undefined;
             });
             await storeUserEventQueueMetricsV2();
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
         });
 
         test('should return early when queue manager not initialized', async () => {
             globals.udpQueueManagerUserActivity = null;
             await storeUserEventQueueMetricsV2();
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
             expect(globals.logger.warn).toHaveBeenCalledWith(
                 'USER EVENT QUEUE METRICS V2: Queue manager not initialized'
             );
@@ -161,9 +163,14 @@ describe('v2/queue-metrics', () => {
             expect(mockV2Utils.applyInfluxTags).toHaveBeenCalledWith(mockPoint, [
                 { name: 'env', value: 'prod' },
             ]);
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
-            expect(mockWriteApi.writePoint).toHaveBeenCalledWith(mockPoint);
-            expect(mockWriteApi.close).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV2).toHaveBeenCalledWith(
+                [mockPoint],
+                'test-org',
+                'test-bucket',
+                'User event queue metrics',
+                'user-events-queue',
+                100
+            );
             expect(mockQueueManager.clearMetrics).toHaveBeenCalled();
         });
 
@@ -191,7 +198,14 @@ describe('v2/queue-metrics', () => {
             await storeUserEventQueueMetricsV2();
 
             expect(mockPoint.intField).toHaveBeenCalledWith('queue_size', 0);
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV2).toHaveBeenCalledWith(
+                [mockPoint],
+                'test-org',
+                'test-bucket',
+                'User event queue metrics',
+                'user-events-queue',
+                100
+            );
         });
 
         test('should log verbose information', async () => {
@@ -207,7 +221,7 @@ describe('v2/queue-metrics', () => {
         test('should return early when InfluxDB disabled', async () => {
             utils.isInfluxDbEnabled.mockReturnValue(false);
             await storeLogEventQueueMetricsV2();
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
         });
 
         test('should return early when feature disabled', async () => {
@@ -216,13 +230,13 @@ describe('v2/queue-metrics', () => {
                 return undefined;
             });
             await storeLogEventQueueMetricsV2();
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
         });
 
         test('should return early when queue manager not initialized', async () => {
             globals.udpQueueManagerLogEvents = null;
             await storeLogEventQueueMetricsV2();
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
             expect(globals.logger.warn).toHaveBeenCalledWith(
                 'LOG EVENT QUEUE METRICS V2: Queue manager not initialized'
             );
@@ -235,7 +249,14 @@ describe('v2/queue-metrics', () => {
             expect(mockPoint.tag).toHaveBeenCalledWith('queue_type', 'log_events');
             expect(mockPoint.tag).toHaveBeenCalledWith('host', 'test-host');
             expect(mockPoint.intField).toHaveBeenCalledWith('queue_size', 100);
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV2).toHaveBeenCalledWith(
+                [mockPoint],
+                'test-org',
+                'test-bucket',
+                'Log event queue metrics',
+                'log-events-queue',
+                100
+            );
             expect(mockQueueManager.clearMetrics).toHaveBeenCalled();
         });
 
@@ -264,7 +285,14 @@ describe('v2/queue-metrics', () => {
 
             expect(mockPoint.floatField).toHaveBeenCalledWith('queue_utilization_pct', 95.0);
             expect(mockPoint.intField).toHaveBeenCalledWith('backpressure_active', 1);
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV2).toHaveBeenCalledWith(
+                [mockPoint],
+                'test-org',
+                'test-bucket',
+                'Log event queue metrics',
+                'log-events-queue',
+                100
+            );
         });
 
         test('should log verbose information', async () => {

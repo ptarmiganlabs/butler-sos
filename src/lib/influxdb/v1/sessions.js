@@ -1,5 +1,5 @@
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV1 } from '../shared/utils.js';
 
 /**
  * Posts proxy sessions data to InfluxDB v1.
@@ -48,11 +48,11 @@ export async function storeSessionsV1(userSessions) {
 
         // Data points are already in InfluxDB v1 format (plain objects)
         // Write array of measurements with retry logic
-        await writeToInfluxWithRetry(
-            async () => await globals.influx.writePoints(userSessions.datapointInfluxdb),
+        await writeBatchToInfluxV1(
+            userSessions.datapointInfluxdb,
             `Proxy sessions for ${userSessions.host}/${userSessions.virtualProxy}`,
-            'v1',
-            userSessions.serverName
+            userSessions.serverName,
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
         );
 
         globals.logger.debug(

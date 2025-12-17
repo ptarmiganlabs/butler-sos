@@ -1,6 +1,6 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV3 } from '../shared/utils.js';
 
 /**
  * Posts Butler SOS memory usage metrics to InfluxDB v3.
@@ -48,11 +48,12 @@ export async function postButlerSOSMemoryUsageToInfluxdbV3(memory) {
 
     try {
         // Convert point to line protocol and write directly with retry logic
-        await writeToInfluxWithRetry(
-            async () => await globals.influx.write(point.toLineProtocol(), database),
+        await writeBatchToInfluxV3(
+            [point],
+            database,
             'Memory usage metrics',
-            'v3',
-            '' // No specific server context for Butler memory
+            'butler-memory',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
         );
         globals.logger.debug(`MEMORY USAGE V3: Wrote data to InfluxDB v3`);
     } catch (err) {

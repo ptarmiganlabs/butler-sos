@@ -34,6 +34,7 @@ jest.unstable_mockModule('@influxdata/influxdb-client', () => ({
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV2: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -56,11 +57,11 @@ describe('v2/butler-memory', () => {
         globals.config.get.mockImplementation((path) => {
             if (path.includes('org')) return 'test-org';
             if (path.includes('bucket')) return 'test-bucket';
+            if (path.includes('maxBatchSize')) return 100;
             return undefined;
         });
 
         utils.isInfluxDbEnabled.mockReturnValue(true);
-        utils.writeToInfluxWithRetry.mockImplementation(async (fn) => await fn());
         mockWriteApi.writePoint.mockResolvedValue(undefined);
     });
 
@@ -74,12 +75,12 @@ describe('v2/butler-memory', () => {
             processMemoryMByte: 250,
         };
         await storeButlerMemoryV2(memory);
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
     });
 
     test('should return early with invalid memory data', async () => {
         await storeButlerMemoryV2(null);
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
         expect(globals.logger.warn).toHaveBeenCalledWith(
             'MEMORY USAGE V2: Invalid memory data provided'
         );
@@ -87,7 +88,7 @@ describe('v2/butler-memory', () => {
 
     test('should return early with non-object memory data', async () => {
         await storeButlerMemoryV2('not an object');
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
         expect(globals.logger.warn).toHaveBeenCalled();
     });
 
@@ -109,9 +110,14 @@ describe('v2/butler-memory', () => {
         expect(mockPoint.floatField).toHaveBeenCalledWith('heap_total', 300.2);
         expect(mockPoint.floatField).toHaveBeenCalledWith('external', 75.8);
         expect(mockPoint.floatField).toHaveBeenCalledWith('process_memory', 400.1);
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
-        expect(mockWriteApi.writePoint).toHaveBeenCalled();
-        expect(mockWriteApi.close).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV2).toHaveBeenCalledWith(
+            [mockPoint],
+            'test-org',
+            'test-bucket',
+            'Memory usage metrics',
+            '',
+            100
+        );
         expect(globals.logger.verbose).toHaveBeenCalledWith(
             'MEMORY USAGE V2: Sent Butler SOS memory usage data to InfluxDB'
         );
@@ -129,7 +135,7 @@ describe('v2/butler-memory', () => {
         await storeButlerMemoryV2(memory);
 
         expect(mockPoint.floatField).toHaveBeenCalledWith('heap_used', 0);
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV2).toHaveBeenCalled();
     });
 
     test('should log silly level debug info', async () => {

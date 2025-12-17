@@ -32,6 +32,7 @@ const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     getConfigTags: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV1: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -51,9 +52,13 @@ describe('v1/user-events', () => {
 
         // Setup default mocks
         globals.config.has.mockReturnValue(true);
-        globals.config.get.mockReturnValue([{ name: 'env', value: 'prod' }]);
+        globals.config.get.mockImplementation((key) => {
+            if (key === 'Butler-SOS.userEvents.tags') return [{ name: 'env', value: 'prod' }];
+            if (key === 'Butler-SOS.influxdbConfig.maxBatchSize') return 100;
+            return null;
+        });
         utils.isInfluxDbEnabled.mockReturnValue(true);
-        utils.writeToInfluxWithRetry.mockResolvedValue();
+        utils.writeBatchToInfluxV1.mockResolvedValue();
     });
 
     describe('storeUserEventV1', () => {
@@ -70,7 +75,7 @@ describe('v1/user-events', () => {
 
             await storeUserEventV1(msg);
 
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
         });
 
         test('should successfully write user event', async () => {
@@ -84,11 +89,11 @@ describe('v1/user-events', () => {
 
             await storeUserEventV1(msg);
 
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalledWith(
-                expect.any(Function),
+            expect(utils.writeBatchToInfluxV1).toHaveBeenCalledWith(
+                expect.any(Array),
                 'User event',
-                'v1',
-                'server1'
+                'server1',
+                100
             );
             expect(globals.logger.verbose).toHaveBeenCalledWith(
                 'USER EVENT V1: Sent user event data to InfluxDB'
@@ -108,7 +113,7 @@ describe('v1/user-events', () => {
             expect(globals.logger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('Missing required field')
             );
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
         });
 
         test('should validate required fields - missing command', async () => {
@@ -124,7 +129,7 @@ describe('v1/user-events', () => {
             expect(globals.logger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('Missing required field')
             );
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
         });
 
         test('should validate required fields - missing user_directory', async () => {
@@ -140,7 +145,7 @@ describe('v1/user-events', () => {
             expect(globals.logger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('Missing required field')
             );
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
         });
 
         test('should validate required fields - missing user_id', async () => {
@@ -156,7 +161,7 @@ describe('v1/user-events', () => {
             expect(globals.logger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('Missing required field')
             );
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
         });
 
         test('should validate required fields - missing origin', async () => {
@@ -172,7 +177,7 @@ describe('v1/user-events', () => {
             expect(globals.logger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('Missing required field')
             );
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
         });
 
         test('should create correct datapoint with config tags', async () => {
@@ -183,10 +188,6 @@ describe('v1/user-events', () => {
                 user_id: 'user123',
                 origin: 'AppAccess',
             };
-
-            utils.writeToInfluxWithRetry.mockImplementation(async (writeFn) => {
-                await writeFn();
-            });
 
             await storeUserEventV1(msg);
 
@@ -209,7 +210,12 @@ describe('v1/user-events', () => {
                 }),
             ]);
 
-            expect(globals.influx.writePoints).toHaveBeenCalledWith(expectedDatapoint);
+            expect(utils.writeBatchToInfluxV1).toHaveBeenCalledWith(
+                expectedDatapoint,
+                'User event',
+                'server1',
+                100
+            );
         });
 
         test('should handle write errors', async () => {
@@ -222,7 +228,7 @@ describe('v1/user-events', () => {
             };
 
             const writeError = new Error('Write failed');
-            utils.writeToInfluxWithRetry.mockRejectedValue(writeError);
+            utils.writeBatchToInfluxV1.mockRejectedValue(writeError);
 
             await expect(storeUserEventV1(msg)).rejects.toThrow('Write failed');
 

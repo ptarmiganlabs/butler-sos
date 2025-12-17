@@ -1,6 +1,6 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV3 } from '../shared/utils.js';
 
 /**
  * Clean tag values for InfluxDB v3 line protocol
@@ -295,11 +295,12 @@ export async function postLogEventToInfluxdbV3(msg) {
             }
         }
 
-        await writeToInfluxWithRetry(
-            async () => await globals.influx.write(point.toLineProtocol(), database),
+        await writeBatchToInfluxV3(
+            [point],
+            database,
             `Log event for ${msg.host}`,
-            'v3',
-            msg.host
+            'log-events',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
         );
 
         globals.logger.debug(`LOG EVENT INFLUXDB V3: Wrote data to InfluxDB v3`);

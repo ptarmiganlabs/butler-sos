@@ -31,6 +31,7 @@ jest.unstable_mockModule('../../../globals.js', () => ({
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV1: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -51,6 +52,11 @@ describe('v1/sessions', () => {
         // Setup default mocks
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeToInfluxWithRetry.mockResolvedValue();
+        utils.writeBatchToInfluxV1.mockResolvedValue();
+        globals.config.get.mockImplementation((path) => {
+            if (path.includes('maxBatchSize')) return 100;
+            return undefined;
+        });
     });
 
     describe('storeSessionsV1', () => {
@@ -68,7 +74,7 @@ describe('v1/sessions', () => {
 
             await storeSessionsV1(userSessions);
 
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
         });
 
         test('should return early when no datapoints', async () => {
@@ -86,7 +92,7 @@ describe('v1/sessions', () => {
             expect(globals.logger.warn).toHaveBeenCalledWith(
                 'PROXY SESSIONS V1: No datapoints to write to InfluxDB'
             );
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
         });
 
         test('should successfully write session data', async () => {
@@ -112,11 +118,11 @@ describe('v1/sessions', () => {
 
             await storeSessionsV1(userSessions);
 
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalledWith(
-                expect.any(Function),
+            expect(utils.writeBatchToInfluxV1).toHaveBeenCalledWith(
+                expect.any(Array),
                 'Proxy sessions for server1/vp1',
-                'v1',
-                'central'
+                'central',
+                100
             );
             expect(globals.logger.verbose).toHaveBeenCalledWith(
                 expect.stringContaining('Sent user session data to InfluxDB')
@@ -146,13 +152,14 @@ describe('v1/sessions', () => {
                 datapointInfluxdb: datapoints,
             };
 
-            utils.writeToInfluxWithRetry.mockImplementation(async (writeFn) => {
-                await writeFn();
-            });
-
             await storeSessionsV1(userSessions);
 
-            expect(globals.influx.writePoints).toHaveBeenCalledWith(datapoints);
+            expect(utils.writeBatchToInfluxV1).toHaveBeenCalledWith(
+                datapoints,
+                expect.any(String),
+                'central',
+                100
+            );
         });
 
         test('should handle write errors', async () => {
@@ -166,7 +173,7 @@ describe('v1/sessions', () => {
             };
 
             const writeError = new Error('Write failed');
-            utils.writeToInfluxWithRetry.mockRejectedValue(writeError);
+            utils.writeBatchToInfluxV1.mockRejectedValue(writeError);
 
             await expect(storeSessionsV1(userSessions)).rejects.toThrow('Write failed');
 

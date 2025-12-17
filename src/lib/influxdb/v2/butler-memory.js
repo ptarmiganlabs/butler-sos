@@ -1,6 +1,6 @@
 import { Point } from '@influxdata/influxdb-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV2 } from '../shared/utils.js';
 
 /**
  * Posts Butler SOS memory usage metrics to InfluxDB v2.
@@ -52,27 +52,13 @@ export async function storeButlerMemoryV2(memory) {
     );
 
     // Write to InfluxDB with retry logic
-    await writeToInfluxWithRetry(
-        async () => {
-            const writeApi = globals.influx.getWriteApi(org, bucketName, 'ns', {
-                flushInterval: 5000,
-                maxRetries: 0,
-            });
-            try {
-                await writeApi.writePoint(point);
-                await writeApi.close();
-            } catch (err) {
-                try {
-                    await writeApi.close();
-                } catch (closeErr) {
-                    // Ignore close errors
-                }
-                throw err;
-            }
-        },
+    await writeBatchToInfluxV2(
+        [point],
+        org,
+        bucketName,
         'Memory usage metrics',
-        'v2',
-        ''
+        '',
+        globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
     );
 
     globals.logger.verbose('MEMORY USAGE V2: Sent Butler SOS memory usage data to InfluxDB');

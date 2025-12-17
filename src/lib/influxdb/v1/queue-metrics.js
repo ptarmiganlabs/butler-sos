@@ -1,5 +1,5 @@
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV1 } from '../shared/utils.js';
 
 /**
  * Store user event queue metrics to InfluxDB v1
@@ -79,11 +79,11 @@ export async function storeUserEventQueueMetricsV1() {
         }
 
         // Write with retry logic
-        await writeToInfluxWithRetry(
-            async () => await globals.influx.writePoints([point]),
+        await writeBatchToInfluxV1(
+            [point],
             'User event queue metrics',
-            'v1',
-            ''
+            '',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
         );
 
         globals.logger.verbose('USER EVENT QUEUE METRICS V1: Sent queue metrics data to InfluxDB');
@@ -174,11 +174,11 @@ export async function storeLogEventQueueMetricsV1() {
         }
 
         // Write with retry logic
-        await writeToInfluxWithRetry(
-            async () => await globals.influx.writePoints([point]),
+        await writeBatchToInfluxV1(
+            [point],
             'Log event queue metrics',
-            'v1',
-            ''
+            '',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
         );
 
         globals.logger.verbose('LOG EVENT QUEUE METRICS V1: Sent queue metrics data to InfluxDB');

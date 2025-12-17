@@ -1,5 +1,5 @@
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV1 } from '../shared/utils.js';
 
 /**
  * Posts Butler SOS memory usage metrics to InfluxDB v1.
@@ -50,12 +50,15 @@ export async function storeButlerMemoryV1(memory) {
             )}`
         );
 
+        // Get max batch size from config
+        const maxBatchSize = globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize');
+
         // Write with retry logic
-        await writeToInfluxWithRetry(
-            async () => await globals.influx.writePoints(datapoint),
+        await writeBatchToInfluxV1(
+            datapoint,
             'Memory usage metrics',
-            'v1',
-            '' // No specific error category for butler memory
+            'INFLUXDB_V1_WRITE',
+            maxBatchSize
         );
 
         globals.logger.verbose('MEMORY USAGE V1: Sent Butler SOS memory usage data to InfluxDB');

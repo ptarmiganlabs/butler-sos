@@ -51,6 +51,7 @@ jest.unstable_mockModule('@influxdata/influxdb-client', () => ({
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV2: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -129,9 +130,7 @@ describe('v2/event-counts', () => {
             expect(mockPoint.intField).toHaveBeenCalledWith('counter', 200);
             expect(mockPoint.intField).toHaveBeenCalledWith('counter', 100);
             expect(mockV2Utils.applyInfluxTags).toHaveBeenCalledTimes(2);
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
-            expect(mockWriteApi.writePoints).toHaveBeenCalled();
-            expect(mockWriteApi.close).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV2).toHaveBeenCalled();
         });
 
         test('should handle zero counts', async () => {
@@ -184,7 +183,7 @@ describe('v2/event-counts', () => {
             expect(mockPoint.tag).toHaveBeenCalledWith('source', 'qseow-proxy');
             expect(mockPoint.intField).toHaveBeenCalledWith('counter', 5);
             expect(mockPoint.intField).toHaveBeenCalledWith('counter', 3);
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV2).toHaveBeenCalled();
         });
 
         test('should handle empty rejection tags', async () => {

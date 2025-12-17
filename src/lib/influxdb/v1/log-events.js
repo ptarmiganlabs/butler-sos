@@ -1,5 +1,5 @@
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV1 } from '../shared/utils.js';
 
 /**
  * Post log event to InfluxDB v1
@@ -217,11 +217,11 @@ export async function storeLogEventV1(msg) {
         );
 
         // Write with retry logic
-        await writeToInfluxWithRetry(
-            async () => await globals.influx.writePoints(datapoint),
+        await writeBatchToInfluxV1(
+            datapoint,
             `Log event from ${msg.source}`,
-            'v1',
-            msg.host
+            msg.host,
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
         );
 
         globals.logger.verbose('LOG EVENT V1: Sent log event data to InfluxDB');

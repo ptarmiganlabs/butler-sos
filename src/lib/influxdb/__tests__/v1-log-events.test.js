@@ -22,6 +22,7 @@ jest.unstable_mockModule('../../../globals.js', () => ({ default: mockGlobals })
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV1: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -36,21 +37,25 @@ describe('v1/log-events', () => {
         const logEvents = await import('../v1/log-events.js');
         storeLogEventV1 = logEvents.storeLogEventV1;
         globals.config.has.mockReturnValue(true);
-        globals.config.get.mockReturnValue([{ name: 'env', value: 'prod' }]);
+        globals.config.get.mockImplementation((path) => {
+            if (path.includes('maxBatchSize')) return 100;
+            return [{ name: 'env', value: 'prod' }];
+        });
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeToInfluxWithRetry.mockResolvedValue();
+        utils.writeBatchToInfluxV1.mockResolvedValue();
     });
 
     test('should return early when InfluxDB disabled', async () => {
         utils.isInfluxDbEnabled.mockReturnValue(false);
         await storeLogEventV1({ source: 'qseow-engine', host: 'server1' });
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should warn for unsupported source', async () => {
         await storeLogEventV1({ source: 'unknown', host: 'server1' });
         expect(globals.logger.warn).toHaveBeenCalledWith(expect.stringContaining('Unsupported'));
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should write qseow-engine event', async () => {
@@ -62,11 +67,11 @@ describe('v1/log-events', () => {
             subsystem: 'System',
             message: 'test',
         });
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalledWith(
-            expect.any(Function),
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalledWith(
+            expect.any(Array),
             'Log event from qseow-engine',
-            'v1',
-            'server1'
+            'server1',
+            100
         );
     });
 
@@ -79,7 +84,7 @@ describe('v1/log-events', () => {
             subsystem: 'Proxy',
             message: 'test',
         });
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should write qseow-scheduler event', async () => {
@@ -91,7 +96,7 @@ describe('v1/log-events', () => {
             subsystem: 'Scheduler',
             message: 'test',
         });
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should write qseow-repository event', async () => {
@@ -103,7 +108,7 @@ describe('v1/log-events', () => {
             subsystem: 'Repository',
             message: 'test',
         });
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should write qseow-qix-perf event', async () => {
@@ -115,11 +120,11 @@ describe('v1/log-events', () => {
             subsystem: 'Perf',
             message: 'test',
         });
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle write errors', async () => {
-        utils.writeToInfluxWithRetry.mockRejectedValue(new Error('Write failed'));
+        utils.writeBatchToInfluxV1.mockRejectedValue(new Error('Write failed'));
         await expect(
             storeLogEventV1({
                 source: 'qseow-engine',
@@ -146,7 +151,7 @@ describe('v1/log-events', () => {
                 { name: 'component', value: 'engine' },
             ],
         });
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should apply config tags when available', async () => {
@@ -163,7 +168,7 @@ describe('v1/log-events', () => {
             subsystem: 'Proxy',
             message: 'test',
         });
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle events without categories', async () => {
@@ -176,7 +181,7 @@ describe('v1/log-events', () => {
             message: 'test',
             category: [],
         });
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle engine event with all optional fields', async () => {
@@ -203,7 +208,7 @@ describe('v1/log-events', () => {
             context: 'DocSession',
             session_id: 'sess-001',
         });
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle engine event without optional fields', async () => {
@@ -219,7 +224,7 @@ describe('v1/log-events', () => {
             user_id: '',
             result_code: '',
         });
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle proxy event with optional fields', async () => {
@@ -238,7 +243,7 @@ describe('v1/log-events', () => {
             origin: 'Proxy',
             context: 'AuthSession',
         });
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle scheduler event with task fields', async () => {
@@ -258,7 +263,7 @@ describe('v1/log-events', () => {
             app_id: 'finance-001',
             execution_id: 'exec-999',
         });
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle repository event with optional fields', async () => {
@@ -277,7 +282,7 @@ describe('v1/log-events', () => {
             origin: 'Repository',
             context: 'API',
         });
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle qix-perf event with all fields', async () => {
@@ -301,7 +306,7 @@ describe('v1/log-events', () => {
             object_id: 'obj-123',
             process_time: 150,
         });
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle qix-perf event with missing optional fields', async () => {
@@ -324,6 +329,6 @@ describe('v1/log-events', () => {
             app_name: '',
             object_id: '',
         });
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 });

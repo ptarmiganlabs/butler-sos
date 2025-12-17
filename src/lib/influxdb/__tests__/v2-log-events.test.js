@@ -35,6 +35,7 @@ jest.unstable_mockModule('@influxdata/influxdb-client', () => ({
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV2: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -99,8 +100,8 @@ describe('v2/log-events', () => {
         };
         await storeLogEventV2(msg);
         // Implementation doesn't explicitly validate required fields, it just processes what's there
-        // So this test will actually call writeToInfluxWithRetry
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        // So this test will actually call writeBatchToInfluxV2
+        expect(utils.writeBatchToInfluxV2).toHaveBeenCalled();
     });
 
     test('should return early with unsupported source', async () => {
@@ -114,7 +115,7 @@ describe('v2/log-events', () => {
         };
         await storeLogEventV2(msg);
         expect(globals.logger.warn).toHaveBeenCalled();
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
     });
 
     test('should write engine log event', async () => {
@@ -167,7 +168,7 @@ describe('v2/log-events', () => {
         expect(mockPoint.stringField).toHaveBeenCalledWith('context', 'Init');
         expect(mockPoint.stringField).toHaveBeenCalledWith('session_id', '');
         expect(mockPoint.stringField).toHaveBeenCalledWith('raw_event', expect.any(String));
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV2).toHaveBeenCalled();
     });
 
     test('should write proxy log event', async () => {
@@ -194,7 +195,7 @@ describe('v2/log-events', () => {
         expect(mockPoint.tag).toHaveBeenCalledWith('result_code', '403');
         expect(mockPoint.stringField).toHaveBeenCalledWith('command', 'Login');
         expect(mockPoint.stringField).toHaveBeenCalledWith('result_code_field', '403');
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV2).toHaveBeenCalled();
     });
 
     test('should write repository log event', async () => {
@@ -216,7 +217,7 @@ describe('v2/log-events', () => {
             'exception_message',
             'Connection timeout'
         );
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV2).toHaveBeenCalled();
     });
 
     test('should write scheduler log event', async () => {
@@ -237,7 +238,7 @@ describe('v2/log-events', () => {
         expect(mockPoint.tag).toHaveBeenCalledWith('level', 'INFO');
         expect(mockPoint.tag).toHaveBeenCalledWith('task_id', 'sched-task-001');
         expect(mockPoint.tag).toHaveBeenCalledWith('task_name', 'Daily Reload');
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV2).toHaveBeenCalled();
     });
 
     test('should handle log event with minimal fields', async () => {
@@ -256,7 +257,7 @@ describe('v2/log-events', () => {
         expect(mockPoint.tag).toHaveBeenCalledWith('source', 'qseow-engine');
         expect(mockPoint.tag).toHaveBeenCalledWith('level', 'DEBUG');
         expect(mockPoint.stringField).toHaveBeenCalledWith('message', 'Debug message');
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV2).toHaveBeenCalled();
     });
 
     test('should handle empty string fields', async () => {
@@ -274,7 +275,7 @@ describe('v2/log-events', () => {
 
         await storeLogEventV2(msg);
 
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV2).toHaveBeenCalled();
     });
 
     test('should apply config tags', async () => {

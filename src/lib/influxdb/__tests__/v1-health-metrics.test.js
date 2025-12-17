@@ -23,6 +23,7 @@ jest.unstable_mockModule('../../../globals.js', () => ({ default: mockGlobals })
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV1: jest.fn(),
     processAppDocuments: jest.fn(),
     getFormattedTime: jest.fn(() => '2024-01-01T00:00:00Z'),
 };
@@ -43,11 +44,13 @@ describe('v1/health-metrics', () => {
         globals.config.get.mockImplementation((path) => {
             if (path.includes('measurementName')) return 'health_metrics';
             if (path.includes('tags')) return [{ name: 'env', value: 'prod' }];
+            if (path.includes('maxBatchSize')) return 100;
             return undefined;
         });
 
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeToInfluxWithRetry.mockResolvedValue();
+        utils.writeBatchToInfluxV1.mockResolvedValue();
         utils.processAppDocuments.mockResolvedValue({ appNames: [], sessionAppNames: [] });
     });
 
@@ -55,7 +58,7 @@ describe('v1/health-metrics', () => {
         utils.isInfluxDbEnabled.mockReturnValue(false);
         const body = { mem: {}, apps: {}, cpu: {}, session: {}, users: {}, cache: {} };
         await storeHealthMetricsV1({ server: 'server1' }, body);
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should write complete health metrics', async () => {
@@ -73,17 +76,24 @@ describe('v1/health-metrics', () => {
             users: { active: 3, total: 8 },
             cache: { hits: 100, lookups: 120, added: 20, replaced: 5, bytes_added: 1024 },
             saturated: false,
+            version: '1.0.0',
+            started: '2024-01-01T00:00:00Z',
         };
         const serverTags = { server_name: 'server1', server_description: 'Test server' };
 
         await storeHealthMetricsV1(serverTags, body);
 
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalledWith(
+            expect.any(Array),
+            'Health metrics for server1',
+            'server1',
+            100
+        );
         expect(utils.processAppDocuments).toHaveBeenCalledTimes(3);
     });
 
     test('should handle write errors', async () => {
-        utils.writeToInfluxWithRetry.mockRejectedValue(new Error('Write failed'));
+        utils.writeBatchToInfluxV1.mockRejectedValue(new Error('Write failed'));
         const body = {
             mem: {},
             apps: { active_docs: [], loaded_docs: [], in_memory_docs: [] },
@@ -92,7 +102,7 @@ describe('v1/health-metrics', () => {
             users: {},
             cache: {},
         };
-        await expect(storeHealthMetricsV1({}, body)).rejects.toThrow();
+        await expect(storeHealthMetricsV1({ server_name: 'server1' }, body)).rejects.toThrow();
         expect(globals.logger.error).toHaveBeenCalled();
     });
 
@@ -108,8 +118,10 @@ describe('v1/health-metrics', () => {
             session: {},
             users: {},
             cache: {},
+            version: '1.0.0',
+            started: '2024-01-01T00:00:00Z',
         };
-        await storeHealthMetricsV1({}, body);
+        await storeHealthMetricsV1({ server_name: 'server1' }, body);
         expect(utils.processAppDocuments).toHaveBeenCalledTimes(3);
     });
 
@@ -119,6 +131,7 @@ describe('v1/health-metrics', () => {
             if (path.includes('tags')) return [{ name: 'env', value: 'prod' }];
             if (path.includes('includeFields.activeDocs')) return true;
             if (path.includes('enableAppNameExtract')) return true;
+            if (path.includes('maxBatchSize')) return 100;
             return undefined;
         });
         utils.processAppDocuments.mockResolvedValue({
@@ -132,9 +145,11 @@ describe('v1/health-metrics', () => {
             session: { active: 5 },
             users: { active: 3 },
             cache: { hits: 100 },
+            version: '1.0.0',
+            started: '2024-01-01T00:00:00Z',
         };
-        await storeHealthMetricsV1({}, body);
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        await storeHealthMetricsV1({ server_name: 'server1' }, body);
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle config with loadedDocs enabled', async () => {
@@ -143,6 +158,7 @@ describe('v1/health-metrics', () => {
             if (path.includes('tags')) return [{ name: 'env', value: 'prod' }];
             if (path.includes('includeFields.loadedDocs')) return true;
             if (path.includes('enableAppNameExtract')) return true;
+            if (path.includes('maxBatchSize')) return 100;
             return undefined;
         });
         utils.processAppDocuments.mockResolvedValue({
@@ -156,9 +172,11 @@ describe('v1/health-metrics', () => {
             session: { active: 5 },
             users: { active: 3 },
             cache: { hits: 100 },
+            version: '1.0.0',
+            started: '2024-01-01T00:00:00Z',
         };
-        await storeHealthMetricsV1({}, body);
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        await storeHealthMetricsV1({ server_name: 'server1' }, body);
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle config with inMemoryDocs enabled', async () => {
@@ -167,6 +185,7 @@ describe('v1/health-metrics', () => {
             if (path.includes('tags')) return [{ name: 'env', value: 'prod' }];
             if (path.includes('includeFields.inMemoryDocs')) return true;
             if (path.includes('enableAppNameExtract')) return true;
+            if (path.includes('maxBatchSize')) return 100;
             return undefined;
         });
         utils.processAppDocuments.mockResolvedValue({
@@ -180,9 +199,11 @@ describe('v1/health-metrics', () => {
             session: { active: 5 },
             users: { active: 3 },
             cache: { hits: 100 },
+            version: '1.0.0',
+            started: '2024-01-01T00:00:00Z',
         };
-        await storeHealthMetricsV1({}, body);
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        await storeHealthMetricsV1({ server_name: 'server1' }, body);
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle config with all doc types disabled', async () => {
@@ -191,6 +212,7 @@ describe('v1/health-metrics', () => {
             if (path.includes('tags')) return [];
             if (path.includes('includeFields')) return false;
             if (path.includes('enableAppNameExtract')) return false;
+            if (path.includes('maxBatchSize')) return 100;
             return undefined;
         });
         const body = {
@@ -200,8 +222,10 @@ describe('v1/health-metrics', () => {
             session: { active: 5 },
             users: { active: 3 },
             cache: { hits: 100 },
+            version: '1.0.0',
+            started: '2024-01-01T00:00:00Z',
         };
-        await storeHealthMetricsV1({}, body);
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        await storeHealthMetricsV1({ server_name: 'server1' }, body);
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 });

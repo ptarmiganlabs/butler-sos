@@ -24,6 +24,7 @@ jest.unstable_mockModule('../../../globals.js', () => ({ default: mockGlobals })
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV1: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -43,6 +44,7 @@ describe('v1/event-counts', () => {
         globals.config.get.mockImplementation((path) => {
             if (path.includes('measurementName')) return 'event_counts';
             if (path.includes('tags')) return [{ name: 'env', value: 'prod' }];
+            if (path.includes('maxBatchSize')) return 100;
             return undefined;
         });
 
@@ -58,6 +60,7 @@ describe('v1/event-counts', () => {
 
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeToInfluxWithRetry.mockResolvedValue();
+        utils.writeBatchToInfluxV1.mockResolvedValue();
     });
 
     test('should return early when no events', async () => {
@@ -70,16 +73,16 @@ describe('v1/event-counts', () => {
     test('should return early when InfluxDB disabled', async () => {
         utils.isInfluxDbEnabled.mockReturnValue(false);
         await storeEventCountV1();
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should write event counts', async () => {
         await storeEventCountV1();
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalledWith(
-            expect.any(Function),
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalledWith(
+            expect.any(Array),
             'Event counts',
-            'v1',
-            ''
+            '',
+            100
         );
     });
 
@@ -90,7 +93,7 @@ describe('v1/event-counts', () => {
         ]);
         globals.udpEvents.getUserEvents.mockResolvedValue([]);
         await storeEventCountV1();
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should apply config tags to user events', async () => {
@@ -100,7 +103,7 @@ describe('v1/event-counts', () => {
             { source: 'qseow-proxy', host: 'host2', subsystem: 'Session', counter: 7 },
         ]);
         await storeEventCountV1();
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle mixed log and user events', async () => {
@@ -111,29 +114,29 @@ describe('v1/event-counts', () => {
             { source: 'qseow-proxy', host: 'host2', subsystem: 'User', counter: 3 },
         ]);
         await storeEventCountV1();
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalledWith(
-            expect.any(Function),
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalledWith(
+            expect.any(Array),
             'Event counts',
-            'v1',
-            ''
+            '',
+            100
         );
     });
 
     test('should handle write errors', async () => {
-        utils.writeToInfluxWithRetry.mockRejectedValue(new Error('Write failed'));
+        utils.writeBatchToInfluxV1.mockRejectedValue(new Error('Write failed'));
         await expect(storeEventCountV1()).rejects.toThrow();
         expect(globals.logger.error).toHaveBeenCalled();
     });
 
     test('should write rejected event counts', async () => {
         await storeRejectedEventCountV1();
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should return early when no rejected events', async () => {
         globals.rejectedEvents.getRejectedLogEvents.mockResolvedValue([]);
         await storeRejectedEventCountV1();
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should return early when InfluxDB disabled for rejected events', async () => {
@@ -142,7 +145,7 @@ describe('v1/event-counts', () => {
         ]);
         utils.isInfluxDbEnabled.mockReturnValue(false);
         await storeRejectedEventCountV1();
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should handle rejected qix-perf events with appName', async () => {
@@ -163,7 +166,7 @@ describe('v1/event-counts', () => {
             return null;
         });
         await storeRejectedEventCountV1();
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle rejected qix-perf events without appName', async () => {
@@ -180,7 +183,7 @@ describe('v1/event-counts', () => {
         ]);
         globals.config.has.mockReturnValue(false);
         await storeRejectedEventCountV1();
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle rejected non-qix-perf events', async () => {
@@ -193,14 +196,14 @@ describe('v1/event-counts', () => {
             },
         ]);
         await storeRejectedEventCountV1();
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
     test('should handle rejected events write errors', async () => {
         globals.rejectedEvents.getRejectedLogEvents.mockResolvedValue([
             { source: 'test', counter: 1 },
         ]);
-        utils.writeToInfluxWithRetry.mockRejectedValue(new Error('Write failed'));
+        utils.writeBatchToInfluxV1.mockRejectedValue(new Error('Write failed'));
         await expect(storeRejectedEventCountV1()).rejects.toThrow();
         expect(globals.logger.error).toHaveBeenCalled();
     });

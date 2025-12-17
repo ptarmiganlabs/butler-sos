@@ -3,7 +3,7 @@ import {
     getFormattedTime,
     processAppDocuments,
     isInfluxDbEnabled,
-    writeToInfluxWithRetry,
+    writeBatchToInfluxV1,
 } from '../shared/utils.js';
 
 /**
@@ -185,11 +185,11 @@ export async function storeHealthMetricsV1(serverTags, body) {
         ];
 
         // Write to InfluxDB v1 using node-influx library with retry logic
-        await writeToInfluxWithRetry(
-            async () => await globals.influx.writePoints(datapoint),
+        await writeBatchToInfluxV1(
+            datapoint,
             `Health metrics for ${serverTags.server_name}`,
-            'v1',
-            serverTags.server_name
+            serverTags.server_name,
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
         );
 
         globals.logger.verbose(

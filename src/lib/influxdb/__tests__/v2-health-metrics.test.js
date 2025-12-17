@@ -38,6 +38,7 @@ jest.unstable_mockModule('@influxdata/influxdb-client', () => ({
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV2: jest.fn(),
     processAppDocuments: jest.fn(),
     getFormattedTime: jest.fn(() => '2 days, 3 hours'),
 };

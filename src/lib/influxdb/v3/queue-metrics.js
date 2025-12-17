@@ -1,6 +1,6 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV3 } from '../shared/utils.js';
 
 /**
  * Store user event queue metrics to InfluxDB v3
@@ -77,11 +77,12 @@ export async function postUserEventQueueMetricsToInfluxdbV3() {
             }
         }
 
-        await writeToInfluxWithRetry(
-            async () => await globals.influx.write(point.toLineProtocol(), database),
+        await writeBatchToInfluxV3(
+            [point],
+            database,
             'User event queue metrics',
-            'v3',
-            'user-events-queue'
+            'user-events-queue',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
         );
 
         globals.logger.verbose(
@@ -171,11 +172,12 @@ export async function postLogEventQueueMetricsToInfluxdbV3() {
             }
         }
 
-        await writeToInfluxWithRetry(
-            async () => await globals.influx.write(point.toLineProtocol(), database),
+        await writeBatchToInfluxV3(
+            [point],
+            database,
             'Log event queue metrics',
-            'v3',
-            'log-events-queue'
+            'log-events-queue',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
         );
 
         globals.logger.verbose(

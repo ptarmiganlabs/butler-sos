@@ -43,6 +43,7 @@ jest.unstable_mockModule('../../../globals.js', () => ({ default: mockGlobals })
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV1: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -110,16 +111,17 @@ describe('v1/queue-metrics', () => {
             if (path.includes('measurementName')) return 'queue_metrics';
             if (path.includes('queueMetrics.influxdb.tags'))
                 return [{ name: 'env', value: 'prod' }];
+            if (path === 'Butler-SOS.influxdbConfig.maxBatchSize') return 100;
             return undefined;
         });
         utils.isInfluxDbEnabled.mockReturnValue(true);
-        utils.writeToInfluxWithRetry.mockResolvedValue();
+        utils.writeBatchToInfluxV1.mockResolvedValue();
     });
 
     test('should return early when InfluxDB disabled for user events', async () => {
         utils.isInfluxDbEnabled.mockReturnValue(false);
         await storeUserEventQueueMetricsV1();
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should return early when config disabled', async () => {
@@ -128,7 +130,7 @@ describe('v1/queue-metrics', () => {
             return undefined;
         });
         await storeUserEventQueueMetricsV1();
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should return early when queue manager not initialized', async () => {
@@ -137,21 +139,22 @@ describe('v1/queue-metrics', () => {
         expect(globals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('not initialized')
         );
+        expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should write user event queue metrics', async () => {
         await storeUserEventQueueMetricsV1();
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalledWith(
-            expect.any(Function),
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalledWith(
+            expect.any(Array),
             expect.stringContaining('User event queue metrics'),
-            'v1',
-            ''
+            '',
+            100
         );
         expect(globals.udpQueueManagerUserActivity.clearMetrics).toHaveBeenCalled();
     });
 
     test('should handle user event write errors', async () => {
-        utils.writeToInfluxWithRetry.mockRejectedValue(new Error('Write failed'));
+        utils.writeBatchToInfluxV1.mockRejectedValue(new Error('Write failed'));
         await expect(storeUserEventQueueMetricsV1()).rejects.toThrow();
         expect(globals.logger.error).toHaveBeenCalled();
     });
@@ -159,7 +162,7 @@ describe('v1/queue-metrics', () => {
     test('should return early when InfluxDB disabled for log events', async () => {
         utils.isInfluxDbEnabled.mockReturnValue(false);
         await storeLogEventQueueMetricsV1();
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should return early when config disabled for log events', async () => {
@@ -168,7 +171,7 @@ describe('v1/queue-metrics', () => {
             return undefined;
         });
         await storeLogEventQueueMetricsV1();
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should return early when log queue manager not initialized', async () => {
@@ -177,21 +180,22 @@ describe('v1/queue-metrics', () => {
         expect(globals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('not initialized')
         );
+        expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should write log event queue metrics', async () => {
         await storeLogEventQueueMetricsV1();
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalledWith(
-            expect.any(Function),
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalledWith(
+            expect.any(Array),
             expect.stringContaining('Log event queue metrics'),
-            'v1',
-            ''
+            '',
+            100
         );
         expect(globals.udpQueueManagerLogEvents.clearMetrics).toHaveBeenCalled();
     });
 
     test('should handle log event write errors', async () => {
-        utils.writeToInfluxWithRetry.mockRejectedValue(new Error('Write failed'));
+        utils.writeBatchToInfluxV1.mockRejectedValue(new Error('Write failed'));
         await expect(storeLogEventQueueMetricsV1()).rejects.toThrow();
         expect(globals.logger.error).toHaveBeenCalled();
     });

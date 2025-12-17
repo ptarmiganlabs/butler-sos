@@ -49,6 +49,7 @@ jest.unstable_mockModule('@influxdata/influxdb3-client', () => ({
 jest.unstable_mockModule('../shared/utils.js', () => ({
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV3: jest.fn(),
 }));
 
 describe('InfluxDB v3 Queue Metrics', () => {
@@ -69,7 +70,7 @@ describe('InfluxDB v3 Queue Metrics', () => {
 
         // Setup default mocks
         utils.isInfluxDbEnabled.mockReturnValue(true);
-        utils.writeToInfluxWithRetry.mockResolvedValue();
+        utils.writeBatchToInfluxV3.mockResolvedValue();
     });
 
     describe('postUserEventQueueMetricsToInfluxdbV3', () => {
@@ -79,7 +80,7 @@ describe('InfluxDB v3 Queue Metrics', () => {
             await queueMetrics.postUserEventQueueMetricsToInfluxdbV3();
 
             expect(Point3).not.toHaveBeenCalled();
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).not.toHaveBeenCalled();
         });
 
         test('should warn when queue manager is not initialized', async () => {
@@ -102,7 +103,7 @@ describe('InfluxDB v3 Queue Metrics', () => {
             await queueMetrics.postUserEventQueueMetricsToInfluxdbV3();
 
             expect(Point3).not.toHaveBeenCalled();
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).not.toHaveBeenCalled();
         });
 
         test('should successfully write queue metrics', async () => {
@@ -142,6 +143,9 @@ describe('InfluxDB v3 Queue Metrics', () => {
                 if (key === 'Butler-SOS.influxdbConfig.v3Config.database') {
                     return 'test-db';
                 }
+                if (key === 'Butler-SOS.influxdbConfig.maxBatchSize') {
+                    return 100;
+                }
                 return null;
             });
 
@@ -153,11 +157,12 @@ describe('InfluxDB v3 Queue Metrics', () => {
             await queueMetrics.postUserEventQueueMetricsToInfluxdbV3();
 
             expect(Point3).toHaveBeenCalledWith('user_events_queue');
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalledWith(
-                expect.any(Function),
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalledWith(
+                expect.any(Array),
+                'test-db',
                 'User event queue metrics',
-                'v3',
-                'user-events-queue'
+                'user-events-queue',
+                100
             );
             expect(globals.logger.verbose).toHaveBeenCalledWith(
                 'USER EVENT QUEUE METRICS INFLUXDB V3: Sent queue metrics data to InfluxDB v3'
@@ -194,7 +199,7 @@ describe('InfluxDB v3 Queue Metrics', () => {
             await queueMetrics.postLogEventQueueMetricsToInfluxdbV3();
 
             expect(Point3).not.toHaveBeenCalled();
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).not.toHaveBeenCalled();
         });
 
         test('should warn when queue manager is not initialized', async () => {
@@ -246,6 +251,9 @@ describe('InfluxDB v3 Queue Metrics', () => {
                 if (key === 'Butler-SOS.influxdbConfig.v3Config.database') {
                     return 'test-db';
                 }
+                if (key === 'Butler-SOS.influxdbConfig.maxBatchSize') {
+                    return 100;
+                }
                 return null;
             });
 
@@ -257,11 +265,12 @@ describe('InfluxDB v3 Queue Metrics', () => {
             await queueMetrics.postLogEventQueueMetricsToInfluxdbV3();
 
             expect(Point3).toHaveBeenCalledWith('log_events_queue');
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalledWith(
-                expect.any(Function),
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalledWith(
+                expect.any(Array),
+                'test-db',
                 'Log event queue metrics',
-                'v3',
-                'log-events-queue'
+                'log-events-queue',
+                100
             );
             expect(globals.logger.verbose).toHaveBeenCalledWith(
                 'LOG EVENT QUEUE METRICS INFLUXDB V3: Sent queue metrics data to InfluxDB v3'
@@ -312,7 +321,7 @@ describe('InfluxDB v3 Queue Metrics', () => {
                 clearMetrics: jest.fn(),
             };
 
-            utils.writeToInfluxWithRetry.mockRejectedValue(new Error('Write failed'));
+            utils.writeBatchToInfluxV3.mockRejectedValue(new Error('Write failed'));
 
             await queueMetrics.postLogEventQueueMetricsToInfluxdbV3();
 

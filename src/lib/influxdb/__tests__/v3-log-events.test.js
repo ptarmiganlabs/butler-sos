@@ -30,6 +30,7 @@ jest.unstable_mockModule('../../../globals.js', () => ({
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV3: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -110,7 +111,7 @@ describe('v3/log-events', () => {
             expect(mockPoint.setTag).toHaveBeenCalledWith('source', 'qseow-engine');
             expect(mockPoint.setTag).toHaveBeenCalledWith('level', 'INFO');
             expect(mockPoint.setStringField).toHaveBeenCalledWith('message', 'Test message');
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
         });
 
         test('should successfully write qseow-proxy log event', async () => {
@@ -126,7 +127,7 @@ describe('v3/log-events', () => {
             expect(mockPoint.setTag).toHaveBeenCalledWith('host', 'server1');
             expect(mockPoint.setTag).toHaveBeenCalledWith('source', 'qseow-proxy');
             expect(mockPoint.setTag).toHaveBeenCalledWith('level', 'WARN');
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
         });
 
         test('should successfully write qseow-scheduler log event', async () => {
@@ -140,7 +141,7 @@ describe('v3/log-events', () => {
             await postLogEventToInfluxdbV3(msg);
 
             expect(mockPoint.setTag).toHaveBeenCalledWith('source', 'qseow-scheduler');
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
         });
 
         test('should successfully write qseow-repository log event', async () => {
@@ -154,7 +155,7 @@ describe('v3/log-events', () => {
             await postLogEventToInfluxdbV3(msg);
 
             expect(mockPoint.setTag).toHaveBeenCalledWith('source', 'qseow-repository');
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
         });
 
         test('should successfully write qseow-qix-perf log event', async () => {
@@ -178,7 +179,7 @@ describe('v3/log-events', () => {
             await postLogEventToInfluxdbV3(msg);
 
             expect(mockPoint.setTag).toHaveBeenCalledWith('source', 'qseow-qix-perf');
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
         });
 
         test('should handle write errors', async () => {
@@ -190,7 +191,7 @@ describe('v3/log-events', () => {
             };
 
             const writeError = new Error('Write failed');
-            utils.writeToInfluxWithRetry.mockRejectedValue(writeError);
+            utils.writeBatchToInfluxV3.mockRejectedValue(writeError);
 
             await postLogEventToInfluxdbV3(msg);
 
@@ -221,7 +222,7 @@ describe('v3/log-events', () => {
                 'exception_message',
                 'Exception details'
             );
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
         });
     });
 });

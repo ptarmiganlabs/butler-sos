@@ -179,9 +179,8 @@ export async function verifyAppConfig(cfg) {
             return false;
         }
 
-        // Validate and set default for maxBatchSize based on version
-        const versionConfig = `v${influxdbVersion}Config`;
-        const maxBatchSizePath = `Butler-SOS.influxdbConfig.${versionConfig}.maxBatchSize`;
+        // Validate and set default for maxBatchSize
+        const maxBatchSizePath = `Butler-SOS.influxdbConfig.maxBatchSize`;
 
         if (cfg.has(maxBatchSizePath)) {
             const maxBatchSize = cfg.get(maxBatchSizePath);

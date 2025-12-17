@@ -30,6 +30,7 @@ jest.unstable_mockModule('../../../globals.js', () => ({
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV3: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -59,10 +60,13 @@ describe('v3/sessions', () => {
         postProxySessionsToInfluxdbV3 = sessions.postProxySessionsToInfluxdbV3;
 
         // Setup default mocks
-        globals.config.get.mockReturnValue('test-db');
-        globals.influx.write.mockResolvedValue();
+        globals.config.get.mockImplementation((key) => {
+            if (key === 'Butler-SOS.influxdbConfig.v3Config.database') return 'test-db';
+            if (key === 'Butler-SOS.influxdbConfig.maxBatchSize') return 100;
+            return undefined;
+        });
         utils.isInfluxDbEnabled.mockReturnValue(true);
-        utils.writeToInfluxWithRetry.mockImplementation(async (fn) => await fn());
+        utils.writeBatchToInfluxV3.mockResolvedValue();
     });
 
     describe('postProxySessionsToInfluxdbV3', () => {
@@ -80,7 +84,7 @@ describe('v3/sessions', () => {
 
             await postProxySessionsToInfluxdbV3(userSessions);
 
-            expect(globals.influx.write).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).not.toHaveBeenCalled();
         });
 
         test('should warn when no datapoints to write', async () => {
@@ -115,9 +119,14 @@ describe('v3/sessions', () => {
 
             await postProxySessionsToInfluxdbV3(userSessions);
 
-            expect(globals.influx.write).toHaveBeenCalledTimes(2);
-            expect(globals.influx.write).toHaveBeenCalledWith('session1', 'test-db');
-            expect(globals.influx.write).toHaveBeenCalledWith('session2', 'test-db');
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalledTimes(1);
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalledWith(
+                [datapoint1, datapoint2],
+                'test-db',
+                'Proxy sessions for server1//vp1',
+                'server1',
+                100
+            );
             expect(globals.logger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('Wrote 2 datapoints')
             );
@@ -135,7 +144,7 @@ describe('v3/sessions', () => {
             };
 
             const writeError = new Error('Write failed');
-            globals.influx.write.mockRejectedValue(writeError);
+            utils.writeBatchToInfluxV3.mockRejectedValue(writeError);
 
             await postProxySessionsToInfluxdbV3(userSessions);
 

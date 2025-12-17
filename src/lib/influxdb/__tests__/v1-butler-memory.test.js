@@ -31,6 +31,7 @@ jest.unstable_mockModule('../../../globals.js', () => ({
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV1: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -50,7 +51,11 @@ describe('v1/butler-memory', () => {
 
         // Setup default mocks
         utils.isInfluxDbEnabled.mockReturnValue(true);
-        utils.writeToInfluxWithRetry.mockResolvedValue();
+        utils.writeBatchToInfluxV1.mockResolvedValue();
+        globals.config.get.mockImplementation((key) => {
+            if (key === 'Butler-SOS.influxdbConfig.maxBatchSize') return 100;
+            return undefined;
+        });
     });
 
     describe('storeButlerMemoryV1', () => {
@@ -67,7 +72,7 @@ describe('v1/butler-memory', () => {
 
             await storeButlerMemoryV1(memory);
 
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
             expect(globals.logger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('MEMORY USAGE V1')
             );
@@ -84,11 +89,11 @@ describe('v1/butler-memory', () => {
 
             await storeButlerMemoryV1(memory);
 
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalledWith(
-                expect.any(Function),
+            expect(utils.writeBatchToInfluxV1).toHaveBeenCalledWith(
+                expect.any(Array),
                 'Memory usage metrics',
-                'v1',
-                ''
+                'INFLUXDB_V1_WRITE',
+                100
             );
             expect(globals.logger.verbose).toHaveBeenCalledWith(
                 'MEMORY USAGE V1: Sent Butler SOS memory usage data to InfluxDB'
@@ -104,27 +109,49 @@ describe('v1/butler-memory', () => {
                 processMemoryMByte: 350.5,
             };
 
-            utils.writeToInfluxWithRetry.mockImplementation(async (writeFn) => {
-                await writeFn();
+            utils.writeBatchToInfluxV1.mockImplementation(async (writeFn) => {
+                // writeFn is the batch array in the new implementation
+                // But wait, mockImplementation receives the arguments passed to the function.
+                // writeBatchToInfluxV1(batch, logMessage, instanceTag, batchSize)
+                // So the first argument is the batch.
+                // The test expects globals.influx.writePoints to be called.
+                // But writeBatchToInfluxV1 calls globals.influx.writePoints internally.
+                // If we mock writeBatchToInfluxV1, we bypass the internal call.
+                // So we should NOT mock implementation if we want to test the datapoint structure via globals.influx.writePoints?
+                // Or we should inspect the batch passed to writeBatchToInfluxV1.
             });
-
+            
+            // The original test was:
+            // utils.writeToInfluxWithRetry.mockImplementation(async (writeFn) => {
+            //     await writeFn();
+            // });
+            // Because writeToInfluxWithRetry took a function that generated points and wrote them.
+            
+            // Now writeBatchToInfluxV1 takes the points directly.
+            // So we can just inspect the arguments of writeBatchToInfluxV1.
+            
             await storeButlerMemoryV1(memory);
 
-            expect(globals.influx.writePoints).toHaveBeenCalledWith([
-                {
-                    measurement: 'butlersos_memory_usage',
-                    tags: {
-                        butler_sos_instance: 'test-instance',
-                        version: '1.0.0',
-                    },
-                    fields: {
-                        heap_used: 150.5,
-                        heap_total: 300.75,
-                        external: 75.25,
-                        process_memory: 350.5,
-                    },
-                },
-            ]);
+            expect(utils.writeBatchToInfluxV1).toHaveBeenCalledWith(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        measurement: 'butlersos_memory_usage',
+                        tags: {
+                            butler_sos_instance: 'test-instance',
+                            version: '1.0.0',
+                        },
+                        fields: {
+                            heap_used: 150.5,
+                            heap_total: 300.75,
+                            external: 75.25,
+                            process_memory: 350.5,
+                        },
+                    })
+                ]),
+                expect.any(String),
+                expect.any(String),
+                expect.any(Number)
+            );
         });
 
         test('should handle write errors and rethrow', async () => {
@@ -137,7 +164,7 @@ describe('v1/butler-memory', () => {
             };
 
             const writeError = new Error('Write failed');
-            utils.writeToInfluxWithRetry.mockRejectedValue(writeError);
+            utils.writeBatchToInfluxV1.mockRejectedValue(writeError);
 
             await expect(storeButlerMemoryV1(memory)).rejects.toThrow('Write failed');
 

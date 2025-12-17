@@ -1,6 +1,6 @@
 import { Point } from '@influxdata/influxdb-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV2 } from '../shared/utils.js';
 import { applyInfluxTags } from './utils.js';
 
 /**
@@ -75,27 +75,13 @@ export async function storeEventCountV2() {
     }
 
     // Write to InfluxDB with retry logic
-    await writeToInfluxWithRetry(
-        async () => {
-            const writeApi = globals.influx.getWriteApi(org, bucketName, 'ns', {
-                flushInterval: 5000,
-                maxRetries: 0,
-            });
-            try {
-                await writeApi.writePoints(points);
-                await writeApi.close();
-            } catch (err) {
-                try {
-                    await writeApi.close();
-                } catch (closeErr) {
-                    // Ignore close errors
-                }
-                throw err;
-            }
-        },
+    await writeBatchToInfluxV2(
+        points,
+        org,
+        bucketName,
         'Event count metrics',
-        'v2',
-        ''
+        '',
+        globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
     );
 
     globals.logger.verbose('EVENT COUNT V2: Sent event count data to InfluxDB');
@@ -179,27 +165,13 @@ export async function storeRejectedEventCountV2() {
     }
 
     // Write to InfluxDB with retry logic
-    await writeToInfluxWithRetry(
-        async () => {
-            const writeApi = globals.influx.getWriteApi(org, bucketName, 'ns', {
-                flushInterval: 5000,
-                maxRetries: 0,
-            });
-            try {
-                await writeApi.writePoints(points);
-                await writeApi.close();
-            } catch (err) {
-                try {
-                    await writeApi.close();
-                } catch (closeErr) {
-                    // Ignore close errors
-                }
-                throw err;
-            }
-        },
+    await writeBatchToInfluxV2(
+        points,
+        org,
+        bucketName,
         'Rejected event count metrics',
-        'v2',
-        ''
+        '',
+        globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
     );
 
     globals.logger.verbose('REJECTED EVENT COUNT V2: Sent rejected event count data to InfluxDB');

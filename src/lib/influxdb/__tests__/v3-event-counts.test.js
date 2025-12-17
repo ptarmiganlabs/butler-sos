@@ -40,6 +40,7 @@ jest.unstable_mockModule('../../../globals.js', () => ({
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV3: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -78,11 +79,13 @@ describe('v3/event-counts', () => {
                 return 'event_count';
             if (key === 'Butler-SOS.qlikSenseEvents.rejectedEventCount.influxdb.measurementName')
                 return 'rejected_event_count';
+            if (key === 'Butler-SOS.influxdbConfig.maxBatchSize') return 100;
             return null;
         });
         globals.config.has.mockReturnValue(false);
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeToInfluxWithRetry.mockResolvedValue();
+        utils.writeBatchToInfluxV3.mockResolvedValue();
     });
 
     describe('storeEventCountInfluxDBV3', () => {
@@ -128,7 +131,7 @@ describe('v3/event-counts', () => {
 
             await storeEventCountInfluxDBV3();
 
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalledTimes(2);
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalledTimes(1);
             expect(mockPoint.setTag).toHaveBeenCalledWith('event_type', 'log');
             expect(mockPoint.setTag).toHaveBeenCalledWith('source', 'qseow-engine');
             expect(mockPoint.setIntegerField).toHaveBeenCalledWith('counter', 10);
@@ -148,7 +151,7 @@ describe('v3/event-counts', () => {
 
             await storeEventCountInfluxDBV3();
 
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalledTimes(1);
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalledTimes(1);
             expect(mockPoint.setTag).toHaveBeenCalledWith('event_type', 'user');
             expect(mockPoint.setIntegerField).toHaveBeenCalledWith('counter', 15);
         });
@@ -166,7 +169,7 @@ describe('v3/event-counts', () => {
 
             await storeEventCountInfluxDBV3();
 
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalledTimes(2);
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalledTimes(1);
         });
 
         test('should apply config tags when available', async () => {
@@ -199,7 +202,7 @@ describe('v3/event-counts', () => {
             globals.udpEvents.getUserEvents.mockResolvedValue([]);
 
             const writeError = new Error('Write failed');
-            utils.writeToInfluxWithRetry.mockRejectedValue(writeError);
+            utils.writeBatchToInfluxV3.mockRejectedValue(writeError);
 
             await storeEventCountInfluxDBV3();
 
@@ -218,7 +221,7 @@ describe('v3/event-counts', () => {
             expect(globals.logger.verbose).toHaveBeenCalledWith(
                 expect.stringContaining('No events to store')
             );
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).not.toHaveBeenCalled();
         });
 
         test('should return early when InfluxDB is disabled', async () => {
@@ -227,7 +230,7 @@ describe('v3/event-counts', () => {
 
             await storeRejectedEventCountInfluxDBV3();
 
-            expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).not.toHaveBeenCalled();
         });
 
         test('should store rejected log events successfully', async () => {
@@ -248,7 +251,7 @@ describe('v3/event-counts', () => {
             await storeRejectedEventCountInfluxDBV3();
 
             // Should have written the rejected event
-            expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
             expect(globals.logger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('Wrote data to InfluxDB v3')
             );
@@ -266,7 +269,7 @@ describe('v3/event-counts', () => {
             globals.rejectedEvents.getRejectedLogEvents.mockResolvedValue(logEvents);
 
             const writeError = new Error('Write failed');
-            utils.writeToInfluxWithRetry.mockRejectedValue(writeError);
+            utils.writeBatchToInfluxV3.mockRejectedValue(writeError);
 
             await storeRejectedEventCountInfluxDBV3();
 

@@ -1,6 +1,6 @@
 import { Point } from '@influxdata/influxdb-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV2 } from '../shared/utils.js';
 import { applyInfluxTags } from './utils.js';
 
 /**
@@ -74,27 +74,13 @@ export async function storeUserEventQueueMetricsV2() {
     applyInfluxTags(point, configTags);
 
     // Write to InfluxDB with retry logic
-    await writeToInfluxWithRetry(
-        async () => {
-            const writeApi = globals.influx.getWriteApi(org, bucketName, 'ns', {
-                flushInterval: 5000,
-                maxRetries: 0,
-            });
-            try {
-                await writeApi.writePoint(point);
-                await writeApi.close();
-            } catch (err) {
-                try {
-                    await writeApi.close();
-                } catch (closeErr) {
-                    // Ignore close errors
-                }
-                throw err;
-            }
-        },
+    await writeBatchToInfluxV2(
+        [point],
+        org,
+        bucketName,
         'User event queue metrics',
-        'v2',
-        'user-events-queue'
+        'user-events-queue',
+        globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
     );
 
     globals.logger.verbose('USER EVENT QUEUE METRICS V2: Sent queue metrics data to InfluxDB');
@@ -174,27 +160,13 @@ export async function storeLogEventQueueMetricsV2() {
     applyInfluxTags(point, configTags);
 
     // Write to InfluxDB with retry logic
-    await writeToInfluxWithRetry(
-        async () => {
-            const writeApi = globals.influx.getWriteApi(org, bucketName, 'ns', {
-                flushInterval: 5000,
-                maxRetries: 0,
-            });
-            try {
-                await writeApi.writePoint(point);
-                await writeApi.close();
-            } catch (err) {
-                try {
-                    await writeApi.close();
-                } catch (closeErr) {
-                    // Ignore close errors
-                }
-                throw err;
-            }
-        },
+    await writeBatchToInfluxV2(
+        [point],
+        org,
+        bucketName,
         'Log event queue metrics',
-        'v2',
-        'log-events-queue'
+        'log-events-queue',
+        globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
     );
 
     globals.logger.verbose('LOG EVENT QUEUE METRICS V2: Sent queue metrics data to InfluxDB');

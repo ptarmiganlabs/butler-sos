@@ -34,6 +34,7 @@ const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     applyTagsToPoint3: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    writeBatchToInfluxV3: jest.fn(),
     validateUnsignedField: jest.fn((value) =>
         typeof value === 'number' && value >= 0 ? value : 0
     ),
@@ -80,6 +81,7 @@ describe('v3/health-metrics', () => {
             if (key === 'Butler-SOS.influxdbConfig.includeFields.loadedDocs') return true;
             if (key === 'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') return true;
             if (key === 'Butler-SOS.appNames.enableAppNameExtract') return true;
+            if (key === 'Butler-SOS.influxdbConfig.maxBatchSize') return 100;
             return false;
         });
 
@@ -89,7 +91,7 @@ describe('v3/health-metrics', () => {
             sessionAppNames: ['SessionApp1'],
         });
         utils.isInfluxDbEnabled.mockReturnValue(true);
-        utils.writeToInfluxWithRetry.mockResolvedValue();
+        utils.writeBatchToInfluxV3.mockResolvedValue();
         utils.applyTagsToPoint3.mockImplementation(() => {});
 
         // Setup influxWriteApi
@@ -148,7 +150,7 @@ describe('v3/health-metrics', () => {
 
         await postHealthMetricsToInfluxdbV3('test-server', 'test-host', body, {});
 
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV3).not.toHaveBeenCalled();
     });
 
     test('should warn and return when influxWriteApi is not initialized', async () => {
@@ -160,7 +162,7 @@ describe('v3/health-metrics', () => {
         expect(globals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Influxdb write API object not initialized')
         );
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV3).not.toHaveBeenCalled();
     });
 
     test('should warn and return when writeApi not found for server', async () => {
@@ -171,7 +173,7 @@ describe('v3/health-metrics', () => {
         expect(globals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Influxdb write API object not found for host test-host')
         );
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV3).not.toHaveBeenCalled();
     });
 
     test('should process and write all health metrics successfully', async () => {
@@ -201,8 +203,15 @@ describe('v3/health-metrics', () => {
         // Should apply tags to all 8 points
         expect(utils.applyTagsToPoint3).toHaveBeenCalledTimes(8);
 
-        // Should write all 8 measurements
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalledTimes(8);
+        // Should write all 8 measurements in one batch
+        expect(utils.writeBatchToInfluxV3).toHaveBeenCalledTimes(1);
+        expect(utils.writeBatchToInfluxV3).toHaveBeenCalledWith(
+            expect.any(Array),
+            'test-db',
+            expect.stringContaining('Health metrics for'),
+            'health-metrics',
+            100
+        );
     });
 
     test('should call getFormattedTime with started timestamp', async () => {
@@ -231,7 +240,7 @@ describe('v3/health-metrics', () => {
     test('should handle write errors with error tracking', async () => {
         const body = createMockBody();
         const writeError = new Error('Write failed');
-        utils.writeToInfluxWithRetry.mockRejectedValue(writeError);
+        utils.writeBatchToInfluxV3.mockRejectedValue(writeError);
 
         await postHealthMetricsToInfluxdbV3('test-server', 'test-host', body, {});
 
