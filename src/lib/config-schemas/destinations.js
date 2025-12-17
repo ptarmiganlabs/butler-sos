@@ -331,7 +331,7 @@ export const destinationsSchema = {
                     description: { type: 'string' },
                     token: { type: 'string' },
                     retentionDuration: { type: 'string' },
-                    timeout: {
+                    writeTimeout: {
                         type: 'number',
                         description: 'Socket timeout for write operations in milliseconds',
                         default: 10000,

@@ -926,8 +926,10 @@ Configuration File:
                 const database = this.config.get('Butler-SOS.influxdbConfig.v3Config.database');
 
                 // Get timeout settings with defaults
-                const timeout = this.config.has('Butler-SOS.influxdbConfig.v3Config.timeout')
-                    ? this.config.get('Butler-SOS.influxdbConfig.v3Config.timeout')
+                const writeTimeout = this.config.has(
+                    'Butler-SOS.influxdbConfig.v3Config.writeTimeout'
+                )
+                    ? this.config.get('Butler-SOS.influxdbConfig.v3Config.writeTimeout')
                     : 10000; // Default 10 seconds for socket timeout
 
                 const queryTimeout = this.config.has(
@@ -941,7 +943,7 @@ Configuration File:
                         host,
                         token,
                         database,
-                        timeout,
+                        timeout: writeTimeout,
                         queryTimeout,
                     });
 
