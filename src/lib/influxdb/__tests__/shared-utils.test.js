@@ -15,6 +15,7 @@ const mockGlobals = {
     },
     influx: null,
     appNames: [],
+    getErrorMessage: jest.fn((err) => err?.message || String(err)),
 };
 
 jest.unstable_mockModule('../../../globals.js', () => ({
@@ -354,5 +355,188 @@ describe('Shared Utils - applyTagsToPoint3', () => {
 
         expect(mockPoint.setTag).toHaveBeenCalledWith('env', '');
         expect(mockPoint.setTag).toHaveBeenCalledWith('region', 'us-east-1');
+    });
+});
+
+describe('Shared Utils - chunkArray', () => {
+    let utils;
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        utils = await import('../shared/utils.js');
+    });
+
+    test('should split array into chunks of specified size', () => {
+        const array = [1, 2, 3, 4, 5, 6, 7];
+        const result = utils.chunkArray(array, 3);
+
+        expect(result).toEqual([[1, 2, 3], [4, 5, 6], [7]]);
+    });
+
+    test('should handle empty array', () => {
+        const result = utils.chunkArray([], 5);
+        expect(result).toEqual([]);
+    });
+
+    test('should handle chunk size larger than array', () => {
+        const array = [1, 2, 3];
+        const result = utils.chunkArray(array, 10);
+
+        expect(result).toEqual([[1, 2, 3]]);
+    });
+
+    test('should handle chunk size of 1', () => {
+        const array = [1, 2, 3];
+        const result = utils.chunkArray(array, 1);
+
+        expect(result).toEqual([[1], [2], [3]]);
+    });
+
+    test('should handle array length exactly divisible by chunk size', () => {
+        const array = [1, 2, 3, 4, 5, 6];
+        const result = utils.chunkArray(array, 2);
+
+        expect(result).toEqual([
+            [1, 2],
+            [3, 4],
+            [5, 6],
+        ]);
+    });
+});
+
+describe('Shared Utils - validateUnsignedField', () => {
+    let utils;
+    let globals;
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        globals = (await import('../../../globals.js')).default;
+        utils = await import('../shared/utils.js');
+    });
+
+    test('should return value unchanged for positive number', () => {
+        const result = utils.validateUnsignedField(42, 'measurement', 'field', 'server1');
+        expect(result).toBe(42);
+        expect(globals.logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('should return 0 for zero', () => {
+        const result = utils.validateUnsignedField(0, 'measurement', 'field', 'server1');
+        expect(result).toBe(0);
+        expect(globals.logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('should clamp negative number to 0 and warn', () => {
+        const result = utils.validateUnsignedField(-5, 'cache', 'hits', 'server1');
+
+        expect(result).toBe(0);
+        expect(globals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Negative value detected')
+        );
+        expect(globals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('measurement=cache')
+        );
+        expect(globals.logger.warn).toHaveBeenCalledWith(expect.stringContaining('field=hits'));
+    });
+
+    test('should warn once per measurement per invocation', () => {
+        // First call should warn
+        utils.validateUnsignedField(-1, 'test_m', 'field1', 'server1');
+        expect(globals.logger.warn).toHaveBeenCalledTimes(1);
+
+        // Second call with same measurement should not warn again in same batch
+        utils.validateUnsignedField(-2, 'test_m', 'field2', 'server1');
+        expect(globals.logger.warn).toHaveBeenCalledTimes(1);
+    });
+
+    test('should handle null/undefined gracefully', () => {
+        const resultNull = utils.validateUnsignedField(null, 'measurement', 'field', 'server1');
+        const resultUndef = utils.validateUnsignedField(
+            undefined,
+            'measurement',
+            'field',
+            'server1'
+        );
+
+        expect(resultNull).toBe(0);
+        expect(resultUndef).toBe(0);
+    });
+
+    test('should handle string numbers', () => {
+        const result = utils.validateUnsignedField('42', 'measurement', 'field', 'server1');
+        expect(result).toBe(42);
+    });
+
+    test('should handle negative string numbers', () => {
+        const result = utils.validateUnsignedField('-10', 'measurement', 'field', 'server1');
+        expect(result).toBe(0);
+        expect(globals.logger.warn).toHaveBeenCalled();
+    });
+});
+
+describe('Shared Utils - writeBatchToInfluxV1', () => {
+    let utils;
+    let globals;
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        globals = (await import('../../../globals.js')).default;
+
+        globals.influx = {
+            writePoints: jest.fn().mockResolvedValue(undefined),
+        };
+        globals.config.get.mockReturnValue(1000); // maxBatchSize
+
+        utils = await import('../shared/utils.js');
+    });
+
+    test('should write small batch in single call', async () => {
+        const points = [
+            { measurement: 'test', fields: { value: 1 } },
+            { measurement: 'test', fields: { value: 2 } },
+        ];
+
+        await utils.writeBatchToInfluxV1(points, 'test_data', 'server1', 1000);
+
+        expect(globals.influx.writePoints).toHaveBeenCalledTimes(1);
+        expect(globals.influx.writePoints).toHaveBeenCalledWith(points);
+    });
+
+    test('should chunk large batch', async () => {
+        const points = Array.from({ length: 2500 }, (_, i) => ({
+            measurement: 'test',
+            fields: { value: i },
+        }));
+
+        await utils.writeBatchToInfluxV1(points, 'test_data', 'server1', 1000);
+
+        // Should be called 3 times: 1000 + 1000 + 500
+        expect(globals.influx.writePoints).toHaveBeenCalledTimes(3);
+    });
+
+    test('should retry with progressive chunking on failure', async () => {
+        const points = Array.from({ length: 1000 }, (_, i) => ({
+            measurement: 'test',
+            fields: { value: i },
+        }));
+
+        // First attempt with batch size 1000 fails, retry with 500 succeeds
+        globals.influx.writePoints
+            .mockRejectedValueOnce(new Error('Batch too large'))
+            .mockResolvedValue(undefined);
+
+        await utils.writeBatchToInfluxV1(points, 'test_data', 'server1', 1000);
+
+        // First call with 1000 points fails, then 2 calls with 500 each succeed
+        expect(globals.influx.writePoints).toHaveBeenCalledTimes(3);
+    });
+
+    test('should handle empty array', async () => {
+        await utils.writeBatchToInfluxV1([], 'test_data', 'server1', 1000);
+
+        expect(globals.influx.writePoints).not.toHaveBeenCalled();
+        expect(globals.logger.verbose).toHaveBeenCalledWith(
+            expect.stringContaining('No points to write')
+        );
     });
 });

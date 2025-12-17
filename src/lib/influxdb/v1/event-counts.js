@@ -106,6 +106,7 @@ export async function storeEventCountV1() {
 
         globals.logger.verbose('EVENT COUNT V1: Sent event count data to InfluxDB');
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V1_WRITE', '');
         globals.logger.error(`EVENT COUNT V1: Error saving data: ${globals.getErrorMessage(err)}`);
         throw err;
     }
@@ -232,6 +233,7 @@ export async function storeRejectedEventCountV1() {
             'REJECTED EVENT COUNT V1: Sent rejected event count data to InfluxDB'
         );
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V1_WRITE', '');
         globals.logger.error(
             `REJECTED EVENT COUNT V1: Error saving data: ${globals.getErrorMessage(err)}`
         );

@@ -178,6 +178,33 @@ export async function verifyAppConfig(cfg) {
             );
             return false;
         }
+
+        // Validate and set default for maxBatchSize based on version
+        const versionConfig = `v${influxdbVersion}Config`;
+        const maxBatchSizePath = `Butler-SOS.influxdbConfig.${versionConfig}.maxBatchSize`;
+
+        if (cfg.has(maxBatchSizePath)) {
+            const maxBatchSize = cfg.get(maxBatchSizePath);
+
+            // Validate maxBatchSize is a number in valid range
+            if (
+                typeof maxBatchSize !== 'number' ||
+                isNaN(maxBatchSize) ||
+                maxBatchSize < 1 ||
+                maxBatchSize > 10000
+            ) {
+                console.warn(
+                    `VERIFY CONFIG FILE WARNING: ${maxBatchSizePath}=${maxBatchSize} is invalid. Must be a number between 1 and 10000. Using default value 1000.`
+                );
+                cfg.set(maxBatchSizePath, 1000);
+            }
+        } else {
+            // Set default if not specified
+            console.info(
+                `VERIFY CONFIG FILE INFO: ${maxBatchSizePath} not specified. Using default value 1000.`
+            );
+            cfg.set(maxBatchSizePath, 1000);
+        }
     }
 
     // Verify that telemetry and system info settings are compatible

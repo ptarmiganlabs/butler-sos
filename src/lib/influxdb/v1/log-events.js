@@ -226,6 +226,7 @@ export async function storeLogEventV1(msg) {
 
         globals.logger.verbose('LOG EVENT V1: Sent log event data to InfluxDB');
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V1_WRITE', msg.host);
         globals.logger.error(
             `LOG EVENT V1: Error saving log event: ${globals.getErrorMessage(err)}`
         );

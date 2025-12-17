@@ -6,6 +6,7 @@ import {
     isInfluxDbEnabled,
     applyTagsToPoint3,
     writeToInfluxWithRetry,
+    validateUnsignedField,
 } from '../shared/utils.js';
 
 /**
@@ -27,6 +28,14 @@ import {
  * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
  */
 export async function postHealthMetricsToInfluxdbV3(serverName, host, body, serverTags) {
+    // Validate input
+    if (!body || typeof body !== 'object') {
+        globals.logger.warn(
+            `HEALTH METRICS V3: Invalid health data from server ${serverName}. Data will not be sent to InfluxDB`
+        );
+        return;
+    }
+
     // Calculate server uptime
     const formattedTime = getFormattedTime(body.started);
 
@@ -166,25 +175,61 @@ export async function postHealthMetricsToInfluxdbV3(serverName, host, body, serv
                     ? sessionAppNamesInMemory.toString()
                     : ''
             )
-            .setIntegerField('calls', body.apps.calls)
-            .setIntegerField('selections', body.apps.selections),
+            .setIntegerField(
+                'calls',
+                validateUnsignedField(body.apps.calls, 'apps', 'calls', serverName)
+            )
+            .setIntegerField(
+                'selections',
+                validateUnsignedField(body.apps.selections, 'apps', 'selections', serverName)
+            ),
 
-        new Point3('cpu').setIntegerField('total', body.cpu.total),
+        new Point3('cpu').setIntegerField(
+            'total',
+            validateUnsignedField(body.cpu.total, 'cpu', 'total', serverName)
+        ),
 
         new Point3('session')
-            .setIntegerField('active', body.session.active)
-            .setIntegerField('total', body.session.total),
+            .setIntegerField(
+                'active',
+                validateUnsignedField(body.session.active, 'session', 'active', serverName)
+            )
+            .setIntegerField(
+                'total',
+                validateUnsignedField(body.session.total, 'session', 'total', serverName)
+            ),
 
         new Point3('users')
-            .setIntegerField('active', body.users.active)
-            .setIntegerField('total', body.users.total),
+            .setIntegerField(
+                'active',
+                validateUnsignedField(body.users.active, 'users', 'active', serverName)
+            )
+            .setIntegerField(
+                'total',
+                validateUnsignedField(body.users.total, 'users', 'total', serverName)
+            ),
 
         new Point3('cache')
-            .setIntegerField('hits', body.cache.hits)
-            .setIntegerField('lookups', body.cache.lookups)
-            .setIntegerField('added', body.cache.added)
-            .setIntegerField('replaced', body.cache.replaced)
-            .setIntegerField('bytes_added', body.cache.bytes_added),
+            .setIntegerField(
+                'hits',
+                validateUnsignedField(body.cache.hits, 'cache', 'hits', serverName)
+            )
+            .setIntegerField(
+                'lookups',
+                validateUnsignedField(body.cache.lookups, 'cache', 'lookups', serverName)
+            )
+            .setIntegerField(
+                'added',
+                validateUnsignedField(body.cache.added, 'cache', 'added', serverName)
+            )
+            .setIntegerField(
+                'replaced',
+                validateUnsignedField(body.cache.replaced, 'cache', 'replaced', serverName)
+            )
+            .setIntegerField(
+                'bytes_added',
+                validateUnsignedField(body.cache.bytes_added, 'cache', 'bytes_added', serverName)
+            ),
 
         new Point3('saturated').setBooleanField('saturated', body.saturated),
     ];

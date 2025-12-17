@@ -11,6 +11,9 @@ const mockGlobals = {
     },
     config: { get: jest.fn(), has: jest.fn() },
     influx: { writePoints: jest.fn() },
+    errorTracker: {
+        incrementError: jest.fn().mockResolvedValue(),
+    },
     udpEvents: { getLogEvents: jest.fn(), getUserEvents: jest.fn() },
     rejectedEvents: { getRejectedLogEvents: jest.fn() },
     getErrorMessage: jest.fn((err) => err.message),

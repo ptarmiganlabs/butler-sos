@@ -335,6 +335,14 @@ export const destinationsSchema = {
                         default: 60000,
                         minimum: 1000,
                     },
+                    maxBatchSize: {
+                        type: 'number',
+                        description:
+                            'Maximum number of data points to write in a single batch. Progressive retry with smaller sizes attempted on failure.',
+                        default: 1000,
+                        minimum: 1,
+                        maximum: 10000,
+                    },
                 },
                 required: ['database', 'description', 'token', 'retentionDuration'],
                 additionalProperties: false,
@@ -347,6 +355,14 @@ export const destinationsSchema = {
                     description: { type: 'string' },
                     token: { type: 'string' },
                     retentionDuration: { type: 'string' },
+                    maxBatchSize: {
+                        type: 'number',
+                        description:
+                            'Maximum number of data points to write in a single batch. Progressive retry with smaller sizes attempted on failure.',
+                        default: 1000,
+                        minimum: 1,
+                        maximum: 10000,
+                    },
                 },
                 required: ['org', 'bucket', 'description', 'token', 'retentionDuration'],
                 additionalProperties: false,
@@ -376,6 +392,14 @@ export const destinationsSchema = {
                         },
                         required: ['name', 'duration'],
                         additionalProperties: false,
+                    },
+                    maxBatchSize: {
+                        type: 'number',
+                        description:
+                            'Maximum number of data points to write in a single batch. Progressive retry with smaller sizes attempted on failure.',
+                        default: 1000,
+                        minimum: 1,
+                        maximum: 10000,
                     },
                 },
                 required: ['auth', 'dbName', 'retentionPolicy'],

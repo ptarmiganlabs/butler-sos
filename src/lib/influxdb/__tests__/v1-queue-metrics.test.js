@@ -12,6 +12,9 @@ const mockGlobals = {
     config: { get: jest.fn(), has: jest.fn() },
     influx: { writePoints: jest.fn() },
     hostInfo: { hostname: 'test-host' },
+    errorTracker: {
+        incrementError: jest.fn().mockResolvedValue(),
+    },
     udpQueueManagerUserActivity: {
         getMetrics: jest.fn(() => ({
             queueSize: 10,

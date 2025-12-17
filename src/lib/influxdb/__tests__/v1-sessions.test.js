@@ -17,6 +17,9 @@ const mockGlobals = {
     influx: {
         writePoints: jest.fn(),
     },
+    errorTracker: {
+        incrementError: jest.fn().mockResolvedValue(),
+    },
     getErrorMessage: jest.fn((err) => err.message),
 };
 

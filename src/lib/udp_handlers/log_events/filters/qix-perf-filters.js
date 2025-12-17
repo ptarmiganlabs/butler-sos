@@ -72,6 +72,7 @@ import globals from '../../../../globals.js';
  *
  * @param {object} eventData - The event data
  * @param {Array} appSpecificFilters - The app specific filter configuration
+ *
  * @returns {boolean} True if the event matches app-specific filters
  */
 export function processAppSpecificFilters(eventData, appSpecificFilters) {

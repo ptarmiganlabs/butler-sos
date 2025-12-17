@@ -16,6 +16,9 @@ const mockGlobals = {
     influx: {
         write: jest.fn(),
     },
+    errorTracker: {
+        incrementError: jest.fn().mockResolvedValue(),
+    },
     influxDefaultDb: 'test-db',
     udpQueueManagerUserActivity: null,
     udpQueueManagerLogEvents: null,

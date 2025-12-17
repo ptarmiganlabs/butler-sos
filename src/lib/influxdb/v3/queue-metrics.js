@@ -91,6 +91,7 @@ export async function postUserEventQueueMetricsToInfluxdbV3() {
         // Clear metrics after writing
         await queueManager.clearMetrics();
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', '');
         globals.logger.error(
             `USER EVENT QUEUE METRICS INFLUXDB V3: Error posting queue metrics: ${globals.getErrorMessage(err)}`
         );
@@ -184,6 +185,7 @@ export async function postLogEventQueueMetricsToInfluxdbV3() {
         // Clear metrics after writing
         await queueManager.clearMetrics();
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', '');
         globals.logger.error(
             `LOG EVENT QUEUE METRICS INFLUXDB V3: Error posting queue metrics: ${globals.getErrorMessage(err)}`
         );

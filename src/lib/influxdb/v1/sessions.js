@@ -66,6 +66,7 @@ export async function storeSessionsV1(userSessions) {
             `PROXY SESSIONS V1: Sent user session data to InfluxDB for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"`
         );
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V1_WRITE', userSessions.host);
         globals.logger.error(
             `PROXY SESSIONS V1: Error saving user session data: ${globals.getErrorMessage(err)}`
         );

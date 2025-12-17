@@ -17,6 +17,14 @@ import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
  * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
  */
 export async function postButlerSOSMemoryUsageToInfluxdbV3(memory) {
+    // Validate input
+    if (!memory || typeof memory !== 'object') {
+        globals.logger.warn(
+            'MEMORY USAGE V3: Invalid memory data provided. Data will not be sent to InfluxDB'
+        );
+        return;
+    }
+
     globals.logger.debug(`MEMORY USAGE V3: Memory usage ${JSON.stringify(memory, null, 2)})`);
 
     // Get Butler version
@@ -48,6 +56,7 @@ export async function postButlerSOSMemoryUsageToInfluxdbV3(memory) {
         );
         globals.logger.debug(`MEMORY USAGE V3: Wrote data to InfluxDB v3`);
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', '');
         globals.logger.error(
             `MEMORY USAGE V3: Error saving memory usage data to InfluxDB v3! ${globals.getErrorMessage(err)}`
         );

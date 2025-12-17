@@ -156,7 +156,7 @@ export function setupUdpQueueMetricsStorage() {
         }, writeFrequency);
 
         globals.logger.info(
-            `UDP QUEUE METRICS: Set up timer for storing user event queue metrics to InfluxDB (interval: ${writeFrequency}ms)`
+            `UDP QUEUE METRICS: Set up timer for storing user event queue metrics to InfluxDB (interval: ${writeFrequency} ms)`
         );
     } else {
         globals.logger.info(
@@ -189,7 +189,7 @@ export function setupUdpQueueMetricsStorage() {
         }, writeFrequency);
 
         globals.logger.info(
-            `UDP QUEUE METRICS: Set up timer for storing log event queue metrics to InfluxDB (interval: ${writeFrequency}ms)`
+            `UDP QUEUE METRICS: Set up timer for storing log event queue metrics to InfluxDB (interval: ${writeFrequency} ms)`
         );
     } else {
         globals.logger.info(

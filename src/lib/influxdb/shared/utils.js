@@ -298,3 +298,309 @@ export async function writeToInfluxWithRetry(
     // All retries failed, throw the last error
     throw lastError;
 }
+
+/**
+ * Splits an array into chunks of a specified size.
+ *
+ * @param {Array} array - The array to chunk
+ * @param {number} chunkSize - The size of each chunk
+ *
+ * @returns {Array[]} Array of chunks
+ */
+export function chunkArray(array, chunkSize) {
+    if (!Array.isArray(array) || array.length === 0) {
+        return [];
+    }
+
+    if (!chunkSize || chunkSize <= 0) {
+        return [array];
+    }
+
+    const chunks = [];
+    for (let i = 0; i < array.length; i += chunkSize) {
+        chunks.push(array.slice(i, i + chunkSize));
+    }
+    return chunks;
+}
+
+/**
+ * Validates that a field value is non-negative (unsigned).
+ * Logs a warning once per measurement if negative values are found and clamps to 0.
+ *
+ * @param {number} value - The value to validate
+ * @param {string} measurement - Measurement name for logging
+ * @param {string} field - Field name for logging
+ * @param {string} serverContext - Server/context name for logging
+ *
+ * @returns {number} The validated value (clamped to 0 if negative)
+ */
+export function validateUnsignedField(value, measurement, field, serverContext) {
+    // Convert to number if string
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+
+    // Handle null/undefined/NaN
+    if (numValue == null || isNaN(numValue)) {
+        return 0;
+    }
+
+    // Check if negative
+    if (numValue < 0) {
+        // Warn once per measurement (using a Set to track)
+        if (!validateUnsignedField._warnedMeasurements) {
+            validateUnsignedField._warnedMeasurements = new Set();
+        }
+
+        if (!validateUnsignedField._warnedMeasurements.has(measurement)) {
+            globals.logger.warn(
+                `Negative value detected for unsigned field: measurement=${measurement}, field=${field}, value=${numValue}, server=${serverContext}. Clamping to 0.`
+            );
+            validateUnsignedField._warnedMeasurements.add(measurement);
+        }
+
+        return 0;
+    }
+
+    return numValue;
+}
+
+/**
+ * Writes data to InfluxDB v1 in batches with progressive retry strategy.
+ * If a batch fails, it will automatically try smaller batch sizes.
+ *
+ * @param {Array} datapoints - Array of datapoint objects to write
+ * @param {string} context - Description of what's being written
+ * @param {string} errorCategory - Error category for tracking
+ * @param {number} maxBatchSize - Maximum batch size from config
+ *
+ * @returns {Promise<void>}
+ */
+export async function writeBatchToInfluxV1(datapoints, context, errorCategory, maxBatchSize) {
+    if (!Array.isArray(datapoints) || datapoints.length === 0) {
+        globals.logger.verbose(`INFLUXDB V1 BATCH: ${context} - No points to write`);
+        return;
+    }
+
+    const progressiveSizes = [maxBatchSize, 500, 250, 100, 10, 1].filter(
+        (size) => size <= maxBatchSize
+    );
+
+    for (const batchSize of progressiveSizes) {
+        const chunks = chunkArray(datapoints, batchSize);
+        let allSucceeded = true;
+        let failedChunks = [];
+
+        for (let i = 0; i < chunks.length; i++) {
+            const chunk = chunks[i];
+            const startIdx = i * batchSize;
+            const endIdx = Math.min(startIdx + chunk.length - 1, datapoints.length - 1);
+
+            try {
+                await writeToInfluxWithRetry(
+                    async () => await globals.influx.writePoints(chunk),
+                    `${context} (chunk ${i + 1}/${chunks.length}, points ${startIdx}-${endIdx})`,
+                    'v1',
+                    errorCategory
+                );
+            } catch (err) {
+                allSucceeded = false;
+                failedChunks.push({ index: i + 1, startIdx, endIdx, total: chunks.length });
+
+                globals.logger.error(
+                    `INFLUXDB V1 BATCH: ${context} - Chunk ${i + 1} of ${chunks.length} (points ${startIdx}-${endIdx}) failed: ${globals.getErrorMessage(err)}`
+                );
+            }
+        }
+
+        if (allSucceeded) {
+            if (batchSize < maxBatchSize) {
+                globals.logger.info(
+                    `INFLUXDB V1 BATCH: ${context} - Successfully wrote all data using batch size ${batchSize} (reduced from ${maxBatchSize})`
+                );
+            }
+            return;
+        }
+
+        // If this wasn't the last attempt, log that we're trying smaller batches
+        if (batchSize !== progressiveSizes[progressiveSizes.length - 1]) {
+            globals.logger.warn(
+                `INFLUXDB V1 BATCH: ${context} - ${failedChunks.length} chunk(s) failed with batch size ${batchSize}, retrying with smaller batches`
+            );
+        } else {
+            // Final attempt failed
+            globals.logger.error(
+                `INFLUXDB V1 BATCH: ${context} - Failed to write data even with batch size 1. ${failedChunks.length} point(s) could not be written.`
+            );
+            throw new Error(`Failed to write batch after trying all progressive sizes`);
+        }
+    }
+}
+
+/**
+ * Writes data to InfluxDB v2 in batches with progressive retry strategy.
+ * Handles writeApi lifecycle management.
+ *
+ * @param {Array} points - Array of Point objects to write
+ * @param {string} org - InfluxDB organization
+ * @param {string} bucketName - InfluxDB bucket name
+ * @param {string} context - Description of what's being written
+ * @param {string} errorCategory - Error category for tracking
+ * @param {number} maxBatchSize - Maximum batch size from config
+ *
+ * @returns {Promise<void>}
+ */
+export async function writeBatchToInfluxV2(
+    points,
+    org,
+    bucketName,
+    context,
+    errorCategory,
+    maxBatchSize
+) {
+    if (!Array.isArray(points) || points.length === 0) {
+        return;
+    }
+
+    const progressiveSizes = [maxBatchSize, 500, 250, 100, 10, 1].filter(
+        (size) => size <= maxBatchSize
+    );
+
+    for (const batchSize of progressiveSizes) {
+        const chunks = chunkArray(points, batchSize);
+        let allSucceeded = true;
+        let failedChunks = [];
+
+        for (let i = 0; i < chunks.length; i++) {
+            const chunk = chunks[i];
+            const startIdx = i * batchSize;
+            const endIdx = Math.min(startIdx + chunk.length - 1, points.length - 1);
+
+            try {
+                await writeToInfluxWithRetry(
+                    async () => {
+                        const writeApi = globals.influx.getWriteApi(org, bucketName, 'ns', {
+                            flushInterval: 5000,
+                        });
+                        try {
+                            await writeApi.writePoints(chunk);
+                            await writeApi.close();
+                        } catch (err) {
+                            try {
+                                await writeApi.close();
+                            } catch (closeErr) {
+                                // Ignore close errors
+                            }
+                            throw err;
+                        }
+                    },
+                    `${context} (chunk ${i + 1}/${chunks.length}, points ${startIdx}-${endIdx})`,
+                    'v2',
+                    errorCategory
+                );
+            } catch (err) {
+                allSucceeded = false;
+                failedChunks.push({ index: i + 1, startIdx, endIdx, total: chunks.length });
+
+                globals.logger.error(
+                    `INFLUXDB V2 BATCH: ${context} - Chunk ${i + 1} of ${chunks.length} (points ${startIdx}-${endIdx}) failed: ${globals.getErrorMessage(err)}`
+                );
+            }
+        }
+
+        if (allSucceeded) {
+            if (batchSize < maxBatchSize) {
+                globals.logger.info(
+                    `INFLUXDB V2 BATCH: ${context} - Successfully wrote all data using batch size ${batchSize} (reduced from ${maxBatchSize})`
+                );
+            }
+            return;
+        }
+
+        // If this wasn't the last attempt, log that we're trying smaller batches
+        if (batchSize !== progressiveSizes[progressiveSizes.length - 1]) {
+            globals.logger.warn(
+                `INFLUXDB V2 BATCH: ${context} - ${failedChunks.length} chunk(s) failed with batch size ${batchSize}, retrying with smaller batches`
+            );
+        } else {
+            // Final attempt failed
+            globals.logger.error(
+                `INFLUXDB V2 BATCH: ${context} - Failed to write data even with batch size 1. ${failedChunks.length} point(s) could not be written.`
+            );
+            throw new Error(`Failed to write batch after trying all progressive sizes`);
+        }
+    }
+}
+
+/**
+ * Writes data to InfluxDB v3 in batches with progressive retry strategy.
+ * Converts Point3 objects to line protocol and concatenates them.
+ *
+ * @param {Array} points - Array of Point3 objects to write
+ * @param {string} database - InfluxDB database name
+ * @param {string} context - Description of what's being written
+ * @param {string} errorCategory - Error category for tracking
+ * @param {number} maxBatchSize - Maximum batch size from config
+ *
+ * @returns {Promise<void>}
+ */
+export async function writeBatchToInfluxV3(points, database, context, errorCategory, maxBatchSize) {
+    if (!Array.isArray(points) || points.length === 0) {
+        return;
+    }
+
+    const progressiveSizes = [maxBatchSize, 500, 250, 100, 10, 1].filter(
+        (size) => size <= maxBatchSize
+    );
+
+    for (const batchSize of progressiveSizes) {
+        const chunks = chunkArray(points, batchSize);
+        let allSucceeded = true;
+        let failedChunks = [];
+
+        for (let i = 0; i < chunks.length; i++) {
+            const chunk = chunks[i];
+            const startIdx = i * batchSize;
+            const endIdx = Math.min(startIdx + chunk.length - 1, points.length - 1);
+
+            try {
+                // Convert Point3 objects to line protocol and concatenate
+                const lineProtocol = chunk.map((p) => p.toLineProtocol()).join('\n');
+
+                await writeToInfluxWithRetry(
+                    async () => await globals.influx.write(lineProtocol, database),
+                    `${context} (chunk ${i + 1}/${chunks.length}, points ${startIdx}-${endIdx})`,
+                    'v3',
+                    errorCategory
+                );
+            } catch (err) {
+                allSucceeded = false;
+                failedChunks.push({ index: i + 1, startIdx, endIdx, total: chunks.length });
+
+                globals.logger.error(
+                    `INFLUXDB V3 BATCH: ${context} - Chunk ${i + 1} of ${chunks.length} (points ${startIdx}-${endIdx}) failed: ${globals.getErrorMessage(err)}`
+                );
+            }
+        }
+
+        if (allSucceeded) {
+            if (batchSize < maxBatchSize) {
+                globals.logger.info(
+                    `INFLUXDB V3 BATCH: ${context} - Successfully wrote all data using batch size ${batchSize} (reduced from ${maxBatchSize})`
+                );
+            }
+            return;
+        }
+
+        // If this wasn't the last attempt, log that we're trying smaller batches
+        if (batchSize !== progressiveSizes[progressiveSizes.length - 1]) {
+            globals.logger.warn(
+                `INFLUXDB V3 BATCH: ${context} - ${failedChunks.length} chunk(s) failed with batch size ${batchSize}, retrying with smaller batches`
+            );
+        } else {
+            // Final attempt failed
+            globals.logger.error(
+                `INFLUXDB V3 BATCH: ${context} - Failed to write data even with batch size 1. ${failedChunks.length} point(s) could not be written.`
+            );
+            throw new Error(`Failed to write batch after trying all progressive sizes`);
+        }
+    }
+}

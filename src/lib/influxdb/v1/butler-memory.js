@@ -60,6 +60,7 @@ export async function storeButlerMemoryV1(memory) {
 
         globals.logger.verbose('MEMORY USAGE V1: Sent Butler SOS memory usage data to InfluxDB');
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V1_WRITE', '');
         globals.logger.error(
             `MEMORY USAGE V1: Error saving Butler SOS memory data: ${globals.getErrorMessage(err)}`
         );

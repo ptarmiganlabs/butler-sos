@@ -4,11 +4,13 @@ import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
 
 /**
  * Clean tag values for InfluxDB v3 line protocol
- * Remove characters not supported by line protocol.
+ * Remove only characters that are explicitly not supported by the line protocol spec.
+ * According to the spec, newlines are not supported in tag or field values.
  *
- * According to the line protocol spec:
- * - Newlines (\n) and carriage returns (\r) are NOT supported → remove them
- * - Comma, equals, space are escaped automatically by Point3
+ * The Point3 class should handle required escaping for tag values:
+ * - Comma (,) → \,
+ * - Equals (=) → \=
+ * - Space ( ) → \
  *
  * @param {string} value - The tag value to clean
  * @returns {string} The cleaned tag value
@@ -17,7 +19,7 @@ function cleanTagValue(value) {
     if (!value || typeof value !== 'string') {
         return value;
     }
-    return value.replace(/[\n\r]/g, ''); // Remove newlines and carriage returns (not supported)
+    return value.replace(/[\n\r]/g, ''); // Remove only newlines and carriage returns
 }
 
 /**
@@ -268,10 +270,8 @@ export async function postLogEventToInfluxdbV3(msg) {
             if (msg?.user_directory?.length > 0)
                 point.setTag('user_directory', cleanTagValue(msg.user_directory));
             if (msg?.user_id?.length > 0) point.setTag('user_id', cleanTagValue(msg.user_id));
-
             if (msg?.app_id?.length > 0) point.setTag('app_id', cleanTagValue(msg.app_id));
             if (msg?.app_name?.length > 0) point.setTag('app_name', cleanTagValue(msg.app_name));
-
             if (msg?.object_id?.length > 0) point.setTag('object_id', cleanTagValue(msg.object_id));
         }
 
@@ -294,6 +294,10 @@ export async function postLogEventToInfluxdbV3(msg) {
                 point.setTag(item.name, cleanTagValue(item.value));
             }
         }
+
+        // Debug logging to troubleshoot line protocol issues
+        console.log('LOG EVENT V3 MESSAGE:', JSON.stringify(msg, null, 2));
+        console.log('LOG EVENT V3 LINE PROTOCOL:', point.toLineProtocol());
 
         await writeToInfluxWithRetry(
             async () => await globals.influx.write(point.toLineProtocol(), database),

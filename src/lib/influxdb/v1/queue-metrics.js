@@ -186,6 +186,7 @@ export async function storeLogEventQueueMetricsV1() {
         // Clear metrics after writing
         await queueManager.clearMetrics();
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V1_WRITE', '');
         globals.logger.error(
             `LOG EVENT QUEUE METRICS V1: Error saving data: ${globals.getErrorMessage(err)}`
         );

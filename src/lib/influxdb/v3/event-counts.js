@@ -142,6 +142,7 @@ export async function storeEventCountInfluxDBV3() {
             'EVENT COUNT INFLUXDB V3: Sent Butler SOS event count data to InfluxDB'
         );
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', '');
         globals.logger.error(
             `EVENT COUNT INFLUXDB V3: Error writing data to InfluxDB: ${globals.getErrorMessage(err)}`
         );
@@ -257,6 +258,7 @@ export async function storeRejectedEventCountInfluxDBV3() {
             'REJECT LOG EVENT INFLUXDB V3: Sent Butler SOS rejected event count data to InfluxDB'
         );
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', '');
         globals.logger.error(
             `REJECTED LOG EVENT INFLUXDB V3: Error writing data to InfluxDB: ${globals.getErrorMessage(err)}`
         );

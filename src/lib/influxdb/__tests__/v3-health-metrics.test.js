@@ -34,6 +34,9 @@ const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     applyTagsToPoint3: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
+    validateUnsignedField: jest.fn((value) =>
+        typeof value === 'number' && value >= 0 ? value : 0
+    ),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
