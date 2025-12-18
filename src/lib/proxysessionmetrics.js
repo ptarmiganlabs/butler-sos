@@ -29,6 +29,7 @@ import { logError } from './log-error.js';
  * @param {string} virtualProxy - Virtual proxy prefix
  * @param {Array} body - Array of session objects from Qlik Sense
  * @param {object} tags - Tags to associate with the metrics
+ *
  * @returns {Promise<object>} Promise resolving to an object containing formatted metrics data
  */
 function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
@@ -249,10 +250,11 @@ function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
  * @param {string} host - Host name or IP of the Qlik Sense server
  * @param {string} virtualProxy - Virtual proxy prefix
  * @param {object} influxTags - Tags to associate with metrics in InfluxDB
+ *
  * @returns {Promise<void>} Promise that resolves when the operation is complete
  */
 export async function getProxySessionStatsFromSense(serverName, host, virtualProxy, influxTags) {
-    // Current user sessions are retrived using this API:
+    // Current user sessions are retrieved using this API:
     // https://help.qlik.com/en-US/sense-developer/February2021/Subsystems/ProxyServiceAPI/Content/Sense_ProxyServiceAPI/ProxyServiceAPI-Proxy-API.htm
 
     // Get certificate configuration options
@@ -370,10 +372,13 @@ export async function getProxySessionStatsFromSense(serverName, host, virtualPro
  * This function configures a periodic task that polls all configured Sense servers
  * and their virtual proxies for user session information. The gathered data is then
  * processed and sent to the configured destinations.
+ * Uses a flag to prevent overlapping executions if session polling takes longer than the polling interval.
  *
  * @returns {void}
  */
 export function setupUserSessionsTimer() {
+    let isCollecting = false;
+
     globals.logger.debug(
         `PROXY SESSIONS: Monitor user sessions for these servers/virtual proxies: ${JSON.stringify(
             globals.serverList,
@@ -384,35 +389,48 @@ export function setupUserSessionsTimer() {
 
     // Configure timer for getting user session data from Sense proxy API
     setInterval(async () => {
-        globals.logger.verbose('PROXY SESSIONS: Event started: Poll user sessions');
+        // Prevent overlapping executions
+        if (isCollecting) {
+            globals.logger.warn(
+                'PROXY SESSIONS: Previous session polling still in progress, skipping this interval'
+            );
+            return;
+        }
 
-        // Process servers sequentially to avoid overwhelming the Sense servers
-        for (const server of globals.serverList) {
-            if (server.userSessions.enable) {
-                const tags = getServerTags(globals.logger, server);
+        isCollecting = true;
+        try {
+            globals.logger.verbose('PROXY SESSIONS: Event started: Poll user sessions');
 
-                // Process virtual proxies sequentially
-                for (const virtualProxy of server.userSessions.virtualProxies) {
-                    globals.logger.debug(
-                        `PROXY SESSIONS: Getting user sessions for host=${
-                            server.userSessions.host
-                        }, virtual proxy=${JSON.stringify(virtualProxy, null, 2)}`
-                    );
+            // Process servers sequentially to avoid overwhelming the Sense servers
+            for (const server of globals.serverList) {
+                if (server.userSessions.enable) {
+                    const tags = getServerTags(globals.logger, server);
 
-                    try {
-                        await getProxySessionStatsFromSense(
-                            server.serverName,
-                            server.userSessions.host,
-                            virtualProxy.virtualProxy,
-                            tags
+                    // Process virtual proxies sequentially
+                    for (const virtualProxy of server.userSessions.virtualProxies) {
+                        globals.logger.debug(
+                            `PROXY SESSIONS: Getting user sessions for host=${
+                                server.userSessions.host
+                            }, virtual proxy=${JSON.stringify(virtualProxy, null, 2)}`
                         );
-                    } catch (err) {
-                        globals.logger.error(
-                            `PROXY SESSIONS: Error getting session stats for server '${server.serverName}' (${server.userSessions.host}), virtual proxy '${virtualProxy.virtualProxy}': ${globals.getErrorMessage(err)}`
-                        );
+
+                        try {
+                            await getProxySessionStatsFromSense(
+                                server.serverName,
+                                server.userSessions.host,
+                                virtualProxy.virtualProxy,
+                                tags
+                            );
+                        } catch (err) {
+                            globals.logger.error(
+                                `PROXY SESSIONS: Error getting session stats for server '${server.serverName}' (${server.userSessions.host}), virtual proxy '${virtualProxy.virtualProxy}': ${globals.getErrorMessage(err)}`
+                            );
+                        }
                     }
                 }
             }
+        } finally {
+            isCollecting = false;
         }
     }, globals.config.get('Butler-SOS.userSessions.pollingInterval'));
 }

@@ -26,9 +26,10 @@ import { logError } from './log-error.js';
  * @param {string} host - The hostname or IP address of the Sense server.
  * @param {object} tags - Tags/metadata to associate with the server metrics.
  * @param {object|null} headers - Additional headers to include in the request.
- * @returns {void}
+ *
+ * @returns {Promise<void>}
  */
-export function getHealthStatsFromSense(serverName, host, tags, headers) {
+export async function getHealthStatsFromSense(serverName, host, tags, headers) {
     globals.logger.debug(`HEALTH: URL=https://${host}/engine/healthcheck`);
 
     // Get certificate configuration options
@@ -72,51 +73,50 @@ export function getHealthStatsFromSense(serverName, host, tags, headers) {
         });
     }
 
-    axios
-        .request(requestSettings)
-        .then((response) => {
-            if (response.status === 200) {
-                globals.logger.verbose(`HEALTH: Received ok response from ${tags.host}`);
-                globals.logger.debug(`HEALTH: ${JSON.stringify(response.data)}`);
+    try {
+        const response = await axios.request(requestSettings);
 
-                // Post to MQTT
-                if (globals.config.get('Butler-SOS.mqttConfig.enable') === true) {
-                    globals.logger.debug('HEALTH: Calling HEALTH metrics MQTT posting method');
-                    postHealthToMQTT(host, tags.host, response.data);
-                }
+        if (response.status === 200) {
+            globals.logger.verbose(`HEALTH: Received ok response from ${tags.host}`);
+            globals.logger.debug(`HEALTH: ${JSON.stringify(response.data)}`);
 
-                // Post to Influxdb
-                if (globals.config.get('Butler-SOS.influxdbConfig.enable') === true) {
-                    globals.logger.debug('HEALTH: Calling HEALTH metrics Influxdb posting method');
-                    postHealthMetricsToInfluxdb(serverName, host, response.data, tags);
-                }
-
-                // Post to New Relic
-                if (globals.config.get('Butler-SOS.newRelic.enable') === true) {
-                    globals.logger.debug('HEALTH: Calling HEALTH metrics New Relic posting method');
-                    postHealthMetricsToNewRelic(host, response.data, tags);
-                }
-
-                // Save latest available data for Prometheus
-                if (globals.config.get('Butler-SOS.prometheus.enable') === true) {
-                    globals.logger.debug('HEALTH: Calling HEALTH metrics Prometheus method');
-                    saveHealthMetricsToPrometheus(host, response.data, tags);
-                }
-            } else {
-                globals.logger.error(
-                    `HEALTH: Received non-200 response code (${response.status}) from server '${serverName}' (${host})`
-                );
+            // Post to MQTT
+            if (globals.config.get('Butler-SOS.mqttConfig.enable') === true) {
+                globals.logger.debug('HEALTH: Calling HEALTH metrics MQTT posting method');
+                postHealthToMQTT(host, tags.host, response.data);
             }
-        })
-        .catch((err) => {
-            // Track error count
-            globals.errorTracker.incrementError('HEALTH_API', serverName);
 
-            logError(
-                `HEALTH: Error when calling health check API for server '${serverName}' (${host})`,
-                err
+            // Post to Influxdb
+            if (globals.config.get('Butler-SOS.influxdbConfig.enable') === true) {
+                globals.logger.debug('HEALTH: Calling HEALTH metrics Influxdb posting method');
+                postHealthMetricsToInfluxdb(serverName, host, response.data, tags);
+            }
+
+            // Post to New Relic
+            if (globals.config.get('Butler-SOS.newRelic.enable') === true) {
+                globals.logger.debug('HEALTH: Calling HEALTH metrics New Relic posting method');
+                postHealthMetricsToNewRelic(host, response.data, tags);
+            }
+
+            // Save latest available data for Prometheus
+            if (globals.config.get('Butler-SOS.prometheus.enable') === true) {
+                globals.logger.debug('HEALTH: Calling HEALTH metrics Prometheus method');
+                saveHealthMetricsToPrometheus(host, response.data, tags);
+            }
+        } else {
+            globals.logger.error(
+                `HEALTH: Received non-200 response code (${response.status}) from server '${serverName}' (${host})`
             );
-        });
+        }
+    } catch (err) {
+        // Track error count
+        globals.errorTracker.incrementError('HEALTH_API', serverName);
+
+        logError(
+            `HEALTH: Error when calling health check API for server '${serverName}' (${host})`,
+            err
+        );
+    }
 }
 
 /**
@@ -124,34 +124,50 @@ export function getHealthStatsFromSense(serverName, host, tags, headers) {
  *
  * This function creates an interval that runs every pollingInterval milliseconds (as defined in config)
  * and calls getHealthStatsFromSense for each server in the serverList global variable.
+ * Uses a flag to prevent overlapping executions if health checks take longer than the polling interval.
  *
  * @returns {void}
  */
 export function setupHealthMetricsTimer() {
+    let isCollecting = false;
+
     // Configure timer for getting healthcheck data
-    setInterval(() => {
-        globals.logger.verbose('HEALTH: Event started: Statistics collection');
+    setInterval(async () => {
+        // Prevent overlapping executions
+        if (isCollecting) {
+            globals.logger.warn(
+                'HEALTH: Previous health check collection still in progress, skipping this interval'
+            );
+            return;
+        }
 
-        globals.serverList.forEach((server) => {
-            globals.logger.verbose(`HEALTH: Getting stats for server: ${server.serverName}`);
-            globals.logger.debug(`HEALTH: Server details: ${JSON.stringify(server)}`);
+        isCollecting = true;
+        try {
+            globals.logger.verbose('HEALTH: Event started: Statistics collection');
 
-            // Get per-server tags
-            const tags = getServerTags(globals.logger, server);
+            // Process servers sequentially to avoid overwhelming the Sense servers
+            for (const server of globals.serverList) {
+                try {
+                    globals.logger.verbose(
+                        `HEALTH: Getting stats for server: ${server.serverName}`
+                    );
+                    globals.logger.debug(`HEALTH: Server details: ${JSON.stringify(server)}`);
 
-            // Save tags to global variable.
-            // Add a new object to the array, with properties host andd tags.
-            // The tags property is an array with all the tags for the server.
-            // Each tag object has a name and a value.
-            // globals.serverTags.push({
-            //     host: server.host,
-            //     tags,
-            // });
+                    // Get per-server tags
+                    const tags = getServerTags(globals.logger, server);
 
-            // Get per-server headers
-            const headers = getServerHeaders(server);
+                    // Get per-server headers
+                    const headers = getServerHeaders(server);
 
-            getHealthStatsFromSense(server.serverName, server.host, tags, headers);
-        });
+                    await getHealthStatsFromSense(server.serverName, server.host, tags, headers);
+                } catch (err) {
+                    globals.logger.error(
+                        `HEALTH: Unexpected error processing health stats for server '${server.serverName}': ${globals.getErrorMessage(err)}`
+                    );
+                }
+            }
+        } finally {
+            isCollecting = false;
+        }
     }, globals.config.get('Butler-SOS.serversToMonitor.pollingInterval'));
 }
