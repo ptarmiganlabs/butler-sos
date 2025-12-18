@@ -549,6 +549,9 @@ Butler-SOS:
         enableSessionExtract: true # Query unique user IDs of what users have sessions open (true/false)?
         # Items below are mandatory if enableSessionExtract=true
         pollingInterval: 30000 # How often (milliseconds) should session data be polled?
+        timeoutMilliseconds: 30000 # HTTP request timeout (milliseconds) for proxy session API calls. Default: 30000
+        maxRetries: 3 # Number of times to retry failed API calls. Default: 3
+        retryDelayMilliseconds: 1000 # Initial delay between retries (milliseconds). Doubles for each retry. Default: 1000
         excludeUser: # Optional blacklist of users that should be disregarded when it comes to session monitoring.
             # Blacklist is only applied to data in InfluxDB. All session data will be sent to MQTT.
             # - directory: LAB
@@ -558,6 +561,9 @@ Butler-SOS:
 
     serversToMonitor:
         pollingInterval: 30000 # How often (milliseconds) should the healthcheck API be polled?
+        timeoutMilliseconds: 30000 # HTTP request timeout (milliseconds) for health check API calls. Default: 30000
+        maxRetries: 3 # Number of times to retry failed API calls. Default: 3
+        retryDelayMilliseconds: 1000 # Initial delay between retries (milliseconds). Doubles for each retry. Default: 1000
 
         # If false, Butler SOS will accept TLS certificates on the server without verifying them with the CA.
         # If true, data will only be retrieved from the Sense server if that server's TLS cert verifies

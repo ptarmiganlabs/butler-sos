@@ -20,14 +20,16 @@ import { getCertificates, createCertificateOptions } from './cert-utils.js';
  *
  * This function makes an HTTPS request to the Sense engine healthcheck API and
  * distributes the data to configured destinations (MQTT, InfluxDB, New Relic, Prometheus).
+ * Implements retry logic with exponential backoff for transient network failures.
  *
  * @param {string} serverName - The name of the server as defined in the config.
  * @param {string} host - The hostname or IP address of the Sense server.
  * @param {object} tags - Tags/metadata to associate with the server metrics.
  * @param {object|null} headers - Additional headers to include in the request.
- * @returns {void}
+ * @param {number} retryCount - Current retry attempt number (used internally for recursion). Defaults to 0.
+ * @returns {Promise<void>}
  */
-export function getHealthStatsFromSense(serverName, host, tags, headers) {
+export async function getHealthStatsFromSense(serverName, host, tags, headers, retryCount = 0) {
     globals.logger.debug(`HEALTH: URL=https://${host}/engine/healthcheck`);
 
     // Get certificate configuration options
@@ -49,6 +51,17 @@ export function getHealthStatsFromSense(serverName, host, tags, headers) {
         rejectUnauthorized: globals.config.get('Butler-SOS.serversToMonitor.rejectUnauthorized'),
     });
 
+    // Get timeout and retry settings from config with fallback defaults
+    const timeout = globals.config.has('Butler-SOS.serversToMonitor.timeoutMilliseconds')
+        ? globals.config.get('Butler-SOS.serversToMonitor.timeoutMilliseconds')
+        : 30000;
+    const maxRetries = globals.config.has('Butler-SOS.serversToMonitor.maxRetries')
+        ? globals.config.get('Butler-SOS.serversToMonitor.maxRetries')
+        : 3;
+    const retryDelay = globals.config.has('Butler-SOS.serversToMonitor.retryDelayMilliseconds')
+        ? globals.config.get('Butler-SOS.serversToMonitor.retryDelayMilliseconds')
+        : 1000;
+
     const requestSettings = {
         url: `https://${host}/engine/healthcheck`,
         method: 'get',
@@ -57,7 +70,7 @@ export function getHealthStatsFromSense(serverName, host, tags, headers) {
             'Content-Type': 'application/json',
         },
         httpsAgent,
-        timeout: 5000,
+        timeout,
         maxRedirects: 5,
     };
 
@@ -71,43 +84,71 @@ export function getHealthStatsFromSense(serverName, host, tags, headers) {
         });
     }
 
-    axios
-        .request(requestSettings)
-        .then((response) => {
-            if (response.status === 200) {
-                globals.logger.verbose(`HEALTH: Received ok response from ${tags.host}`);
-                globals.logger.debug(`HEALTH: ${JSON.stringify(response.data)}`);
+    try {
+        const response = await axios.request(requestSettings);
 
-                // Post to MQTT
-                if (globals.config.get('Butler-SOS.mqttConfig.enable') === true) {
-                    globals.logger.debug('HEALTH: Calling HEALTH metrics MQTT posting method');
-                    postHealthToMQTT(host, tags.host, response.data);
-                }
+        if (response.status === 200) {
+            globals.logger.verbose(`HEALTH: Received ok response from ${tags.host}`);
+            globals.logger.debug(`HEALTH: ${JSON.stringify(response.data)}`);
 
-                // Post to Influxdb
-                if (globals.config.get('Butler-SOS.influxdbConfig.enable') === true) {
-                    globals.logger.debug('HEALTH: Calling HEALTH metrics Influxdb posting method');
-                    postHealthMetricsToInfluxdb(serverName, host, response.data, tags);
-                }
-
-                // Post to New Relic
-                if (globals.config.get('Butler-SOS.newRelic.enable') === true) {
-                    globals.logger.debug('HEALTH: Calling HEALTH metrics New Relic posting method');
-                    postHealthMetricsToNewRelic(host, response.data, tags);
-                }
-
-                // Save latest available data for Prometheus
-                if (globals.config.get('Butler-SOS.prometheus.enable') === true) {
-                    globals.logger.debug('HEALTH: Calling HEALTH metrics Prometheus method');
-                    saveHealthMetricsToPrometheus(host, response.data, tags);
-                }
+            // Post to MQTT
+            if (globals.config.get('Butler-SOS.mqttConfig.enable') === true) {
+                globals.logger.debug('HEALTH: Calling HEALTH metrics MQTT posting method');
+                postHealthToMQTT(host, tags.host, response.data);
             }
-        })
-        .catch((err) => {
-            globals.logger.error(
-                `HEALTH: Error when calling health check API for server '${serverName}' (${host}): ${globals.getErrorMessage(err)}`
+
+            // Post to Influxdb
+            if (globals.config.get('Butler-SOS.influxdbConfig.enable') === true) {
+                globals.logger.debug('HEALTH: Calling HEALTH metrics Influxdb posting method');
+                postHealthMetricsToInfluxdb(serverName, host, response.data, tags);
+            }
+
+            // Post to New Relic
+            if (globals.config.get('Butler-SOS.newRelic.enable') === true) {
+                globals.logger.debug('HEALTH: Calling HEALTH metrics New Relic posting method');
+                postHealthMetricsToNewRelic(host, response.data, tags);
+            }
+
+            // Save latest available data for Prometheus
+            if (globals.config.get('Butler-SOS.prometheus.enable') === true) {
+                globals.logger.debug('HEALTH: Calling HEALTH metrics Prometheus method');
+                saveHealthMetricsToPrometheus(host, response.data, tags);
+            }
+        }
+    } catch (err) {
+        // Check if we should retry based on error type and retry count
+        const shouldRetry =
+            retryCount < maxRetries &&
+            (err.code === 'ECONNABORTED' || // Timeout
+                err.code === 'ECONNRESET' || // Connection reset
+                err.code === 'ETIMEDOUT' || // Network timeout
+                err.code === 'ENOTFOUND' || // DNS lookup failed
+                err.code === 'ENETUNREACH'); // Network unreachable
+
+        if (shouldRetry) {
+            // Calculate exponential backoff delay
+            const delay = retryDelay * Math.pow(2, retryCount);
+            globals.logger.warn(
+                `HEALTH: Error calling health check API for server '${serverName}' (${host}): ${globals.getErrorMessage(err)}. Retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})...`
             );
-        });
+
+            // Wait before retrying
+            await new Promise((resolve) => setTimeout(resolve, delay));
+
+            // Recursive retry
+            return getHealthStatsFromSense(serverName, host, tags, headers, retryCount + 1);
+        }
+
+        // Final error after all retries exhausted or non-retryable error
+        globals.logger.error(
+            `HEALTH: Error when calling health check API for server '${serverName}' (${host}): ${globals.getErrorMessage(err)}`
+        );
+        if (retryCount > 0) {
+            globals.logger.error(
+                `HEALTH: Failed after ${retryCount} ${retryCount === 1 ? 'retry' : 'retries'}`
+            );
+        }
+    }
 }
 
 /**
@@ -120,29 +161,30 @@ export function getHealthStatsFromSense(serverName, host, tags, headers) {
  */
 export function setupHealthMetricsTimer() {
     // Configure timer for getting healthcheck data
-    setInterval(() => {
+    setInterval(async () => {
         globals.logger.verbose('HEALTH: Event started: Statistics collection');
 
-        globals.serverList.forEach((server) => {
-            globals.logger.verbose(`HEALTH: Getting stats for server: ${server.serverName}`);
-            globals.logger.debug(`HEALTH: Server details: ${JSON.stringify(server)}`);
+        // Process all servers concurrently with error handling
+        const healthCheckPromises = globals.serverList.map(async (server) => {
+            try {
+                globals.logger.verbose(`HEALTH: Getting stats for server: ${server.serverName}`);
+                globals.logger.debug(`HEALTH: Server details: ${JSON.stringify(server)}`);
 
-            // Get per-server tags
-            const tags = getServerTags(globals.logger, server);
+                // Get per-server tags
+                const tags = getServerTags(globals.logger, server);
 
-            // Save tags to global variable.
-            // Add a new object to the array, with properties host andd tags.
-            // The tags property is an array with all the tags for the server.
-            // Each tag object has a name and a value.
-            // globals.serverTags.push({
-            //     host: server.host,
-            //     tags,
-            // });
+                // Get per-server headers
+                const headers = getServerHeaders(server);
 
-            // Get per-server headers
-            const headers = getServerHeaders(server);
-
-            getHealthStatsFromSense(server.serverName, server.host, tags, headers);
+                await getHealthStatsFromSense(server.serverName, server.host, tags, headers);
+            } catch (err) {
+                globals.logger.error(
+                    `HEALTH: Unexpected error processing health stats for server '${server.serverName}': ${globals.getErrorMessage(err)}`
+                );
+            }
         });
+
+        // Wait for all health checks to complete
+        await Promise.allSettled(healthCheckPromises);
     }, globals.config.get('Butler-SOS.serversToMonitor.pollingInterval'));
 }
