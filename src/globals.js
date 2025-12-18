@@ -965,7 +965,7 @@ Configuration File:
                         this.logger.info(`INFLUXDB3 INIT:   Port: ${port}`);
                         this.logger.info(`INFLUXDB3 INIT:   Database: ${database}`);
                         this.logger.info(`INFLUXDB3 INIT:   Token: ${tokenPreview}`);
-                        this.logger.info(`INFLUXDB3 INIT:   Socket timeout: ${timeout}ms`);
+                        this.logger.info(`INFLUXDB3 INIT:   Socket timeout: ${writeTimeout}ms`);
                         this.logger.info(`INFLUXDB3 INIT:   Query timeout: ${queryTimeout}ms`);
                     } catch (testErr) {
                         this.logger.warn(
@@ -978,7 +978,7 @@ Configuration File:
                         this.logger.info(`INFLUXDB3 INIT:   Port: ${port}`);
                         this.logger.info(`INFLUXDB3 INIT:   Database: ${database}`);
                         this.logger.info(`INFLUXDB3 INIT:   Token: ${tokenPreview}`);
-                        this.logger.info(`INFLUXDB3 INIT:   Socket timeout: ${timeout}ms`);
+                        this.logger.info(`INFLUXDB3 INIT:   Socket timeout: ${writeTimeout}ms`);
                         this.logger.info(`INFLUXDB3 INIT:   Query timeout: ${queryTimeout}ms`);
                     }
                 } catch (err) {

@@ -1,0 +1,14 @@
+apiVersion: 1
+
+datasources:
+    - name: Butler SOS
+      type: influxdb
+      access: proxy
+      url: http://influxdb-v3-core:8181
+      database: butler-sos
+      jsonData:
+          httpMode: GET
+          httpHeaderName1: Authorization
+      secureJsonData:
+          httpHeaderValue1: Token apiv3_99RtQcbFuBYP_wO1fK5aHvIBQqOqOVRAV4cAqAJxm_gpQRUFIpQkONXWfG0cBt_1wOI21Dc2l5K2izMa3gW7mA
+      uid: bf7gj7evi44xsd

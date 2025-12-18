@@ -1,0 +1,302 @@
+---
+Butler-SOS:
+    logLevel: info
+    fileLogging: true
+    logDirectory: log
+    systemInfo:
+        enable: true
+    anonTelemetry: true
+    configVisualisation:
+        enable: true
+        host: 0.0.0.0
+        port: 3100
+        obfuscate: true
+    heartbeat:
+        enable: false
+        remoteURL: http://localhost
+        frequency: every 1 hour
+    dockerHealthCheck:
+        enable: true
+        port: 12398
+    uptimeMonitor:
+        enable: true
+        frequency: every 15 seconds
+        logLevel: verbose
+        storeInInfluxdb:
+            butlerSOSMemoryUsage: true
+            instanceTag: docker-v1
+        storeNewRelic:
+            enable: false
+            destinationAccount: []
+            metric:
+                dynamic:
+                    butlerMemoryUsage:
+                        enable: false
+                    butlerUptime:
+                        enable: false
+            attribute:
+                static: []
+                dynamic:
+                    butlerVersion:
+                        enable: false
+    qlikSenseEvents:
+        influxdb:
+            enable: true
+            writeFrequency: 5000
+        eventCount:
+            enable: true
+            influxdb:
+                measurementName: event_count
+                tags:
+                    - name: qs_env
+                      value: docker-v1
+        rejectedEventCount:
+            enable: false
+            influxdb:
+                measurementName: rejected_event_count
+    influxdbConfig:
+        enable: true
+        host: influxdb-v1
+        port: 8086
+        version: 1
+        maxBatchSize: 100
+        v3Config:
+            database: mydatabase
+            description: Butler SOS metrics
+            token: mytoken
+            retentionDuration: 10d
+            writeTimeout: 10000
+            queryTimeout: 60000
+        v2Config:
+            org: myorg
+            bucket: mybucket
+            description: Butler SOS metrics
+            token: mytoken
+            retentionDuration: 10d
+        v1Config:
+            auth:
+                enable: false
+                username: ''
+                password: ''
+            dbName: senseops
+            retentionPolicy:
+                name: 10d
+                duration: 10d
+        includeFields:
+            activeDocs: false
+            loadedDocs: false
+            inMemoryDocs: false
+    serversToMonitor:
+        pollingInterval: 30000
+        rejectUnauthorized: false
+        serverTagsDefinition: []
+        servers: []
+    thirdPartyToolsCredentials:
+        newRelic: []
+    userEvents:
+        enable: false
+        excludeUser: []
+        udpServerConfig:
+            serverHost: 0.0.0.0
+            portUserActivityEvents: 9997
+            messageQueue:
+                maxConcurrent: 10
+                maxSize: 200
+                backpressureThreshold: 80
+            rateLimit:
+                enable: false
+                maxMessagesPerMinute: 600
+            maxMessageSize: 65507
+            queueMetrics:
+                influxdb:
+                    enable: false
+                    writeFrequency: 20000
+                    measurementName: user_events_queue
+                    tags: []
+        tags: []
+        sendToMQTT:
+            enable: false
+            postTo:
+                everythingTopic:
+                    enable: false
+                    topic: qliksense/userevent
+                sessionStartTopic:
+                    enable: false
+                    topic: qliksense/userevent/session/start
+                sessionStopTopic:
+                    enable: false
+                    topic: qliksense/userevent/session/stop
+                connectionOpenTopic:
+                    enable: false
+                    topic: qliksense/userevent/connection/open
+                connectionCloseTopic:
+                    enable: false
+                    topic: qliksense/userevent/connection/close
+        sendToInfluxdb:
+            enable: false
+        sendToNewRelic:
+            enable: false
+            destinationAccount: []
+            scramble: true
+    logEvents:
+        udpServerConfig:
+            serverHost: 0.0.0.0
+            portLogEvents: 9996
+            messageQueue:
+                maxConcurrent: 10
+                maxSize: 200
+                backpressureThreshold: 80
+            rateLimit:
+                enable: false
+                maxMessagesPerMinute: 600
+            maxMessageSize: 65507
+            queueMetrics:
+                influxdb:
+                    enable: false
+                    writeFrequency: 20000
+                    measurementName: log_events_queue
+                    tags: []
+        tags: []
+        source:
+            engine:
+                enable: false
+            proxy:
+                enable: false
+            repository:
+                enable: false
+            scheduler:
+                enable: false
+            qixPerf:
+                enable: false
+        categorise:
+            enable: false
+            rules: []
+            ruleDefault:
+                enable: false
+                category: []
+        enginePerformanceMonitor:
+            enable: false
+            appNameLookup:
+                enable: false
+            trackRejectedEvents:
+                enable: false
+                tags: []
+            monitorFilter:
+                allApps:
+                    enable: false
+                    appExclude: []
+                    objectType:
+                        allObjectTypes: true
+                        allObjectTypesExclude: []
+                        someObjectTypesInclude: []
+                    method:
+                        allMethods: true
+                        allMethodsExclude: []
+                        someMethodsInclude: []
+                appSpecific:
+                    enable: false
+                    app: []
+        sendToMQTT:
+            enable: false
+            baseTopic: qliksense/logevent
+            postTo:
+                baseTopic: true
+                subsystemTopics: true
+        sendToInfluxdb:
+            enable: false
+        sendToNewRelic:
+            enable: false
+            destinationAccount: []
+            source:
+                engine:
+                    enable: false
+                    logLevel:
+                        error: true
+                        warn: true
+                proxy:
+                    enable: false
+                    logLevel:
+                        error: true
+                        warn: true
+                repository:
+                    enable: false
+                    logLevel:
+                        error: true
+                        warn: true
+                scheduler:
+                    enable: false
+                    logLevel:
+                        error: true
+                        warn: true
+    cert:
+        clientCert: /nodeapp/config/certificate/client.pem
+        clientCertKey: /nodeapp/config/certificate/client_key.pem
+        clientCertCA: /nodeapp/config/certificate/root.pem
+        clientCertPassphrase: ''
+    mqttConfig:
+        enable: false
+        brokerHost: localhost
+        brokerPort: 1883
+        baseTopic: butler-sos/
+    newRelic:
+        enable: false
+        event:
+            url: https://insights-collector.eu01.nr-data.net
+            header: []
+            attribute:
+                static: []
+                dynamic:
+                    butlerSosVersion:
+                        enable: false
+        metric:
+            destinationAccount: []
+            url: https://insights-collector.eu01.nr-data.net/metric/v1
+            header: []
+            dynamic:
+                engine:
+                    memory:
+                        enable: false
+                    cpu:
+                        enable: false
+                    calls:
+                        enable: false
+                    selections:
+                        enable: false
+                    sessions:
+                        enable: false
+                    users:
+                        enable: false
+                    saturated:
+                        enable: false
+                apps:
+                    docCount:
+                        enable: false
+                    activeDocs:
+                        enable: false
+                    loadedDocs:
+                        enable: false
+                    inMemoryDocs:
+                        enable: false
+                cache:
+                    cache:
+                        enable: false
+                proxy:
+                    sessions:
+                        enable: false
+            attribute:
+                static: []
+                dynamic:
+                    butlerSosVersion:
+                        enable: false
+    prometheus:
+        enable: false
+        host: 0.0.0.0
+        port: 9842
+    appNames:
+        enableAppNameExtract: false
+        extractInterval: 60000
+        hostIP: localhost
+    userSessions:
+        enableSessionExtract: false
+        pollingInterval: 30000
+        excludeUser: []

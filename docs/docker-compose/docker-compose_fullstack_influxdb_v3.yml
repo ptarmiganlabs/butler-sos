@@ -1,29 +1,31 @@
-# docker-compose_fullstack_influxdb_v3.yml
+name: butler-sos-v3
 # InfluxDB v3.x (Core) - using the InfluxDB 3.x Community Edition
 # Inspiration from https://github.com/InfluxCommunity/TIG-Stack-using-InfluxDB-3/blob/main/docker-compose.yml
 services:
     butler-sos:
-        image: ptarmiganlabs/butler-sos:latest
+        image: butler-sos:local
         container_name: butler-sos
         restart: unless-stopped
         ports:
-            - "9997:9997"   # UDP user events
-            - "9996:9996"   # UDP log events
-            - "9842:9842"   # Prometheus metrics
-            - "3100:3100"   # Config file visualization
+            - '9997:9997' # UDP user events
+            - '9996:9996' # UDP log events
+            - '9842:9842' # Prometheus metrics
+            - '3100:3100' # Config file visualization
         volumes:
             # Make config file and log files accessible outside of container
-            - "./config:/nodeapp/config"
-            - "./log:/nodeapp/log"
-        command: ["node", "src/butler-sos.js", "-c", "/nodeapp/config/${BUTLER_SOS_CONFIG_FILE}"]
+            - './config:/nodeapp/config'
+            - './test_data/v3/log:/nodeapp/log'
+        command: ['node', 'src/butler-sos.js', '-c', '/nodeapp/config/${BUTLER_SOS_CONFIG_FILE}']
         logging:
-            driver: "json-file"
+            driver: 'json-file'
             options:
-                max-file: "5"
-                max-size: "5m"
+                max-file: '5'
+                max-size: '5m'
         depends_on:
-            # Or switch to influxdb3-enterprise as needed
-            - influxdb-v3-core
+            influxdb-v3-core:
+                condition: service_healthy
+            setup-influxdb:
+                condition: service_completed_successfully
         networks:
             - senseops
 
@@ -41,24 +43,49 @@ services:
             - --node-id=${INFLUXDB_NODE_ID}
             - --object-store=file
             - --data-dir=/var/lib/influxdb3
+            - --admin-token-file=/admin_token.txt
         volumes:
-            - ./influxdb/data:/var/lib/influxdb3 # Mount for influxdb data directory
-            - ./influxdb/config/:/etc/influxdb3/ # Mount for influxdb configuration
+            - ./test_data/v3/influxdb/data:/var/lib/influxdb3 # Mount for influxdb data directory
+            - ./test_data/v3/influxdb/config/:/etc/influxdb3/ # Mount for influxdb configuration
+            - ./config/admin_token.txt:/admin_token.txt
         # environment:
-            # InfluxDB v3 setup - uses similar setup to v2 but different internal architecture
-            # - "DOCKER_INFLUXDB_INIT_MODE=setup"
-            # - "DOCKER_INFLUXDB_INIT_USERNAME=admin"
-            # - "DOCKER_INFLUXDB_INIT_PASSWORD=butlersos123"
-            # - "DOCKER_INFLUXDB_INIT_ORG=butler-sos"
-            # - "DOCKER_INFLUXDB_INIT_BUCKET=butler-sos"
-            # - "DOCKER_INFLUXDB_INIT_DATABASE=butler-sos" # v3 uses database concept
-            # - "DOCKER_INFLUXDB_INIT_RETENTION=10d"
-            # - "DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=butlersos-token"
+        # InfluxDB v3 setup - uses similar setup to v2 but different internal architecture
+        # - "DOCKER_INFLUXDB_INIT_MODE=setup"
+        # - "DOCKER_INFLUXDB_INIT_USERNAME=admin"
+        # - "DOCKER_INFLUXDB_INIT_PASSWORD=butlersos123"
+        # - "DOCKER_INFLUXDB_INIT_ORG=butler-sos"
+        # - "DOCKER_INFLUXDB_INIT_BUCKET=butler-sos"
+        # - "DOCKER_INFLUXDB_INIT_DATABASE=butler-sos" # v3 uses database concept
+        # - "DOCKER_INFLUXDB_INIT_RETENTION=10d"
+        # - "DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=butlersos-token"
         healthcheck:
-            test: ["CMD-SHELL", "curl -f -H 'Authorization: Bearer ${INFLUXDB_TOKEN}' http://localhost:8181/health || exit 1"]
+            test:
+                [
+                    'CMD-SHELL',
+                    "curl -f -H 'Authorization: Bearer ${INFLUXDB_TOKEN}' http://localhost:8181/health || exit 1",
+                ]
             interval: 30s
             timeout: 10s
             retries: 3
+        networks:
+            - senseops
+
+    setup-influxdb:
+        image: influxdb:3-core
+        container_name: setup-influxdb
+        restart: no
+        entrypoint: ['/bin/sh', '-c']
+        command:
+            - |
+                echo "Creating database $${INFLUXDB_DATABASE}..."
+                influxdb3 create database $${INFLUXDB_DATABASE} --host http://influxdb-v3-core:8181 --token $${INFLUXDB_TOKEN} || true
+                echo "Database creation attempt finished."
+        environment:
+            - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
+            - INFLUXDB_DATABASE=${INFLUXDB_DATABASE}
+        depends_on:
+            influxdb-v3-core:
+                condition: service_healthy
         networks:
             - senseops
 
@@ -67,15 +94,20 @@ services:
         container_name: grafana
         restart: unless-stopped
         ports:
-            - "${GRAFANA_PORT}:3000"
+            - '${GRAFANA_PORT}:3000'
         environment:
             - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
             - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+            - GF_AUTH_ANONYMOUS_ENABLED=true
+            - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
         volumes:
-            - ./grafana/data:/var/lib/grafana
+            - ./test_data/v3/grafana/data:/var/lib/grafana
+            - ./grafana/provisioning/datasources/datasource_v3.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+            - ./grafana/provisioning/dashboards/dashboard.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml
+            - ./grafana/dashboards:/var/lib/grafana/dashboards
         depends_on:
-            # Or switch to influxdb3-enterprise as needed
-            - influxdb-v3-core
+            influxdb-v3-core:
+                condition: service_healthy
         networks:
             - senseops
 

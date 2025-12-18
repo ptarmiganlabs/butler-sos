@@ -16,6 +16,7 @@ ssl/*
 *.tmp
 snyk.sarif
 build
+test_data
 
 # Logs
 log/
@@ -60,4 +61,3 @@ butler-sos
 src/config/production_vac.yaml
 tmp/
 docs/docker-compose/.env
-docs/docker-compose/config/production_influxdb_v3.yaml

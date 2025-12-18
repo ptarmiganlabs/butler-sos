@@ -1,24 +1,27 @@
-# docker-compose_fullstack_influxdb_v2.yml
+name: butler-sos-v2
 services:
     butler-sos:
-        image: ptarmiganlabs/butler-sos:latest
+        image: butler-sos:local
         container_name: butler-sos
         restart: unless-stopped
         ports:
-            - "9997:9997"   # UDP user events
-            - "9996:9996"   # UDP log events
-            - "9842:9842"   # Prometheus metrics
-            - "3100:3100"   # Config file visualization
+            - '9997:9997' # UDP user events
+            - '9996:9996' # UDP log events
+            - '9842:9842' # Prometheus metrics
+            - '3100:3100' # Config file visualization
         volumes:
             # Make config file and log files accessible outside of container
-            - "./config:/nodeapp/config"
-            - "./log:/nodeapp/log"
-        command: ["node", "src/butler-sos.js", "-c", "/nodeapp/config/production_influxdb_v2.yaml"]
+            - './config:/nodeapp/config'
+            - './test_data/v2/log:/nodeapp/log'
+        command: ['node', 'src/butler-sos.js', '-c', '/nodeapp/config/production_influxdb_v2.yaml']
         logging:
-            driver: "json-file"
+            driver: 'json-file'
             options:
-                max-file: "5"
-                max-size: "5m"
+                max-file: '5'
+                max-size: '5m'
+        depends_on:
+            influxdb:
+                condition: service_healthy
         networks:
             - senseops
 
@@ -27,20 +30,25 @@ services:
         container_name: influxdb-v2
         restart: unless-stopped
         volumes:
-            - ./influxdb/data:/var/lib/influxdb2 # Mount for influxdb data directory
-            - ./influxdb/config/:/etc/influxdb2/ # Mount for influxdb configuration
+            - ./test_data/v2/influxdb/data:/var/lib/influxdb2 # Mount for influxdb data directory
+            - ./test_data/v2/influxdb/config/:/etc/influxdb2/ # Mount for influxdb configuration
         ports:
             # The API for InfluxDB is served on port 8086
-            - "8086:8086"
+            - '8086:8086'
         environment:
             # Initial setup parameters
-            - "DOCKER_INFLUXDB_INIT_MODE=setup"
-            - "DOCKER_INFLUXDB_INIT_USERNAME=admin"
-            - "DOCKER_INFLUXDB_INIT_PASSWORD=butlersos123"
-            - "DOCKER_INFLUXDB_INIT_ORG=butler-sos"
-            - "DOCKER_INFLUXDB_INIT_BUCKET=butler-sos"
-            - "DOCKER_INFLUXDB_INIT_RETENTION=10d"
-            - "DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=butlersos-token"
+            - 'DOCKER_INFLUXDB_INIT_MODE=setup'
+            - 'DOCKER_INFLUXDB_INIT_USERNAME=admin'
+            - 'DOCKER_INFLUXDB_INIT_PASSWORD=butlersos123'
+            - 'DOCKER_INFLUXDB_INIT_ORG=butler-sos'
+            - 'DOCKER_INFLUXDB_INIT_BUCKET=butler-sos'
+            - 'DOCKER_INFLUXDB_INIT_RETENTION=10d'
+            - 'DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=butlersos-token'
+        healthcheck:
+            test: ['CMD', 'influx', 'ping']
+            interval: 30s
+            timeout: 10s
+            retries: 5
         networks:
             - senseops
 
@@ -49,9 +57,18 @@ services:
         container_name: grafana
         restart: unless-stopped
         ports:
-            - "3000:3000"
+            - '3000:3000'
         volumes:
-            - ./grafana/data:/var/lib/grafana
+            - ./test_data/v2/grafana/data:/var/lib/grafana
+            - ./grafana/provisioning/datasources/datasource_v2.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+            - ./grafana/provisioning/dashboards/dashboard.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml
+            - ./grafana/dashboards:/var/lib/grafana/dashboards
+        environment:
+            - GF_AUTH_ANONYMOUS_ENABLED=true
+            - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+        depends_on:
+            influxdb:
+                condition: service_healthy
         networks:
             - senseops
 
