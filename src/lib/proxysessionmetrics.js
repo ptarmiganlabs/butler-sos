@@ -26,6 +26,7 @@ import { getCertificates, createCertificateOptions } from './cert-utils.js';
  * @param {string} virtualProxy - Virtual proxy prefix
  * @param {Array} body - Array of session objects from Qlik Sense
  * @param {object} tags - Tags to associate with the metrics
+ *
  * @returns {Promise<object>} Promise resolving to an object containing formatted metrics data
  */
 function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
@@ -211,6 +212,7 @@ function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
  * @param {string} host - Host name or IP of the Qlik Sense server
  * @param {string} virtualProxy - Virtual proxy prefix
  * @param {object} influxTags - Tags to associate with metrics in InfluxDB
+ *
  * @returns {Promise<void>} Promise that resolves when the operation is complete
  */
 export async function getProxySessionStatsFromSense(serverName, host, virtualProxy, influxTags) {

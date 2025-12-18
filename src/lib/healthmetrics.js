@@ -25,6 +25,7 @@ import { getCertificates, createCertificateOptions } from './cert-utils.js';
  * @param {string} host - The hostname or IP address of the Sense server.
  * @param {object} tags - Tags/metadata to associate with the server metrics.
  * @param {object|null} headers - Additional headers to include in the request.
+ *
  * @returns {Promise<void>}
  */
 export async function getHealthStatsFromSense(serverName, host, tags, headers) {
