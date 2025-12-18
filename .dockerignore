@@ -28,7 +28,6 @@ img
 log
 scriptlog
 node_modules
-package-lock.json
 renovate.json
 release
 release-macos
@@ -42,3 +41,10 @@ src/.snyk
 src/config
 src/docker-compose
 src/log
+
+coverage
+build
+jest.config.mjs
+eslint.config.js
+CHANGELOG.md
+changelog_old.md
