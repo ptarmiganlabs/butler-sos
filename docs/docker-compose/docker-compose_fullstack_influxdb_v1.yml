@@ -1,24 +1,27 @@
-# docker-compose_fullstack_influxdb_v1.yml
+name: butler-sos-v1
 services:
     butler-sos:
-        image: ptarmiganlabs/butler-sos:latest
+        image: butler-sos:local
         container_name: butler-sos
         restart: unless-stopped
         ports:
-            - "9997:9997"   # UDP user events
-            - "9996:9996"   # UDP log events
-            - "9842:9842"   # Prometheus metrics
-            - "3100:3100"   # Config file visualization
+            - '9997:9997' # UDP user events
+            - '9996:9996' # UDP log events
+            - '9842:9842' # Prometheus metrics
+            - '3100:3100' # Config file visualization
         volumes:
             # Make config file and log files accessible outside of container
-            - "./config:/nodeapp/config"
-            - "./log:/nodeapp/log"
-        command: ["node", "src/butler-sos.js", "-c", "/nodeapp/config/production_influxdb_v1.yaml"]
+            - './config:/nodeapp/config'
+            - './test_data/v1/log:/nodeapp/log'
+        command: ['node', 'src/butler-sos.js', '-c', '/nodeapp/config/production_influxdb_v1.yaml']
         logging:
-            driver: "json-file"
+            driver: 'json-file'
             options:
-                max-file: "5"
-                max-size: "5m"
+                max-file: '5'
+                max-size: '5m'
+        depends_on:
+            influxdb:
+                condition: service_healthy
         networks:
             - senseops
 
@@ -27,15 +30,20 @@ services:
         container_name: influxdb-v1
         restart: unless-stopped
         volumes:
-            - ./influxdb/data:/var/lib/influxdb # Mount for influxdb data directory
-            - ./influxdb/config/:/etc/influxdb/ # Mount for influxdb configuration
+            - ./test_data/v1/influxdb/data:/var/lib/influxdb # Mount for influxdb data directory
+            - ./test_data/v1/influxdb/config/:/etc/influxdb/ # Mount for influxdb configuration
         ports:
             # The API for InfluxDB is served on port 8086
-            - "8086:8086"
-            - "8082:8082"
+            - '8086:8086'
+            - '8082:8082'
         environment:
             # Disable usage reporting
-            - "INFLUXDB_REPORTING_DISABLED=true"
+            - 'INFLUXDB_REPORTING_DISABLED=true'
+        healthcheck:
+            test: ['CMD', 'curl', '-f', 'http://localhost:8086/ping']
+            interval: 30s
+            timeout: 10s
+            retries: 5
         networks:
             - senseops
 
@@ -44,9 +52,18 @@ services:
         container_name: grafana
         restart: unless-stopped
         ports:
-            - "3000:3000"
+            - '3000:3000'
         volumes:
-            - ./grafana/data:/var/lib/grafana
+            - ./test_data/v1/grafana/data:/var/lib/grafana
+            - ./grafana/provisioning/datasources/datasource_v1.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+            - ./grafana/provisioning/dashboards/dashboard.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml
+            - ./grafana/dashboards:/var/lib/grafana/dashboards
+        environment:
+            - GF_AUTH_ANONYMOUS_ENABLED=true
+            - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+        depends_on:
+            influxdb:
+                condition: service_healthy
         networks:
             - senseops
 
