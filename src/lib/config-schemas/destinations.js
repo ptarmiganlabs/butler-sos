@@ -316,6 +316,37 @@ export const destinationsSchema = {
             },
             port: { type: 'number' },
             version: { type: 'number' },
+            maxBatchSize: {
+                type: 'number',
+                description:
+                    'Maximum number of data points to write in a single batch. Progressive retry with smaller sizes attempted on failure.',
+                default: 1000,
+                minimum: 1,
+                maximum: 10000,
+            },
+            v3Config: {
+                type: 'object',
+                properties: {
+                    database: { type: 'string' },
+                    description: { type: 'string' },
+                    token: { type: 'string' },
+                    retentionDuration: { type: 'string' },
+                    writeTimeout: {
+                        type: 'number',
+                        description: 'Socket timeout for write operations in milliseconds',
+                        default: 10000,
+                        minimum: 1000,
+                    },
+                    queryTimeout: {
+                        type: 'number',
+                        description: 'gRPC timeout for query operations in milliseconds',
+                        default: 60000,
+                        minimum: 1000,
+                    },
+                },
+                required: ['database', 'description', 'token', 'retentionDuration'],
+                additionalProperties: false,
+            },
             v2Config: {
                 type: 'object',
                 properties: {

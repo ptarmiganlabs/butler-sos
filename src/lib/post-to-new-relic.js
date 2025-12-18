@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import axios from 'axios';
 
 import globals from '../globals.js';
+import { logError } from './log-error.js';
 
 // const sessionAppPrefix = 'SessionApp';
 
@@ -350,8 +351,11 @@ export async function postHealthMetricsToNewRelic(_host, body, tags) {
             }
         }
     } catch (error) {
+        // Track error count
+        await globals.errorTracker.incrementError('NEW_RELIC_POST', '');
+
         // handle error
-        globals.logger.error(`HEALTH METRICS NEW RELIC: Error sending proxy sessions: ${error}`);
+        logError('HEALTH METRICS NEW RELIC: Error sending proxy sessions', error);
     }
 }
 
@@ -511,8 +515,11 @@ export async function postProxySessionsToNewRelic(userSessions) {
             }
         }
     } catch (error) {
+        // Track error count
+        await globals.errorTracker.incrementError('NEW_RELIC_POST', '');
+
         // handle error
-        globals.logger.error(`PROXY SESSIONS NEW RELIC: Error sending proxy sessions: ${error}`);
+        logError('PROXY SESSIONS NEW RELIC: Error sending proxy sessions', error);
     }
 }
 
@@ -687,7 +694,7 @@ export async function postButlerSOSUptimeToNewRelic(fields) {
         }
     } catch (error) {
         // handle error
-        globals.logger.error(`UPTIME NEW RELIC: Error sending uptime: ${error}`);
+        logError('UPTIME NEW RELIC: Error sending uptime', error);
     }
 }
 
@@ -842,7 +849,7 @@ export async function postUserEventToNewRelic(msg) {
             }
         }
     } catch (err) {
-        globals.logger.error(`USER EVENT NEW RELIC: Error saving user event to New Relic! ${err}`);
+        logError('USER EVENT NEW RELIC: Error saving user event to New Relic!', err);
     }
 }
 
@@ -1136,6 +1143,6 @@ export async function postLogEventToNewRelic(msg) {
             }
         }
     } catch (err) {
-        globals.logger.error(`LOG EVENT NEW RELIC: Error saving event to New Relic! ${err}`);
+        logError('LOG EVENT NEW RELIC: Error saving event to New Relic!', err);
     }
 }

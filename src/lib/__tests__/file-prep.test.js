@@ -41,9 +41,8 @@ const handlebars = (await import('handlebars')).default;
 const globals = (await import('../../globals.js')).default;
 
 // Import the module under test
-const { prepareFile, compileTemplate, getFileContent, getMimeType } = await import(
-    '../file-prep.js'
-);
+const { prepareFile, compileTemplate, getFileContent, getMimeType } =
+    await import('../file-prep.js');
 
 describe('file-prep', () => {
     beforeEach(() => {

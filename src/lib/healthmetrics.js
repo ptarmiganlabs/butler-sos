@@ -7,13 +7,14 @@ import https from 'https';
 import axios from 'axios';
 
 import globals from '../globals.js';
-import { postHealthMetricsToInfluxdb } from './post-to-influxdb.js';
+import { postHealthMetricsToInfluxdb } from './influxdb/index.js';
 import { postHealthMetricsToNewRelic } from './post-to-new-relic.js';
 import { postHealthToMQTT } from './post-to-mqtt.js';
 import { getServerHeaders } from './serverheaders.js';
 import { getServerTags } from './servertags.js';
 import { saveHealthMetricsToPrometheus } from './prom-client.js';
 import { getCertificates, createCertificateOptions } from './cert-utils.js';
+import { logError } from './log-error.js';
 
 /**
  * Retrieves health statistics from Qlik Sense server via the engine healthcheck API.
@@ -102,10 +103,18 @@ export async function getHealthStatsFromSense(serverName, host, tags, headers) {
                 globals.logger.debug('HEALTH: Calling HEALTH metrics Prometheus method');
                 saveHealthMetricsToPrometheus(host, response.data, tags);
             }
+        } else {
+            globals.logger.error(
+                `HEALTH: Received non-200 response code (${response.status}) from server '${serverName}' (${host})`
+            );
         }
     } catch (err) {
-        globals.logger.error(
-            `HEALTH: Error when calling health check API for server '${serverName}' (${host}): ${globals.getErrorMessage(err)}`
+        // Track error count
+        globals.errorTracker.incrementError('HEALTH_API', serverName);
+
+        logError(
+            `HEALTH: Error when calling health check API for server '${serverName}' (${host})`,
+            err
         );
     }
 }

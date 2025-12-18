@@ -21,6 +21,9 @@ jest.unstable_mockModule('../../globals.js', () => ({
         config: {
             get: jest.fn(),
         },
+        errorTracker: {
+            incrementError: jest.fn().mockResolvedValue(),
+        },
         certPath: 'cert/path',
         keyPath: 'key/path',
     },
@@ -129,9 +132,12 @@ describe('appnamesextract', () => {
         expect(qrsInteract).toHaveBeenCalledWith(expect.any(Object));
         expect(mockGet).toHaveBeenCalledWith('app');
 
-        // Verify error logging
+        // Verify error logging - logError creates TWO log calls: message + stack trace
         expect(globals.logger.error).toHaveBeenCalledWith(
-            'APP NAMES: Error getting app names: Error: QRS API Error'
+            'APP NAMES: Error getting app names: QRS API Error'
+        );
+        expect(globals.logger.error).toHaveBeenCalledWith(
+            expect.stringContaining('Stack trace: Error: QRS API Error')
         );
     });
 });

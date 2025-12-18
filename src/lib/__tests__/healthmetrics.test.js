@@ -23,6 +23,9 @@ jest.unstable_mockModule('../../globals.js', () => ({
             verbose: jest.fn(),
             debug: jest.fn(),
         },
+        errorTracker: {
+            incrementError: jest.fn(),
+        },
         config: {
             get: jest.fn(),
             has: jest.fn(),
@@ -32,10 +35,10 @@ jest.unstable_mockModule('../../globals.js', () => ({
 }));
 const globals = (await import('../../globals.js')).default;
 
-jest.unstable_mockModule('../post-to-influxdb.js', () => ({
+jest.unstable_mockModule('../influxdb/index.js', () => ({
     postHealthMetricsToInfluxdb: jest.fn(),
 }));
-const { postHealthMetricsToInfluxdb } = await import('../post-to-influxdb.js');
+const { postHealthMetricsToInfluxdb } = await import('../influxdb/index.js');
 
 jest.unstable_mockModule('../post-to-new-relic.js', () => ({
     postHealthMetricsToNewRelic: jest.fn(),

@@ -217,7 +217,7 @@ describe('Log Event Handler Sanitization', () => {
     });
 
     describe('QIX Performance Event Handler', () => {
-        it('should sanitize method and object_type fields', () => {
+        it('should sanitize method and object_type fields', async () => {
             const msg = [
                 '/qseow-qix-perf/',
                 '1',
@@ -247,7 +247,7 @@ describe('Log Event Handler Sanitization', () => {
                 'linechart\x02', // Field 25: object_type
             ];
 
-            const result = processQixPerfEvent(msg);
+            const result = await processQixPerfEvent(msg);
             if (result) {
                 expect(result.method).not.toMatch(/[\x00-\x1F\x7F]/);
                 expect(result.object_type).not.toMatch(/[\x00-\x1F\x7F]/);

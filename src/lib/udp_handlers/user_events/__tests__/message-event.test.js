@@ -44,7 +44,7 @@ jest.unstable_mockModule('uuid', () => ({
 }));
 
 // Mock posting modules
-jest.unstable_mockModule('../../../post-to-influxdb.js', () => ({
+jest.unstable_mockModule('../../../influxdb/index.js', () => ({
     postUserEventToInfluxdb: jest.fn(),
     storeEventCountInfluxDB: jest.fn(),
     storeRejectedEventCountInfluxDB: jest.fn(),
@@ -61,7 +61,7 @@ jest.unstable_mockModule('../../../post-to-mqtt.js', () => ({
 // Import modules after mocking
 const { validate } = await import('uuid');
 const { UAParser } = await import('ua-parser-js');
-const { postUserEventToInfluxdb } = await import('../../../post-to-influxdb.js');
+const { postUserEventToInfluxdb } = await import('../../../influxdb/index.js');
 const { postUserEventToNewRelic } = await import('../../../post-to-new-relic.js');
 const { postUserEventToMQTT } = await import('../../../post-to-mqtt.js');
 const { default: globals } = await import('../../../../globals.js');

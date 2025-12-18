@@ -39,9 +39,9 @@ import { sanitizeField } from '../../../udp-queue-manager.js';
  * 25: Object type. Ex: <Unknown>, AppPropsList, SheetList, StoryList, VariableList, linechart, barchart, map, listbox, CurrentSelection
  *
  * @param {Array} msg - The message parts
- * @returns {object | null} Processed message object or null if event should be skipped
+ * @returns {Promise<object | null>} Processed message object or null if event should be skipped
  */
-export function processQixPerfEvent(msg) {
+export async function processQixPerfEvent(msg) {
     globals.logger.verbose(
         `LOG EVENT: ${msg[0]}:${msg[5]}:${msg[4]}, ${msg[6]}, ${msg[9]}\\${msg[10]}, ${msg[13]}, ${msg[15]}, Object type: ${msg[25]}`
     );
@@ -51,6 +51,32 @@ export function processQixPerfEvent(msg) {
         globals.logger.debug(
             'LOG EVENT: Qix performance monitoring is disabled in the configuration. Skipping event.'
         );
+
+        // Is logging of event counts enabled?
+        if (globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.enable') === true) {
+            // Get source, host and subsystem if they exist, otherwise set to 'Unknown'
+            let source = 'Unknown';
+            let host = 'Unknown';
+            let subsystem = 'Unknown';
+
+            if (msg.length > 0) {
+                source = msg[0].toLowerCase().replace('/', '').replace('/', '');
+            }
+            if (msg.length > 5) {
+                host = msg[5];
+            }
+            if (msg.length > 6) {
+                subsystem = msg[6];
+            }
+
+            // Increase counter for log events when detailed monitoring is disabled
+            await globals.udpEvents.addLogEvent({
+                source: source,
+                host: host,
+                subsystem: subsystem,
+            });
+        }
+
         return null;
     }
 

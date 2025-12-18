@@ -8,6 +8,9 @@ jest.unstable_mockModule('../../globals.js', () => ({
             debug: jest.fn(),
             verbose: jest.fn(),
         },
+        errorTracker: {
+            incrementError: jest.fn(),
+        },
         mqttClient: {
             publish: jest.fn(),
         },
@@ -19,13 +22,20 @@ jest.unstable_mockModule('../../globals.js', () => ({
 }));
 const globals = (await import('../../globals.js')).default;
 
+// Mock log-error module
+const mockLogError = jest.fn();
+jest.unstable_mockModule('../log-error.js', () => ({
+    logError: mockLogError,
+}));
+
 // Import the module under test
-const { postHealthToMQTT, postUserSessionsToMQTT, postUserEventToMQTT } = await import(
-    '../post-to-mqtt.js'
-);
+const { postHealthToMQTT, postUserSessionsToMQTT, postUserEventToMQTT } =
+    await import('../post-to-mqtt.js');
 
 describe('post-to-mqtt', () => {
     beforeEach(() => {
+        // Reset all mocks before each test
+        jest.clearAllMocks();
         // Setup default config values
         globals.config.get.mockImplementation((path) => {
             if (path === 'Butler-SOS.mqttConfig.baseTopic') {
@@ -497,7 +507,7 @@ describe('post-to-mqtt', () => {
             );
         });
 
-        test('should handle errors during publishing', () => {
+        test('should handle errors during publishing', async () => {
             // Force an error by making the MQTT client throw
             globals.mqttClient.publish.mockImplementation(() => {
                 throw new Error('MQTT publish error');
@@ -516,11 +526,12 @@ describe('post-to-mqtt', () => {
             };
 
             // Call the function being tested
-            postUserEventToMQTT(userEvent);
+            await postUserEventToMQTT(userEvent);
 
             // Verify error was logged
-            expect(globals.logger.error).toHaveBeenCalledWith(
-                expect.stringContaining('USER EVENT MQTT: Failed posting message to MQTT')
+            expect(mockLogError).toHaveBeenCalledWith(
+                expect.stringContaining('USER EVENT MQTT: Failed posting message to MQTT'),
+                expect.any(Error)
             );
         });
     });

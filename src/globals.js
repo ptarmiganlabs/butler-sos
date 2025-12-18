@@ -8,16 +8,39 @@ import winston from 'winston';
 import 'winston-daily-rotate-file';
 import si from 'systeminformation';
 import { readFileSync } from 'fs';
-import Influx from 'influx';
 import { Command, Option } from 'commander';
-import { InfluxDB, HttpError, DEFAULT_WriteOptions } from '@influxdata/influxdb-client';
+
+// Note on InfluxDB libraries:
+// v1 client library: https://github.com/node-influx/node-influx
+// v2 client library: https://influxdata.github.io/influxdb-client-js/
+// v3 client library: https://github.com/InfluxCommunity/influxdb3-js
+
+// v1
+import Influx from 'influx';
+
+// v2
+// Import InfluxDB as const InfluxDB2 to avoid name clash with Influx from 'influx' above
+import {
+    InfluxDB as InfluxDB2,
+    HttpError,
+    DEFAULT_WriteOptions,
+} from '@influxdata/influxdb-client';
 import { OrgsAPI, BucketsAPI } from '@influxdata/influxdb-client-apis';
+
+// v3
+import {
+    InfluxDBClient as InfluxDBClient3,
+    Point as Point3,
+    setLogger as setInfluxV3Logger,
+} from '@influxdata/influxdb3-client';
+
 import { fileURLToPath } from 'url';
 import sea from './lib/sea-wrapper.js';
 
 import { getServerTags } from './lib/servertags.js';
 import { UdpEvents } from './lib/udp-event.js';
 import { UdpQueueManager } from './lib/udp-queue-manager.js';
+import { ErrorTracker, setupErrorCounterReset } from './lib/error-tracker.js';
 import { verifyConfigFileSchema, verifyAppConfig } from './lib/config-file-verify.js';
 
 let instance = null;
@@ -134,9 +157,6 @@ class Settings {
         }
 
         this.appVersion = appVersion;
-
-        // Make copy of influxdb client
-        const InfluxDB2 = InfluxDB;
 
         // Command line parameters
         const program = new Command();
@@ -575,6 +595,14 @@ Configuration File:
         }
 
         // ------------------------------------
+        // Track API error counts
+        this.errorTracker = new ErrorTracker(this.logger);
+        this.logger.info('ERROR TRACKER: Initialized error tracking with daily UTC reset');
+
+        // Setup midnight UTC reset timer for error counters
+        setupErrorCounterReset();
+
+        // ------------------------------------
         // Get info on what servers to monitor
         this.serverList = this.config.get('Butler-SOS.serversToMonitor.servers');
 
@@ -700,6 +728,13 @@ Configuration File:
                 );
                 this.logger.info(
                     `CONFIG: Influxdb retention policy duration: ${this.config.get('Butler-SOS.influxdbConfig.v2Config.retentionDuration')}`
+                );
+            } else if (this.config.get('Butler-SOS.influxdbConfig.version') === 3) {
+                this.logger.info(
+                    `CONFIG: Influxdb database name: ${this.config.get('Butler-SOS.influxdbConfig.v3Config.database')}`
+                );
+                this.logger.info(
+                    `CONFIG: Influxdb retention policy duration: ${this.config.get('Butler-SOS.influxdbConfig.v3Config.retentionDuration')}`
                 );
             } else {
                 this.logger.error(
@@ -869,6 +904,88 @@ Configuration File:
                         `INFLUXDB2 INIT: Error creating InfluxDB 2 client: ${this.getErrorMessage(err)}`
                     );
                     this.logger.error(`INFLUXDB2 INIT: Exiting.`);
+                }
+            } else if (this.config.get('Butler-SOS.influxdbConfig.version') === 3) {
+                // Configure InfluxDB v3 client logger to suppress internal error messages
+                // The retry logic in Butler SOS provides better error handling
+                setInfluxV3Logger({
+                    error: () => {
+                        // Suppress InfluxDB client library error messages
+                        // Butler SOS retry logic and logging handles errors
+                    },
+                    warn: () => {
+                        // Suppress InfluxDB client library warning messages
+                    },
+                });
+
+                // Set up Influxdb v3 client (uses its own client library, NOT same as v2)
+                const hostName = this.config.get('Butler-SOS.influxdbConfig.host');
+                const port = this.config.get('Butler-SOS.influxdbConfig.port');
+                const host = `http://${hostName}:${port}`;
+                const token = this.config.get('Butler-SOS.influxdbConfig.v3Config.token');
+                const database = this.config.get('Butler-SOS.influxdbConfig.v3Config.database');
+
+                // Get timeout settings with defaults
+                const writeTimeout = this.config.has(
+                    'Butler-SOS.influxdbConfig.v3Config.writeTimeout'
+                )
+                    ? this.config.get('Butler-SOS.influxdbConfig.v3Config.writeTimeout')
+                    : 10000; // Default 10 seconds for socket timeout
+
+                const queryTimeout = this.config.has(
+                    'Butler-SOS.influxdbConfig.v3Config.queryTimeout'
+                )
+                    ? this.config.get('Butler-SOS.influxdbConfig.v3Config.queryTimeout')
+                    : 60000; // Default 60 seconds for gRPC query timeout
+
+                try {
+                    this.influx = new InfluxDBClient3({
+                        host,
+                        token,
+                        database,
+                        timeout: writeTimeout,
+                        queryTimeout,
+                    });
+
+                    // Test connection by executing a simple query
+                    this.logger.info(`INFLUXDB3 INIT: Testing connection to InfluxDB v3...`);
+                    try {
+                        // Execute a simple query to test the connection
+                        const testQuery = `SELECT 1 as test LIMIT 1`;
+                        const queryResult = this.influx.query(testQuery, database);
+
+                        // Try to get first result (this will throw if connection fails)
+                        const iterator = queryResult[Symbol.asyncIterator]();
+                        await iterator.next();
+
+                        // Connection successful - log details
+                        const tokenPreview = token.substring(0, 4) + '***';
+                        this.logger.info(`INFLUXDB3 INIT: Connection successful!`);
+                        this.logger.info(`INFLUXDB3 INIT:   Host: ${hostName}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Port: ${port}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Database: ${database}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Token: ${tokenPreview}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Socket timeout: ${timeout}ms`);
+                        this.logger.info(`INFLUXDB3 INIT:   Query timeout: ${queryTimeout}ms`);
+                    } catch (testErr) {
+                        this.logger.warn(
+                            `INFLUXDB3 INIT: Could not test connection (this may be normal): ${this.getErrorMessage(testErr)}`
+                        );
+                        // Still log the configuration
+                        const tokenPreview = token.substring(0, 4) + '***';
+                        this.logger.info(`INFLUXDB3 INIT: Client created with:`);
+                        this.logger.info(`INFLUXDB3 INIT:   Host: ${hostName}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Port: ${port}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Database: ${database}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Token: ${tokenPreview}`);
+                        this.logger.info(`INFLUXDB3 INIT:   Socket timeout: ${timeout}ms`);
+                        this.logger.info(`INFLUXDB3 INIT:   Query timeout: ${queryTimeout}ms`);
+                    }
+                } catch (err) {
+                    this.logger.error(
+                        `INFLUXDB3 INIT: Error creating InfluxDB 3 client: ${this.getErrorMessage(err)}`
+                    );
+                    this.logger.error(`INFLUXDB3 INIT: Exiting.`);
                 }
             } else {
                 this.logger.error(
@@ -1090,8 +1207,8 @@ Configuration File:
                         maxRetries: 2, // do not retry writes
 
                         // ... there are more write options that can be customized, see
-                        // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeoptions.html and
-                        // https://influxdata.github.io/influxdb-client-js/influxdb-client.writeretryoptions.html
+                        // https://influxdata.github.io/influxdb-client-js/interfaces/_influxdata_influxdb-client.WriteOptions.html
+                        // https://influxdata.github.io/influxdb-client-js/interfaces/_influxdata_influxdb-client.WriteRetryOptions.html
                     };
 
                     try {
@@ -1112,6 +1229,45 @@ Configuration File:
                             `INFLUXDB2: Error getting write API: ${this.getErrorMessage(err)}`
                         );
                     }
+                });
+            }
+        } else if (this.config.get('Butler-SOS.influxdbConfig.version') === 3) {
+            // Get config
+            const databaseName = this.config.get('Butler-SOS.influxdbConfig.v3Config.database');
+            const description = this.config.get('Butler-SOS.influxdbConfig.v3Config.description');
+            const token = this.config.get('Butler-SOS.influxdbConfig.v3Config.token');
+            const retentionDuration = this.config.get(
+                'Butler-SOS.influxdbConfig.v3Config.retentionDuration'
+            );
+
+            if (
+                this.influx &&
+                this.config.get('Butler-SOS.influxdbConfig.enable') === true &&
+                databaseName?.length > 0 &&
+                token?.length > 0 &&
+                retentionDuration?.length > 0
+            ) {
+                enableInfluxdb = true;
+            }
+
+            if (enableInfluxdb) {
+                // For InfluxDB v3, we use client.write() directly (no getWriteApi method in v3)
+                this.logger.info(`INFLUXDB3: Using database "${databaseName}"`);
+
+                // For v3, we store the client itself and call write() directly
+                // The influxWriteApi array will contain objects with client and database info
+                this.serverList.forEach((server) => {
+                    // Get per-server tags
+                    const tags = getServerTags(this.logger, server);
+
+                    // Store client info and tags for this server
+                    // v3 uses client.write() directly, not getWriteApi()
+                    this.influxWriteApi.push({
+                        serverName: server.serverName,
+                        writeAPI: this.influx, // Store the client itself
+                        database: databaseName,
+                        defaultTags: tags, // Store tags for later use
+                    });
                 });
             }
         }

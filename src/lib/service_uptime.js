@@ -2,7 +2,7 @@ import later from '@breejs/later';
 import { Duration } from 'luxon';
 
 import globals from '../globals.js';
-import { postButlerSOSMemoryUsageToInfluxdb } from './post-to-influxdb.js';
+import { postButlerSOSMemoryUsageToInfluxdb } from './influxdb/index.js';
 import { postButlerSOSUptimeToNewRelic } from './post-to-new-relic.js';
 
 const fullUnits = ['years', 'months', 'days', 'hours', 'minutes', 'seconds'];

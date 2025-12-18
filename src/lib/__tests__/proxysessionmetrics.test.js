@@ -52,6 +52,9 @@ jest.unstable_mockModule('../../globals.js', () => ({
             debug: jest.fn(),
             error: jest.fn(),
         },
+        errorTracker: {
+            incrementError: jest.fn(),
+        },
         config: {
             get: jest.fn().mockImplementation((path) => {
                 if (path === 'Butler-SOS.cert.clientCert') return '/path/to/cert.pem';
@@ -88,7 +91,7 @@ jest.unstable_mockModule('../../globals.js', () => ({
 
 // Mock dependent modules
 const mockPostProxySessionsToInfluxdb = jest.fn().mockResolvedValue();
-jest.unstable_mockModule('../post-to-influxdb.js', () => ({
+jest.unstable_mockModule('../influxdb/index.js', () => ({
     postProxySessionsToInfluxdb: mockPostProxySessionsToInfluxdb,
 }));
 
@@ -116,9 +119,8 @@ jest.unstable_mockModule('../prom-client.js', () => ({
 }));
 
 // Import the module under test
-const { setupUserSessionsTimer, getProxySessionStatsFromSense } = await import(
-    '../proxysessionmetrics.js'
-);
+const { setupUserSessionsTimer, getProxySessionStatsFromSense } =
+    await import('../proxysessionmetrics.js');
 
 describe('proxysessionmetrics', () => {
     let proxysessionmetrics;
@@ -136,7 +138,7 @@ describe('proxysessionmetrics', () => {
         // Get mocked modules
         axios = (await import('axios')).default;
         globals = (await import('../../globals.js')).default;
-        influxdb = await import('../post-to-influxdb.js');
+        influxdb = await import('../influxdb/index.js');
         newRelic = await import('../post-to-new-relic.js');
         mqtt = await import('../post-to-mqtt.js');
         servertags = await import('../servertags.js');
