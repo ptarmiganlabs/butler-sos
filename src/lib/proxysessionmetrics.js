@@ -206,22 +206,14 @@ function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
  * This function makes an API call to the Qlik Sense Proxy API to get information about
  * active user sessions. It then processes this data and sends it to configured destinations
  * (MQTT, InfluxDB, New Relic, Prometheus).
- * Implements retry logic with exponential backoff for transient network failures.
  *
  * @param {string} serverName - Name of the Qlik Sense server
  * @param {string} host - Host name or IP of the Qlik Sense server
  * @param {string} virtualProxy - Virtual proxy prefix
  * @param {object} influxTags - Tags to associate with metrics in InfluxDB
- * @param {number} retryCount - Current retry attempt number (used internally for recursion). Defaults to 0.
  * @returns {Promise<void>} Promise that resolves when the operation is complete
  */
-export async function getProxySessionStatsFromSense(
-    serverName,
-    host,
-    virtualProxy,
-    influxTags,
-    retryCount = 0
-) {
+export async function getProxySessionStatsFromSense(serverName, host, virtualProxy, influxTags) {
     // Current user sessions are retrieved using this API:
     // https://help.qlik.com/en-US/sense-developer/February2021/Subsystems/ProxyServiceAPI/Content/Sense_ProxyServiceAPI/ProxyServiceAPI-Proxy-API.htm
 
@@ -244,17 +236,6 @@ export async function getProxySessionStatsFromSense(
         rejectUnauthorized: globals.config.get('Butler-SOS.serversToMonitor.rejectUnauthorized'),
     });
 
-    // Get timeout and retry settings from config with fallback defaults
-    const timeout = globals.config.has('Butler-SOS.userSessions.timeoutMilliseconds')
-        ? globals.config.get('Butler-SOS.userSessions.timeoutMilliseconds')
-        : 30000;
-    const maxRetries = globals.config.has('Butler-SOS.userSessions.maxRetries')
-        ? globals.config.get('Butler-SOS.userSessions.maxRetries')
-        : 3;
-    const retryDelay = globals.config.has('Butler-SOS.userSessions.retryDelayMilliseconds')
-        ? globals.config.get('Butler-SOS.userSessions.retryDelayMilliseconds')
-        : 1000;
-
     const vP = virtualProxy === '/' ? '' : `${virtualProxy}`;
     const requestSettings = {
         url: `https://${host}/qps${vP}/session?Xrfkey=abcdefghij987654`,
@@ -266,7 +247,7 @@ export async function getProxySessionStatsFromSense(
             XVirtualProxy: virtualProxy,
         },
         httpsAgent,
-        timeout,
+        timeout: 5000,
         maxRedirects: 5,
     };
 
@@ -335,44 +316,9 @@ export async function getProxySessionStatsFromSense(
             }
         }
     } catch (err) {
-        // Check if we should retry based on error type and retry count
-        const shouldRetry =
-            retryCount < maxRetries &&
-            (err.code === 'ECONNABORTED' || // Timeout
-                err.code === 'ECONNRESET' || // Connection reset
-                err.code === 'ETIMEDOUT' || // Network timeout
-                err.code === 'ENOTFOUND' || // DNS lookup failed
-                err.code === 'ENETUNREACH'); // Network unreachable
-
-        if (shouldRetry) {
-            // Calculate exponential backoff delay
-            const delay = retryDelay * Math.pow(2, retryCount);
-            globals.logger.warn(
-                `PROXY SESSIONS: Error calling proxy session API for server '${serverName}' (${host}), virtual proxy '${virtualProxy}': ${globals.getErrorMessage(err)}. Retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})...`
-            );
-
-            // Wait before retrying
-            await new Promise((resolve) => setTimeout(resolve, delay));
-
-            // Recursive retry
-            return getProxySessionStatsFromSense(
-                serverName,
-                host,
-                virtualProxy,
-                influxTags,
-                retryCount + 1
-            );
-        }
-
-        // Final error after all retries exhausted or non-retryable error
         globals.logger.error(
             `PROXY SESSIONS: Error when calling proxy session API for server '${serverName}' (${host}), virtual proxy '${virtualProxy}': ${globals.getErrorMessage(err)}`
         );
-        if (retryCount > 0) {
-            globals.logger.error(
-                `PROXY SESSIONS: Failed after ${retryCount} ${retryCount === 1 ? 'retry' : 'retries'}`
-            );
-        }
     }
 }
 

@@ -20,16 +20,14 @@ import { getCertificates, createCertificateOptions } from './cert-utils.js';
  *
  * This function makes an HTTPS request to the Sense engine healthcheck API and
  * distributes the data to configured destinations (MQTT, InfluxDB, New Relic, Prometheus).
- * Implements retry logic with exponential backoff for transient network failures.
  *
  * @param {string} serverName - The name of the server as defined in the config.
  * @param {string} host - The hostname or IP address of the Sense server.
  * @param {object} tags - Tags/metadata to associate with the server metrics.
  * @param {object|null} headers - Additional headers to include in the request.
- * @param {number} retryCount - Current retry attempt number (used internally for recursion). Defaults to 0.
  * @returns {Promise<void>}
  */
-export async function getHealthStatsFromSense(serverName, host, tags, headers, retryCount = 0) {
+export async function getHealthStatsFromSense(serverName, host, tags, headers) {
     globals.logger.debug(`HEALTH: URL=https://${host}/engine/healthcheck`);
 
     // Get certificate configuration options
@@ -51,17 +49,6 @@ export async function getHealthStatsFromSense(serverName, host, tags, headers, r
         rejectUnauthorized: globals.config.get('Butler-SOS.serversToMonitor.rejectUnauthorized'),
     });
 
-    // Get timeout and retry settings from config with fallback defaults
-    const timeout = globals.config.has('Butler-SOS.serversToMonitor.timeoutMilliseconds')
-        ? globals.config.get('Butler-SOS.serversToMonitor.timeoutMilliseconds')
-        : 30000;
-    const maxRetries = globals.config.has('Butler-SOS.serversToMonitor.maxRetries')
-        ? globals.config.get('Butler-SOS.serversToMonitor.maxRetries')
-        : 3;
-    const retryDelay = globals.config.has('Butler-SOS.serversToMonitor.retryDelayMilliseconds')
-        ? globals.config.get('Butler-SOS.serversToMonitor.retryDelayMilliseconds')
-        : 1000;
-
     const requestSettings = {
         url: `https://${host}/engine/healthcheck`,
         method: 'get',
@@ -70,7 +57,7 @@ export async function getHealthStatsFromSense(serverName, host, tags, headers, r
             'Content-Type': 'application/json',
         },
         httpsAgent,
-        timeout,
+        timeout: 5000,
         maxRedirects: 5,
     };
 
@@ -116,38 +103,9 @@ export async function getHealthStatsFromSense(serverName, host, tags, headers, r
             }
         }
     } catch (err) {
-        // Check if we should retry based on error type and retry count
-        const shouldRetry =
-            retryCount < maxRetries &&
-            (err.code === 'ECONNABORTED' || // Timeout
-                err.code === 'ECONNRESET' || // Connection reset
-                err.code === 'ETIMEDOUT' || // Network timeout
-                err.code === 'ENOTFOUND' || // DNS lookup failed
-                err.code === 'ENETUNREACH'); // Network unreachable
-
-        if (shouldRetry) {
-            // Calculate exponential backoff delay
-            const delay = retryDelay * Math.pow(2, retryCount);
-            globals.logger.warn(
-                `HEALTH: Error calling health check API for server '${serverName}' (${host}): ${globals.getErrorMessage(err)}. Retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})...`
-            );
-
-            // Wait before retrying
-            await new Promise((resolve) => setTimeout(resolve, delay));
-
-            // Recursive retry
-            return getHealthStatsFromSense(serverName, host, tags, headers, retryCount + 1);
-        }
-
-        // Final error after all retries exhausted or non-retryable error
         globals.logger.error(
             `HEALTH: Error when calling health check API for server '${serverName}' (${host}): ${globals.getErrorMessage(err)}`
         );
-        if (retryCount > 0) {
-            globals.logger.error(
-                `HEALTH: Failed after ${retryCount} ${retryCount === 1 ? 'retry' : 'retries'}`
-            );
-        }
     }
 }
 
