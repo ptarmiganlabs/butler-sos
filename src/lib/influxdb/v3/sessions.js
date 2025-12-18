@@ -1,6 +1,6 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxV3WithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV3 } from '../shared/utils.js';
 
 /**
  * Posts proxy sessions data to InfluxDB v3.
@@ -39,12 +39,14 @@ export async function postProxySessionsToInfluxdbV3(userSessions) {
     // The datapointInfluxdb array contains summary points and individual session details
     try {
         if (userSessions.datapointInfluxdb && userSessions.datapointInfluxdb.length > 0) {
-            for (const point of userSessions.datapointInfluxdb) {
-                await writeToInfluxV3WithRetry(
-                    async () => await globals.influx.write(point.toLineProtocol(), database),
-                    `Proxy sessions for ${userSessions.host}/${userSessions.virtualProxy}`
-                );
-            }
+            await writeBatchToInfluxV3(
+                userSessions.datapointInfluxdb,
+                database,
+                `Proxy sessions for ${userSessions.host}/${userSessions.virtualProxy}`,
+                userSessions.host,
+                globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+            );
+
             globals.logger.debug(
                 `PROXY SESSIONS V3: Wrote ${userSessions.datapointInfluxdb.length} datapoints to InfluxDB v3`
             );

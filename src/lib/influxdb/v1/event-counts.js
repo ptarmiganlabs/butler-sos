@@ -1,33 +1,50 @@
 import globals from '../../../globals.js';
-import { logError } from '../../log-error.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV1 } from '../shared/utils.js';
 
 /**
- * Store event counts to InfluxDB v1
- * Aggregates and stores counts for log and user events
+ * Store event count in InfluxDB v1
  *
- * @returns {Promise<void>}
+ * @description
+ * This function reads arrays of log and user events from the `udpEvents` object,
+ * and stores the data in InfluxDB v1. The data is written to a measurement named after
+ * the `Butler-SOS.qlikSenseEvents.eventCount.influxdb.measurementName` config setting.
+ *
+ * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
+ * @throws {Error} Error if unable to write data to InfluxDB
  */
 export async function storeEventCountV1() {
+    // Get array of log events
+    const logEvents = await globals.udpEvents.getLogEvents();
+    const userEvents = await globals.udpEvents.getUserEvents();
+
+    globals.logger.debug(`EVENT COUNT V1: Log events: ${JSON.stringify(logEvents, null, 2)}`);
+    globals.logger.debug(`EVENT COUNT V1: User events: ${JSON.stringify(userEvents, null, 2)}`);
+
+    // Are there any events to store?
+    if (logEvents.length === 0 && userEvents.length === 0) {
+        globals.logger.verbose('EVENT COUNT V1: No events to store in InfluxDB');
+        return;
+    }
+
+    // Only write to InfluxDB if the global influx object has been initialized
+    if (!isInfluxDbEnabled()) {
+        return;
+    }
+
     try {
-        // Get array of log events
-        const logEvents = await globals.udpEvents.getLogEvents();
-        const userEvents = await globals.udpEvents.getUserEvents();
-
-        globals.logger.debug(`EVENT COUNT V1: Log events: ${JSON.stringify(logEvents, null, 2)}`);
-        globals.logger.debug(`EVENT COUNT V1: User events: ${JSON.stringify(userEvents, null, 2)}`);
-
-        // Are there any events to store?
-        if (logEvents.length === 0 && userEvents.length === 0) {
-            globals.logger.verbose('EVENT COUNT V1: No events to store in InfluxDB');
-            return;
-        }
-
         const points = [];
 
         // Get measurement name to use for event counts
         const measurementName = globals.config.get(
             'Butler-SOS.qlikSenseEvents.eventCount.influxdb.measurementName'
         );
+
+        // Get config tags once to avoid repeated config lookups
+        const configTagsArray =
+            globals.config.has('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') &&
+            Array.isArray(globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags'))
+                ? globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags')
+                : null;
 
         // Loop through data in log events and create datapoints
         for (const event of logEvents) {
@@ -45,16 +62,8 @@ export async function storeEventCountV1() {
             };
 
             // Add static tags from config file
-            if (
-                globals.config.has('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') &&
-                globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') !==
-                    null &&
-                globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags').length > 0
-            ) {
-                const configTags = globals.config.get(
-                    'Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags'
-                );
-                for (const item of configTags) {
+            if (configTagsArray) {
+                for (const item of configTagsArray) {
                     point.tags[item.name] = item.value;
                 }
             }
@@ -78,16 +87,8 @@ export async function storeEventCountV1() {
             };
 
             // Add static tags from config file
-            if (
-                globals.config.has('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') &&
-                globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags') !==
-                    null &&
-                globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags').length > 0
-            ) {
-                const configTags = globals.config.get(
-                    'Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags'
-                );
-                for (const item of configTags) {
+            if (configTagsArray) {
+                for (const item of configTagsArray) {
                     point.tags[item.name] = item.value;
                 }
             }
@@ -95,40 +96,56 @@ export async function storeEventCountV1() {
             points.push(point);
         }
 
-        await globals.influx.writePoints(points);
+        // Write with retry logic
+        await writeBatchToInfluxV1(
+            points,
+            'Event counts',
+            '',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+        );
 
         globals.logger.verbose('EVENT COUNT V1: Sent event count data to InfluxDB');
     } catch (err) {
-        logError('EVENT COUNT V1: Error saving data', err);
+        await globals.errorTracker.incrementError('INFLUXDB_V1_WRITE', '');
+        globals.logger.error(`EVENT COUNT V1: Error saving data: ${globals.getErrorMessage(err)}`);
         throw err;
     }
 }
 
 /**
  * Store rejected event counts to InfluxDB v1
- * Tracks events that were rejected due to validation failures or rate limiting
  *
- * @returns {Promise<void>}
+ * @description
+ * Tracks events that were rejected due to validation failures, rate limiting,
+ * or filtering rules. Particularly important for QIX performance monitoring.
+ *
+ * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
+ * @throws {Error} Error if unable to write data to InfluxDB
  */
 export async function storeRejectedEventCountV1() {
+    // Get array of rejected log events
+    const rejectedLogEvents = await globals.rejectedEvents.getRejectedLogEvents();
+
+    globals.logger.debug(
+        `REJECTED EVENT COUNT V1: Rejected log events: ${JSON.stringify(
+            rejectedLogEvents,
+            null,
+            2
+        )}`
+    );
+
+    // Are there any events to store?
+    if (rejectedLogEvents.length === 0) {
+        globals.logger.verbose('REJECTED EVENT COUNT V1: No events to store in InfluxDB');
+        return;
+    }
+
+    // Only write to InfluxDB if the global influx object has been initialized
+    if (!isInfluxDbEnabled()) {
+        return;
+    }
+
     try {
-        // Get array of rejected log events
-        const rejectedLogEvents = await globals.rejectedEvents.getRejectedLogEvents();
-
-        globals.logger.debug(
-            `REJECTED EVENT COUNT V1: Rejected log events: ${JSON.stringify(
-                rejectedLogEvents,
-                null,
-                2
-            )}`
-        );
-
-        // Are there any events to store?
-        if (rejectedLogEvents.length === 0) {
-            globals.logger.verbose('REJECTED EVENT COUNT V1: No events to store in InfluxDB');
-            return;
-        }
-
         const points = [];
 
         // Get measurement name to use for rejected events
@@ -204,13 +221,22 @@ export async function storeRejectedEventCountV1() {
             }
         }
 
-        await globals.influx.writePoints(points);
+        // Write with retry logic
+        await writeBatchToInfluxV1(
+            points,
+            'Rejected event counts',
+            '',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+        );
 
         globals.logger.verbose(
             'REJECTED EVENT COUNT V1: Sent rejected event count data to InfluxDB'
         );
     } catch (err) {
-        logError('REJECTED EVENT COUNT V1: Error saving data', err);
+        await globals.errorTracker.incrementError('INFLUXDB_V1_WRITE', '');
+        globals.logger.error(
+            `REJECTED EVENT COUNT V1: Error saving data: ${globals.getErrorMessage(err)}`
+        );
         throw err;
     }
 }

@@ -1,6 +1,6 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxV3WithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV3 } from '../shared/utils.js';
 
 /**
  * Posts Butler SOS memory usage metrics to InfluxDB v3.
@@ -17,6 +17,14 @@ import { isInfluxDbEnabled, writeToInfluxV3WithRetry } from '../shared/utils.js'
  * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
  */
 export async function postButlerSOSMemoryUsageToInfluxdbV3(memory) {
+    // Validate input
+    if (!memory || typeof memory !== 'object') {
+        globals.logger.warn(
+            'MEMORY USAGE V3: Invalid memory data provided. Data will not be sent to InfluxDB'
+        );
+        return;
+    }
+
     globals.logger.debug(`MEMORY USAGE V3: Memory usage ${JSON.stringify(memory, null, 2)})`);
 
     // Get Butler version
@@ -40,12 +48,16 @@ export async function postButlerSOSMemoryUsageToInfluxdbV3(memory) {
 
     try {
         // Convert point to line protocol and write directly with retry logic
-        await writeToInfluxV3WithRetry(
-            async () => await globals.influx.write(point.toLineProtocol(), database),
-            'Memory usage metrics'
+        await writeBatchToInfluxV3(
+            [point],
+            database,
+            'Memory usage metrics',
+            'butler-memory',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
         );
         globals.logger.debug(`MEMORY USAGE V3: Wrote data to InfluxDB v3`);
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', '');
         globals.logger.error(
             `MEMORY USAGE V3: Error saving memory usage data to InfluxDB v3! ${globals.getErrorMessage(err)}`
         );

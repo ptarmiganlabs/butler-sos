@@ -310,13 +310,20 @@ export const destinationsSchema = {
         type: 'object',
         properties: {
             enable: { type: 'boolean' },
-            useRefactoredCode: { type: 'boolean' },
             host: {
                 type: 'string',
                 format: 'hostname',
             },
             port: { type: 'number' },
             version: { type: 'number' },
+            maxBatchSize: {
+                type: 'number',
+                description:
+                    'Maximum number of data points to write in a single batch. Progressive retry with smaller sizes attempted on failure.',
+                default: 1000,
+                minimum: 1,
+                maximum: 10000,
+            },
             v3Config: {
                 type: 'object',
                 properties: {
@@ -324,7 +331,7 @@ export const destinationsSchema = {
                     description: { type: 'string' },
                     token: { type: 'string' },
                     retentionDuration: { type: 'string' },
-                    timeout: {
+                    writeTimeout: {
                         type: 'number',
                         description: 'Socket timeout for write operations in milliseconds',
                         default: 10000,

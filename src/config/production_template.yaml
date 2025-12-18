@@ -502,19 +502,17 @@ Butler-SOS:
     # Influx db config parameters
     influxdbConfig:
         enable: true
-        # Feature flag to enable refactored InfluxDB code (recommended for better maintainability)
-        # Set to true to use the new modular implementation, false for legacy code
-        useRefactoredCode: false
         # Items below are mandatory if influxdbConfig.enable=true
         host: influxdb.mycompany.com # InfluxDB host, hostname, FQDN or IP address
         port: 8086 # Port where InfluxDBdb is listening, usually 8086
-        version: 1 # Is the InfluxDB instance version 1.x or 2.x? Valid values are 1, 2, or 3
+        version: 2 # Is the InfluxDB instance version 1.x or 2.x? Valid values are 1, 2, or 3
+        maxBatchSize: 1000 # Maximum number of data points to write in a single batch. If a batch fails, progressive retry with smaller sizes (1000→500→250→100→10→1) will be attempted. Valid range: 1-10000.
         v3Config: # Settings for InfluxDB v3.x only, i.e. Butler-SOS.influxdbConfig.version=3
             database: mydatabase
             description: Butler SOS metrics
             token: mytoken
             retentionDuration: 10d
-            timeout: 10000 # Optional: Socket timeout in milliseconds (default: 10000)
+            writeTimeout: 10000 # Optional: Socket timeout in milliseconds (writing to InfluxDB) (default: 10000)
             queryTimeout: 60000 # Optional: Query timeout in milliseconds (default: 60000)
         v2Config: # Settings for InfluxDB v2.x only, i.e. Butler-SOS.influxdbConfig.version=2
             org: myorg

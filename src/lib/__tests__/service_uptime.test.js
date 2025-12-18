@@ -18,7 +18,7 @@ jest.unstable_mockModule('../../globals.js', () => ({
 }));
 
 // Mock other dependencies
-jest.unstable_mockModule('../post-to-influxdb.js', () => ({
+jest.unstable_mockModule('../influxdb/index.js', () => ({
     postButlerSOSMemoryUsageToInfluxdb: jest.fn(),
 }));
 
@@ -58,7 +58,7 @@ process.memoryUsage = jest.fn().mockReturnValue({
 
 // Load mocked dependencies
 const globals = (await import('../../globals.js')).default;
-const { postButlerSOSMemoryUsageToInfluxdb } = await import('../post-to-influxdb.js');
+const { postButlerSOSMemoryUsageToInfluxdb } = await import('../influxdb/index.js');
 const { postButlerSOSUptimeToNewRelic } = await import('../post-to-new-relic.js');
 const later = (await import('@breejs/later')).default;
 

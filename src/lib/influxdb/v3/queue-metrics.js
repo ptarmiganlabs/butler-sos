@@ -1,6 +1,6 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxV3WithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV3 } from '../shared/utils.js';
 
 /**
  * Store user event queue metrics to InfluxDB v3
@@ -77,9 +77,12 @@ export async function postUserEventQueueMetricsToInfluxdbV3() {
             }
         }
 
-        await writeToInfluxV3WithRetry(
-            async () => await globals.influx.write(point.toLineProtocol(), database),
-            'User event queue metrics'
+        await writeBatchToInfluxV3(
+            [point],
+            database,
+            'User event queue metrics',
+            'user-events-queue',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
         );
 
         globals.logger.verbose(
@@ -89,6 +92,7 @@ export async function postUserEventQueueMetricsToInfluxdbV3() {
         // Clear metrics after writing
         await queueManager.clearMetrics();
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', '');
         globals.logger.error(
             `USER EVENT QUEUE METRICS INFLUXDB V3: Error posting queue metrics: ${globals.getErrorMessage(err)}`
         );
@@ -168,9 +172,12 @@ export async function postLogEventQueueMetricsToInfluxdbV3() {
             }
         }
 
-        await writeToInfluxV3WithRetry(
-            async () => await globals.influx.write(point.toLineProtocol(), database),
-            'Log event queue metrics'
+        await writeBatchToInfluxV3(
+            [point],
+            database,
+            'Log event queue metrics',
+            'log-events-queue',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
         );
 
         globals.logger.verbose(
@@ -180,6 +187,7 @@ export async function postLogEventQueueMetricsToInfluxdbV3() {
         // Clear metrics after writing
         await queueManager.clearMetrics();
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', '');
         globals.logger.error(
             `LOG EVENT QUEUE METRICS INFLUXDB V3: Error posting queue metrics: ${globals.getErrorMessage(err)}`
         );

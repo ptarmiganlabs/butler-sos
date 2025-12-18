@@ -1,5 +1,5 @@
 import globals from '../../globals.js';
-import { getInfluxDbVersion, useRefactoredInfluxDb } from './shared/utils.js';
+import { getInfluxDbVersion } from './shared/utils.js';
 
 // Import version-specific implementations
 import { storeHealthMetricsV1 } from './v1/health-metrics.js';
@@ -45,7 +45,7 @@ export async function postHealthMetricsToInfluxdb(serverName, host, body, server
         return storeHealthMetricsV1(serverTags, body);
     }
     if (version === 2) {
-        return storeHealthMetricsV2(serverName, host, body);
+        return storeHealthMetricsV2(serverName, host, body, serverTags);
     }
     if (version === 3) {
         return postHealthMetricsToInfluxdbV3(serverName, host, body, serverTags);

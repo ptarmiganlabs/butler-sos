@@ -1,6 +1,6 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxV3WithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV3 } from '../shared/utils.js';
 
 /**
  * Store event count in InfluxDB v3
@@ -40,6 +40,8 @@ export async function storeEventCountInfluxDBV3() {
     const database = globals.config.get('Butler-SOS.influxdbConfig.v3Config.database');
 
     try {
+        const points = [];
+
         // Store data for each log event
         for (const logEvent of logEvents) {
             const tags = {
@@ -80,11 +82,7 @@ export async function storeEventCountInfluxDBV3() {
                 point.setTag(key, tags[key]);
             });
 
-            await writeToInfluxV3WithRetry(
-                async () => await globals.influx.write(point.toLineProtocol(), database),
-                'Log event counts'
-            );
-            globals.logger.debug(`EVENT COUNT INFLUXDB V3: Wrote log event data to InfluxDB v3`);
+            points.push(point);
         }
 
         // Loop through data in user events and create datapoints
@@ -127,17 +125,24 @@ export async function storeEventCountInfluxDBV3() {
                 point.setTag(key, tags[key]);
             });
 
-            await writeToInfluxV3WithRetry(
-                async () => await globals.influx.write(point.toLineProtocol(), database),
-                'User event counts'
-            );
-            globals.logger.debug(`EVENT COUNT INFLUXDB V3: Wrote user event data to InfluxDB v3`);
+            points.push(point);
         }
+
+        await writeBatchToInfluxV3(
+            points,
+            database,
+            'Event counts',
+            'event-counts',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+        );
+
+        globals.logger.debug(`EVENT COUNT INFLUXDB V3: Wrote event data to InfluxDB v3`);
 
         globals.logger.verbose(
             'EVENT COUNT INFLUXDB V3: Sent Butler SOS event count data to InfluxDB'
         );
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', '');
         globals.logger.error(
             `EVENT COUNT INFLUXDB V3: Error writing data to InfluxDB: ${globals.getErrorMessage(err)}`
         );
@@ -239,18 +244,20 @@ export async function storeRejectedEventCountInfluxDBV3() {
         });
 
         // Write to InfluxDB
-        for (const point of points) {
-            await writeToInfluxV3WithRetry(
-                async () => await globals.influx.write(point.toLineProtocol(), database),
-                'Rejected event counts'
-            );
-        }
+        await writeBatchToInfluxV3(
+            points,
+            database,
+            'Rejected event counts',
+            'rejected-event-counts',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+        );
         globals.logger.debug(`REJECT LOG EVENT INFLUXDB V3: Wrote data to InfluxDB v3`);
 
         globals.logger.verbose(
             'REJECT LOG EVENT INFLUXDB V3: Sent Butler SOS rejected event count data to InfluxDB'
         );
     } catch (err) {
+        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', '');
         globals.logger.error(
             `REJECTED LOG EVENT INFLUXDB V3: Error writing data to InfluxDB: ${globals.getErrorMessage(err)}`
         );

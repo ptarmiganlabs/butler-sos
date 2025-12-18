@@ -1,10 +1,15 @@
 import globals from '../../../globals.js';
-import { logError } from '../../log-error.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV1 } from '../shared/utils.js';
 
 /**
  * Store user event queue metrics to InfluxDB v1
  *
- * @returns {Promise<void>}
+ * @description
+ * Retrieves metrics from the user event queue manager and stores them in InfluxDB v1
+ * for monitoring queue health, backpressure, dropped messages, and processing performance.
+ *
+ * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
+ * @throws {Error} Error if unable to write data to InfluxDB
  */
 export async function storeUserEventQueueMetricsV1() {
     try {
@@ -21,6 +26,11 @@ export async function storeUserEventQueueMetricsV1() {
         const queueManager = globals.udpQueueManagerUserActivity;
         if (!queueManager) {
             globals.logger.warn('USER EVENT QUEUE METRICS V1: Queue manager not initialized');
+            return;
+        }
+
+        // Only write to InfluxDB if the global influx object has been initialized
+        if (!isInfluxDbEnabled()) {
             return;
         }
 
@@ -68,11 +78,22 @@ export async function storeUserEventQueueMetricsV1() {
             }
         }
 
-        await globals.influx.writePoints([point]);
+        // Write with retry logic
+        await writeBatchToInfluxV1(
+            [point],
+            'User event queue metrics',
+            '',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+        );
 
         globals.logger.verbose('USER EVENT QUEUE METRICS V1: Sent queue metrics data to InfluxDB');
+
+        // Clear metrics after writing
+        await queueManager.clearMetrics();
     } catch (err) {
-        logError('USER EVENT QUEUE METRICS V1: Error saving data', err);
+        globals.logger.error(
+            `USER EVENT QUEUE METRICS V1: Error saving data: ${globals.getErrorMessage(err)}`
+        );
         throw err;
     }
 }
@@ -80,7 +101,12 @@ export async function storeUserEventQueueMetricsV1() {
 /**
  * Store log event queue metrics to InfluxDB v1
  *
- * @returns {Promise<void>}
+ * @description
+ * Retrieves metrics from the log event queue manager and stores them in InfluxDB v1
+ * for monitoring queue health, backpressure, dropped messages, and processing performance.
+ *
+ * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
+ * @throws {Error} Error if unable to write data to InfluxDB
  */
 export async function storeLogEventQueueMetricsV1() {
     try {
@@ -95,6 +121,11 @@ export async function storeLogEventQueueMetricsV1() {
         const queueManager = globals.udpQueueManagerLogEvents;
         if (!queueManager) {
             globals.logger.warn('LOG EVENT QUEUE METRICS V1: Queue manager not initialized');
+            return;
+        }
+
+        // Only write to InfluxDB if the global influx object has been initialized
+        if (!isInfluxDbEnabled()) {
             return;
         }
 
@@ -142,11 +173,23 @@ export async function storeLogEventQueueMetricsV1() {
             }
         }
 
-        await globals.influx.writePoints([point]);
+        // Write with retry logic
+        await writeBatchToInfluxV1(
+            [point],
+            'Log event queue metrics',
+            '',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+        );
 
         globals.logger.verbose('LOG EVENT QUEUE METRICS V1: Sent queue metrics data to InfluxDB');
+
+        // Clear metrics after writing
+        await queueManager.clearMetrics();
     } catch (err) {
-        logError('LOG EVENT QUEUE METRICS V1: Error saving data', err);
+        await globals.errorTracker.incrementError('INFLUXDB_V1_WRITE', '');
+        globals.logger.error(
+            `LOG EVENT QUEUE METRICS V1: Error saving data: ${globals.getErrorMessage(err)}`
+        );
         throw err;
     }
 }

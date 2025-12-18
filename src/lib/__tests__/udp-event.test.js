@@ -27,7 +27,7 @@ jest.unstable_mockModule('../../globals.js', () => ({
     },
 }));
 
-jest.unstable_mockModule('../post-to-influxdb.js', () => ({
+jest.unstable_mockModule('../influxdb/index.js', () => ({
     storeRejectedEventCountInfluxDB: jest.fn(),
     storeEventCountInfluxDB: jest.fn(),
 }));
@@ -50,7 +50,7 @@ describe('udp-event', () => {
         setupUdpEventsStorage = udpModule.setupUdpEventsStorage;
 
         globals = (await import('../../globals.js')).default;
-        influxDBModule = await import('../post-to-influxdb.js');
+        influxDBModule = await import('../influxdb/index.js');
 
         // Create an instance of UdpEvents for testing
         udpEventsInstance = new UdpEvents(globals.logger);
