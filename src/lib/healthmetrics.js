@@ -156,35 +156,50 @@ export async function getHealthStatsFromSense(serverName, host, tags, headers, r
  *
  * This function creates an interval that runs every pollingInterval milliseconds (as defined in config)
  * and calls getHealthStatsFromSense for each server in the serverList global variable.
+ * Uses a flag to prevent overlapping executions if health checks take longer than the polling interval.
  *
  * @returns {void}
  */
 export function setupHealthMetricsTimer() {
+    let isCollecting = false;
+
     // Configure timer for getting healthcheck data
     setInterval(async () => {
-        globals.logger.verbose('HEALTH: Event started: Statistics collection');
+        // Prevent overlapping executions
+        if (isCollecting) {
+            globals.logger.warn(
+                'HEALTH: Previous health check collection still in progress, skipping this interval'
+            );
+            return;
+        }
 
-        // Process all servers concurrently with error handling
-        const healthCheckPromises = globals.serverList.map(async (server) => {
-            try {
-                globals.logger.verbose(`HEALTH: Getting stats for server: ${server.serverName}`);
-                globals.logger.debug(`HEALTH: Server details: ${JSON.stringify(server)}`);
+        isCollecting = true;
+        try {
+            globals.logger.verbose('HEALTH: Event started: Statistics collection');
 
-                // Get per-server tags
-                const tags = getServerTags(globals.logger, server);
+            // Process servers sequentially to avoid overwhelming the Sense servers
+            for (const server of globals.serverList) {
+                try {
+                    globals.logger.verbose(
+                        `HEALTH: Getting stats for server: ${server.serverName}`
+                    );
+                    globals.logger.debug(`HEALTH: Server details: ${JSON.stringify(server)}`);
 
-                // Get per-server headers
-                const headers = getServerHeaders(server);
+                    // Get per-server tags
+                    const tags = getServerTags(globals.logger, server);
 
-                await getHealthStatsFromSense(server.serverName, server.host, tags, headers);
-            } catch (err) {
-                globals.logger.error(
-                    `HEALTH: Unexpected error processing health stats for server '${server.serverName}': ${globals.getErrorMessage(err)}`
-                );
+                    // Get per-server headers
+                    const headers = getServerHeaders(server);
+
+                    await getHealthStatsFromSense(server.serverName, server.host, tags, headers);
+                } catch (err) {
+                    globals.logger.error(
+                        `HEALTH: Unexpected error processing health stats for server '${server.serverName}': ${globals.getErrorMessage(err)}`
+                    );
+                }
             }
-        });
-
-        // Wait for all health checks to complete
-        await Promise.allSettled(healthCheckPromises);
+        } finally {
+            isCollecting = false;
+        }
     }, globals.config.get('Butler-SOS.serversToMonitor.pollingInterval'));
 }

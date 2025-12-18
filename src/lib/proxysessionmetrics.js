@@ -222,7 +222,7 @@ export async function getProxySessionStatsFromSense(
     influxTags,
     retryCount = 0
 ) {
-    // Current user sessions are retrived using this API:
+    // Current user sessions are retrieved using this API:
     // https://help.qlik.com/en-US/sense-developer/February2021/Subsystems/ProxyServiceAPI/Content/Sense_ProxyServiceAPI/ProxyServiceAPI-Proxy-API.htm
 
     // Get certificate configuration options
