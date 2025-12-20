@@ -26,6 +26,19 @@ Butler-SOS:
         port: 3100 # Port where the web server will listen. Change if port 3100 is already in use.
         obfuscate: true # Should the config file shown in the web UI be obfuscated?
 
+    # Audit events API
+    # Receives audit events from the Butler SOS audit extension running in the browser.
+    # Calls are authenticated using a simple bearer token (see apiToken), and CORS must be configured.
+    auditEvents:
+        enable: false
+        host: 0.0.0.0 # IP/FQDN to bind to. Use 0.0.0.0 to listen on all interfaces.
+        port: 8181
+        apiToken: '' # Recommended: set a strong token and configure the same token in the extension.
+        cors:
+            allowedOrigins:
+                # - https://qliksense.company.com
+                # - https://qlikcloud.com
+
     # Heartbeats can be used to send "I'm alive" messages to some other tool, e.g. an infrastructure monitoring tool
     # The concept is simple: The remoteURL will be called at the specified frequency. The receiving tool will then know
     # that Butler SOS is alive.

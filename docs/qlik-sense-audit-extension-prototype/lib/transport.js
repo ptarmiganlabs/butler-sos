@@ -1,17 +1,17 @@
 /**
  * Transport Layer
- * 
+ *
  * Handles HTTP communication with Butler SOS audit endpoint
- * 
+ *
  * @module lib/transport
  */
 
-define(['jquery'], function($) {
+define(['jquery'], function ($) {
     'use strict';
-    
+
     /**
      * Creates a new Transport instance
-     * 
+     *
      * @class
      * @param {string} endpoint - Butler SOS endpoint URL
      * @param {string} apiToken - API authentication token
@@ -20,23 +20,23 @@ define(['jquery'], function($) {
         this.endpoint = endpoint;
         this.apiToken = apiToken;
     }
-    
+
     /**
      * Send events to Butler SOS
-     * 
+     *
      * @param {Array<object>} events - Array of events to send
      * @returns {Promise} Promise that resolves when send completes
      */
-    Transport.prototype.send = function(events) {
+    Transport.prototype.send = function (events) {
         var self = this;
-        
+
         if (!this.endpoint || events.length === 0) {
             return Promise.resolve();
         }
-        
+
         var payload = this.buildPayload(events);
-        
-        return new Promise(function(resolve, reject) {
+
+        return new Promise(function (resolve, reject) {
             $.ajax({
                 url: self.endpoint,
                 method: 'POST',
@@ -44,26 +44,26 @@ define(['jquery'], function($) {
                 headers: self.getHeaders(),
                 data: JSON.stringify(payload),
                 timeout: 5000,
-                success: function(response) {
+                success: function (response) {
                     resolve(response);
                 },
-                error: function(xhr, status, error) {
+                error: function (xhr, status, error) {
                     reject(new Error('HTTP ' + xhr.status + ': ' + error));
-                }
+                },
             });
         });
     };
-    
+
     /**
      * Build payload with event metadata
-     * 
+     *
      * @param {Array<object>} events - Events to include
      * @returns {object} Complete payload object
      */
-    Transport.prototype.buildPayload = function(events) {
+    Transport.prototype.buildPayload = function (events) {
         var app = typeof qlik !== 'undefined' ? qlik.currApp() : null;
         var global = typeof qlik !== 'undefined' ? qlik.getGlobal() : null;
-        
+
         // Get user info
         var userInfo = null;
         if (global && global.session) {
@@ -74,14 +74,14 @@ define(['jquery'], function($) {
                 console.warn('Butler SOS: Could not get user info:', e);
             }
         }
-        
+
         // Build source information
         var source = {
             extensionVersion: '1.0.0',
             appId: app ? app.id : 'unknown',
-            sessionId: app && app.sessionId ? app.sessionId : 'unknown'
+            sessionId: app && app.sessionId ? app.sessionId : 'unknown',
         };
-        
+
         // Add user info if available
         if (userInfo) {
             source.userId = userInfo.qUserId || 'unknown';
@@ -92,18 +92,18 @@ define(['jquery'], function($) {
             source.userDirectory = 'unknown';
             source.userName = 'unknown';
         }
-        
+
         // Build client information
         var client = {
             timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent
+            userAgent: navigator.userAgent,
         };
-        
+
         // Add screen resolution if available
         if (typeof screen !== 'undefined') {
             client.screenResolution = screen.width + 'x' + screen.height;
         }
-        
+
         // Parse user agent for browser/OS info
         var ua = this.parseUserAgent(navigator.userAgent);
         if (ua.browser) {
@@ -115,39 +115,39 @@ define(['jquery'], function($) {
         if (ua.os) {
             client.os = ua.os;
         }
-        
+
         return {
             apiVersion: '1.0',
             source: source,
             client: client,
-            events: events
+            events: events,
         };
     };
-    
+
     /**
      * Get HTTP headers for request
-     * 
+     *
      * @returns {object} Headers object
      */
-    Transport.prototype.getHeaders = function() {
+    Transport.prototype.getHeaders = function () {
         var headers = {};
-        
+
         if (this.apiToken) {
             headers['X-Butler-SOS-Token'] = this.apiToken;
         }
-        
+
         return headers;
     };
-    
+
     /**
      * Parse user agent string (basic parsing)
-     * 
+     *
      * @param {string} ua - User agent string
      * @returns {object} Parsed information
      */
-    Transport.prototype.parseUserAgent = function(ua) {
+    Transport.prototype.parseUserAgent = function (ua) {
         var result = {};
-        
+
         // Detect browser
         if (ua.indexOf('Chrome') > -1 && ua.indexOf('Edg') === -1) {
             result.browser = 'Chrome';
@@ -166,7 +166,7 @@ define(['jquery'], function($) {
             var match = ua.match(/Version\/([0-9.]+)/);
             if (match) result.browserVersion = match[1];
         }
-        
+
         // Detect OS
         if (ua.indexOf('Windows') > -1) {
             result.os = 'Windows';
@@ -183,9 +183,9 @@ define(['jquery'], function($) {
         } else if (ua.indexOf('Android') > -1) {
             result.os = 'Android';
         }
-        
+
         return result;
     };
-    
+
     return Transport;
 });
