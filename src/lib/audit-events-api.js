@@ -1,8 +1,27 @@
 import Fastify from 'fastify';
 import FastifyRateLimit from '@fastify/rate-limit';
 import FastifyCors from '@fastify/cors';
+import Ajv from 'ajv';
+import addFormats from 'ajv-formats';
 
 import globals from '../globals.js';
+import { downloadScreenshot } from './audit-screenshots.js';
+
+/**
+ * @typedef {object} AuditEventEnvelope
+ * @property {number} schemaVersion - Schema version of the envelope.
+ * @property {string} eventId - Unique ID for this event.
+ * @property {string} [correlationId] - Optional correlation ID linking related events.
+ * @property {string} timestamp - ISO-8601 timestamp.
+ * @property {string} type - Message type identifier.
+ * @property {Record<string, unknown>} [source] - Optional source metadata.
+ * @property {Record<string, unknown>} payload - Event-type-specific payload.
+ */
+
+/**
+ * @typedef {object} AuditRequestContext
+ * @property {string} ip - Client IP address.
+ */
 
 /**
  * Returns the Fastify route schema for the audit events endpoint.
@@ -63,6 +82,7 @@ function getAuditEventSchema() {
  * - Otherwise => only allow listed origins.
  *
  * @param {unknown} corsOriginList - Value from config (`Butler-SOS.auditEvents.cors.allowedOrigins`).
+ *
  * @returns {import('@fastify/cors').FastifyCorsOptions} CORS options for `@fastify/cors`.
  */
 function buildCorsOptions(corsOriginList) {
@@ -95,6 +115,7 @@ function buildCorsOptions(corsOriginList) {
  * Extracts the bearer token from an HTTP Authorization header.
  *
  * @param {unknown} authorizationHeader - Value of the `Authorization` header.
+ *
  * @returns {string|null} The extracted token, or null if not present/invalid.
  */
 function getBearerToken(authorizationHeader) {
@@ -110,7 +131,8 @@ function getBearerToken(authorizationHeader) {
  * to support new `envelope.type` values.
  *
  * @param {object} logger - Logger instance to use.
- * @returns {Record<string, (envelope: unknown, request: import('fastify').FastifyRequest) => Promise<void>>}
+ *
+ * @returns {Record<string, (envelope: unknown, requestContext: AuditRequestContext) => Promise<void>>}
  *   Map from `envelope.type` to async handler.
  */
 function createTypeHandlers(logger) {
@@ -118,20 +140,83 @@ function createTypeHandlers(logger) {
      * Handles a screenshot URL notification sent by the audit extension.
      *
      * @param {unknown} envelope - The received audit event envelope.
-     * @param {import('fastify').FastifyRequest} request - Fastify request.
+     * @param {AuditRequestContext} requestContext - Minimal request context.
+     *
      * @returns {Promise<void>} Resolves when logging is complete.
      */
-    async function handleScreenshotUrlReceived(envelope, request) {
+    async function handleScreenshotUrlReceived(envelope, requestContext) {
         // Envelope shape is validated at the route level. Payload remains intentionally open-ended.
         const screenshotUrl = envelope?.payload?.event?.screenshotUrl;
         const objectId = envelope?.payload?.event?.objectId;
         logger.info(
-            `AUDIT API: screenshot.url.received eventId=${envelope.eventId} objectId=${objectId} url=${screenshotUrl} ip=${request.ip}`
+            `AUDIT API: screenshot.url.received eventId=${envelope.eventId} objectId=${objectId} url=${screenshotUrl} ip=${requestContext.ip}`
         );
+
+        const screenshotsEnabled =
+            globals.config.has('Butler-SOS.auditEvents.screenshots.enable') &&
+            globals.config.get('Butler-SOS.auditEvents.screenshots.enable') === true;
+
+        if (!screenshotsEnabled) return;
+        if (typeof screenshotUrl !== 'string' || screenshotUrl.length === 0) {
+            logger.warn(
+                `AUDIT API: Screenshot download enabled, but screenshotUrl is missing eventId=${envelope.eventId}`
+            );
+            return;
+        }
+
+        const screenshotDownloadConfig = {
+            enable: true,
+            downloadTimeoutMs: globals.config.get(
+                'Butler-SOS.auditEvents.screenshots.downloadTimeoutMs'
+            ),
+            storageTargets: globals.config.get('Butler-SOS.auditEvents.screenshots.storageTargets'),
+        };
+
+        await downloadScreenshot(screenshotUrl, envelope, screenshotDownloadConfig, logger);
     }
 
     return {
         'screenshot.url.received': handleScreenshotUrlReceived,
+    };
+}
+
+/**
+ * Creates AJV validators for audit-event payloads, keyed by `envelope.type`.
+ *
+ * If a type is missing from the returned map, no payload validation is performed.
+ *
+ * @returns {{ validatePayloadByType: Record<string, import('ajv').ValidateFunction> }} Validators keyed by message type.
+ */
+function createPayloadValidators() {
+    const ajv = new Ajv({ allErrors: true, strict: false, allowUnionTypes: true });
+    addFormats(ajv);
+
+    /**
+     * Payload schema for screenshot.url.received.
+     *
+     * Expected shape: { event: { screenshotUrl: string, objectId?: string } }
+     */
+    const screenshotUrlReceivedPayloadSchema = {
+        type: 'object',
+        properties: {
+            event: {
+                type: 'object',
+                properties: {
+                    screenshotUrl: { type: 'string', minLength: 1, format: 'uri' },
+                    objectId: { type: ['string', 'null'] },
+                },
+                required: ['screenshotUrl'],
+                additionalProperties: true,
+            },
+        },
+        required: ['event'],
+        additionalProperties: true,
+    };
+
+    return {
+        validatePayloadByType: {
+            'screenshot.url.received': ajv.compile(screenshotUrlReceivedPayloadSchema),
+        },
     };
 }
 
@@ -148,6 +233,7 @@ function createTypeHandlers(logger) {
  * @param {object} [options] - Registration options.
  * @param {string} [options.apiToken] - Bearer token expected in `Authorization` header.
  * @param {string[]} [options.corsOrigins] - Allowed CORS origins.
+ *
  * @returns {Promise<void>} Resolves when registration is complete.
  */
 async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {}) {
@@ -167,6 +253,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
      *
      * @param {import('fastify').FastifyRequest} request - Fastify request.
      * @param {import('fastify').FastifyReply} reply - Fastify reply.
+     *
      * @returns {Promise<void>} Resolves when the request is allowed to proceed.
      */
     async function auditEventAuthPreHandler(request, reply) {
@@ -185,6 +272,50 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
     fastify.addHook('preHandler', auditEventAuthPreHandler);
 
     const handlers = createTypeHandlers(globals.logger);
+    const { validatePayloadByType } = createPayloadValidators();
+
+    /**
+     * Validates `envelope.payload` using a per-type AJV schema.
+     *
+     * If a schema is not registered for the given type, validation is skipped.
+     *
+     * @param {AuditEventEnvelope} envelope - The received audit event envelope
+     * @returns {boolean} True if payload is valid (or validation skipped), false otherwise
+     */
+    function validatePayload(envelope) {
+        const validator = validatePayloadByType[envelope?.type];
+        if (!validator) return true;
+
+        const ok = validator(envelope?.payload);
+        if (!ok) {
+            globals.logger.warn(
+                `AUDIT API: Payload validation failed type=${envelope?.type} eventId=${envelope?.eventId} errors=${JSON.stringify(
+                    validator.errors
+                )}`
+            );
+        }
+        return ok;
+    }
+
+    /**
+     * Processes an audit event envelope by dispatching to a type-specific handler.
+     *
+     * @param {AuditEventEnvelope} envelope - The received audit event envelope
+     * @param {AuditRequestContext} requestContext - Minimal request context safe to use asynchronously
+     * @returns {Promise<void>}
+     */
+    async function processAuditEventEnvelope(envelope, requestContext) {
+        const handler = handlers[envelope.type];
+        if (handler) {
+            await handler(envelope, requestContext);
+            return;
+        }
+
+        globals.logger.info(
+            `AUDIT API: Received audit event type=${envelope.type} eventId=${envelope.eventId} ip=${requestContext.ip}`
+        );
+        globals.logger.info(`AUDIT API: Full envelope: ${JSON.stringify(envelope)}`);
+    }
 
     /**
      * Fastify route handler for receiving audit events.
@@ -194,21 +325,62 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
      *
      * @param {import('fastify').FastifyRequest} request - Fastify request.
      * @param {import('fastify').FastifyReply} reply - Fastify reply.
+     *
      * @returns {Promise<void>} Resolves when the response is sent.
      */
     async function handleAuditEventPost(request, reply) {
+        /** @type {AuditEventEnvelope} */
         const envelope = request.body;
 
-        try {
-            const handler = handlers[envelope.type];
-            if (handler) {
-                await handler(envelope, request);
-            } else {
-                globals.logger.info(
-                    `AUDIT API: Received audit event type=${envelope.type} eventId=${envelope.eventId} ip=${request.ip}`
+        const requestContext = {
+            ip: request.ip,
+        };
+
+        // Validate payload structure using per-type AJV schema (envelope is validated by Fastify schema).
+        // If payload validation fails, accept-and-drop.
+        if (!validatePayload(envelope)) {
+            return reply
+                .code(202)
+                .send({ status: 'accepted', receivedAt: new Date().toISOString() });
+        }
+
+        // If queue manager is available, enqueue processing and return quickly.
+        const queueManager = globals.auditEventsQueueManager;
+        if (queueManager) {
+            try {
+                // Drop on rate limit
+                if (!queueManager.checkRateLimit()) {
+                    await queueManager.handleRateLimitDrop();
+                    globals.logger.warn(
+                        `AUDIT API: Dropped audit event due to queue rate limit type=${envelope.type} eventId=${envelope.eventId} ip=${request.ip}`
+                    );
+                    return reply
+                        .code(202)
+                        .send({ status: 'accepted', receivedAt: new Date().toISOString() });
+                }
+
+                const queued = await queueManager.addToQueue(async () => {
+                    await processAuditEventEnvelope(envelope, requestContext);
+                });
+
+                if (!queued) {
+                    globals.logger.warn(
+                        `AUDIT API: Dropped audit event due to full queue type=${envelope.type} eventId=${envelope.eventId} ip=${request.ip}`
+                    );
+                }
+            } catch (err) {
+                globals.logger.error(
+                    `AUDIT API: Error while enqueueing audit event: ${globals.getErrorMessage(err)}`
                 );
-                globals.logger.info(`AUDIT API: Full envelope: ${JSON.stringify(envelope)}`);
             }
+
+            return reply
+                .code(202)
+                .send({ status: 'accepted', receivedAt: new Date().toISOString() });
+        }
+
+        try {
+            await processAuditEventEnvelope(envelope, requestContext);
         } catch (err) {
             globals.logger.error(
                 `AUDIT API: Error while handling audit event: ${globals.getErrorMessage(err)}`
@@ -234,6 +406,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
  * If disabled, this function logs and returns without starting a server.
  *
  * @returns {Promise<void>} Resolves when the server is started (or skipped if disabled).
+ *
  * @throws {Error} Re-throws startup errors after logging.
  */
 export async function setupAuditEventsApiServer() {

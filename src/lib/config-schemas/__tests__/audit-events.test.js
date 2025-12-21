@@ -26,6 +26,30 @@ describe('auditEvents schema', () => {
                 host: '0.0.0.0',
                 port: 8181,
                 apiToken: 'test-token',
+                queue: {
+                    messageQueue: {
+                        maxConcurrent: 10,
+                        maxSize: 200,
+                        backpressureThreshold: 80,
+                    },
+                    rateLimit: {
+                        enable: false,
+                        maxMessagesPerMinute: 600,
+                    },
+                    queueMetrics: {
+                        influxdb: {
+                            enable: false,
+                            writeFrequency: 20000,
+                            measurementName: 'audit_events_queue',
+                            tags: [],
+                        },
+                    },
+                },
+                screenshots: {
+                    enable: false,
+                    downloadTimeoutMs: 15000,
+                    storageTargets: null,
+                },
                 cors: {
                     allowedOrigins: ['https://qliksense.company.com'],
                 },

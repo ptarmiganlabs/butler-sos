@@ -34,6 +34,34 @@ Butler-SOS:
         host: 0.0.0.0 # IP/FQDN to bind to. Use 0.0.0.0 to listen on all interfaces.
         port: 8181
         apiToken: '' # Recommended: set a strong token and configure the same token in the extension.
+        # Message queue settings for handling incoming HTTP audit events
+        queue:
+            messageQueue:
+                maxConcurrent: 10 # Max number of messages being processed simultaneously (default: 10)
+                maxSize: 200 # Max queue size before messages are dropped (default: 200)
+                backpressureThreshold: 80 # Warn when queue utilization reaches this % (default: 80)
+            # Rate limiting to prevent message flooding (in addition to HTTP rate limiting)
+            rateLimit:
+                enable: false # Enable rate limiting (default: false)
+                maxMessagesPerMinute: 600 # Max messages per minute, ~10/sec (default: 600)
+            # Queue metrics storage in InfluxDB
+            queueMetrics:
+                influxdb:
+                    enable: false # Store queue metrics in InfluxDB (default: false)
+                    writeFrequency: 20000 # How often to write metrics, milliseconds (default: 20000)
+                    measurementName: audit_events_queue # InfluxDB measurement name (default: audit_events_queue)
+                    tags: # Optional tags added to queue metrics
+                        - name: qs_env
+                          value: dev
+        # Optional: download screenshots referenced by screenshot.url.received events.
+        # Multiple storage targets can be enabled at the same time.
+        screenshots:
+            enable: false
+            downloadTimeoutMs: 15000
+            storageTargets:
+                - enable: true
+                  type: flat
+                  directory: screenshots/audit
         cors:
             allowedOrigins:
                 # - https://qliksense.company.com

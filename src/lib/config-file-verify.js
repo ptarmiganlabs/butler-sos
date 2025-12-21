@@ -61,6 +61,7 @@ function createConditionalSchema(parsedConfig, baseSchema) {
     // Apply conditional validation to features with enable flags
     makeFeatureConditional('mqttConfig');
     makeFeatureConditional('newRelic');
+    makeFeatureConditional('auditEvents');
     makeFeatureConditional('userEvents');
     makeFeatureConditional('prometheus');
     makeFeatureConditional('influxdbConfig');

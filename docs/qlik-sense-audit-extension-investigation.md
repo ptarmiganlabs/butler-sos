@@ -15,11 +15,12 @@ This document investigates the feasibility and design of a Qlik Sense visualizat
 ✅ **Proven:** The qlik-trail project demonstrates the core concepts work  
 ⚠️ **Limitation:** UDP is not available from browsers; requires HTTP/WebSocket endpoint  
 ⚠️ **Consideration:** Performance and security implications need careful management  
-✅ **Value:** Provides granular audit data not available from server-side logs alone  
+✅ **Value:** Provides granular audit data not available from server-side logs alone
 
 ### Recommendation
 
 **Proceed with a phased approach:**
+
 1. **Phase 1:** Implement basic HTTP endpoint and prototype extension
 2. **Phase 2:** Add WebSocket support for real-time streaming if needed
 3. **Phase 3:** Enhance with data sampling and advanced tracking features
@@ -40,6 +41,7 @@ Server-side logs from Qlik Sense services (Proxy, Engine, Repository, Scheduler)
 ### 1.2 Proposed Solution
 
 A client-side Qlik Sense visualization extension that:
+
 - Monitors user interactions within apps
 - Captures selection details, field values, and object rendering events
 - Transmits audit data to Butler SOS for storage and analysis
@@ -65,14 +67,14 @@ The [qlik-trail](https://github.com/olim-dev/qlik-trail) project demonstrates th
 
 #### 2.1.1 Available Capabilities
 
-| Capability | Feasibility | API Method | Notes |
-|------------|-------------|------------|-------|
-| Field names | ✅ Confirmed | `getList('SelectionObject')` | Easy to capture |
-| Selected values | ✅ Confirmed | `createList()` + `qDataPages` | Requires additional API call |
-| Selection counts | ✅ Confirmed | `qSelectedCount` in SelectionObject | Built-in property |
-| Alternate states | ✅ Confirmed | `qStateName` | Supports alternate state tracking |
-| Selection source | ⚠️ Partial | Event analysis | Can infer from timing/context |
-| Bookmark detection | ⚠️ Partial | Compare signatures | Requires signature comparison |
+| Capability         | Feasibility  | API Method                          | Notes                             |
+| ------------------ | ------------ | ----------------------------------- | --------------------------------- |
+| Field names        | ✅ Confirmed | `getList('SelectionObject')`        | Easy to capture                   |
+| Selected values    | ✅ Confirmed | `createList()` + `qDataPages`       | Requires additional API call      |
+| Selection counts   | ✅ Confirmed | `qSelectedCount` in SelectionObject | Built-in property                 |
+| Alternate states   | ✅ Confirmed | `qStateName`                        | Supports alternate state tracking |
+| Selection source   | ⚠️ Partial   | Event analysis                      | Can infer from timing/context     |
+| Bookmark detection | ⚠️ Partial   | Compare signatures                  | Requires signature comparison     |
 
 #### 2.1.2 Core API Patterns
 
@@ -81,9 +83,9 @@ The [qlik-trail](https://github.com/olim-dev/qlik-trail) project demonstrates th
 var app = qlik.currApp();
 
 // 2. Listen to selection changes
-app.getList('SelectionObject', function(reply) {
+app.getList('SelectionObject', function (reply) {
     var selections = reply.qSelectionObject.qSelections;
-    selections.forEach(function(sel) {
+    selections.forEach(function (sel) {
         // sel.qField - field name
         // sel.qSelectedCount - number of selected values
         // sel.qTotal - total number of values in field
@@ -95,14 +97,16 @@ app.getList('SelectionObject', function(reply) {
 app.createList({
     qStateName: sel.qStateName || '$',
     qDef: { qFieldDefs: [sel.qField] },
-    qInitialDataFetch: [{
-        qTop: 0,
-        qLeft: 0,
-        qWidth: 1,
-        qHeight: 10000  // Max values to fetch
-    }]
-}).then(function(model) {
-    model.getLayout().then(function(layout) {
+    qInitialDataFetch: [
+        {
+            qTop: 0,
+            qLeft: 0,
+            qWidth: 1,
+            qHeight: 10000, // Max values to fetch
+        },
+    ],
+}).then(function (model) {
+    model.getLayout().then(function (layout) {
         var values = layout.qListObject.qDataPages[0].qMatrix;
         // values = array of [{ qText: "Value1", qState: "S" }]
     });
@@ -110,12 +114,13 @@ app.createList({
 
 // 4. Detect selection changes with signature
 function createSignature(selections) {
-    return JSON.stringify(selections.map(function(s) {
-        return s.qField + ':' + (s.qStateName || '$') + ':' + s.qSelectedCount;
-    }));
+    return JSON.stringify(
+        selections.map(function (s) {
+            return s.qField + ':' + (s.qStateName || '$') + ':' + s.qSelectedCount;
+        })
+    );
 }
 ```
-
 
 ### 2.2 Object Rendering Tracking
 
@@ -123,34 +128,34 @@ function createSignature(selections) {
 
 #### 2.2.1 Available Object Information
 
-| Information | Feasibility | Method | Notes |
-|-------------|-------------|--------|-------|
-| Object ID | ✅ Confirmed | `model.id` | Unique identifier |
-| Object Type | ✅ Confirmed | `layout.qInfo.qType` | Chart type (barchart, table, etc.) |
-| Render events | ✅ Confirmed | `model.Validated.bind()` | Fires on data updates |
-| Row counts | ✅ Confirmed | `layout.qHyperCube.qSize.qcy` | For hypercube objects |
-| Actual data values | ⚠️ Complex | `layout.qHyperCube.qDataPages` | Can be large, privacy concerns |
-| Dimension values | ⚠️ Complex | Parse hypercube structure | Requires understanding layout |
+| Information        | Feasibility  | Method                         | Notes                              |
+| ------------------ | ------------ | ------------------------------ | ---------------------------------- |
+| Object ID          | ✅ Confirmed | `model.id`                     | Unique identifier                  |
+| Object Type        | ✅ Confirmed | `layout.qInfo.qType`           | Chart type (barchart, table, etc.) |
+| Render events      | ✅ Confirmed | `model.Validated.bind()`       | Fires on data updates              |
+| Row counts         | ✅ Confirmed | `layout.qHyperCube.qSize.qcy`  | For hypercube objects              |
+| Actual data values | ⚠️ Complex   | `layout.qHyperCube.qDataPages` | Can be large, privacy concerns     |
+| Dimension values   | ⚠️ Complex   | Parse hypercube structure      | Requires understanding layout      |
 
 #### 2.2.2 Example Code
 
 ```javascript
-app.getObject('QV01', 'myObjectId').then(function(model) {
+app.getObject('QV01', 'myObjectId').then(function (model) {
     // Listen for render/update events
-    model.Validated.bind(function() {
-        model.getLayout().then(function(layout) {
+    model.Validated.bind(function () {
+        model.getLayout().then(function (layout) {
             var event = {
                 objectId: model.id,
                 objectType: layout.qInfo.qType,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             };
-            
+
             // For hypercube-based objects
             if (layout.qHyperCube) {
                 event.rowCount = layout.qHyperCube.qSize.qcy;
                 event.columnCount = layout.qHyperCube.qSize.qcx;
             }
-            
+
             sendToButlerSOS(event);
         });
     });
@@ -164,38 +169,40 @@ app.getObject('QV01', 'myObjectId').then(function(model) {
 #### 2.3.1 UDP Limitation
 
 **Direct UDP from browser is NOT possible** due to browser security model:
+
 - Browsers only support HTTP(S) and WebSocket protocols
 - No access to raw UDP sockets from JavaScript
 - This is a fundamental limitation, not a workaround issue
 
 #### 2.3.2 Available Options
 
-| Option | Protocol | Pros | Cons | Recommendation |
-|--------|----------|------|------|----------------|
-| HTTP POST | HTTPS | Simple, widely supported, works with proxies | Higher overhead, not real-time | ✅ **Recommended for Phase 1** |
-| WebSocket | WSS | Real-time, bi-directional, lower overhead | More complex, connection management | ⚠️ Consider for Phase 2 |
-| Server-Side Relay | UDP via proxy | Uses existing UDP infrastructure | Requires intermediary service | ❌ Not recommended (adds complexity) |
+| Option            | Protocol      | Pros                                         | Cons                                | Recommendation                       |
+| ----------------- | ------------- | -------------------------------------------- | ----------------------------------- | ------------------------------------ |
+| HTTP POST         | HTTPS         | Simple, widely supported, works with proxies | Higher overhead, not real-time      | ✅ **Recommended for Phase 1**       |
+| WebSocket         | WSS           | Real-time, bi-directional, lower overhead    | More complex, connection management | ⚠️ Consider for Phase 2              |
+| Server-Side Relay | UDP via proxy | Uses existing UDP infrastructure             | Requires intermediary service       | ❌ Not recommended (adds complexity) |
 
 ### 2.4 Performance Considerations
 
 #### 2.4.1 Impact on Client
 
-| Aspect | Impact | Mitigation |
-|--------|--------|------------|
-| Selection listener | Low | Single global listener, minimal CPU |
-| Network calls | Medium | Batch events (default: 1 second) |
-| Memory usage | Low-Medium | Limit buffer size, clear after send |
-| Page load time | Negligible | Extension loads asynchronously |
+| Aspect             | Impact     | Mitigation                          |
+| ------------------ | ---------- | ----------------------------------- |
+| Selection listener | Low        | Single global listener, minimal CPU |
+| Network calls      | Medium     | Batch events (default: 1 second)    |
+| Memory usage       | Low-Medium | Limit buffer size, clear after send |
+| Page load time     | Negligible | Extension loads asynchronously      |
 
 #### 2.4.2 Impact on Butler SOS
 
-| Aspect | Impact | Mitigation |
-|--------|--------|------------|
-| Network traffic | Medium | Client-side batching, compression |
-| Processing load | Medium | Async processing, queue management |
-| Storage | High | User configurable retention, sampling |
+| Aspect          | Impact | Mitigation                            |
+| --------------- | ------ | ------------------------------------- |
+| Network traffic | Medium | Client-side batching, compression     |
+| Processing load | Medium | Async processing, queue management    |
+| Storage         | High   | User configurable retention, sampling |
 
 **Estimated Traffic:**
+
 - 10 users × 20 selections/hour × 2KB/event = ~400 KB/hour
 - With data sampling: up to 10× higher
 - Acceptable for most deployments
@@ -204,49 +211,48 @@ app.getObject('QV01', 'myObjectId').then(function(model) {
 
 #### 2.5.1 Risks
 
-| Risk | Severity | Description |
-|------|----------|-------------|
-| Data exposure | **HIGH** | Extension has access to all data user can see |
-| Unauthorized transmission | **MEDIUM** | Could send data to unintended endpoint |
-| Man-in-the-middle | **MEDIUM** | HTTP traffic interception (if not HTTPS) |
-| Denial of service | **LOW** | Malicious rapid event generation |
+| Risk                      | Severity   | Description                                   |
+| ------------------------- | ---------- | --------------------------------------------- |
+| Data exposure             | **HIGH**   | Extension has access to all data user can see |
+| Unauthorized transmission | **MEDIUM** | Could send data to unintended endpoint        |
+| Man-in-the-middle         | **MEDIUM** | HTTP traffic interception (if not HTTPS)      |
+| Denial of service         | **LOW**    | Malicious rapid event generation              |
 
 #### 2.5.2 Mitigations
 
 1. **Authentication:**
-   - API token-based authentication
-   - Token configured per app or organization-wide
-   - Validate token on Butler SOS side
+    - API token-based authentication
+    - Token configured per app or organization-wide
+    - Validate token on Butler SOS side
 
 2. **Encryption:**
-   - **REQUIRE HTTPS** for all communication
-   - TLS 1.2+ minimum
-   - Certificate validation
+    - **REQUIRE HTTPS** for all communication
+    - TLS 1.2+ minimum
+    - Certificate validation
 
 3. **Rate Limiting:**
-   - Butler SOS enforces rate limits per source
-   - Client-side batching reduces request frequency
-   - Reject excessive event rates
+    - Butler SOS enforces rate limits per source
+    - Client-side batching reduces request frequency
+    - Reject excessive event rates
 
 4. **Access Control:**
-   - Extension only sees data user has access to
-   - No privilege escalation possible
-   - Butler SOS logs all received events
+    - Extension only sees data user has access to
+    - No privilege escalation possible
+    - Butler SOS logs all received events
 
 5. **Data Minimization:**
-   - Configurable to exclude sensitive fields
-   - Optional data sampling (vs. full capture)
-   - Retention policies in Butler SOS
+    - Configurable to exclude sensitive fields
+    - Optional data sampling (vs. full capture)
+    - Retention policies in Butler SOS
 
 #### 2.5.3 Deployment Security
 
-| Consideration | Recommendation |
-|---------------|----------------|
-| Extension distribution | QMC Content Library (controlled deployment) |
-| Configuration management | Store tokens in QMC custom properties, not extension |
-| Network access | Restrict Butler SOS endpoint to internal network only |
-| Monitoring | Alert on unusual event volumes or patterns |
-
+| Consideration            | Recommendation                                        |
+| ------------------------ | ----------------------------------------------------- |
+| Extension distribution   | QMC Content Library (controlled deployment)           |
+| Configuration management | Store tokens in QMC custom properties, not extension  |
+| Network access           | Restrict Butler SOS endpoint to internal network only |
+| Monitoring               | Alert on unusual event volumes or patterns            |
 
 ---
 
@@ -309,53 +315,53 @@ app.getObject('QV01', 'myObjectId').then(function(model) {
 
 ```json
 {
-  "apiVersion": "1.0",
-  "source": {
-    "extensionVersion": "1.0.0",
-    "appId": "a4c3d8f1-5c2b-4e8f-9d1a-7b6c3e2f1a0b",
-    "appName": "Sales Dashboard",
-    "sessionId": "550e8400-e29b-41d4-a716-446655440000",
-    "userId": "DOMAIN\\username",
-    "userDirectory": "DOMAIN",
-    "userName": "username"
-  },
-  "client": {
-    "timestamp": "2025-12-19T12:30:20.592Z",
-    "userAgent": "Mozilla/5.0...",
-    "browser": "Chrome",
-    "browserVersion": "120.0",
-    "os": "Windows",
-    "osVersion": "10"
-  },
-  "events": [
-    {
-      "type": "SELECTION_CHANGED",
-      "timestamp": "2025-12-19T12:30:20.592Z",
-      "data": {
-        "selections": [
-          {
-            "field": "Country",
-            "stateName": "$",
-            "selectedCount": 3,
-            "totalCount": 50,
-            "values": ["USA", "Canada", "Mexico"]
-          }
-        ]
-      }
-    }
-  ]
+    "apiVersion": "1.0",
+    "source": {
+        "extensionVersion": "1.0.0",
+        "appId": "a4c3d8f1-5c2b-4e8f-9d1a-7b6c3e2f1a0b",
+        "appName": "Sales Dashboard",
+        "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+        "userId": "DOMAIN\\username",
+        "userDirectory": "DOMAIN",
+        "userName": "username"
+    },
+    "client": {
+        "timestamp": "2025-12-19T12:30:20.592Z",
+        "userAgent": "Mozilla/5.0...",
+        "browser": "Chrome",
+        "browserVersion": "120.0",
+        "os": "Windows",
+        "osVersion": "10"
+    },
+    "events": [
+        {
+            "type": "SELECTION_CHANGED",
+            "timestamp": "2025-12-19T12:30:20.592Z",
+            "data": {
+                "selections": [
+                    {
+                        "field": "Country",
+                        "stateName": "$",
+                        "selectedCount": 3,
+                        "totalCount": 50,
+                        "values": ["USA", "Canada", "Mexico"]
+                    }
+                ]
+            }
+        }
+    ]
 }
 ```
 
 ### 3.3 Event Types
 
-| Event Type | Description | Data Included |
-|------------|-------------|---------------|
-| `SELECTION_CHANGED` | User made selections | Field names, values, counts, state |
-| `SELECTION_CLEARED` | All selections cleared | Previous state |
-| `OBJECT_RENDERED` | Object displayed data | Object ID, type, row/column counts |
-| `SHEET_OPENED` | User navigated to sheet | Sheet ID, sheet name |
-| `APP_OPENED` | User opened app | App ID, app name |
+| Event Type          | Description             | Data Included                      |
+| ------------------- | ----------------------- | ---------------------------------- |
+| `SELECTION_CHANGED` | User made selections    | Field names, values, counts, state |
+| `SELECTION_CLEARED` | All selections cleared  | Previous state                     |
+| `OBJECT_RENDERED`   | Object displayed data   | Object ID, type, row/column counts |
+| `SHEET_OPENED`      | User navigated to sheet | Sheet ID, sheet name               |
+| `APP_OPENED`        | User opened app         | App ID, app name                   |
 
 ---
 
@@ -364,6 +370,7 @@ app.getObject('QV01', 'myObjectId').then(function(model) {
 ### 4.1 Core Components
 
 The extension consists of:
+
 1. **Main Extension Module** - Initializes and coordinates components
 2. **Event Buffer** - Batches events before sending
 3. **Selection Monitor** - Tracks field selections and values
@@ -381,16 +388,16 @@ The extension consists of:
 
 ### 4.3 Configuration Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| Butler SOS Endpoint | String | (required) | URL of Butler SOS API endpoint |
-| API Token | String | (required) | Authentication token |
-| Batch Interval | Number | 1000 | Milliseconds between batches |
-| Track Selections | Boolean | true | Enable selection tracking |
-| Capture Values | Boolean | true | Include selected values |
-| Max Values Per Field | Number | 100 | Maximum values to capture per field |
-| Track Objects | Boolean | true | Enable object rendering tracking |
-| Object IDs | String | "" | Comma-separated object IDs (empty = all) |
+| Option               | Type    | Default    | Description                              |
+| -------------------- | ------- | ---------- | ---------------------------------------- |
+| Butler SOS Endpoint  | String  | (required) | URL of Butler SOS API endpoint           |
+| API Token            | String  | (required) | Authentication token                     |
+| Batch Interval       | Number  | 1000       | Milliseconds between batches             |
+| Track Selections     | Boolean | true       | Enable selection tracking                |
+| Capture Values       | Boolean | true       | Include selected values                  |
+| Max Values Per Field | Number  | 100        | Maximum values to capture per field      |
+| Track Objects        | Boolean | true       | Enable object rendering tracking         |
+| Object IDs           | String  | ""         | Comma-separated object IDs (empty = all) |
 
 ---
 
@@ -399,58 +406,58 @@ The extension consists of:
 ### 5.1 New Components
 
 1. **HTTP API Endpoint** (`/api/v1/audit/events`)
-   - Accept POST requests with audit event payloads
-   - Validate JSON schema
-   - Authenticate using API token
-   - Rate limiting to prevent abuse
+    - Accept POST requests with audit event payloads
+    - Validate JSON schema
+    - Authenticate using API token
+    - Rate limiting to prevent abuse
 
 2. **Audit Event Processor**
-   - Transform events to internal format
-   - Enrich with server-side metadata
-   - Route to configured destinations
+    - Transform events to internal format
+    - Enrich with server-side metadata
+    - Route to configured destinations
 
 3. **Configuration Schema**
-   - Add `auditEvents` section to config
-   - Define API token
-   - Configure destinations (InfluxDB, New Relic, MQTT)
+    - Add `auditEvents` section to config
+    - Define API token
+    - Configure destinations (InfluxDB, New Relic, MQTT)
 
 ### 5.2 Integration Points
 
-| Component | Change Type | Complexity |
-|-----------|-------------|------------|
-| Fastify server | Add route handler | Low |
-| Config schema | Add section | Low |
-| InfluxDB writer | New measurement | Medium |
-| New Relic sender | New event type | Medium |
-| MQTT publisher | New topic | Low |
+| Component        | Change Type       | Complexity |
+| ---------------- | ----------------- | ---------- |
+| Fastify server   | Add route handler | Low        |
+| Config schema    | Add section       | Low        |
+| InfluxDB writer  | New measurement   | Medium     |
+| New Relic sender | New event type    | Medium     |
+| MQTT publisher   | New topic         | Low        |
 
 ### 5.3 Configuration Example
 
 ```yaml
 Butler-SOS:
-  auditEvents:
-    enable: true
-    apiToken: 'your-secure-token-here'
-    destinations:
-      influxdb: true
-      newRelic: false
-      mqtt: false
-    influxdb:
-      measurement: 'audit_events'
+    auditEvents:
+        enable: true
+        apiToken: 'your-secure-token-here'
+        destinations:
+            influxdb: true
+            newRelic: false
+            mqtt: false
+        influxdb:
+            measurement: 'audit_events'
 ```
 
 ### 5.4 Development Effort Estimate
 
-| Task | Effort | Notes |
-|------|--------|-------|
-| HTTP endpoint | 4-6 hours | Including authentication, validation |
-| Event processing | 4-6 hours | Transform, enrich, queue |
-| InfluxDB integration | 3-4 hours | New measurement schema |
-| New Relic integration | 2-3 hours | Leverage existing code |
-| MQTT integration | 2-3 hours | New topic structure |
-| Testing | 6-8 hours | Unit + integration tests |
-| Documentation | 4-6 hours | User guide, API docs |
-| **TOTAL** | **25-36 hours** | ~1 week for experienced developer |
+| Task                  | Effort          | Notes                                |
+| --------------------- | --------------- | ------------------------------------ |
+| HTTP endpoint         | 4-6 hours       | Including authentication, validation |
+| Event processing      | 4-6 hours       | Transform, enrich, queue             |
+| InfluxDB integration  | 3-4 hours       | New measurement schema               |
+| New Relic integration | 2-3 hours       | Leverage existing code               |
+| MQTT integration      | 2-3 hours       | New topic structure                  |
+| Testing               | 6-8 hours       | Unit + integration tests             |
+| Documentation         | 4-6 hours       | User guide, API docs                 |
+| **TOTAL**             | **25-36 hours** | ~1 week for experienced developer    |
 
 ---
 
@@ -462,11 +469,11 @@ Butler-SOS:
 
 ```yaml
 Butler-SOS:
-  auditEvents:
-    enable: true
-    apiToken: 'generate-with-openssl-rand-base64-32'
-    destinations:
-      influxdb: true
+    auditEvents:
+        enable: true
+        apiToken: 'generate-with-openssl-rand-base64-32'
+        destinations:
+            influxdb: true
 ```
 
 Restart Butler SOS and verify endpoint availability.
@@ -474,11 +481,13 @@ Restart Butler SOS and verify endpoint availability.
 #### Step 2: Deploy Extension
 
 **Option A: QMC Content Library** (Recommended)
+
 1. Package extension as ZIP
 2. Upload to QMC → Content Libraries
 3. Extension available to all apps
 
 **Option B: Manual Installation**
+
 1. Copy to `C:\Program Files\Qlik\Sense\EGW\extroot\extensions\`
 2. Requires server admin access
 
@@ -491,12 +500,12 @@ Restart Butler SOS and verify endpoint availability.
 
 ### 6.2 Network Requirements
 
-| Requirement | Configuration |
-|-------------|---------------|
-| Firewall | Allow outbound HTTPS from Qlik Sense to Butler SOS port 8181 |
-| DNS | Butler SOS hostname resolvable from browsers |
-| TLS | Valid certificate on Butler SOS |
-| Proxy | Configure PAC file if web proxy used |
+| Requirement | Configuration                                                |
+| ----------- | ------------------------------------------------------------ |
+| Firewall    | Allow outbound HTTPS from Qlik Sense to Butler SOS port 8181 |
+| DNS         | Butler SOS hostname resolvable from browsers                 |
+| TLS         | Valid certificate on Butler SOS                              |
+| Proxy       | Configure PAC file if web proxy used                         |
 
 ### 6.3 Monitoring
 
@@ -511,13 +520,13 @@ Restart Butler SOS and verify endpoint availability.
 
 ### 7.1 Expected Load
 
-| Users | Events/Hour | Network (MB/hr) | Impact |
-|-------|-------------|-----------------|--------|
-| 10 | 100 | 0.24 | Negligible |
-| 50 | 500 | 1.2 | Low |
-| 100 | 1,000 | 2.4 | Low-Medium |
-| 500 | 5,000 | 12 | Medium |
-| 1,000 | 10,000 | 24 | Medium-High |
+| Users | Events/Hour | Network (MB/hr) | Impact      |
+| ----- | ----------- | --------------- | ----------- |
+| 10    | 100         | 0.24            | Negligible  |
+| 50    | 500         | 1.2             | Low         |
+| 100   | 1,000       | 2.4             | Low-Medium  |
+| 500   | 5,000       | 12              | Medium      |
+| 1,000 | 10,000      | 24              | Medium-High |
 
 ### 7.2 Optimization Strategies
 
@@ -557,12 +566,12 @@ Restart Butler SOS and verify endpoint availability.
 
 ### 8.3 Compliance
 
-| Regulation | Considerations |
-|------------|----------------|
-| GDPR | Document legal basis, implement retention limits |
-| HIPAA | Exclude PHI fields, encrypt transmission |
-| SOX | Ensure audit trail integrity |
-| PCI DSS | Never capture payment card data |
+| Regulation | Considerations                                   |
+| ---------- | ------------------------------------------------ |
+| GDPR       | Document legal basis, implement retention limits |
+| HIPAA      | Exclude PHI fields, encrypt transmission         |
+| SOX        | Ensure audit trail integrity                     |
+| PCI DSS    | Never capture payment card data                  |
 
 ---
 
@@ -620,16 +629,19 @@ Restart Butler SOS and verify endpoint availability.
 ### 11.2 Implementation Phases
 
 **Phase 1: MVP** (2-3 weeks)
+
 - Basic selection tracking
 - HTTP endpoint
 - InfluxDB integration
 
 **Phase 2: Enhanced** (1-2 weeks)
+
 - Value capture
 - Object tracking
 - New Relic integration
 
 **Phase 3: Production** (1-2 weeks)
+
 - Security hardening
 - Performance optimization
 - Documentation
@@ -682,4 +694,3 @@ The Qlik Sense audit extension is a **viable and valuable enhancement** to Butle
 **Document Version:** 1.0  
 **Last Updated:** December 19, 2025  
 **Status:** Ready for Review
-

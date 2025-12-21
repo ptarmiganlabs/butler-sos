@@ -571,6 +571,23 @@ Configuration File:
                 'log_events'
             );
 
+            // Audit events queue manager (HTTP ingest)
+            this.auditEventsQueueManager = null;
+            if (
+                this.config.has('Butler-SOS.auditEvents.enable') &&
+                this.config.get('Butler-SOS.auditEvents.enable') === true
+            ) {
+                const auditEventsQueueConfig = {
+                    messageQueue: this.config.get('Butler-SOS.auditEvents.queue.messageQueue'),
+                    rateLimit: this.config.get('Butler-SOS.auditEvents.queue.rateLimit'),
+                };
+                this.auditEventsQueueManager = new UdpQueueManager(
+                    auditEventsQueueConfig,
+                    this.logger,
+                    'audit_events'
+                );
+            }
+
             this.logger.info('CONFIG: UDP queue managers initialized');
         } catch (err) {
             this.logger.error(

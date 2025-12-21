@@ -54,7 +54,12 @@ const mockV2Utils = {
 jest.unstable_mockModule('../v2/utils.js', () => mockV2Utils);
 
 describe('v2/queue-metrics', () => {
-    let storeUserEventQueueMetricsV2, storeLogEventQueueMetricsV2, globals, utils, Point;
+    let storeUserEventQueueMetricsV2,
+        storeLogEventQueueMetricsV2,
+        storeAuditEventQueueMetricsV2,
+        globals,
+        utils,
+        Point;
 
     beforeEach(async () => {
         jest.clearAllMocks();
@@ -65,6 +70,7 @@ describe('v2/queue-metrics', () => {
         const queueMetrics = await import('../v2/queue-metrics.js');
         storeUserEventQueueMetricsV2 = queueMetrics.storeUserEventQueueMetricsV2;
         storeLogEventQueueMetricsV2 = queueMetrics.storeLogEventQueueMetricsV2;
+        storeAuditEventQueueMetricsV2 = queueMetrics.storeAuditEventQueueMetricsV2;
 
         mockPoint.tag.mockReturnThis();
         mockPoint.intField.mockReturnThis();
@@ -84,6 +90,7 @@ describe('v2/queue-metrics', () => {
 
         globals.udpQueueManagerUserActivity = mockQueueManager;
         globals.udpQueueManagerLogEvents = mockQueueManager;
+        globals.auditEventsQueueManager = mockQueueManager;
 
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeBatchToInfluxV2.mockResolvedValue();
@@ -301,6 +308,65 @@ describe('v2/queue-metrics', () => {
             expect(globals.logger.verbose).toHaveBeenCalledWith(
                 'LOG EVENT QUEUE METRICS V2: Sent queue metrics data to InfluxDB'
             );
+        });
+    });
+
+    describe('storeAuditEventQueueMetricsV2', () => {
+        test('should return early when InfluxDB disabled', async () => {
+            utils.isInfluxDbEnabled.mockReturnValue(false);
+            await storeAuditEventQueueMetricsV2();
+            expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
+        });
+
+        test('should return early when feature disabled', async () => {
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable')
+                    return false;
+                if (path.includes('enable')) return true;
+                return undefined;
+            });
+
+            await storeAuditEventQueueMetricsV2();
+            expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
+        });
+
+        test('should return early when queue manager not initialized', async () => {
+            globals.auditEventsQueueManager = null;
+            await storeAuditEventQueueMetricsV2();
+            expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
+            expect(globals.logger.warn).toHaveBeenCalledWith(
+                'AUDIT EVENT QUEUE METRICS V2: Queue manager not initialized'
+            );
+        });
+
+        test('should write complete audit event queue metrics', async () => {
+            globals.config.get.mockImplementation((path) => {
+                if (path.includes('org')) return 'test-org';
+                if (path.includes('bucket')) return 'test-bucket';
+                if (path === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.measurementName')
+                    return 'audit_events_queue';
+                if (path === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.tags')
+                    return [{ name: 'env', value: 'prod' }];
+                if (path === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable')
+                    return true;
+                if (path === 'Butler-SOS.influxdbConfig.maxBatchSize') return 100;
+                return undefined;
+            });
+
+            await storeAuditEventQueueMetricsV2();
+
+            expect(Point).toHaveBeenCalledWith('audit_events_queue');
+            expect(mockPoint.tag).toHaveBeenCalledWith('queue_type', 'audit_events');
+            expect(mockPoint.tag).toHaveBeenCalledWith('host', 'test-host');
+            expect(utils.writeBatchToInfluxV2).toHaveBeenCalledWith(
+                [mockPoint],
+                'test-org',
+                'test-bucket',
+                'Audit event queue metrics',
+                'audit-events-queue',
+                100
+            );
+            expect(mockQueueManager.clearMetrics).toHaveBeenCalled();
         });
     });
 });

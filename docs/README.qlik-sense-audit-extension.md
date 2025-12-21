@@ -7,9 +7,11 @@ This directory contains the complete feasibility investigation for a Qlik Sense 
 ## Contents
 
 ### 1. Investigation Document
+
 **File:** [`qlik-sense-audit-extension-investigation.md`](qlik-sense-audit-extension-investigation.md)
 
 Comprehensive 685-line investigation covering:
+
 - **Executive Summary** - Key findings and recommendations
 - **Technical Feasibility** - Selection tracking, object rendering, browser communication
 - **Architecture Design** - Recommended approach with diagrams and data schemas
@@ -22,9 +24,11 @@ Comprehensive 685-line investigation covering:
 **Key Verdict:** ✅ **FEASIBLE - Proceed with phased implementation**
 
 ### 2. Prototype Extension
+
 **Directory:** [`qlik-sense-audit-extension-prototype/`](qlik-sense-audit-extension-prototype/)
 
 Working prototype code (955 lines total) including:
+
 - Extension metadata (`.qext`)
 - Main extension module with configuration UI
 - Event buffer for batching
@@ -43,20 +47,21 @@ To understand this investigation:
 
 ## Key Findings
 
-| Aspect | Status | Notes |
-|--------|--------|-------|
-| Client-side tracking | ✅ Feasible | Qlik APIs support selection and object monitoring |
-| Browser to Butler SOS | ⚠️ HTTP required | UDP not possible from browser |
-| Performance impact | ✅ Acceptable | <5% overhead with batching |
-| Security | ⚠️ Requires attention | HTTPS, tokens, rate limiting needed |
-| Development effort | ✅ Moderate | ~1 week for core, 2-3 weeks to production |
-| Value proposition | ✅ High | Audit data not available from server logs |
+| Aspect                | Status                | Notes                                             |
+| --------------------- | --------------------- | ------------------------------------------------- |
+| Client-side tracking  | ✅ Feasible           | Qlik APIs support selection and object monitoring |
+| Browser to Butler SOS | ⚠️ HTTP required      | UDP not possible from browser                     |
+| Performance impact    | ✅ Acceptable         | <5% overhead with batching                        |
+| Security              | ⚠️ Requires attention | HTTPS, tokens, rate limiting needed               |
+| Development effort    | ✅ Moderate           | ~1 week for core, 2-3 weeks to production         |
+| Value proposition     | ✅ High               | Audit data not available from server logs         |
 
 ## Recommendation
 
 **PROCEED** with phased implementation:
 
 ### Phase 1: MVP (2-3 weeks)
+
 - Basic selection tracking (field names, counts)
 - HTTP endpoint in Butler SOS
 - InfluxDB integration
@@ -64,12 +69,14 @@ To understand this investigation:
 - Basic testing
 
 ### Phase 2: Enhanced (1-2 weeks)
+
 - Selected value capture
 - Object rendering tracking
 - New Relic integration
 - Advanced error handling
 
 ### Phase 3: Production (1-2 weeks)
+
 - Security hardening
 - Performance optimization
 - Comprehensive documentation
@@ -80,7 +87,8 @@ To understand this investigation:
 **Estimated Effort:** 25-36 hours (~1 week)
 
 ### New Components
-1. **HTTP Endpoint** - `/api/v1/audit/events` 
+
+1. **HTTP Endpoint** - `/api/v1/audit/events`
 2. **Event Processor** - Transform and route events
 3. **Config Schema** - Add `auditEvents` section
 4. **InfluxDB Writer** - New measurement type
@@ -91,13 +99,13 @@ To understand this investigation:
 
 ```yaml
 Butler-SOS:
-  auditEvents:
-    enable: true
-    apiToken: 'your-secure-token'
-    destinations:
-      influxdb: true
-      newRelic: false
-      mqtt: false
+    auditEvents:
+        enable: true
+        apiToken: 'your-secure-token'
+        destinations:
+            influxdb: true
+            newRelic: false
+            mqtt: false
 ```
 
 ## Security Highlights
@@ -107,7 +115,7 @@ Butler-SOS:
 ✅ **Rate limiting** - Prevent abuse  
 ✅ **Data minimization** - Configurable field exclusions  
 ✅ **Audit logging** - All events logged  
-✅ **Network restrictions** - Internal network only  
+✅ **Network restrictions** - Internal network only
 
 ## Architecture Overview
 
@@ -121,22 +129,22 @@ Destinations (InfluxDB/NewRelic/MQTT)
 
 ## Event Types
 
-| Type | Description | Data Captured |
-|------|-------------|---------------|
+| Type                | Description     | Data Captured                  |
+| ------------------- | --------------- | ------------------------------ |
 | `SELECTION_CHANGED` | User selections | Fields, values, counts, states |
-| `SELECTION_CLEARED` | Clear all | Previous state |
-| `OBJECT_RENDERED` | Chart updated | Object ID, type, row counts |
-| `SHEET_OPENED` | Navigation | Sheet ID, name |
+| `SELECTION_CLEARED` | Clear all       | Previous state                 |
+| `OBJECT_RENDERED`   | Chart updated   | Object ID, type, row counts    |
+| `SHEET_OPENED`      | Navigation      | Sheet ID, name                 |
 
 ## Performance Benchmarks
 
 | Users | Events/Hour | Network | Butler SOS Load |
-|-------|-------------|---------|-----------------|
-| 10 | 100 | 0.24 MB | Negligible |
-| 50 | 500 | 1.2 MB | Low |
-| 100 | 1,000 | 2.4 MB | Low-Medium |
-| 500 | 5,000 | 12 MB | Medium |
-| 1,000 | 10,000 | 24 MB | Medium-High |
+| ----- | ----------- | ------- | --------------- |
+| 10    | 100         | 0.24 MB | Negligible      |
+| 50    | 500         | 1.2 MB  | Low             |
+| 100   | 1,000       | 2.4 MB  | Low-Medium      |
+| 500   | 5,000       | 12 MB   | Medium          |
+| 1,000 | 10,000      | 24 MB   | Medium-High     |
 
 ## Next Steps
 
@@ -162,6 +170,7 @@ Destinations (InfluxDB/NewRelic/MQTT)
 ## Contact
 
 For questions or feedback:
+
 - **GitHub Issues:** https://github.com/ptarmiganlabs/butler-sos/issues
 - **Documentation:** https://butler-sos.ptarmiganlabs.com
 
