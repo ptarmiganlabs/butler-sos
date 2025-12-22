@@ -97,6 +97,6 @@
         "lockfile-lint": "^4.14.1",
         "npm-check-updates": "^19.1.2",
         "prettier": "^3.7.4",
-        "snyk": "^1.1301.0"
+        "snyk": "^1.1301.2"
     }
 }
