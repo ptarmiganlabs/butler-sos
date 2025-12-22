@@ -75,6 +75,19 @@ export const auditEventsSchema = {
                 properties: {
                     enable: { type: 'boolean', default: false },
                     downloadTimeoutMs: { type: 'number', default: 15000 },
+                    addInImageMetadata: {
+                        type: 'object',
+                        properties: {
+                            date: { type: 'boolean', default: false },
+                            eventId: { type: 'boolean', default: false },
+                            correlationId: { type: 'boolean', default: false },
+                            userId: { type: 'boolean', default: false },
+                            appId: { type: 'boolean', default: false },
+                            appName: { type: 'boolean', default: false },
+                            sheetName: { type: 'boolean', default: false },
+                        },
+                        additionalProperties: false,
+                    },
                     auth: {
                         type: 'object',
                         properties: {

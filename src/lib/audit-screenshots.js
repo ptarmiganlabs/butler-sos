@@ -3,9 +3,11 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import https from 'node:https';
 import axios from 'axios';
+import { DateTime } from 'luxon';
 
 import globals from '../globals.js';
 import { createCertificateOptions, getCertificates } from './cert-utils.js';
+import { addTextHeaderToPng } from './audit-screenshot-metadata-image.js';
 
 /**
  * Minimal logger interface used by this module.
@@ -63,7 +65,23 @@ import { createCertificateOptions, getCertificates } from './cert-utils.js';
  * @property {boolean} enable Whether screenshot downloads are enabled.
  * @property {number} [downloadTimeoutMs] Timeout for the screenshot download request in milliseconds.
  * @property {ScreenshotAuthConfig} [auth] Screenshot authentication options.
+ * @property {ScreenshotImageMetadataConfig} [addInImageMetadata] Optional metadata header rendered into PNG screenshots.
  * @property {ScreenshotStorageTarget[] | null} [storageTargets] Where to store downloaded screenshots.
+ */
+
+/**
+ * Controls which metadata fields are rendered into the screenshot image.
+ *
+ * When `date` is enabled, two lines are rendered: UTC and server-local.
+ *
+ * @typedef {object} ScreenshotImageMetadataConfig
+ * @property {boolean} [date] Render date lines (UTC and server-local).
+ * @property {boolean} [eventId] Render envelope event id.
+ * @property {boolean} [correlationId] Render envelope correlation id.
+ * @property {boolean} [userId] Render the full user identifier string (often `DOMAIN\\user`).
+ * @property {boolean} [appId] Render app id.
+ * @property {boolean} [appName] Render app name.
+ * @property {boolean} [sheetName] Render sheet name.
  */
 
 /**
@@ -370,6 +388,107 @@ function extensionFromContentType(contentType) {
 }
 
 /**
+ * Normalizes a possibly-empty value into a printable metadata string.
+ *
+ * @param {unknown} value Candidate value.
+ * @returns {string} The value if it is a non-empty string, otherwise `n/a`.
+ */
+function safeMetadataValue(value) {
+    return typeof value === 'string' && value.length > 0 ? value : 'n/a';
+}
+
+/**
+ * Formats an ISO-8601 timestamp into UTC and server-local time.
+ *
+ * @param {string | null | undefined} timestamp ISO-8601 timestamp.
+ * @returns {{ utc: string, local: string }} Formatted timestamps.
+ */
+function formatTimestampUtcAndLocal(timestamp) {
+    const dt =
+        typeof timestamp === 'string' && timestamp.length > 0
+            ? DateTime.fromISO(timestamp, { setZone: true })
+            : DateTime.utc();
+
+    if (!dt.isValid) {
+        return {
+            utc: 'invalid_timestamp',
+            local: 'invalid_timestamp',
+        };
+    }
+
+    return {
+        utc: dt.toUTC().toFormat('yyyy-LL-dd HH:mm:ss'),
+        local: dt.toLocal().toFormat('yyyy-LL-dd HH:mm:ss'),
+    };
+}
+
+/**
+ * Checks whether any metadata flag is enabled.
+ *
+ * @param {ScreenshotImageMetadataConfig | null | undefined} flags Metadata flags.
+ * @returns {boolean} True if at least one flag is set to true.
+ */
+function hasAnyEnabledMetadataFlag(flags) {
+    if (!flags || typeof flags !== 'object') return false;
+    return Object.values(flags).some((v) => v === true);
+}
+
+/**
+ * Builds the list of metadata lines to render into the screenshot image.
+ *
+ * @param {AuditEventEnvelope | null | undefined} envelope Audit envelope.
+ * @param {AuditContext} auditCtx Extracted audit context.
+ * @param {ScreenshotImageMetadataConfig | null | undefined} flags Metadata flags.
+ * @returns {Array<{ key: string, value: string }>} Lines to render.
+ */
+function buildScreenshotMetadataLines(envelope, auditCtx, flags) {
+    if (!hasAnyEnabledMetadataFlag(flags)) return [];
+
+    const lines = [];
+
+    if (flags.date === true) {
+        const { utc, local } = formatTimestampUtcAndLocal(envelope?.timestamp);
+        lines.push({ key: 'DATE (UTC)', value: utc });
+        lines.push({ key: 'DATE (LOCAL)', value: local });
+    }
+
+    if (flags.eventId === true)
+        lines.push({ key: 'EVENT ID', value: safeMetadataValue(envelope?.eventId) });
+    if (flags.correlationId === true)
+        lines.push({ key: 'CORRELATION ID', value: safeMetadataValue(envelope?.correlationId) });
+
+    if (flags.userId === true) {
+        lines.push({ key: 'USER ID', value: safeMetadataValue(auditCtx?.user) });
+    }
+
+    if (flags.appId === true)
+        lines.push({ key: 'APP ID', value: safeMetadataValue(auditCtx?.appId) });
+    if (flags.appName === true)
+        lines.push({ key: 'APP NAME', value: safeMetadataValue(auditCtx?.appName) });
+    if (flags.sheetName === true)
+        lines.push({ key: 'SHEET NAME', value: safeMetadataValue(auditCtx?.sheetName) });
+
+    return lines;
+}
+
+/**
+ * Builds the output filename for the metadata-enhanced screenshot image.
+ *
+ * @param {string} originalFilename Original screenshot filename.
+ * @returns {string} Filename with `_metadata` inserted before extension.
+ */
+function buildMetadataFilename(originalFilename) {
+    if (typeof originalFilename !== 'string' || originalFilename.length === 0) {
+        return 'screenshot_metadata';
+    }
+
+    const ext = path.extname(originalFilename);
+    if (!ext) return `${originalFilename}_metadata`;
+    const base = originalFilename.slice(0, -ext.length);
+    return `${base}_metadata${ext}`;
+}
+
+/**
  * Attempts to infer an image file extension from the URL path.
  *
  * Only a small allow-list is supported; unsupported/unknown extensions return `null`.
@@ -549,6 +668,29 @@ export async function downloadScreenshot(url, envelope, config, logger) {
 
             const filename = buildScreenshotFilename(envelope, url, contentType);
 
+            const ext = extensionFromContentType(contentType) || extensionFromUrl(url);
+            const metadataFlags = config?.addInImageMetadata;
+            const shouldAddMetadata = ext === 'png' && hasAnyEnabledMetadataFlag(metadataFlags);
+            const metadataLines = shouldAddMetadata
+                ? buildScreenshotMetadataLines(envelope, auditCtx, metadataFlags)
+                : [];
+
+            let metadataBuffer;
+            if (shouldAddMetadata && metadataLines.length > 0) {
+                try {
+                    metadataBuffer = addTextHeaderToPng(buffer, metadataLines, {
+                        valueMaxChars: 160,
+                    });
+                } catch (err) {
+                    logger.warn(
+                        `AUDIT API: Failed to add metadata header to screenshot PNG. error=${formatAxiosError(
+                            err
+                        )} ${auditCtxStr}`
+                    );
+                    metadataBuffer = undefined;
+                }
+            }
+
             for (const target of targets) {
                 if (target.type !== 'flat') continue;
 
@@ -559,6 +701,13 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 await fs.writeFile(filePath, buffer);
 
                 logger.info(`AUDIT API: Saved screenshot file=${filePath}`);
+
+                if (metadataBuffer && metadataBuffer.length > 0) {
+                    const metadataFilename = buildMetadataFilename(filename);
+                    const metadataFilePath = path.join(directoryPath, metadataFilename);
+                    await fs.writeFile(metadataFilePath, metadataBuffer);
+                    logger.info(`AUDIT API: Saved screenshot metadata file=${metadataFilePath}`);
+                }
             }
 
             return;

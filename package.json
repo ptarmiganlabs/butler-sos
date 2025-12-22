@@ -73,6 +73,7 @@
         "luxon": "^3.7.2",
         "mqtt": "^5.14.1",
         "p-queue": "^9.0.1",
+        "pngjs": "^7.0.0",
         "posthog-node": "^5.17.4",
         "prom-client": "^15.1.3",
         "qrs-interact": "^6.3.1",

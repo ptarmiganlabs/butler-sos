@@ -58,6 +58,18 @@ Butler-SOS:
         screenshots:
             enable: false
             downloadTimeoutMs: 15000
+            # Optional: add a metadata header above downloaded PNG screenshots.
+            # Enabled fields are rendered as text into the image itself.
+            # When date is enabled, both UTC and server-local time are shown.
+            addInImageMetadata:
+                date: false
+                eventId: false
+                correlationId: false
+                # Full user identifier as provided by the audit event (often DOMAIN\\user).
+                userId: false
+                appId: false
+                appName: false
+                sheetName: false
             # Optional: authenticate screenshot downloads against Qlik Sense using a QPS ticket (mutual TLS).
             # Certificates are reused from Butler-SOS.cert.*
             # TLS server certificate verification is controlled via Butler-SOS.serversToMonitor.rejectUnauthorized.

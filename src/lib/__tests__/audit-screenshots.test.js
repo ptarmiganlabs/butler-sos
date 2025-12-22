@@ -1,4 +1,7 @@
 import { jest, describe, test, expect, beforeEach } from '@jest/globals';
+import pngjs from 'pngjs';
+
+const { PNG } = pngjs;
 
 const mockAxios = {
     request: jest.fn(),
@@ -264,5 +267,192 @@ describe('audit-screenshots', () => {
 
         expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(1);
         expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('adds metadata header to PNG screenshot when enabled', async () => {
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const logger = {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+        };
+
+        const srcPng = new PNG({ width: 20, height: 10 });
+        for (let y = 0; y < srcPng.height; y += 1) {
+            for (let x = 0; x < srcPng.width; x += 1) {
+                const idx = (srcPng.width * y + x) << 2;
+                srcPng.data[idx] = 255;
+                srcPng.data[idx + 1] = 0;
+                srcPng.data[idx + 2] = 0;
+                srcPng.data[idx + 3] = 255;
+            }
+        }
+        const srcBuffer = PNG.sync.write(srcPng);
+
+        mockAxios.request.mockResolvedValue({
+            status: 200,
+            headers: { 'content-type': 'image/png' },
+            data: srcBuffer,
+        });
+
+        await downloadScreenshot(
+            'https://example.com/screenshot.png',
+            {
+                timestamp: '2025-12-22T12:34:56.000Z',
+                eventId: 'evt-1',
+                correlationId: 'corr-1',
+                payload: {
+                    context: {
+                        user: 'LAB\\test-user',
+                        appId: 'app-1',
+                        appName: 'Test App',
+                        sheetId: 'sheet-1',
+                        sheetName: 'Sheet 1',
+                    },
+                    event: {
+                        objectId: 'obj-1',
+                        screenshotUrl: 'https://example.com/screenshot.png',
+                        type: 'screenshot',
+                        format: 'png',
+                        width: 20,
+                        height: 10,
+                    },
+                },
+            },
+            {
+                enable: true,
+                downloadTimeoutMs: 15000,
+                addInImageMetadata: {
+                    date: true,
+                    eventId: true,
+                    correlationId: true,
+                    userId: true,
+                    appId: true,
+                    appName: true,
+                    sheetName: true,
+                },
+                storageTargets: [
+                    {
+                        enable: true,
+                        type: 'flat',
+                        directory: 'screenshots/audit',
+                    },
+                ],
+            },
+            logger
+        );
+
+        expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(2);
+
+        const firstWrittenPath = mockFsPromises.writeFile.mock.calls[0][0];
+        const firstWrittenBuffer = mockFsPromises.writeFile.mock.calls[0][1];
+        expect(firstWrittenPath).toContain('screenshots/audit');
+        expect(firstWrittenPath).toContain('.png');
+
+        const secondWrittenPath = mockFsPromises.writeFile.mock.calls[1][0];
+        const secondWrittenBuffer = mockFsPromises.writeFile.mock.calls[1][1];
+        expect(secondWrittenPath).toContain('screenshots/audit');
+        expect(secondWrittenPath).toContain('_metadata');
+
+        const originalPng = PNG.sync.read(firstWrittenBuffer);
+        expect(originalPng.width).toBe(srcPng.width);
+        expect(originalPng.height).toBe(srcPng.height);
+
+        const outPng = PNG.sync.read(secondWrittenBuffer);
+        expect(outPng.height).toBeGreaterThan(srcPng.height);
+        expect(outPng.width).toBeGreaterThanOrEqual(srcPng.width);
+
+        // Verify header contains black text pixels (not just background).
+        const headerHeight = outPng.height - srcPng.height;
+        let blackPixels = 0;
+        for (let y = 0; y < headerHeight; y += 1) {
+            for (let x = 0; x < outPng.width; x += 1) {
+                const idx = (outPng.width * y + x) << 2;
+                if (
+                    outPng.data[idx] === 0 &&
+                    outPng.data[idx + 1] === 0 &&
+                    outPng.data[idx + 2] === 0 &&
+                    outPng.data[idx + 3] === 255
+                ) {
+                    blackPixels += 1;
+                }
+            }
+        }
+        expect(blackPixels).toBeGreaterThan(10);
+
+        expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    test('expands PNG width to fit long (capped) metadata values', async () => {
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const logger = {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+        };
+
+        const srcPng = new PNG({ width: 20, height: 10 });
+        for (let y = 0; y < srcPng.height; y += 1) {
+            for (let x = 0; x < srcPng.width; x += 1) {
+                const idx = (srcPng.width * y + x) << 2;
+                srcPng.data[idx] = 0;
+                srcPng.data[idx + 1] = 0;
+                srcPng.data[idx + 2] = 255;
+                srcPng.data[idx + 3] = 255;
+            }
+        }
+        const srcBuffer = PNG.sync.write(srcPng);
+
+        mockAxios.request.mockResolvedValue({
+            status: 200,
+            headers: { 'content-type': 'image/png' },
+            data: srcBuffer,
+        });
+
+        await downloadScreenshot(
+            'https://example.com/screenshot.png',
+            {
+                timestamp: '2025-12-22T12:34:56.000Z',
+                eventId: 'evt-1',
+                correlationId: 'corr-1',
+                payload: {
+                    context: {
+                        user: 'LAB\\test-user',
+                        appId: 'app-1',
+                        appName: 'A'.repeat(220),
+                        sheetName: 'SHEET',
+                    },
+                    event: {
+                        type: 'screenshot',
+                    },
+                },
+            },
+            {
+                enable: true,
+                downloadTimeoutMs: 15000,
+                addInImageMetadata: {
+                    appName: true,
+                },
+                storageTargets: [
+                    {
+                        enable: true,
+                        type: 'flat',
+                        directory: 'screenshots/audit',
+                    },
+                ],
+            },
+            logger
+        );
+
+        expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(2);
+        const writtenBuffer = mockFsPromises.writeFile.mock.calls[1][1];
+        const outPng = PNG.sync.read(writtenBuffer);
+
+        expect(outPng.width).toBeGreaterThan(srcPng.width);
+        expect(outPng.height).toBeGreaterThan(srcPng.height);
+
+        expect(logger.error).not.toHaveBeenCalled();
     });
 });
