@@ -11,9 +11,9 @@ import { createCertificateOptions, getCertificates } from './cert-utils.js';
  * Minimal logger interface used by this module.
  *
  * @typedef {object} Logger
- * @property {(msg: string) => void} info
- * @property {(msg: string) => void} warn
- * @property {(msg: string) => void} error
+ * @property {(msg: string) => void} info Logs informational messages.
+ * @property {(msg: string) => void} warn Logs warning messages.
+ * @property {(msg: string) => void} error Logs error messages.
  */
 
 /**
@@ -23,8 +23,8 @@ import { createCertificateOptions, getCertificates } from './cert-utils.js';
  *
  * @typedef {object} AuditEventEnvelope
  * @property {string} [timestamp] ISO-8601 timestamp (UTC recommended).
- * @property {string} [eventId] Event identifier.
- * @property {string} [correlationId] Correlation identifier.
+ * @property {string} [eventId] Unique event identifier.
+ * @property {string} [correlationId] Correlation identifier used to link related events.
  */
 
 /**
@@ -44,7 +44,7 @@ import { createCertificateOptions, getCertificates } from './cert-utils.js';
  * @property {number} port QPS port.
  * @property {string} userDirectory Qlik user directory (e.g. "LAB").
  * @property {string} userId Qlik user id (e.g. "butler-sos").
- * @property {number} [ticketTimeoutMs] Request timeout for the QPS ticket call.
+ * @property {number} [ticketTimeoutMs] Request timeout for the QPS ticket call in milliseconds.
  */
 
 /**
@@ -54,16 +54,16 @@ import { createCertificateOptions, getCertificates } from './cert-utils.js';
  * - `qpsTicket`: obtain a QPS ticket using mutual TLS and add `qlikTicket=<ticket>` to the URL.
  *
  * @typedef {object} ScreenshotAuthConfig
- * @property {'none'|'qpsTicket'} [mode]
+ * @property {'none'|'qpsTicket'} [mode] Authentication mode (defaults to `none`).
  * @property {QpsTicketConfig} [qps] QPS ticket settings (required when mode is `qpsTicket`).
  */
 
 /**
  * @typedef {object} ScreenshotDownloadConfig
  * @property {boolean} enable Whether screenshot downloads are enabled.
- * @property {number} downloadTimeoutMs Timeout for the screenshot download request.
- * @property {ScreenshotAuthConfig | undefined} [auth] Screenshot authentication options.
- * @property {ScreenshotStorageTarget[] | null} storageTargets Where to store downloaded screenshots.
+ * @property {number} [downloadTimeoutMs] Timeout for the screenshot download request in milliseconds.
+ * @property {ScreenshotAuthConfig} [auth] Screenshot authentication options.
+ * @property {ScreenshotStorageTarget[] | null} [storageTargets] Where to store downloaded screenshots.
  */
 
 /**
@@ -164,7 +164,7 @@ function withQlikTicket(rawUrl, ticket) {
  * only pulls a small set of known fields.
  *
  * @param {unknown} envelope Raw audit event envelope.
- * @returns {{ eventId?: string, correlationId?: string, timestamp?: string, type?: string, user?: string, appId?: string, appName?: string, sheetId?: string, sheetName?: string, objectId?: string, objectName?: string, objectType?: string, screenshotFormat?: string, screenshotWidth?: number, screenshotHeight?: number }}
+ * @returns {AuditContext} Extracted context values suitable for logging.
  */
 function extractAuditContext(envelope) {
     const env = envelope && typeof envelope === 'object' ? envelope : null;
@@ -175,12 +175,26 @@ function extractAuditContext(envelope) {
     const event = payloadObj && 'event' in payloadObj ? payloadObj.event : null;
     const eventObj = event && typeof event === 'object' ? event : null;
 
+    /**
+     * Reads a non-empty string field from a potentially untrusted object.
+     *
+     * @param {unknown} o Candidate object.
+     * @param {string} k Field name.
+     * @returns {string | undefined} Field value if present and non-empty.
+     */
     const readString = (o, k) => {
         if (!o || typeof o !== 'object') return undefined;
         const v = o[k];
         return typeof v === 'string' && v.length > 0 ? v : undefined;
     };
 
+    /**
+     * Reads a finite number field from a potentially untrusted object.
+     *
+     * @param {unknown} o Candidate object.
+     * @param {string} k Field name.
+     * @returns {number | undefined} Field value if present and finite.
+     */
     const readNumber = (o, k) => {
         if (!o || typeof o !== 'object') return undefined;
         const v = o[k];
@@ -207,10 +221,33 @@ function extractAuditContext(envelope) {
 }
 
 /**
+ * Extracted audit context used for log enrichment.
+ *
+ * @typedef {object} AuditContext
+ * @property {string} [eventId] Event identifier.
+ * @property {string} [correlationId] Correlation identifier.
+ * @property {string} [timestamp] ISO-8601 timestamp.
+ * @property {string} [type] Event type.
+ * @property {string} [user] User identifier.
+ * @property {string} [appId] Qlik Sense app identifier.
+ * @property {string} [appName] Qlik Sense app name.
+ * @property {string} [sheetId] Sheet identifier.
+ * @property {string} [sheetName] Sheet name.
+ * @property {string} [objectId] Object identifier.
+ * @property {string} [objectName] Object name.
+ * @property {string} [objectType] Object type.
+ * @property {string} [screenshotFormat] Screenshot format (e.g. png/jpg).
+ * @property {number} [screenshotWidth] Screenshot width in pixels.
+ * @property {number} [screenshotHeight] Screenshot height in pixels.
+ */
+
+/**
  * Converts a context object into a compact `k=v` string.
  *
- * @param {Record<string, unknown>} context
- * @returns {string}
+ * Empty/undefined values are omitted.
+ *
+ * @param {Record<string, unknown>} context Context values to serialize.
+ * @returns {string} Space-separated `k=v` pairs.
  */
 function formatContextForLog(context) {
     if (!context || typeof context !== 'object') return '';
@@ -226,8 +263,8 @@ function formatContextForLog(context) {
 /**
  * Returns true if an HTTP status is likely transient and worth retrying.
  *
- * @param {number} status
- * @returns {boolean}
+ * @param {number} status HTTP status code.
+ * @returns {boolean} True if the status should be retried.
  */
 function isRetryableHttpStatus(status) {
     return [404, 408, 425, 429, 500, 502, 503, 504].includes(status);
@@ -236,8 +273,8 @@ function isRetryableHttpStatus(status) {
 /**
  * Sleep helper used for retry backoff.
  *
- * @param {number} ms
- * @returns {Promise<void>}
+ * @param {number} ms Delay in milliseconds.
+ * @returns {Promise<void>} Resolves after the delay.
  */
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -246,8 +283,8 @@ function sleep(ms) {
 /**
  * Builds a richer error string for axios errors.
  *
- * @param {unknown} err
- * @returns {string}
+ * @param {unknown} err Error thrown by axios or other code.
+ * @returns {string} Human-readable error summary.
  */
 function formatAxiosError(err) {
     if (axios.isAxiosError && axios.isAxiosError(err)) {
@@ -294,6 +331,13 @@ function formatTimestampForFilename(timestamp) {
     const date = timestamp ? new Date(timestamp) : new Date();
     if (Number.isNaN(date.getTime())) return 'invalid_timestamp';
 
+    /**
+     * Pads a number with leading zeroes.
+     *
+     * @param {number} n Number to pad.
+     * @param {number} [width] Target width (defaults to 2).
+     * @returns {string} Padded string.
+     */
     const pad = (n, width = 2) => String(n).padStart(width, '0');
 
     const yyyy = date.getUTCFullYear();
@@ -348,14 +392,29 @@ function extensionFromUrl(url) {
 }
 
 /**
+ * Axios `validateStatus` helper that accepts all HTTP statuses.
+ *
+ * This lets the caller handle non-2xx responses explicitly based on status code.
+ *
+ * @param {number} _status HTTP status code.
+ * @returns {boolean} Always true.
+ */
+function acceptAllHttpStatuses(_status) {
+    return true;
+}
+
+/**
  * Builds a unique filename for a screenshot.
  *
  * Required uniqueness properties:
  * - timestamp + eventId + correlationId
  *
- * @param {AuditEventEnvelope} envelope Envelope metadata used to create the filename.
+ * If `contentType` is a supported image type, it is used to select the extension.
+ * Otherwise the extension is inferred from the URL path; if that fails, `bin` is used.
+ *
+ * @param {AuditEventEnvelope | null | undefined} envelope Envelope metadata used to create the filename.
  * @param {string} url Screenshot URL (used to infer extension if needed).
- * @param {string | null} contentType HTTP Content-Type header value (preferred for extension selection).
+ * @param {string | null | undefined} contentType HTTP Content-Type header value (preferred for extension selection).
  * @returns {string} Filename in the format `${timestamp}_${eventId}_${correlationId}.${ext}`.
  */
 export function buildScreenshotFilename(envelope, url, contentType) {
@@ -377,7 +436,7 @@ export function buildScreenshotFilename(envelope, url, contentType) {
  * - If the response `Content-Type` is present and not an image type, the file is not written.
  *
  * @param {string} url Screenshot URL.
- * @param {AuditEventEnvelope} envelope Envelope metadata (used for filename generation).
+ * @param {AuditEventEnvelope | null | undefined} envelope Envelope metadata (used for filename generation).
  * @param {ScreenshotDownloadConfig} config Screenshot download configuration.
  * @param {Logger} logger Logger.
  * @returns {Promise<void>} Resolves when the attempt completes.
@@ -432,7 +491,7 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 httpsAgent,
                 timeout: timeoutMs,
                 maxRedirects: 5,
-                validateStatus: () => true,
+                validateStatus: acceptAllHttpStatuses,
             });
 
             const contentType = response.headers?.['content-type'] || null;
