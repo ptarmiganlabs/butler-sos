@@ -75,6 +75,52 @@ export const auditEventsSchema = {
                 properties: {
                     enable: { type: 'boolean', default: false },
                     downloadTimeoutMs: { type: 'number', default: 15000 },
+                    auth: {
+                        type: 'object',
+                        properties: {
+                            mode: {
+                                type: 'string',
+                                enum: ['none', 'qpsTicket'],
+                                default: 'none',
+                            },
+                            qps: {
+                                type: 'object',
+                                properties: {
+                                    host: { type: 'string', minLength: 1 },
+                                    port: { type: 'number', default: 4243 },
+                                    userDirectory: { type: 'string', minLength: 1 },
+                                    userId: { type: 'string', minLength: 1 },
+                                    ticketTimeoutMs: { type: 'number', default: 5000 },
+                                },
+                                required: [
+                                    'host',
+                                    'port',
+                                    'userDirectory',
+                                    'userId',
+                                    'ticketTimeoutMs',
+                                ],
+                                additionalProperties: false,
+                            },
+                        },
+                        required: ['mode'],
+                        additionalProperties: false,
+                        allOf: [
+                            {
+                                if: {
+                                    properties: {
+                                        mode: { const: 'qpsTicket' },
+                                    },
+                                    required: ['mode'],
+                                },
+                                then: {
+                                    properties: {
+                                        qps: { type: 'object' },
+                                    },
+                                    required: ['qps'],
+                                },
+                            },
+                        ],
+                    },
                     storageTargets: {
                         type: ['array', 'null'],
                         items: {

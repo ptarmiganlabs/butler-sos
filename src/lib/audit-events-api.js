@@ -169,6 +169,9 @@ function createTypeHandlers(logger) {
             downloadTimeoutMs: globals.config.get(
                 'Butler-SOS.auditEvents.screenshots.downloadTimeoutMs'
             ),
+            auth: globals.config.has('Butler-SOS.auditEvents.screenshots.auth')
+                ? globals.config.get('Butler-SOS.auditEvents.screenshots.auth')
+                : undefined,
             storageTargets: globals.config.get('Butler-SOS.auditEvents.screenshots.storageTargets'),
         };
 

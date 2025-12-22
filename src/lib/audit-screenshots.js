@@ -1,19 +1,270 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import crypto from 'node:crypto';
+import https from 'node:https';
+import axios from 'axios';
+
+import globals from '../globals.js';
+import { createCertificateOptions, getCertificates } from './cert-utils.js';
 
 /**
+ * Minimal logger interface used by this module.
+ *
+ * @typedef {object} Logger
+ * @property {(msg: string) => void} info
+ * @property {(msg: string) => void} warn
+ * @property {(msg: string) => void} error
+ */
+
+/**
+ * Envelope metadata included with audit events.
+ *
+ * The fields are used to build deterministic filenames.
+ *
+ * @typedef {object} AuditEventEnvelope
+ * @property {string} [timestamp] ISO-8601 timestamp (UTC recommended).
+ * @property {string} [eventId] Event identifier.
+ * @property {string} [correlationId] Correlation identifier.
+ */
+
+/**
+ * Flat-file screenshot storage target.
+ *
  * @typedef {object} ScreenshotStorageTarget
- * @property {boolean} enable
- * @property {'flat'} type
- * @property {string} directory
+ * @property {boolean} enable Whether to store screenshots for this target.
+ * @property {'flat'} type Storage target type.
+ * @property {string} directory Target directory where screenshots are written.
+ */
+
+/**
+ * Qlik Sense QPS ticket request configuration.
+ *
+ * @typedef {object} QpsTicketConfig
+ * @property {string} host QPS hostname.
+ * @property {number} port QPS port.
+ * @property {string} userDirectory Qlik user directory (e.g. "LAB").
+ * @property {string} userId Qlik user id (e.g. "butler-sos").
+ * @property {number} [ticketTimeoutMs] Request timeout for the QPS ticket call.
+ */
+
+/**
+ * Screenshot authentication configuration.
+ *
+ * - `none`: fetch the screenshot URL as-is.
+ * - `qpsTicket`: obtain a QPS ticket using mutual TLS and add `qlikTicket=<ticket>` to the URL.
+ *
+ * @typedef {object} ScreenshotAuthConfig
+ * @property {'none'|'qpsTicket'} [mode]
+ * @property {QpsTicketConfig} [qps] QPS ticket settings (required when mode is `qpsTicket`).
  */
 
 /**
  * @typedef {object} ScreenshotDownloadConfig
- * @property {boolean} enable
- * @property {number} downloadTimeoutMs
- * @property {ScreenshotStorageTarget[] | null} storageTargets
+ * @property {boolean} enable Whether screenshot downloads are enabled.
+ * @property {number} downloadTimeoutMs Timeout for the screenshot download request.
+ * @property {ScreenshotAuthConfig | undefined} [auth] Screenshot authentication options.
+ * @property {ScreenshotStorageTarget[] | null} storageTargets Where to store downloaded screenshots.
  */
+
+/**
+ * Generates an XRF key used by Qlik APIs (16 characters).
+ *
+ * @returns {string} 16-character XRF key.
+ */
+function generateXrfkey() {
+    return crypto.randomBytes(8).toString('hex');
+}
+
+/**
+ * Creates an HTTPS agent configured with the globally configured Qlik client certificates.
+ *
+ * TLS server certificate verification is controlled via `Butler-SOS.serversToMonitor.rejectUnauthorized`.
+ *
+ * @returns {https.Agent} HTTPS agent for mutual TLS.
+ */
+function createQlikMutualTlsAgent() {
+    const options = createCertificateOptions();
+    const cert = getCertificates(options);
+
+    return new https.Agent({
+        cert: cert.cert,
+        key: cert.key,
+        ca: cert.ca,
+        passphrase: options.CertificatePassphrase,
+        rejectUnauthorized: globals.config.get('Butler-SOS.serversToMonitor.rejectUnauthorized'),
+    });
+}
+
+/**
+ * Requests a QPS ticket for a given user.
+ *
+ * Uses mutual TLS based on the global certificate configuration.
+ *
+ * @param {QpsTicketConfig} qps QPS ticket request settings.
+ * @param {Logger} logger Logger.
+ * @returns {Promise<string>} The QPS ticket.
+ * @throws {Error} If the request fails or the response does not include a `Ticket` field.
+ */
+async function requestQpsTicket(qps, logger) {
+    const xrfkey = generateXrfkey();
+    const httpsAgent = createQlikMutualTlsAgent();
+    const timeoutMs =
+        typeof qps.ticketTimeoutMs === 'number' && qps.ticketTimeoutMs > 0
+            ? qps.ticketTimeoutMs
+            : 5000;
+
+    const url = `https://${qps.host}:${qps.port}/qps/ticket?Xrfkey=${xrfkey}`;
+
+    const requestSettings = {
+        url,
+        method: 'post',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Qlik-Xrfkey': xrfkey,
+        },
+        data: {
+            UserDirectory: qps.userDirectory,
+            UserId: qps.userId,
+        },
+        httpsAgent,
+        timeout: timeoutMs,
+        maxRedirects: 5,
+    };
+
+    const response = await axios.request(requestSettings);
+    const ticket = response?.data?.Ticket;
+
+    if (typeof ticket !== 'string' || ticket.length === 0) {
+        logger.warn(
+            `AUDIT API: QPS ticket response missing Ticket field. url=${url} status=${response?.status}`
+        );
+        throw new Error('QPS ticket response missing Ticket');
+    }
+
+    return ticket;
+}
+
+/**
+ * Returns a new URL string with `qlikTicket` query param set.
+ *
+ * @param {string} rawUrl Original screenshot URL.
+ * @param {string} ticket Qlik ticket.
+ * @returns {string} Updated URL.
+ */
+function withQlikTicket(rawUrl, ticket) {
+    const u = new URL(rawUrl);
+    u.searchParams.set('qlikTicket', ticket);
+    return u.toString();
+}
+
+/**
+ * Extracts relevant context from an audit envelope for logging.
+ *
+ * This function is defensive: it treats the envelope as untrusted input and
+ * only pulls a small set of known fields.
+ *
+ * @param {unknown} envelope Raw audit event envelope.
+ * @returns {{ eventId?: string, correlationId?: string, timestamp?: string, type?: string, user?: string, appId?: string, appName?: string, sheetId?: string, sheetName?: string, objectId?: string, objectName?: string, objectType?: string, screenshotFormat?: string, screenshotWidth?: number, screenshotHeight?: number }}
+ */
+function extractAuditContext(envelope) {
+    const env = envelope && typeof envelope === 'object' ? envelope : null;
+    const payload = env && 'payload' in env ? env.payload : null;
+    const payloadObj = payload && typeof payload === 'object' ? payload : null;
+    const ctx = payloadObj && 'context' in payloadObj ? payloadObj.context : null;
+    const ctxObj = ctx && typeof ctx === 'object' ? ctx : null;
+    const event = payloadObj && 'event' in payloadObj ? payloadObj.event : null;
+    const eventObj = event && typeof event === 'object' ? event : null;
+
+    const readString = (o, k) => {
+        if (!o || typeof o !== 'object') return undefined;
+        const v = o[k];
+        return typeof v === 'string' && v.length > 0 ? v : undefined;
+    };
+
+    const readNumber = (o, k) => {
+        if (!o || typeof o !== 'object') return undefined;
+        const v = o[k];
+        return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+    };
+
+    return {
+        eventId: readString(env, 'eventId'),
+        correlationId: readString(env, 'correlationId'),
+        timestamp: readString(env, 'timestamp'),
+        type: readString(env, 'type'),
+        user: readString(ctxObj, 'user'),
+        appId: readString(ctxObj, 'appId'),
+        appName: readString(ctxObj, 'appName'),
+        sheetId: readString(ctxObj, 'sheetId'),
+        sheetName: readString(ctxObj, 'sheetName'),
+        objectId: readString(eventObj, 'objectId'),
+        objectName: readString(eventObj, 'objectName'),
+        objectType: readString(eventObj, 'objectType'),
+        screenshotFormat: readString(eventObj, 'format'),
+        screenshotWidth: readNumber(eventObj, 'width'),
+        screenshotHeight: readNumber(eventObj, 'height'),
+    };
+}
+
+/**
+ * Converts a context object into a compact `k=v` string.
+ *
+ * @param {Record<string, unknown>} context
+ * @returns {string}
+ */
+function formatContextForLog(context) {
+    if (!context || typeof context !== 'object') return '';
+
+    const parts = [];
+    for (const [key, value] of Object.entries(context)) {
+        if (value === undefined || value === null || value === '') continue;
+        parts.push(`${key}=${value}`);
+    }
+    return parts.join(' ');
+}
+
+/**
+ * Returns true if an HTTP status is likely transient and worth retrying.
+ *
+ * @param {number} status
+ * @returns {boolean}
+ */
+function isRetryableHttpStatus(status) {
+    return [404, 408, 425, 429, 500, 502, 503, 504].includes(status);
+}
+
+/**
+ * Sleep helper used for retry backoff.
+ *
+ * @param {number} ms
+ * @returns {Promise<void>}
+ */
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Builds a richer error string for axios errors.
+ *
+ * @param {unknown} err
+ * @returns {string}
+ */
+function formatAxiosError(err) {
+    if (axios.isAxiosError && axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        const code = err.code;
+        const message = err.message;
+        return `AxiosError message='${message}' code=${code || 'n/a'} status=${
+            typeof status === 'number' ? status : 'n/a'
+        }`;
+    }
+
+    if (err instanceof Error) {
+        return `${err.name} message='${err.message}'`;
+    }
+
+    return String(err);
+}
 
 /**
  * Sanitizes a string so it is safe to use as part of a filename.
@@ -22,7 +273,7 @@ import path from 'node:path';
  * - Unsafe characters are replaced with `_`.
  * - Output is capped to 128 characters.
  *
- * @param {unknown} value - The value to sanitize.
+ * @param {unknown} value The value to sanitize.
  * @returns {string} Sanitized filename component.
  */
 function sanitizeFilenameComponent(value) {
@@ -36,7 +287,7 @@ function sanitizeFilenameComponent(value) {
  * If the timestamp is missing, current time is used.
  * If parsing fails, `invalid_timestamp` is returned.
  *
- * @param {string | null | undefined} timestamp - ISO-8601 timestamp.
+ * @param {string | null | undefined} timestamp ISO-8601 timestamp.
  * @returns {string} A UTC timestamp formatted as `YYYYMMDDThhmmss.mmmZ`.
  */
 function formatTimestampForFilename(timestamp) {
@@ -57,11 +308,11 @@ function formatTimestampForFilename(timestamp) {
 }
 
 /**
- * Maps a HTTP Content-Type value to a preferred image file extension.
+ * Maps an HTTP Content-Type value to a preferred image file extension.
  *
  * Only a small allow-list is supported; unsupported types return `null`.
  *
- * @param {string | null | undefined} contentType - Content-Type header value.
+ * @param {string | null | undefined} contentType Content-Type header value.
  * @returns {string | null} File extension without dot (e.g. `png`), or null.
  */
 function extensionFromContentType(contentType) {
@@ -80,7 +331,7 @@ function extensionFromContentType(contentType) {
  * Only a small allow-list is supported; unsupported/unknown extensions return `null`.
  * `jpeg` is normalized to `jpg`.
  *
- * @param {string} url - Screenshot URL.
+ * @param {string} url Screenshot URL.
  * @returns {string | null} File extension without dot (e.g. `jpg`), or null.
  */
 function extensionFromUrl(url) {
@@ -102,10 +353,10 @@ function extensionFromUrl(url) {
  * Required uniqueness properties:
  * - timestamp + eventId + correlationId
  *
- * @param {{ timestamp?: string, eventId?: string, correlationId?: string }} envelope
- * @param {string} url
- * @param {string|null} contentType
- * @returns {string}
+ * @param {AuditEventEnvelope} envelope Envelope metadata used to create the filename.
+ * @param {string} url Screenshot URL (used to infer extension if needed).
+ * @param {string | null} contentType HTTP Content-Type header value (preferred for extension selection).
+ * @returns {string} Filename in the format `${timestamp}_${eventId}_${correlationId}.${ext}`.
  */
 export function buildScreenshotFilename(envelope, url, contentType) {
     const ts = formatTimestampForFilename(envelope?.timestamp);
@@ -120,11 +371,16 @@ export function buildScreenshotFilename(envelope, url, contentType) {
 /**
  * Downloads a screenshot URL and stores it to all enabled storage targets.
  *
- * @param {string} url
- * @param {{ timestamp?: string, eventId?: string, correlationId?: string }} envelope
- * @param {ScreenshotDownloadConfig} config
- * @param {import('../globals.js').default['logger']} logger
- * @returns {Promise<void>}
+ * Notes:
+ * - This function is "best effort" and logs warnings on failures.
+ * - When authentication mode is `qpsTicket`, a QPS ticket is requested and appended as `qlikTicket`.
+ * - If the response `Content-Type` is present and not an image type, the file is not written.
+ *
+ * @param {string} url Screenshot URL.
+ * @param {AuditEventEnvelope} envelope Envelope metadata (used for filename generation).
+ * @param {ScreenshotDownloadConfig} config Screenshot download configuration.
+ * @param {Logger} logger Logger.
+ * @returns {Promise<void>} Resolves when the attempt completes.
  */
 export async function downloadScreenshot(url, envelope, config, logger) {
     if (!config?.enable) return;
@@ -138,40 +394,133 @@ export async function downloadScreenshot(url, envelope, config, logger) {
         return;
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), config.downloadTimeoutMs);
+    const auditCtx = extractAuditContext(envelope);
+    const auditCtxStr = formatContextForLog(auditCtx);
 
-    try {
-        const response = await fetch(url, {
-            method: 'GET',
-            signal: controller.signal,
-        });
+    const timeoutMs =
+        typeof config.downloadTimeoutMs === 'number' && config.downloadTimeoutMs > 0
+            ? config.downloadTimeoutMs
+            : 15000;
 
-        if (!response.ok) {
-            logger.warn(`AUDIT API: Screenshot download failed HTTP ${response.status} url=${url}`);
+    const authMode = config?.auth?.mode || 'none';
+    const maxAttempts = 3;
+    const baseDelayMs = 500;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        let downloadUrl = url;
+        let httpsAgent;
+
+        try {
+            if (authMode === 'qpsTicket') {
+                const qps = config?.auth?.qps;
+                if (!qps?.host || !qps?.port || !qps?.userDirectory || !qps?.userId) {
+                    logger.warn(
+                        `AUDIT API: Screenshot auth mode is qpsTicket, but QPS settings are missing. ${auditCtxStr}`
+                    );
+                    return;
+                }
+
+                const ticket = await requestQpsTicket(qps, logger);
+                downloadUrl = withQlikTicket(url, ticket);
+                httpsAgent = createQlikMutualTlsAgent();
+            }
+
+            const response = await axios.request({
+                url: downloadUrl,
+                method: 'get',
+                responseType: 'arraybuffer',
+                httpsAgent,
+                timeout: timeoutMs,
+                maxRedirects: 5,
+                validateStatus: () => true,
+            });
+
+            const contentType = response.headers?.['content-type'] || null;
+            const buffer = Buffer.from(response.data);
+
+            // Non-2xx
+            if (response.status < 200 || response.status >= 300) {
+                const retryable = isRetryableHttpStatus(response.status);
+
+                if (retryable && attempt < maxAttempts) {
+                    const delayMs = baseDelayMs * 2 ** (attempt - 1);
+                    logger.info(
+                        `AUDIT API: Screenshot download retrying attempt=${attempt + 1}/${maxAttempts} in ${delayMs}ms httpStatus=${
+                            response.status
+                        } url=${downloadUrl} (original=${url}) ${auditCtxStr}`
+                    );
+                    await sleep(delayMs);
+                    continue;
+                }
+
+                const level = retryable ? 'error' : 'warn';
+                logger[level](
+                    `AUDIT API: Screenshot download failed httpStatus=${response.status} url=${downloadUrl} (original=${url}) attempt=${attempt}/${maxAttempts} ${auditCtxStr}`
+                );
+                return;
+            }
+
+            // 2xx but not an image
+            if (
+                typeof contentType === 'string' &&
+                !contentType.toLowerCase().startsWith('image/')
+            ) {
+                const preview = buffer
+                    .subarray(0, 200)
+                    .toString('utf8')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                if (attempt < maxAttempts) {
+                    const delayMs = baseDelayMs * 2 ** (attempt - 1);
+                    logger.info(
+                        `AUDIT API: Screenshot download retrying attempt=${attempt + 1}/${maxAttempts} in ${delayMs}ms nonImageContentType='${
+                            contentType
+                        }' url=${downloadUrl} (original=${url}) ${auditCtxStr}`
+                    );
+                    await sleep(delayMs);
+                    continue;
+                }
+
+                logger.error(
+                    `AUDIT API: Screenshot download returned non-image content-type='${contentType}'. url=${downloadUrl} (original=${url}) attempt=${attempt}/${maxAttempts} preview='${preview}' ${auditCtxStr}`
+                );
+                return;
+            }
+
+            const filename = buildScreenshotFilename(envelope, url, contentType);
+
+            for (const target of targets) {
+                if (target.type !== 'flat') continue;
+
+                const directoryPath = path.resolve(target.directory);
+                await fs.mkdir(directoryPath, { recursive: true });
+
+                const filePath = path.join(directoryPath, filename);
+                await fs.writeFile(filePath, buffer);
+
+                logger.info(`AUDIT API: Saved screenshot file=${filePath}`);
+            }
+
+            return;
+        } catch (err) {
+            if (attempt < maxAttempts) {
+                const delayMs = baseDelayMs * 2 ** (attempt - 1);
+                logger.info(
+                    `AUDIT API: Screenshot download retrying attempt=${attempt + 1}/${maxAttempts} in ${delayMs}ms error=${formatAxiosError(
+                        err
+                    )} url=${downloadUrl} (original=${url}) ${auditCtxStr}`
+                );
+                await sleep(delayMs);
+                continue;
+            }
+
+            logger.error(
+                `AUDIT API: Screenshot download failed after ${maxAttempts} attempts. error=${formatAxiosError(
+                    err
+                )} url=${downloadUrl} (original=${url}) ${auditCtxStr}`
+            );
             return;
         }
-
-        const contentType = response.headers.get('content-type');
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        const filename = buildScreenshotFilename(envelope, url, contentType);
-
-        for (const target of targets) {
-            if (target.type !== 'flat') continue;
-
-            const directoryPath = path.resolve(target.directory);
-            await fs.mkdir(directoryPath, { recursive: true });
-
-            const filePath = path.join(directoryPath, filename);
-            await fs.writeFile(filePath, buffer);
-
-            logger.info(`AUDIT API: Saved screenshot file=${filePath}`);
-        }
-    } catch (err) {
-        logger.error(`AUDIT API: Screenshot download error: ${err && err.name ? err.name : err}`);
-    } finally {
-        clearTimeout(timeout);
     }
 }

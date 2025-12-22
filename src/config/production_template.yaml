@@ -58,6 +58,17 @@ Butler-SOS:
         screenshots:
             enable: false
             downloadTimeoutMs: 15000
+            # Optional: authenticate screenshot downloads against Qlik Sense using a QPS ticket (mutual TLS).
+            # Certificates are reused from Butler-SOS.cert.*
+            # TLS server certificate verification is controlled via Butler-SOS.serversToMonitor.rejectUnauthorized.
+            auth:
+                mode: none # none | qpsTicket
+                qps:
+                    host: <Qlik Sense host/IP>
+                    port: 4243
+                    userDirectory: <User directory>
+                    userId: <User id>
+                    ticketTimeoutMs: 5000
             storageTargets:
                 - enable: true
                   type: flat
