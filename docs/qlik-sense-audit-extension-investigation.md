@@ -61,7 +61,7 @@ A client-side Qlik Sense visualization extension that:
 
 ### 2.1 Client-Side Selection Tracking
 
-**Status: ✅ FEASIBLE**
+#### Status: ✅ FEASIBLE
 
 The [qlik-trail](https://github.com/olim-dev/qlik-trail) project demonstrates that comprehensive selection tracking is possible using Qlik's Capability APIs.
 
@@ -124,7 +124,7 @@ function createSignature(selections) {
 
 ### 2.2 Object Rendering Tracking
 
-**Status: ✅ FEASIBLE with limitations**
+#### Status: ✅ FEASIBLE with limitations
 
 #### 2.2.1 Available Object Information
 
@@ -164,7 +164,7 @@ app.getObject('QV01', 'myObjectId').then(function (model) {
 
 ### 2.3 Browser-to-Butler SOS Communication
 
-**Status: ⚠️ REQUIRES ARCHITECTURAL CHANGES**
+#### Status: ⚠️ REQUIRES ARCHITECTURAL CHANGES
 
 #### 2.3.1 UDP Limitation
 
@@ -260,7 +260,7 @@ app.getObject('QV01', 'myObjectId').then(function (model) {
 
 ### 3.1 Recommended Architecture (Phase 1)
 
-```
+```text
 ┌─────────────────────────────────────────────┐
 │          Qlik Sense Server                  │
 │                                             │
@@ -486,7 +486,7 @@ Restart Butler SOS and verify endpoint availability.
 2. Upload to QMC → Content Libraries
 3. Extension available to all apps
 
-**Option B: Manual Installation**
+#### Option B: Manual Installation
 
 1. Copy to `C:\Program Files\Qlik\Sense\EGW\extroot\extensions\`
 2. Requires server admin access
@@ -506,6 +506,13 @@ Restart Butler SOS and verify endpoint availability.
 | DNS         | Butler SOS hostname resolvable from browsers                 |
 | TLS         | Valid certificate on Butler SOS                              |
 | Proxy       | Configure PAC file if web proxy used                         |
+
+#### Important (HTTPS + self-signed certificates)
+
+- If the Qlik Sense client is accessed over HTTPS, the audit extension must call an HTTPS endpoint. Browsers will block calls from an HTTPS page to an HTTP endpoint (mixed content).
+- If you use a self-signed certificate for the Butler SOS audit-events endpoint, the browser must trust that certificate. There is no client-side setting in a Qlik Sense extension that can disable TLS certificate validation for `fetch()`.
+- Practical approaches: Use a certificate issued by a public CA, or by an internal corporate CA that is trusted by client machines.
+- If you must use self-signed: import the cert (or its issuing CA) into the OS/browser trust store on every client that will run Qlik Sense.
 
 ### 6.3 Monitoring
 
@@ -619,7 +626,7 @@ Restart Butler SOS and verify endpoint availability.
 
 ### 11.1 Final Recommendation
 
-**✅ PROCEED with phased implementation**
+### ✅ PROCEED with phased implementation
 
 - Technically feasible with proven APIs
 - Moderate development effort (~1-2 weeks)
@@ -667,11 +674,11 @@ Restart Butler SOS and verify endpoint availability.
 
 ## 12. References
 
-1. **qlik-trail Project:** https://github.com/olim-dev/qlik-trail
-2. **Qlik Extension API:** https://qlik.dev/extend/build-visualization-extensions
-3. **Qlik Engine API:** https://qlik.dev/apis/javascript/engine-api
-4. **Butler SOS Documentation:** https://butler-sos.ptarmiganlabs.com
-5. **Butler SOS UDP Handlers:** https://github.com/ptarmiganlabs/butler-sos/tree/master/src/lib/udp_handlers
+1. **qlik-trail Project:** [https://github.com/olim-dev/qlik-trail](https://github.com/olim-dev/qlik-trail)
+2. **Qlik Extension API:** [https://qlik.dev/extend/build-visualization-extensions](https://qlik.dev/extend/build-visualization-extensions)
+3. **Qlik Engine API:** [https://qlik.dev/apis/javascript/engine-api](https://qlik.dev/apis/javascript/engine-api)
+4. **Butler SOS Documentation:** [https://butler-sos.ptarmiganlabs.com](https://butler-sos.ptarmiganlabs.com)
+5. **Butler SOS UDP Handlers:** [https://github.com/ptarmiganlabs/butler-sos/tree/master/src/lib/udp_handlers](https://github.com/ptarmiganlabs/butler-sos/tree/master/src/lib/udp_handlers)
 
 ---
 

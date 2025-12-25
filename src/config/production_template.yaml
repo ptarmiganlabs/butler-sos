@@ -34,6 +34,16 @@ Butler-SOS:
         host: 0.0.0.0 # IP/FQDN to bind to. Use 0.0.0.0 to listen on all interfaces.
         port: 8181
         apiToken: '' # Recommended: set a strong token and configure the same token in the extension.
+        # Optional: serve the audit events API over HTTPS.
+        # This is required if the Qlik Sense client is served over HTTPS, otherwise browsers will block calls to an HTTP endpoint (mixed content).
+        # Note: if you use a self-signed certificate, the browser must trust it (import into OS/browser trust store).
+        # There is no way for a client-side Qlik Sense extension to bypass TLS validation for fetch() calls.
+        tls:
+            enable: false
+            cert: <path/to/server.crt>
+            key: <path/to/server.key>
+            # ca: <path/to/ca.pem>
+            # passphrase: <optional key passphrase>
         # Message queue settings for handling incoming HTTP audit events
         queue:
             messageQueue:
@@ -89,6 +99,9 @@ Butler-SOS:
             allowedOrigins:
                 # - https://qliksense.company.com
                 # - https://qlikcloud.com
+                # Note: browsers send an unauthenticated OPTIONS preflight before the real POST.
+                # If that OPTIONS request is blocked, the browser will block the POST due to CORS.
+                - '*'
 
     # Heartbeats can be used to send "I'm alive" messages to some other tool, e.g. an infrastructure monitoring tool
     # The concept is simple: The remoteURL will be called at the specified frequency. The receiving tool will then know

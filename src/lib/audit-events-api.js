@@ -3,6 +3,8 @@ import FastifyRateLimit from '@fastify/rate-limit';
 import FastifyCors from '@fastify/cors';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import globals from '../globals.js';
 import { downloadScreenshot } from './audit-screenshots.js';
@@ -98,7 +100,6 @@ function buildCorsOptions(corsOriginList) {
         return {
             origin: true,
             credentials: false,
-            allowedHeaders: ['Content-Type', 'Authorization'],
             methods: ['POST', 'OPTIONS'],
         };
     }
@@ -106,7 +107,6 @@ function buildCorsOptions(corsOriginList) {
     return {
         origin: origins,
         credentials: false,
-        allowedHeaders: ['Content-Type', 'Authorization'],
         methods: ['POST', 'OPTIONS'],
     };
 }
@@ -125,6 +125,45 @@ function getBearerToken(authorizationHeader) {
 }
 
 /**
+ * Loads HTTPS/TLS server options for Fastify from configuration.
+ *
+ * @param {unknown} tlsConfig
+ *   Configuration object (expected to be `Butler-SOS.auditEvents.tls`).
+ * @returns {import('node:https').ServerOptions|null}
+ *   HTTPS server options when enabled, otherwise null.
+ */
+function loadAuditEventsTlsOptions(tlsConfig) {
+    if (!tlsConfig || typeof tlsConfig !== 'object') return null;
+    if (tlsConfig.enable !== true) return null;
+
+    const certPath = typeof tlsConfig.cert === 'string' ? tlsConfig.cert : '';
+    const keyPath = typeof tlsConfig.key === 'string' ? tlsConfig.key : '';
+    if (!certPath || !keyPath) {
+        throw new Error('AUDIT API: tls.enable=true requires tls.cert and tls.key');
+    }
+
+    const resolvedCertPath = path.resolve(process.cwd(), certPath);
+    const resolvedKeyPath = path.resolve(process.cwd(), keyPath);
+
+    /** @type {import('node:https').ServerOptions} */
+    const httpsOptions = {
+        cert: fs.readFileSync(resolvedCertPath),
+        key: fs.readFileSync(resolvedKeyPath),
+    };
+
+    if (typeof tlsConfig.ca === 'string' && tlsConfig.ca.length > 0) {
+        const resolvedCaPath = path.resolve(process.cwd(), tlsConfig.ca);
+        httpsOptions.ca = fs.readFileSync(resolvedCaPath);
+    }
+
+    if (typeof tlsConfig.passphrase === 'string' && tlsConfig.passphrase.length > 0) {
+        httpsOptions.passphrase = tlsConfig.passphrase;
+    }
+
+    return httpsOptions;
+}
+
+/**
  * Creates per-message-type handlers for audit event envelopes.
  *
  * The API is designed to be extensible: add more keys to the returned object
@@ -137,6 +176,93 @@ function getBearerToken(authorizationHeader) {
  */
 function createTypeHandlers(logger) {
     /**
+     * Safely stringify values for logging.
+     *
+     * @param {unknown} value - Value to stringify.
+     * @param {number} [maxLen] - Max string length before truncation.
+     * @returns {string} JSON string (possibly truncated) suitable for logs.
+     */
+    function safeJsonForLog(value, maxLen = 8000) {
+        try {
+            const s = JSON.stringify(value);
+            if (typeof s !== 'string') return '';
+            return s.length > maxLen ? `${s.slice(0, maxLen)}…(truncated)` : s;
+        } catch (err) {
+            return '[unserializable]';
+        }
+    }
+
+    /**
+     * Picks a small, stable subset of fields from Qlik SelectionObject items.
+     *
+     * @param {unknown} details - Raw SelectionObject selections array.
+     * @returns {Array<{qField?: unknown, qSelectedCount?: unknown, qSelected?: unknown}>}
+     *   Reduced selection list for logging.
+     */
+    function pickSelectionDetailsForLog(details) {
+        if (!Array.isArray(details)) return [];
+        return details.map((d) => {
+            const obj =
+                d && typeof d === 'object' ? /** @type {Record<string, unknown>} */ (d) : {};
+            return {
+                qField: obj.qField,
+                qSelectedCount: obj.qSelectedCount,
+                qSelected: obj.qSelected,
+            };
+        });
+    }
+
+    /**
+     * Handles a finalized selection transaction.
+     *
+     * @param {unknown} envelope - The received audit event envelope.
+     * @param {AuditRequestContext} requestContext - Minimal request context.
+     *
+     * @returns {Promise<void>} Resolves when logging is complete.
+     */
+    async function handleSelectionTransactionFinalized(envelope, requestContext) {
+        const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
+        logger.info(
+            `AUDIT API: selection.transaction.finalized eventId=${envelope?.eventId} selectionTxnId=${selectionTxnId} ip=${requestContext.ip}`
+        );
+    }
+
+    /**
+     * Handles a selection state change event.
+     *
+     * @param {unknown} envelope - The received audit event envelope.
+     * @param {AuditRequestContext} requestContext - Minimal request context.
+     *
+     * @returns {Promise<void>} Resolves when logging is complete.
+     */
+    async function handleSelectionStateChanged(envelope, requestContext) {
+        const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
+        const details = envelope?.payload?.event?.details;
+        logger.info(
+            `AUDIT API: selection.state.changed eventId=${envelope?.eventId} selectionTxnId=${selectionTxnId} details=${safeJsonForLog(
+                pickSelectionDetailsForLog(details),
+                20000
+            )} ip=${requestContext.ip}`
+        );
+    }
+
+    /**
+     * Handles an app model validated event.
+     *
+     * @param {unknown} envelope - The received audit event envelope.
+     * @param {AuditRequestContext} requestContext - Minimal request context.
+     *
+     * @returns {Promise<void>} Resolves when logging is complete.
+     */
+    async function handleAppModelValidated(envelope, requestContext) {
+        const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
+        const dataStateId = envelope?.payload?.event?.dataStateId;
+        logger.info(
+            `AUDIT API: app.model.validated eventId=${envelope?.eventId} selectionTxnId=${selectionTxnId} dataStateId=${dataStateId} ip=${requestContext.ip}`
+        );
+    }
+
+    /**
      * Handles a screenshot URL notification sent by the audit extension.
      *
      * @param {unknown} envelope - The received audit event envelope.
@@ -148,8 +274,11 @@ function createTypeHandlers(logger) {
         // Envelope shape is validated at the route level. Payload remains intentionally open-ended.
         const screenshotUrl = envelope?.payload?.event?.screenshotUrl;
         const objectId = envelope?.payload?.event?.objectId;
+        const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
+        const dataStateId = envelope?.payload?.event?.dataStateId;
+
         logger.info(
-            `AUDIT API: screenshot.url.received eventId=${envelope.eventId} objectId=${objectId} url=${screenshotUrl} ip=${requestContext.ip}`
+            `AUDIT API: screenshot.url.received eventId=${envelope.eventId} objectId=${objectId} selectionTxnId=${selectionTxnId} dataStateId=${dataStateId} url=${screenshotUrl} ip=${requestContext.ip}`
         );
 
         const screenshotsEnabled =
@@ -184,6 +313,9 @@ function createTypeHandlers(logger) {
     }
 
     return {
+        'selection.transaction.finalized': handleSelectionTransactionFinalized,
+        'selection.state.changed': handleSelectionStateChanged,
+        'app.model.validated': handleAppModelValidated,
         'screenshot.url.received': handleScreenshotUrlReceived,
     };
 }
@@ -212,8 +344,77 @@ function createPayloadValidators() {
                 properties: {
                     screenshotUrl: { type: 'string', minLength: 1, format: 'uri' },
                     objectId: { type: ['string', 'null'] },
+                    selectionTxnId: { type: 'string', minLength: 1 },
                 },
-                required: ['screenshotUrl'],
+                required: ['screenshotUrl', 'selectionTxnId'],
+                additionalProperties: true,
+            },
+        },
+        required: ['event'],
+        additionalProperties: true,
+    };
+
+    /**
+     * Payload schema for selection.transaction.finalized.
+     *
+     * Expected shape: { event: { selectionTxnId: string, beforeSelections: any[], afterSelections: any[] } }
+     */
+    const selectionTransactionFinalizedPayloadSchema = {
+        type: 'object',
+        properties: {
+            event: {
+                type: 'object',
+                properties: {
+                    selectionTxnId: { type: 'string', minLength: 1 },
+                    beforeSelections: { type: 'array' },
+                    afterSelections: { type: 'array' },
+                },
+                required: ['selectionTxnId', 'beforeSelections', 'afterSelections'],
+                additionalProperties: true,
+            },
+        },
+        required: ['event'],
+        additionalProperties: true,
+    };
+
+    /**
+     * Payload schema for selection.state.changed.
+     *
+     * Expected shape: { event: { selectionTxnId: string, details: any[] } }
+     */
+    const selectionStateChangedPayloadSchema = {
+        type: 'object',
+        properties: {
+            event: {
+                type: 'object',
+                properties: {
+                    selectionTxnId: { type: 'string', minLength: 1 },
+                    details: { type: 'array' },
+                },
+                required: ['selectionTxnId', 'details'],
+                additionalProperties: true,
+            },
+        },
+        required: ['event'],
+        additionalProperties: true,
+    };
+
+    /**
+     * Payload schema for app.model.validated.
+     *
+     * Expected shape: { event: { selectionTxnId: string } }
+     */
+    const appModelValidatedPayloadSchema = {
+        type: 'object',
+        properties: {
+            event: {
+                type: 'object',
+                properties: {
+                    selectionTxnId: { type: 'string', minLength: 1 },
+                    dataStateId: { type: ['integer', 'null'] },
+                    captureScheduled: { type: ['boolean', 'null'] },
+                },
+                required: ['selectionTxnId'],
                 additionalProperties: true,
             },
         },
@@ -223,6 +424,11 @@ function createPayloadValidators() {
 
     return {
         validatePayloadByType: {
+            'selection.transaction.finalized': ajv.compile(
+                selectionTransactionFinalizedPayloadSchema
+            ),
+            'selection.state.changed': ajv.compile(selectionStateChangedPayloadSchema),
+            'app.model.validated': ajv.compile(appModelValidatedPayloadSchema),
             'screenshot.url.received': ajv.compile(screenshotUrlReceivedPayloadSchema),
         },
     };
@@ -265,6 +471,10 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
      * @returns {Promise<void>} Resolves when the request is allowed to proceed.
      */
     async function auditEventAuthPreHandler(request, reply) {
+        // Browser CORS preflight requests do not include Authorization headers.
+        // If we require auth here, the preflight will fail and the browser will block the real POST.
+        if (request.method === 'OPTIONS') return;
+
         if (!apiToken) return;
 
         const token = getBearerToken(request.headers.authorization);
@@ -428,7 +638,15 @@ export async function setupAuditEventsApiServer() {
             return;
         }
 
-        const auditServer = Fastify({ logger: true });
+        const tlsConfig = globals.config.has('Butler-SOS.auditEvents.tls')
+            ? globals.config.get('Butler-SOS.auditEvents.tls')
+            : null;
+        const httpsOptions = loadAuditEventsTlsOptions(tlsConfig);
+
+        const auditServer = Fastify({
+            logger: true,
+            ...(httpsOptions ? { https: httpsOptions } : {}),
+        });
 
         // Keep Fastify logs quiet; use Butler SOS logger instead.
         const currLogLevel = globals.getLoggingLevel();
@@ -448,7 +666,10 @@ export async function setupAuditEventsApiServer() {
 
         await auditServer.listen({ host, port });
 
-        globals.logger.info(`AUDIT API: Listening on http://${host}:${port}/api/v1/audit-event`);
+        const scheme = httpsOptions ? 'https' : 'http';
+        globals.logger.info(
+            `AUDIT API: Listening on ${scheme}://${host}:${port}/api/v1/audit-event`
+        );
         if (!apiToken) {
             globals.logger.warn(
                 'AUDIT API: No apiToken configured. This is not recommended; set Butler-SOS.auditEvents.apiToken.'

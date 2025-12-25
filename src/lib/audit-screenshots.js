@@ -568,9 +568,13 @@ export async function downloadScreenshot(url, envelope, config, logger) {
         : [];
 
     if (targets.length === 0) {
-        logger.warn('AUDIT API: Screenshot download enabled, but no storageTargets are enabled');
+        logger.warn(
+            `AUDIT API: Screenshot download enabled, but no storageTargets are enabled. selectionTxnId=${selectionTxnId}`
+        );
         return;
     }
+
+    const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
 
     const auditCtx = extractAuditContext(envelope);
     const auditCtxStr = formatContextForLog(auditCtx);
@@ -593,7 +597,7 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 const qps = config?.auth?.qps;
                 if (!qps?.host || !qps?.port || !qps?.userDirectory || !qps?.userId) {
                     logger.warn(
-                        `AUDIT API: Screenshot auth mode is qpsTicket, but QPS settings are missing. ${auditCtxStr}`
+                        `AUDIT API: Screenshot auth mode is qpsTicket, but QPS settings are missing. selectionTxnId=${selectionTxnId} ${auditCtxStr}`
                     );
                     return;
                 }
@@ -625,7 +629,7 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     logger.info(
                         `AUDIT API: Screenshot download retrying attempt=${attempt + 1}/${maxAttempts} in ${delayMs}ms httpStatus=${
                             response.status
-                        } url=${downloadUrl} (original=${url}) ${auditCtxStr}`
+                        } selectionTxnId=${selectionTxnId} url=${downloadUrl} (original=${url}) ${auditCtxStr}`
                     );
                     await sleep(delayMs);
                     continue;
@@ -633,7 +637,7 @@ export async function downloadScreenshot(url, envelope, config, logger) {
 
                 const level = retryable ? 'error' : 'warn';
                 logger[level](
-                    `AUDIT API: Screenshot download failed httpStatus=${response.status} url=${downloadUrl} (original=${url}) attempt=${attempt}/${maxAttempts} ${auditCtxStr}`
+                    `AUDIT API: Screenshot download failed httpStatus=${response.status} url=${downloadUrl} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} ${auditCtxStr}`
                 );
                 return;
             }
@@ -652,7 +656,7 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 if (attempt < maxAttempts) {
                     const delayMs = baseDelayMs * 2 ** (attempt - 1);
                     logger.info(
-                        `AUDIT API: Screenshot download retrying attempt=${attempt + 1}/${maxAttempts} in ${delayMs}ms nonImageContentType='${
+                        `AUDIT API: Screenshot download retrying attempt=${attempt + 1}/${maxAttempts} in ${delayMs}ms selectionTxnId=${selectionTxnId} nonImageContentType='${
                             contentType
                         }' url=${downloadUrl} (original=${url}) ${auditCtxStr}`
                     );
@@ -661,7 +665,7 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 }
 
                 logger.error(
-                    `AUDIT API: Screenshot download returned non-image content-type='${contentType}'. url=${downloadUrl} (original=${url}) attempt=${attempt}/${maxAttempts} preview='${preview}' ${auditCtxStr}`
+                    `AUDIT API: Screenshot download returned non-image content-type='${contentType}'. url=${downloadUrl} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} preview='${preview}' ${auditCtxStr}`
                 );
                 return;
             }
@@ -683,7 +687,7 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     });
                 } catch (err) {
                     logger.warn(
-                        `AUDIT API: Failed to add metadata header to screenshot PNG. error=${formatAxiosError(
+                        `AUDIT API: Failed to add metadata header to screenshot PNG. selectionTxnId=${selectionTxnId}error=${formatAxiosError(
                             err
                         )} ${auditCtxStr}`
                     );
@@ -700,13 +704,17 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 const filePath = path.join(directoryPath, filename);
                 await fs.writeFile(filePath, buffer);
 
-                logger.info(`AUDIT API: Saved screenshot file=${filePath}`);
+                logger.info(
+                    `AUDIT API: Saved screenshot, selectionTxnId=${selectionTxnId} file=${filePath}`
+                );
 
                 if (metadataBuffer && metadataBuffer.length > 0) {
                     const metadataFilename = buildMetadataFilename(filename);
                     const metadataFilePath = path.join(directoryPath, metadataFilename);
                     await fs.writeFile(metadataFilePath, metadataBuffer);
-                    logger.info(`AUDIT API: Saved screenshot metadata file=${metadataFilePath}`);
+                    logger.info(
+                        `AUDIT API: Saved screenshot metadata, selectionTxnId=${selectionTxnId} file=${metadataFilePath}`
+                    );
                 }
             }
 
@@ -715,7 +723,7 @@ export async function downloadScreenshot(url, envelope, config, logger) {
             if (attempt < maxAttempts) {
                 const delayMs = baseDelayMs * 2 ** (attempt - 1);
                 logger.info(
-                    `AUDIT API: Screenshot download retrying attempt=${attempt + 1}/${maxAttempts} in ${delayMs}ms error=${formatAxiosError(
+                    `AUDIT API: Screenshot download retrying attempt=${attempt + 1}/${maxAttempts} in ${delayMs}ms selectionTxnId=${selectionTxnId} error=${formatAxiosError(
                         err
                     )} url=${downloadUrl} (original=${url}) ${auditCtxStr}`
                 );
@@ -724,7 +732,7 @@ export async function downloadScreenshot(url, envelope, config, logger) {
             }
 
             logger.error(
-                `AUDIT API: Screenshot download failed after ${maxAttempts} attempts. error=${formatAxiosError(
+                `AUDIT API: Screenshot download failed after ${maxAttempts} attempts. selectionTxnId=${selectionTxnId} selectionTxnId=${selectionTxnId} error=${formatAxiosError(
                     err
                 )} url=${downloadUrl} (original=${url}) ${auditCtxStr}`
             );
