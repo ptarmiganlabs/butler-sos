@@ -110,6 +110,7 @@ export const auditEventsSchema = {
                             date: { type: 'boolean', default: false },
                             eventId: { type: 'boolean', default: false },
                             correlationId: { type: 'boolean', default: false },
+                            selectionTxnId: { type: 'boolean', default: false },
                             userId: { type: 'boolean', default: false },
                             appId: { type: 'boolean', default: false },
                             appName: { type: 'boolean', default: false },

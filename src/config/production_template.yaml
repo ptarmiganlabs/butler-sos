@@ -75,6 +75,7 @@ Butler-SOS:
                 date: false
                 eventId: false
                 correlationId: false
+                selectionTxnId: false
                 # Full user identifier as provided by the audit event (often DOMAIN\\user).
                 userId: false
                 appId: false

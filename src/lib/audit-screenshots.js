@@ -78,6 +78,7 @@ import { addTextHeaderToPng } from './audit-screenshot-metadata-image.js';
  * @property {boolean} [date] Render date lines (UTC and server-local).
  * @property {boolean} [eventId] Render envelope event id.
  * @property {boolean} [correlationId] Render envelope correlation id.
+ * @property {boolean} [selectionTxnId] Render selection transaction id (payload.event.selectionTxnId).
  * @property {boolean} [userId] Render the full user identifier string (often `DOMAIN\\user`).
  * @property {boolean} [appId] Render app id.
  * @property {boolean} [appName] Render app name.
@@ -456,6 +457,11 @@ function buildScreenshotMetadataLines(envelope, auditCtx, flags) {
         lines.push({ key: 'EVENT ID', value: safeMetadataValue(envelope?.eventId) });
     if (flags.correlationId === true)
         lines.push({ key: 'CORRELATION ID', value: safeMetadataValue(envelope?.correlationId) });
+    if (flags.selectionTxnId === true)
+        lines.push({
+            key: 'SELECTION TXN ID',
+            value: safeMetadataValue(envelope?.payload?.event?.selectionTxnId),
+        });
 
     if (flags.userId === true) {
         lines.push({ key: 'USER ID', value: safeMetadataValue(auditCtx?.user) });
