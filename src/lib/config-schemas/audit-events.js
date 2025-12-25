@@ -12,6 +12,35 @@ export const auditEventsSchema = {
             host: { type: 'string' },
             port: { type: 'number' },
             apiToken: { type: 'string' },
+            tls: {
+                type: 'object',
+                properties: {
+                    enable: { type: 'boolean', default: false },
+                    cert: { type: 'string', minLength: 1 },
+                    key: { type: 'string', minLength: 1 },
+                    ca: { type: 'string' },
+                    passphrase: { type: 'string' },
+                },
+                required: ['enable'],
+                additionalProperties: false,
+                allOf: [
+                    {
+                        if: {
+                            properties: {
+                                enable: { const: true },
+                            },
+                            required: ['enable'],
+                        },
+                        then: {
+                            properties: {
+                                cert: { type: 'string', minLength: 1 },
+                                key: { type: 'string', minLength: 1 },
+                            },
+                            required: ['cert', 'key'],
+                        },
+                    },
+                ],
+            },
             queue: {
                 type: 'object',
                 properties: {
