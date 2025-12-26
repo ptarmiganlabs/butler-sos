@@ -12,6 +12,150 @@ export const auditEventsSchema = {
             host: { type: 'string' },
             port: { type: 'number' },
             apiToken: { type: 'string' },
+            destination: {
+                type: 'object',
+                properties: {
+                    enable: { type: 'boolean', default: false },
+                    type: {
+                        type: 'string',
+                        enum: ['influxdb'],
+                        default: 'influxdb',
+                    },
+                    influxdb: {
+                        type: 'object',
+                        properties: {
+                            host: {
+                                type: 'string',
+                                format: 'hostname',
+                            },
+                            port: { type: 'number' },
+                            version: {
+                                type: 'number',
+                                enum: [1, 2, 3],
+                            },
+                            maxBatchSize: {
+                                type: 'number',
+                                default: 1000,
+                                minimum: 1,
+                                maximum: 10000,
+                            },
+                            writeFrequency: {
+                                type: 'number',
+                                default: 20000,
+                                minimum: 0,
+                            },
+                            measurementName: {
+                                type: 'string',
+                                default: 'audit_event',
+                            },
+                            auditEventSchemaVersion: {
+                                type: 'string',
+                                default: '1',
+                            },
+                            staticTags: {
+                                type: ['array', 'null'],
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        name: { type: 'string' },
+                                        value: { type: 'string' },
+                                    },
+                                    required: ['name', 'value'],
+                                    additionalProperties: false,
+                                },
+                                default: null,
+                            },
+                            v3Config: {
+                                type: 'object',
+                                properties: {
+                                    database: { type: 'string' },
+                                    token: { type: 'string' },
+                                    retentionDuration: { type: 'string' },
+                                    writeTimeout: {
+                                        type: 'number',
+                                        default: 10000,
+                                        minimum: 1000,
+                                    },
+                                },
+                                required: ['database', 'token', 'retentionDuration'],
+                                additionalProperties: false,
+                            },
+                            v2Config: {
+                                type: 'object',
+                                properties: {
+                                    org: { type: 'string' },
+                                    bucket: { type: 'string' },
+                                    token: { type: 'string' },
+                                    retentionDuration: { type: 'string' },
+                                },
+                                required: ['org', 'bucket', 'token', 'retentionDuration'],
+                                additionalProperties: false,
+                            },
+                            v1Config: {
+                                type: 'object',
+                                properties: {
+                                    auth: {
+                                        type: 'object',
+                                        properties: {
+                                            enable: { type: 'boolean' },
+                                            username: { type: 'string' },
+                                            password: {
+                                                type: 'string',
+                                                format: 'password',
+                                            },
+                                        },
+                                        required: ['enable', 'username', 'password'],
+                                        additionalProperties: false,
+                                    },
+                                    dbName: { type: 'string' },
+                                    retentionPolicy: {
+                                        type: 'object',
+                                        properties: {
+                                            name: { type: 'string' },
+                                            duration: { type: 'string' },
+                                        },
+                                        required: ['name', 'duration'],
+                                        additionalProperties: false,
+                                    },
+                                },
+                                required: ['auth', 'dbName', 'retentionPolicy'],
+                                additionalProperties: false,
+                            },
+                        },
+                        required: [
+                            'host',
+                            'port',
+                            'version',
+                            'maxBatchSize',
+                            'writeFrequency',
+                            'measurementName',
+                            'auditEventSchemaVersion',
+                            'staticTags',
+                            'v2Config',
+                            'v1Config',
+                        ],
+                        additionalProperties: false,
+                        allOf: [
+                            {
+                                if: {
+                                    properties: {
+                                        version: { const: 3 },
+                                    },
+                                    required: ['version'],
+                                },
+                                then: {
+                                    properties: {
+                                        v3Config: { type: 'object' },
+                                    },
+                                    required: ['v3Config'],
+                                },
+                            },
+                        ],
+                    },
+                },
+                required: ['enable', 'type', 'influxdb'],
+                additionalProperties: false,
+            },
             tls: {
                 type: 'object',
                 properties: {

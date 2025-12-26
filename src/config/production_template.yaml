@@ -34,6 +34,50 @@ Butler-SOS:
         host: 0.0.0.0 # IP/FQDN to bind to. Use 0.0.0.0 to listen on all interfaces.
         port: 8181
         apiToken: '' # Recommended: set a strong token and configure the same token in the extension.
+
+        # Destination(s) for audit events.
+        # This is intentionally separate from Butler-SOS.influxdbConfig so audit data can be stored in a separate
+        # InfluxDB instance/version/database/bucket than other Butler SOS metrics.
+        destination:
+            enable: false # Set to true to store incoming audit events in one or more destinations.
+            type: influxdb # Future-proofing: additional destination types may be added later.
+            influxdb:
+                host: localhost
+                port: 8086
+                version: 2 # 1 | 2 | 3
+                maxBatchSize: 1000 # Flush immediately when this many audit events are buffered.
+                writeFrequency: 20000 # Flush buffered audit events this often (ms). Use 0 to write immediately per event.
+                measurementName: audit_event # Single measurement for all audit events.
+                auditEventSchemaVersion: '1' # Stored as tag auditEventSchemaVersion.
+                staticTags: # Optional static tags added to all audit event points.
+                    - name: qs_env
+                      value: dev
+
+                # Settings for InfluxDB v3.x only, i.e. Butler-SOS.auditEvents.destination.influxdb.version=3
+                v3Config:
+                    database: <database name>
+                    token: <token>
+                    retentionDuration: 0s
+                    writeTimeout: 10000
+
+                # Settings for InfluxDB v2.x only, i.e. Butler-SOS.auditEvents.destination.influxdb.version=2
+                v2Config:
+                    org: <org>
+                    bucket: <bucket>
+                    token: <token>
+                    retentionDuration: 0s
+
+                # Settings below are for InfluxDB v1.x only, i.e. Butler-SOS.auditEvents.destination.influxdb.version=1
+                v1Config:
+                    auth:
+                        enable: false
+                        username: <username>
+                        password: <password>
+                    dbName: <db name>
+                    retentionPolicy:
+                        name: <retention policy>
+                        duration: 0s
+
         # Optional: serve the audit events API over HTTPS.
         # This is required if the Qlik Sense client is served over HTTPS, otherwise browsers will block calls to an HTTP endpoint (mixed content).
         # Note: if you use a self-signed certificate, the browser must trust it (import into OS/browser trust store).

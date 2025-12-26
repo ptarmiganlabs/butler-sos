@@ -8,6 +8,7 @@ import path from 'node:path';
 
 import globals from '../globals.js';
 import { downloadScreenshot } from './audit-screenshots.js';
+import { writeAuditEventToDestinations } from './audit-destinations/index.js';
 
 /**
  * @typedef {object} AuditEventEnvelope
@@ -171,8 +172,8 @@ function loadAuditEventsTlsOptions(tlsConfig) {
  *
  * @param {object} logger - Logger instance to use.
  *
- * @returns {Record<string, (envelope: unknown, requestContext: AuditRequestContext) => Promise<void>>}
- *   Map from `envelope.type` to async handler.
+ * @returns {Record<string, (envelope: unknown, requestContext: AuditRequestContext) => Promise<object | undefined>>}
+ *   Map from `envelope.type` to async handler. Handlers may return optional metadata.
  */
 function createTypeHandlers(logger) {
     /**
@@ -218,7 +219,7 @@ function createTypeHandlers(logger) {
      * @param {unknown} envelope - The received audit event envelope.
      * @param {AuditRequestContext} requestContext - Minimal request context.
      *
-     * @returns {Promise<void>} Resolves when logging is complete.
+     * @returns {Promise<object | undefined>} Optional metadata for downstream destinations.
      */
     async function handleSelectionTransactionFinalized(envelope, requestContext) {
         const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
@@ -233,7 +234,7 @@ function createTypeHandlers(logger) {
      * @param {unknown} envelope - The received audit event envelope.
      * @param {AuditRequestContext} requestContext - Minimal request context.
      *
-     * @returns {Promise<void>} Resolves when logging is complete.
+     * @returns {Promise<object | undefined>} Optional metadata for downstream destinations.
      */
     async function handleSelectionStateChanged(envelope, requestContext) {
         const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
@@ -252,7 +253,7 @@ function createTypeHandlers(logger) {
      * @param {unknown} envelope - The received audit event envelope.
      * @param {AuditRequestContext} requestContext - Minimal request context.
      *
-     * @returns {Promise<void>} Resolves when logging is complete.
+     * @returns {Promise<object | undefined>} Optional metadata for downstream destinations.
      */
     async function handleAppModelValidated(envelope, requestContext) {
         const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
@@ -268,7 +269,7 @@ function createTypeHandlers(logger) {
      * @param {unknown} envelope - The received audit event envelope.
      * @param {AuditRequestContext} requestContext - Minimal request context.
      *
-     * @returns {Promise<void>} Resolves when logging is complete.
+     * @returns {Promise<object | undefined>} Optional metadata for downstream destinations.
      */
     async function handleScreenshotUrlReceived(envelope, requestContext) {
         // Envelope shape is validated at the route level. Payload remains intentionally open-ended.
@@ -309,7 +310,26 @@ function createTypeHandlers(logger) {
             storageTargets: globals.config.get('Butler-SOS.auditEvents.screenshots.storageTargets'),
         };
 
-        await downloadScreenshot(screenshotUrl, envelope, screenshotDownloadConfig, logger);
+        const result = await downloadScreenshot(
+            screenshotUrl,
+            envelope,
+            screenshotDownloadConfig,
+            logger
+        );
+
+        if (
+            result?.savedPaths &&
+            Array.isArray(result.savedPaths) &&
+            result.savedPaths.length > 0
+        ) {
+            return {
+                screenshot: {
+                    savedPaths: result.savedPaths,
+                },
+            };
+        }
+
+        return undefined;
     }
 
     return {
@@ -524,15 +544,22 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
      */
     async function processAuditEventEnvelope(envelope, requestContext) {
         const handler = handlers[envelope.type];
+        /** @type {object} */
+        let extras = {};
+
         if (handler) {
-            await handler(envelope, requestContext);
-            return;
+            const handlerResult = await handler(envelope, requestContext);
+            if (handlerResult && typeof handlerResult === 'object') {
+                extras = handlerResult;
+            }
+        } else {
+            globals.logger.info(
+                `AUDIT API: Received audit event type=${envelope.type} eventId=${envelope.eventId} ip=${requestContext.ip}`
+            );
+            globals.logger.info(`AUDIT API: Full envelope: ${JSON.stringify(envelope)}`);
         }
 
-        globals.logger.info(
-            `AUDIT API: Received audit event type=${envelope.type} eventId=${envelope.eventId} ip=${requestContext.ip}`
-        );
-        globals.logger.info(`AUDIT API: Full envelope: ${JSON.stringify(envelope)}`);
+        await writeAuditEventToDestinations(envelope, extras);
     }
 
     /**

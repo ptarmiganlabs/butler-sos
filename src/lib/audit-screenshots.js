@@ -564,10 +564,12 @@ export function buildScreenshotFilename(envelope, url, contentType) {
  * @param {AuditEventEnvelope | null | undefined} envelope Envelope metadata (used for filename generation).
  * @param {ScreenshotDownloadConfig} config Screenshot download configuration.
  * @param {Logger} logger Logger.
- * @returns {Promise<void>} Resolves when the attempt completes.
+ * @returns {Promise<{ savedPaths: string[] } | null>} Saved file paths, or null if not saved.
  */
 export async function downloadScreenshot(url, envelope, config, logger) {
-    if (!config?.enable) return;
+    if (!config?.enable) return null;
+
+    const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
 
     const targets = Array.isArray(config.storageTargets)
         ? config.storageTargets.filter((t) => t && t.enable === true)
@@ -577,10 +579,8 @@ export async function downloadScreenshot(url, envelope, config, logger) {
         logger.warn(
             `AUDIT API: Screenshot download enabled, but no storageTargets are enabled. selectionTxnId=${selectionTxnId}`
         );
-        return;
+        return null;
     }
-
-    const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
 
     const auditCtx = extractAuditContext(envelope);
     const auditCtxStr = formatContextForLog(auditCtx);
@@ -701,6 +701,9 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 }
             }
 
+            /** @type {string[]} */
+            const savedPaths = [];
+
             for (const target of targets) {
                 if (target.type !== 'flat') continue;
 
@@ -710,6 +713,8 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 const filePath = path.join(directoryPath, filename);
                 await fs.writeFile(filePath, buffer);
 
+                savedPaths.push(filePath);
+
                 logger.info(
                     `AUDIT API: Saved screenshot, selectionTxnId=${selectionTxnId} file=${filePath}`
                 );
@@ -718,13 +723,14 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     const metadataFilename = buildMetadataFilename(filename);
                     const metadataFilePath = path.join(directoryPath, metadataFilename);
                     await fs.writeFile(metadataFilePath, metadataBuffer);
+                    savedPaths.push(metadataFilePath);
                     logger.info(
                         `AUDIT API: Saved screenshot metadata, selectionTxnId=${selectionTxnId} file=${metadataFilePath}`
                     );
                 }
             }
 
-            return;
+            return savedPaths.length > 0 ? { savedPaths } : null;
         } catch (err) {
             if (attempt < maxAttempts) {
                 const delayMs = baseDelayMs * 2 ** (attempt - 1);
@@ -742,7 +748,9 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     err
                 )} url=${downloadUrl} (original=${url}) ${auditCtxStr}`
             );
-            return;
+            return null;
         }
     }
+
+    return null;
 }
