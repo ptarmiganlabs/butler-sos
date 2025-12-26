@@ -918,9 +918,9 @@ Configuration File:
                     this.influx = new InfluxDB2({ url, token });
                 } catch (err) {
                     this.logger.error(
-                        `INFLUXDB2 INIT: Error creating InfluxDB 2 client: ${this.getErrorMessage(err)}`
+                        `INFLUXDB2 METRICS INIT: Error creating InfluxDB 2 client: ${this.getErrorMessage(err)}`
                     );
-                    this.logger.error(`INFLUXDB2 INIT: Exiting.`);
+                    this.logger.error(`INFLUXDB2 METRICS INIT: Exiting.`);
                 }
             } else if (this.config.get('Butler-SOS.influxdbConfig.version') === 3) {
                 // Configure InfluxDB v3 client logger to suppress internal error messages
@@ -965,7 +965,9 @@ Configuration File:
                     });
 
                     // Test connection by executing a simple query
-                    this.logger.info(`INFLUXDB3 INIT: Testing connection to InfluxDB v3...`);
+                    this.logger.info(
+                        `INFLUXDB3 METRICS INIT: Testing connection to InfluxDB v3...`
+                    );
                     try {
                         // Execute a simple query to test the connection
                         const testQuery = `SELECT 1 as test LIMIT 1`;
@@ -977,32 +979,40 @@ Configuration File:
 
                         // Connection successful - log details
                         const tokenPreview = token.substring(0, 4) + '***';
-                        this.logger.info(`INFLUXDB3 INIT: Connection successful!`);
-                        this.logger.info(`INFLUXDB3 INIT:   Host: ${hostName}`);
-                        this.logger.info(`INFLUXDB3 INIT:   Port: ${port}`);
-                        this.logger.info(`INFLUXDB3 INIT:   Database: ${database}`);
-                        this.logger.info(`INFLUXDB3 INIT:   Token: ${tokenPreview}`);
-                        this.logger.info(`INFLUXDB3 INIT:   Socket timeout: ${writeTimeout}ms`);
-                        this.logger.info(`INFLUXDB3 INIT:   Query timeout: ${queryTimeout}ms`);
+                        this.logger.info(`INFLUXDB3 METRICS INIT: Connection successful!`);
+                        this.logger.info(`INFLUXDB3 METRICS INIT:   Host: ${hostName}`);
+                        this.logger.info(`INFLUXDB3 METRICS INIT:   Port: ${port}`);
+                        this.logger.info(`INFLUXDB3 METRICS INIT:   Database: ${database}`);
+                        this.logger.info(`INFLUXDB3 METRICS INIT:   Token: ${tokenPreview}`);
+                        this.logger.info(
+                            `INFLUXDB3 METRICS INIT:   Socket timeout: ${writeTimeout}ms`
+                        );
+                        this.logger.info(
+                            `INFLUXDB3 METRICS INIT:   Query timeout: ${queryTimeout}ms`
+                        );
                     } catch (testErr) {
                         this.logger.warn(
-                            `INFLUXDB3 INIT: Could not test connection (this may be normal): ${this.getErrorMessage(testErr)}`
+                            `INFLUXDB3 METRICS INIT: Could not test connection (this may be normal): ${this.getErrorMessage(testErr)}`
                         );
                         // Still log the configuration
                         const tokenPreview = token.substring(0, 4) + '***';
-                        this.logger.info(`INFLUXDB3 INIT: Client created with:`);
-                        this.logger.info(`INFLUXDB3 INIT:   Host: ${hostName}`);
-                        this.logger.info(`INFLUXDB3 INIT:   Port: ${port}`);
-                        this.logger.info(`INFLUXDB3 INIT:   Database: ${database}`);
-                        this.logger.info(`INFLUXDB3 INIT:   Token: ${tokenPreview}`);
-                        this.logger.info(`INFLUXDB3 INIT:   Socket timeout: ${writeTimeout}ms`);
-                        this.logger.info(`INFLUXDB3 INIT:   Query timeout: ${queryTimeout}ms`);
+                        this.logger.info(`INFLUXDB3 METRICS INIT: Client created with:`);
+                        this.logger.info(`INFLUXDB3 METRICS INIT:   Host: ${hostName}`);
+                        this.logger.info(`INFLUXDB3 METRICS INIT:   Port: ${port}`);
+                        this.logger.info(`INFLUXDB3 METRICS INIT:   Database: ${database}`);
+                        this.logger.info(`INFLUXDB3 METRICS INIT:   Token: ${tokenPreview}`);
+                        this.logger.info(
+                            `INFLUXDB3 METRICS INIT:   Socket timeout: ${writeTimeout}ms`
+                        );
+                        this.logger.info(
+                            `INFLUXDB3 METRICS INIT:   Query timeout: ${queryTimeout}ms`
+                        );
                     }
                 } catch (err) {
                     this.logger.error(
-                        `INFLUXDB3 INIT: Error creating InfluxDB 3 client: ${this.getErrorMessage(err)}`
+                        `INFLUXDB3 METRICS INIT: Error creating InfluxDB 3 client: ${this.getErrorMessage(err)}`
                     );
-                    this.logger.error(`INFLUXDB3 INIT: Exiting.`);
+                    this.logger.error(`INFLUXDB3 METRICS INIT: Exiting.`);
                 }
             } else {
                 this.logger.error(
