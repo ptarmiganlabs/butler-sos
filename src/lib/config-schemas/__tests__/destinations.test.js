@@ -318,6 +318,7 @@ describe('destinations schema', () => {
                     host: 'localhost',
                     port: 8086,
                     version: 2,
+                    maxBatchSize: 1000,
                     v2Config: {
                         org: 'myorg',
                         bucket: 'mybucket',
@@ -425,6 +426,7 @@ describe('destinations schema', () => {
                 host: 'localhost',
                 port: 8086,
                 version: 2,
+                maxBatchSize: 1000,
                 v2Config: {
                     org: 'myorg',
                     bucket: 'mybucket',

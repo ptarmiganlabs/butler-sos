@@ -33,18 +33,21 @@ jest.unstable_mockModule('../shared/utils.js', () => ({
 jest.unstable_mockModule('../v3/queue-metrics.js', () => ({
     postUserEventQueueMetricsToInfluxdbV3: jest.fn(),
     postLogEventQueueMetricsToInfluxdbV3: jest.fn(),
+    postAuditEventQueueMetricsToInfluxdbV3: jest.fn(),
 }));
 
 // Mock v2 implementations
 jest.unstable_mockModule('../v2/queue-metrics.js', () => ({
     storeUserEventQueueMetricsV2: jest.fn(),
     storeLogEventQueueMetricsV2: jest.fn(),
+    storeAuditEventQueueMetricsV2: jest.fn(),
 }));
 
 // Mock v1 implementations
 jest.unstable_mockModule('../v1/queue-metrics.js', () => ({
     storeUserEventQueueMetricsV1: jest.fn(),
     storeLogEventQueueMetricsV1: jest.fn(),
+    storeAuditEventQueueMetricsV1: jest.fn(),
 }));
 
 jest.unstable_mockModule('../v1/health-metrics.js', () => ({

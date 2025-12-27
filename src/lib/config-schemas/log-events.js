@@ -563,7 +563,16 @@ export const logEventsSchema = {
                 additionalProperties: false,
             },
         },
-        required: ['udpServerConfig', 'tags', 'source', 'categorise'],
+        required: [
+            'udpServerConfig',
+            'tags',
+            'source',
+            'categorise',
+            'enginePerformanceMonitor',
+            'sendToMQTT',
+            'sendToInfluxdb',
+            'sendToNewRelic',
+        ],
         additionalProperties: false,
     },
 };

@@ -23,6 +23,8 @@ import { udpInitLogEventServer } from './lib/udp_handlers_log_events.js';
 import { setupAnonUsageReportTimer } from './lib/telemetry.js';
 import { setupPromClient } from './lib/prom-client.js';
 import { setupConfigVisServer } from './lib/config-visualise.js';
+import { setupAuditEventsApiServer } from './lib/audit-events-api.js';
+import { initAuditInfluxDestination } from './lib/audit-destinations/influxdb/init.js';
 import { setupUdpEventsStorage } from './lib/udp-event.js';
 import { setupUdpQueueMetricsStorage } from './lib/influxdb/index.js';
 import { logError } from './lib/log-error.js';
@@ -324,6 +326,15 @@ async function mainScript() {
     // Set up config server, if enabled
     if (globals.config.get('Butler-SOS.configVisualisation.enable') === true) {
         await setupConfigVisServer();
+    }
+
+    // Set up audit events API server, if enabled
+    if (
+        globals.config.has('Butler-SOS.auditEvents.enable') &&
+        globals.config.get('Butler-SOS.auditEvents.enable') === true
+    ) {
+        await initAuditInfluxDestination();
+        await setupAuditEventsApiServer();
     }
 
     // Set up rejected user/log events storage, if enabled

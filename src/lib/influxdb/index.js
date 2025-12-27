@@ -113,6 +113,16 @@ export async function postLogEventQueueMetricsToInfluxdb(queueMetrics) {
 }
 
 /**
+ * Stores audit event queue metrics to InfluxDB.
+ *
+ * @param {object} queueMetrics - Queue metrics data (unused, kept for compatibility)
+ * @returns {Promise<void>}
+ */
+export async function postAuditEventQueueMetricsToInfluxdb(queueMetrics) {
+    return await factory.postAuditEventQueueMetricsToInfluxdb();
+}
+
+/**
  * Sets up timers for queue metrics storage.
  *
  * @returns {object} Object containing interval IDs for cleanup
@@ -121,6 +131,7 @@ export function setupUdpQueueMetricsStorage() {
     const intervalIds = {
         userEvents: null,
         logEvents: null,
+        auditEvents: null,
     };
 
     // Check if InfluxDB is enabled
@@ -194,6 +205,39 @@ export function setupUdpQueueMetricsStorage() {
     } else {
         globals.logger.info(
             'UDP QUEUE METRICS: Log event queue metrics storage to InfluxDB is disabled'
+        );
+    }
+
+    // Set up audit events queue metrics storage
+    if (
+        globals.config.has('Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable') &&
+        globals.config.get('Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable') === true
+    ) {
+        const writeFrequency = globals.config.get(
+            'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.writeFrequency'
+        );
+
+        intervalIds.auditEvents = setInterval(async () => {
+            try {
+                globals.logger.verbose(
+                    'UDP QUEUE METRICS: Timer for storing audit event queue metrics to InfluxDB triggered'
+                );
+                await postAuditEventQueueMetricsToInfluxdb();
+            } catch (err) {
+                globals.logger.error(
+                    `UDP QUEUE METRICS: Error storing audit event queue metrics to InfluxDB: ${
+                        err && err.stack ? err.stack : err
+                    }`
+                );
+            }
+        }, writeFrequency);
+
+        globals.logger.info(
+            `UDP QUEUE METRICS: Set up timer for storing audit event queue metrics to InfluxDB (interval: ${writeFrequency} ms)`
+        );
+    } else {
+        globals.logger.info(
+            'UDP QUEUE METRICS: Audit event queue metrics storage to InfluxDB is disabled'
         );
     }
 

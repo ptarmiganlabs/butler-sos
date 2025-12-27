@@ -227,6 +227,10 @@ export async function writeToInfluxWithRetry(
                 globals.logger.info(
                     `INFLUXDB ${versionTag} RETRY: ${context} - Write succeeded on attempt ${attempt + 1}/${maxRetries + 1}`
                 );
+            } else {
+                globals.logger.verbose(
+                    `INFLUXDB ${versionTag} WRITE: ${context} - Write succeeded`
+                );
             }
 
             return; // Success!
