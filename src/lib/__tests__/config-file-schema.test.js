@@ -60,6 +60,19 @@ describe('config-file-schema', () => {
                     },
                     storeNewRelic: {
                         enable: false,
+                        destinationAccount: [],
+                        metric: {
+                            dynamic: {
+                                butlerMemoryUsage: { enable: false },
+                                butlerUptime: { enable: false },
+                            },
+                        },
+                        attribute: {
+                            static: [],
+                            dynamic: {
+                                butlerVersion: { enable: false },
+                            },
+                        },
                     },
                 },
                 thirdPartyToolsCredentials: {
@@ -110,6 +123,30 @@ describe('config-file-schema', () => {
                         },
                     },
                     tags: null,
+                    sendToMQTT: {
+                        enable: false,
+                        postTo: {
+                            everythingTopic: { enable: false, topic: 'butlersos/user_events' },
+                            sessionStartTopic: { enable: false, topic: 'butlersos/session_start' },
+                            sessionStopTopic: { enable: false, topic: 'butlersos/session_stop' },
+                            connectionOpenTopic: {
+                                enable: false,
+                                topic: 'butlersos/connection_open',
+                            },
+                            connectionCloseTopic: {
+                                enable: false,
+                                topic: 'butlersos/connection_close',
+                            },
+                        },
+                    },
+                    sendToInfluxdb: {
+                        enable: false,
+                    },
+                    sendToNewRelic: {
+                        enable: false,
+                        destinationAccount: [],
+                        scramble: false,
+                    },
                 },
                 logEvents: {
                     tags: null,
@@ -158,6 +195,36 @@ describe('config-file-schema', () => {
                         },
                         qixPerf: {
                             enable: false,
+                        },
+                    },
+                    enginePerformanceMonitor: {
+                        enable: false,
+                        appNameLookup: { enable: false },
+                        trackRejectedEvents: { enable: false, tags: [] },
+                        monitorFilter: {
+                            allApps: { enable: false, appExclude: [] },
+                            appSpecific: { enable: false, app: [] },
+                        },
+                    },
+                    sendToMQTT: {
+                        enable: false,
+                        baseTopic: 'butlersos/log_events',
+                        postTo: {
+                            baseTopic: false,
+                            subsystemTopics: false,
+                        },
+                    },
+                    sendToInfluxdb: {
+                        enable: false,
+                    },
+                    sendToNewRelic: {
+                        enable: false,
+                        destinationAccount: [],
+                        source: {
+                            engine: { enable: false, logLevel: { error: false, warn: false } },
+                            proxy: { enable: false, logLevel: { error: false, warn: false } },
+                            repository: { enable: false, logLevel: { error: false, warn: false } },
+                            scheduler: { enable: false, logLevel: { error: false, warn: false } },
                         },
                     },
                 },
@@ -232,6 +299,7 @@ describe('config-file-schema', () => {
                     host: 'localhost',
                     port: 8086,
                     version: 2,
+                    maxBatchSize: 1000,
                     v2Config: {
                         org: 'myorg',
                         bucket: 'mybucket',

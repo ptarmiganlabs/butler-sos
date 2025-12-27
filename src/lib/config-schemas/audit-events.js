@@ -34,7 +34,7 @@ export const auditEventsSchema = {
                                 enum: [1, 2, 3],
                             },
                             maxBatchSize: {
-                                type: 'number',
+                                type: 'integer',
                                 default: 1000,
                                 minimum: 1,
                                 maximum: 10000,
@@ -133,24 +133,33 @@ export const auditEventsSchema = {
                             'measurementName',
                             'auditEventSchemaVersion',
                             'staticTags',
-                            'v2Config',
-                            'v1Config',
                         ],
                         additionalProperties: false,
                         allOf: [
                             {
                                 if: {
-                                    type: 'object',
-                                    properties: {
-                                        version: { const: 3 },
-                                    },
-                                    required: ['version'],
+                                    properties: { version: { const: 1 } },
                                 },
                                 then: {
-                                    type: 'object',
-                                    properties: {
-                                        v3Config: { type: 'object' },
-                                    },
+                                    properties: { v1Config: { type: 'object' } },
+                                    required: ['v1Config'],
+                                },
+                            },
+                            {
+                                if: {
+                                    properties: { version: { const: 2 } },
+                                },
+                                then: {
+                                    properties: { v2Config: { type: 'object' } },
+                                    required: ['v2Config'],
+                                },
+                            },
+                            {
+                                if: {
+                                    properties: { version: { const: 3 } },
+                                },
+                                then: {
+                                    properties: { v3Config: { type: 'object' } },
                                     required: ['v3Config'],
                                 },
                             },

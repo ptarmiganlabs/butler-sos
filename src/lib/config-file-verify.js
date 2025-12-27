@@ -28,8 +28,9 @@ function createConditionalSchema(parsedConfig, baseSchema) {
      * Creates conditional validation for a feature based on its enable status
      *
      * @param {string} featureName - The name of the feature to make conditional
+     * @param {string} enablePropertyName - The name of the property that enables the feature (default: 'enable')
      */
-    const makeFeatureConditional = (featureName) => {
+    const makeFeatureConditional = (featureName, enablePropertyName = 'enable') => {
         const featureSchema = butlerSchema.properties[featureName];
         if (!featureSchema) return;
 
@@ -40,21 +41,21 @@ function createConditionalSchema(parsedConfig, baseSchema) {
         butlerSchema.properties[featureName] = {
             type: 'object',
             properties: {
-                enable: { type: 'boolean' },
+                [enablePropertyName]: { type: 'boolean' },
             },
-            required: ['enable'],
+            required: [enablePropertyName],
             if: {
                 type: 'object',
-                properties: { enable: { const: true } },
-                required: ['enable'],
+                properties: { [enablePropertyName]: { const: true } },
+                required: [enablePropertyName],
             },
             then: originalSchema,
             else: {
                 type: 'object',
                 properties: {
-                    enable: { type: 'boolean' },
+                    [enablePropertyName]: { type: 'boolean' },
                 },
-                required: ['enable'],
+                required: [enablePropertyName],
                 additionalProperties: true, // Allow any additional properties when disabled
             },
         };
@@ -70,6 +71,9 @@ function createConditionalSchema(parsedConfig, baseSchema) {
     makeFeatureConditional('configVisualisation');
     makeFeatureConditional('heartbeat');
     makeFeatureConditional('dockerHealthCheck');
+    makeFeatureConditional('uptimeMonitor');
+    makeFeatureConditional('appNames', 'enableAppNameExtract');
+    makeFeatureConditional('userSessions', 'enableSessionExtract');
 
     return schema;
 }
