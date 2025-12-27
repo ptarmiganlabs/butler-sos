@@ -279,7 +279,9 @@ describe('healthmetrics', () => {
         await getHealthStatsFromSense('server1', 'host1', {}, {});
 
         // Expectations
-        expect(globals.logger.error).toHaveBeenCalledWith('HEALTH: Client certificate or key was not found');
+        expect(globals.logger.error).toHaveBeenCalledWith(
+            'HEALTH: Client certificate or key was not found'
+        );
     });
 
     test('should handle non-200 response code', async () => {
@@ -342,8 +344,12 @@ describe('healthmetrics', () => {
         await jest.runOnlyPendingTimersAsync();
 
         // Expectations
-        expect(globals.logger.verbose).toHaveBeenCalledWith('HEALTH: Event started: Statistics collection');
-        expect(globals.logger.verbose).toHaveBeenCalledWith('HEALTH: Getting stats for server: server1');
+        expect(globals.logger.verbose).toHaveBeenCalledWith(
+            'HEALTH: Event started: Statistics collection'
+        );
+        expect(globals.logger.verbose).toHaveBeenCalledWith(
+            'HEALTH: Getting stats for server: server1'
+        );
         expect(axios.request).toHaveBeenCalled();
     });
 
@@ -378,10 +384,12 @@ describe('healthmetrics', () => {
         jest.advanceTimersByTime(1000);
         // We don't await runOnlyPendingTimersAsync here because it would wait for axiosPromise
         // Instead we just let the interval callback start
-        await Promise.resolve(); 
+        await Promise.resolve();
         await Promise.resolve();
 
-        expect(globals.logger.verbose).toHaveBeenCalledWith('HEALTH: Event started: Statistics collection');
+        expect(globals.logger.verbose).toHaveBeenCalledWith(
+            'HEALTH: Event started: Statistics collection'
+        );
 
         // Second interval while first is still running
         jest.advanceTimersByTime(1000);
@@ -402,7 +410,9 @@ describe('healthmetrics', () => {
         await Promise.resolve();
         await Promise.resolve();
 
-        expect(globals.logger.verbose).toHaveBeenCalledWith('HEALTH: Event started: Statistics collection');
+        expect(globals.logger.verbose).toHaveBeenCalledWith(
+            'HEALTH: Event started: Statistics collection'
+        );
     });
 
     test('should handle errors in the server loop', async () => {
@@ -436,7 +446,9 @@ describe('healthmetrics', () => {
 
         // Expectations
         expect(globals.logger.error).toHaveBeenCalledWith(
-            expect.stringContaining("HEALTH: Unexpected error processing health stats for server 'server1'")
+            expect.stringContaining(
+                "HEALTH: Unexpected error processing health stats for server 'server1'"
+            )
         );
     });
 });

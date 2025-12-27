@@ -50,7 +50,7 @@ describe('InfluxDB Shared Utils Comprehensive', () => {
             const result = utils.getFormattedTime(serverStarted);
             // The result might vary by 1 hour due to timezone, so we check for both
             expect(result).toMatch(/1 days, [01]h 00m 00s/);
-            
+
             Date.now.mockRestore();
         });
 
@@ -67,7 +67,7 @@ describe('InfluxDB Shared Utils Comprehensive', () => {
             mockGlobals.appNames = [{ id: 'RegularApp_456', name: 'App 456' }];
             const docIDs = ['SessionApp_123', 'RegularApp_456'];
             const result = await utils.processAppDocuments(docIDs, 'PREFIX', 'state');
-            
+
             expect(result.appNames).toContain('App 456');
             expect(result.sessionAppNames).toContain('SessionApp_123');
         });
@@ -115,10 +115,10 @@ describe('InfluxDB Shared Utils Comprehensive', () => {
             mockGlobals.influx.writePoints
                 .mockRejectedValueOnce(new Error('Too big'))
                 .mockResolvedValue();
-            
+
             const points = [1, 2];
             await utils.writeBatchToInfluxV1(points, 'ctx', 'cat', 2);
-            
+
             // First attempt with size 2 fails.
             // Next size is 1 (since 500, 250, 100, 10 are filtered out).
             // It should try size 1.
@@ -141,7 +141,8 @@ describe('InfluxDB Shared Utils Comprehensive', () => {
 
         test('should retry with smaller batches on failure', async () => {
             const mockWriteApi = {
-                writePoints: jest.fn()
+                writePoints: jest
+                    .fn()
                     .mockRejectedValueOnce(new Error('Too big'))
                     .mockResolvedValue(),
                 close: jest.fn().mockResolvedValue(),
@@ -160,7 +161,7 @@ describe('InfluxDB Shared Utils Comprehensive', () => {
             const points = [
                 { toLineProtocol: () => 'p1' },
                 { toLineProtocol: () => 'p2' },
-                { toLineProtocol: () => 'p3' }
+                { toLineProtocol: () => 'p3' },
             ];
             await utils.writeBatchToInfluxV3(points, 'db', 'ctx', 'cat', 2);
             expect(mockGlobals.influx.write).toHaveBeenCalledTimes(2);
@@ -170,11 +171,11 @@ describe('InfluxDB Shared Utils Comprehensive', () => {
             mockGlobals.influx.write
                 .mockRejectedValueOnce(new Error('Too big'))
                 .mockResolvedValue();
-            
+
             const points = [
                 { toLineProtocol: () => 'p1' },
                 { toLineProtocol: () => 'p2' },
-                { toLineProtocol: () => 'p3' }
+                { toLineProtocol: () => 'p3' },
             ];
             await utils.writeBatchToInfluxV3(points, 'db', 'ctx', 'cat', 2);
             expect(mockGlobals.influx.write).toHaveBeenCalledTimes(5);

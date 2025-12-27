@@ -97,7 +97,10 @@ jest.unstable_mockModule(userEventsPath, () => ({
 const globals = (await import(globalsPath)).default;
 const { logError } = await import(logErrorPath);
 const { listeningEventHandler, messageEventHandler } = await import(logEventsPath);
-const { listeningEventHandler: listeningEventHandlerUser, messageEventHandler: messageEventHandlerUser } = await import(userEventsPath);
+const {
+    listeningEventHandler: listeningEventHandlerUser,
+    messageEventHandler: messageEventHandlerUser,
+} = await import(userEventsPath);
 
 describe('UDP Handlers', () => {
     let udpHandlersLogEvents;
@@ -123,10 +126,22 @@ describe('UDP Handlers', () => {
                 udpHandlersLogEvents.udpInitLogEventServer();
 
                 // Verify setup
-                expect(globals.udpServerLogEvents.socket.on).toHaveBeenCalledWith('listening', expect.any(Function));
-                expect(globals.udpServerLogEvents.socket.on).toHaveBeenCalledWith('message', expect.any(Function));
-                expect(globals.udpServerLogEvents.socket.on).toHaveBeenCalledWith('error', expect.any(Function));
-                expect(globals.udpServerLogEvents.socket.on).toHaveBeenCalledWith('close', expect.any(Function));
+                expect(globals.udpServerLogEvents.socket.on).toHaveBeenCalledWith(
+                    'listening',
+                    expect.any(Function)
+                );
+                expect(globals.udpServerLogEvents.socket.on).toHaveBeenCalledWith(
+                    'message',
+                    expect.any(Function)
+                );
+                expect(globals.udpServerLogEvents.socket.on).toHaveBeenCalledWith(
+                    'error',
+                    expect.any(Function)
+                );
+                expect(globals.udpServerLogEvents.socket.on).toHaveBeenCalledWith(
+                    'close',
+                    expect.any(Function)
+                );
 
                 // Trigger listening
                 handlers['listening']();
@@ -151,7 +166,9 @@ describe('UDP Handlers', () => {
                 // Trigger message with queue full
                 globals.udpQueueManagerLogEvents.addToQueue.mockResolvedValueOnce(false);
                 await handlers['message'](mockMsg, mockRemote);
-                expect(globals.logger.debug).toHaveBeenCalledWith(expect.stringContaining('dropped due to full queue'));
+                expect(globals.logger.debug).toHaveBeenCalledWith(
+                    expect.stringContaining('dropped due to full queue')
+                );
 
                 // Trigger error
                 const mockError = new Error('UDP error');
@@ -160,7 +177,9 @@ describe('UDP Handlers', () => {
 
                 // Trigger close
                 handlers['close']();
-                expect(globals.logger.warn).toHaveBeenCalledWith('[UDP] Log events server socket closed');
+                expect(globals.logger.warn).toHaveBeenCalledWith(
+                    '[UDP] Log events server socket closed'
+                );
             });
 
             test('should handle errors in message handler', async () => {
@@ -171,10 +190,15 @@ describe('UDP Handlers', () => {
 
                 udpHandlersLogEvents.udpInitLogEventServer();
 
-                globals.udpQueueManagerLogEvents.addToQueue.mockRejectedValueOnce(new Error('Queue error'));
+                globals.udpQueueManagerLogEvents.addToQueue.mockRejectedValueOnce(
+                    new Error('Queue error')
+                );
                 await handlers['message'](Buffer.from('msg'), {});
 
-                expect(logError).toHaveBeenCalledWith('[UDP Queue] Error handling log event message', expect.any(Error));
+                expect(logError).toHaveBeenCalledWith(
+                    '[UDP Queue] Error handling log event message',
+                    expect.any(Error)
+                );
             });
         });
     });
@@ -191,10 +215,22 @@ describe('UDP Handlers', () => {
                 udpHandlersUserActivity.udpInitUserActivityServer();
 
                 // Verify setup
-                expect(globals.udpServerUserActivity.socket.on).toHaveBeenCalledWith('listening', expect.any(Function));
-                expect(globals.udpServerUserActivity.socket.on).toHaveBeenCalledWith('message', expect.any(Function));
-                expect(globals.udpServerUserActivity.socket.on).toHaveBeenCalledWith('error', expect.any(Function));
-                expect(globals.udpServerUserActivity.socket.on).toHaveBeenCalledWith('close', expect.any(Function));
+                expect(globals.udpServerUserActivity.socket.on).toHaveBeenCalledWith(
+                    'listening',
+                    expect.any(Function)
+                );
+                expect(globals.udpServerUserActivity.socket.on).toHaveBeenCalledWith(
+                    'message',
+                    expect.any(Function)
+                );
+                expect(globals.udpServerUserActivity.socket.on).toHaveBeenCalledWith(
+                    'error',
+                    expect.any(Function)
+                );
+                expect(globals.udpServerUserActivity.socket.on).toHaveBeenCalledWith(
+                    'close',
+                    expect.any(Function)
+                );
 
                 // Trigger listening
                 handlers['listening']();
@@ -219,16 +255,23 @@ describe('UDP Handlers', () => {
                 // Trigger message with queue full
                 globals.udpQueueManagerUserActivity.addToQueue.mockResolvedValueOnce(false);
                 await handlers['message'](mockMsg, mockRemote);
-                expect(globals.logger.debug).toHaveBeenCalledWith(expect.stringContaining('dropped due to full queue'));
+                expect(globals.logger.debug).toHaveBeenCalledWith(
+                    expect.stringContaining('dropped due to full queue')
+                );
 
                 // Trigger error
                 const mockError = new Error('UDP error');
                 handlers['error'](mockError);
-                expect(logError).toHaveBeenCalledWith('[UDP] User activity server error', mockError);
+                expect(logError).toHaveBeenCalledWith(
+                    '[UDP] User activity server error',
+                    mockError
+                );
 
                 // Trigger close
                 handlers['close']();
-                expect(globals.logger.warn).toHaveBeenCalledWith('[UDP] User activity server socket closed');
+                expect(globals.logger.warn).toHaveBeenCalledWith(
+                    '[UDP] User activity server socket closed'
+                );
             });
 
             test('should handle errors in message handler', async () => {
@@ -239,10 +282,15 @@ describe('UDP Handlers', () => {
 
                 udpHandlersUserActivity.udpInitUserActivityServer();
 
-                globals.udpQueueManagerUserActivity.addToQueue.mockRejectedValueOnce(new Error('Queue error'));
+                globals.udpQueueManagerUserActivity.addToQueue.mockRejectedValueOnce(
+                    new Error('Queue error')
+                );
                 await handlers['message'](Buffer.from('msg'), {});
 
-                expect(logError).toHaveBeenCalledWith('[UDP Queue] Error handling user activity message', expect.any(Error));
+                expect(logError).toHaveBeenCalledWith(
+                    '[UDP Queue] Error handling user activity message',
+                    expect.any(Error)
+                );
             });
         });
     });

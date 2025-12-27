@@ -35,12 +35,14 @@ describe('qix-perf-filters', () => {
         test('should return true if app matches and all filters are true', () => {
             const config = {
                 enable: true,
-                app: [{
-                    include: [{ appId: 'app1' }],
-                    objectType: { allObjectTypes: true },
-                    appObject: { allAppObjects: true },
-                    method: { allMethods: true },
-                }],
+                app: [
+                    {
+                        include: [{ appId: 'app1' }],
+                        objectType: { allObjectTypes: true },
+                        appObject: { allAppObjects: true },
+                        method: { allMethods: true },
+                    },
+                ],
             };
             expect(processAppSpecificFilters(eventData, config)).toBe(true);
         });
@@ -48,9 +50,11 @@ describe('qix-perf-filters', () => {
         test('should return false if app does not match', () => {
             const config = {
                 enable: true,
-                app: [{
-                    include: [{ appId: 'other' }],
-                }],
+                app: [
+                    {
+                        include: [{ appId: 'other' }],
+                    },
+                ],
             };
             expect(processAppSpecificFilters(eventData, config)).toBe(false);
         });
@@ -58,12 +62,14 @@ describe('qix-perf-filters', () => {
         test('should handle objectType exclusion', () => {
             const config = {
                 enable: true,
-                app: [{
-                    include: [{ appId: 'app1' }],
-                    objectType: { allObjectTypes: true, allObjectTypesExclude: ['type1'] },
-                    appObject: { allAppObjects: true },
-                    method: { allMethods: true },
-                }],
+                app: [
+                    {
+                        include: [{ appId: 'app1' }],
+                        objectType: { allObjectTypes: true, allObjectTypesExclude: ['type1'] },
+                        appObject: { allAppObjects: true },
+                        method: { allMethods: true },
+                    },
+                ],
             };
             expect(processAppSpecificFilters(eventData, config)).toBe(false);
         });
@@ -71,12 +77,14 @@ describe('qix-perf-filters', () => {
         test('should handle objectType inclusion', () => {
             const config = {
                 enable: true,
-                app: [{
-                    include: [{ appId: 'app1' }],
-                    objectType: { allObjectTypes: false, someObjectTypesInclude: ['type1'] },
-                    appObject: { allAppObjects: true },
-                    method: { allMethods: true },
-                }],
+                app: [
+                    {
+                        include: [{ appId: 'app1' }],
+                        objectType: { allObjectTypes: false, someObjectTypesInclude: ['type1'] },
+                        appObject: { allAppObjects: true },
+                        method: { allMethods: true },
+                    },
+                ],
             };
             expect(processAppSpecificFilters(eventData, config)).toBe(true);
         });
@@ -84,12 +92,17 @@ describe('qix-perf-filters', () => {
         test('should handle appObject exclusion', () => {
             const config = {
                 enable: true,
-                app: [{
-                    include: [{ appId: 'app1' }],
-                    objectType: { allObjectTypes: true },
-                    appObject: { allAppObjects: true, allAppObjectsExclude: [{ objectId: 'obj1' }] },
-                    method: { allMethods: true },
-                }],
+                app: [
+                    {
+                        include: [{ appId: 'app1' }],
+                        objectType: { allObjectTypes: true },
+                        appObject: {
+                            allAppObjects: true,
+                            allAppObjectsExclude: [{ objectId: 'obj1' }],
+                        },
+                        method: { allMethods: true },
+                    },
+                ],
             };
             expect(processAppSpecificFilters(eventData, config)).toBe(false);
         });
@@ -97,12 +110,17 @@ describe('qix-perf-filters', () => {
         test('should handle appObject inclusion', () => {
             const config = {
                 enable: true,
-                app: [{
-                    include: [{ appId: 'app1' }],
-                    objectType: { allObjectTypes: true },
-                    appObject: { allAppObjects: false, someAppObjectsInclude: [{ objectId: 'obj1' }] },
-                    method: { allMethods: true },
-                }],
+                app: [
+                    {
+                        include: [{ appId: 'app1' }],
+                        objectType: { allObjectTypes: true },
+                        appObject: {
+                            allAppObjects: false,
+                            someAppObjectsInclude: [{ objectId: 'obj1' }],
+                        },
+                        method: { allMethods: true },
+                    },
+                ],
             };
             expect(processAppSpecificFilters(eventData, config)).toBe(true);
         });
@@ -110,12 +128,14 @@ describe('qix-perf-filters', () => {
         test('should handle method exclusion', () => {
             const config = {
                 enable: true,
-                app: [{
-                    include: [{ appId: 'app1' }],
-                    objectType: { allObjectTypes: true },
-                    appObject: { allAppObjects: true },
-                    method: { allMethods: true, allMethodsExclude: ['method1'] },
-                }],
+                app: [
+                    {
+                        include: [{ appId: 'app1' }],
+                        objectType: { allObjectTypes: true },
+                        appObject: { allAppObjects: true },
+                        method: { allMethods: true, allMethodsExclude: ['method1'] },
+                    },
+                ],
             };
             expect(processAppSpecificFilters(eventData, config)).toBe(false);
         });
@@ -123,12 +143,14 @@ describe('qix-perf-filters', () => {
         test('should handle method inclusion', () => {
             const config = {
                 enable: true,
-                app: [{
-                    include: [{ appId: 'app1' }],
-                    objectType: { allObjectTypes: true },
-                    appObject: { allAppObjects: true },
-                    method: { allMethods: false, someMethodsInclude: ['method1'] },
-                }],
+                app: [
+                    {
+                        include: [{ appId: 'app1' }],
+                        objectType: { allObjectTypes: true },
+                        appObject: { allAppObjects: true },
+                        method: { allMethods: false, someMethodsInclude: ['method1'] },
+                    },
+                ],
             };
             expect(processAppSpecificFilters(eventData, config)).toBe(true);
         });

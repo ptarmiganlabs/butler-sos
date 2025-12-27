@@ -83,7 +83,7 @@ describe('InfluxDB Audit Buffer', () => {
         jest.useFakeTimers();
         buffer._resetState();
         mockQueueManager.shouldFail = false;
-        
+
         mockConfig.has.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
             return false;
@@ -118,14 +118,16 @@ describe('InfluxDB Audit Buffer', () => {
         buffer.bufferAuditInfluxEvent(event);
         buffer.bufferAuditInfluxEvent(event);
         expect(mockLogger.verbose).not.toHaveBeenCalledWith(expect.stringContaining('Flushed'));
-        
+
         buffer.bufferAuditInfluxEvent(event);
-        
+
         // Allow the async flush to run.
         await jest.runOnlyPendingTimersAsync();
         await Promise.resolve();
-        
-        expect(mockLogger.verbose).toHaveBeenCalledWith(expect.stringContaining('Flushed 3 point(s)'));
+
+        expect(mockLogger.verbose).toHaveBeenCalledWith(
+            expect.stringContaining('Flushed 3 point(s)')
+        );
     });
 
     test('should handle queue manager failure', async () => {
@@ -133,18 +135,20 @@ describe('InfluxDB Audit Buffer', () => {
         buffer.bufferAuditInfluxEvent({ id: 'q-fail' });
         buffer.bufferAuditInfluxEvent({ id: 'q-fail' });
         buffer.bufferAuditInfluxEvent({ id: 'q-fail' });
-        
+
         await jest.runOnlyPendingTimersAsync();
         await Promise.resolve();
-        
-        expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Failed to enqueue flush: Queue Full'));
+
+        expect(mockLogger.error).toHaveBeenCalledWith(
+            expect.stringContaining('Failed to enqueue flush: Queue Full')
+        );
     });
 
     test('should handle flush failures and retry', async () => {
         mockClient.getAuditInfluxClient.mockReturnValue({
             client: {
-                writePoints: jest.fn().mockRejectedValue(new Error('Influx Down'))
-            }
+                writePoints: jest.fn().mockRejectedValue(new Error('Influx Down')),
+            },
         });
 
         buffer.bufferAuditInfluxEvent({ id: 'fail' });
@@ -154,18 +158,22 @@ describe('InfluxDB Audit Buffer', () => {
         // Allow all progressive retries to run
         await jest.runOnlyPendingTimersAsync();
         // Progressive retries might schedule more timers/microtasks
-        for(let i=0; i<10; i++) {
+        for (let i = 0; i < 10; i++) {
             await jest.runOnlyPendingTimersAsync();
             await Promise.resolve();
         }
-        
-        expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Flush failed; will retry later'));
-        
+
+        expect(mockLogger.error).toHaveBeenCalledWith(
+            expect.stringContaining('Flush failed; will retry later')
+        );
+
         mockClient.getAuditInfluxClient.mockReturnValue({
-            client: { writePoints: jest.fn().mockResolvedValue(undefined) }
+            client: { writePoints: jest.fn().mockResolvedValue(undefined) },
         });
         await buffer.flushNow();
-        expect(mockLogger.verbose).toHaveBeenCalledWith(expect.stringContaining('Flushed 3 point(s)'));
+        expect(mockLogger.verbose).toHaveBeenCalledWith(
+            expect.stringContaining('Flushed 3 point(s)')
+        );
     });
 
     test('should handle InfluxDB v2 with bucket creation and close error', async () => {
@@ -176,7 +184,7 @@ describe('InfluxDB Audit Buffer', () => {
                     version: 2,
                     maxBatchSize: 1,
                     writeFrequency: 0,
-                    v2Config: { org: 'my-org', bucket: 'new-bucket', retentionDuration: '1d' }
+                    v2Config: { org: 'my-org', bucket: 'new-bucket', retentionDuration: '1d' },
                 };
             }
             return null;
@@ -184,17 +192,18 @@ describe('InfluxDB Audit Buffer', () => {
 
         const mockWriteApi = {
             writePoints: jest.fn().mockResolvedValue(undefined),
-            close: jest.fn()
+            close: jest
+                .fn()
                 .mockRejectedValueOnce(new Error('Close Error'))
-                .mockResolvedValue(undefined)
+                .mockResolvedValue(undefined),
         };
         const mockV2Client = {
-            getWriteApi: jest.fn().mockReturnValue(mockWriteApi)
+            getWriteApi: jest.fn().mockReturnValue(mockWriteApi),
         };
         mockClient.getAuditInfluxClient.mockReturnValue({
             client: mockV2Client,
             org: 'my-org',
-            bucket: 'new-bucket'
+            bucket: 'new-bucket',
         });
 
         // Mock bucket not found (empty list)
@@ -205,7 +214,7 @@ describe('InfluxDB Audit Buffer', () => {
         mockBucketsAPI.mockReturnValue(bucketsAPIInstance);
 
         buffer.bufferAuditInfluxEvent({ id: 'v2-new' });
-        
+
         await jest.runOnlyPendingTimersAsync();
         await Promise.resolve();
 
@@ -221,29 +230,31 @@ describe('InfluxDB Audit Buffer', () => {
                     version: 3,
                     maxBatchSize: 10,
                     writeFrequency: 0,
-                    v3Config: { database: 'my-db' }
+                    v3Config: { database: 'my-db' },
                 };
             }
             return null;
         });
 
         const mockV3Client = {
-            write: jest.fn().mockRejectedValue(new Error('V3 Error'))
+            write: jest.fn().mockRejectedValue(new Error('V3 Error')),
         };
         mockClient.getAuditInfluxClient.mockReturnValue({
             client: mockV3Client,
-            database: 'my-db'
+            database: 'my-db',
         });
 
         buffer.bufferAuditInfluxEvent({ id: 'v3-fail' });
-        
+
         await jest.runOnlyPendingTimersAsync();
-        for(let i=0; i<10; i++) {
+        for (let i = 0; i < 10; i++) {
             await jest.runOnlyPendingTimersAsync();
             await Promise.resolve();
         }
 
-        expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('retrying with smaller batches'));
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('retrying with smaller batches')
+        );
     });
 
     test('should handle unsupported InfluxDB version', async () => {
@@ -256,11 +267,13 @@ describe('InfluxDB Audit Buffer', () => {
         });
 
         buffer.bufferAuditInfluxEvent({ id: 'v99' });
-        
+
         await jest.runOnlyPendingTimersAsync();
         await Promise.resolve();
-        
-        expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Unsupported InfluxDB version v99'));
+
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Unsupported InfluxDB version v99')
+        );
     });
 
     test('should handle mapping failure', async () => {
@@ -280,7 +293,7 @@ describe('InfluxDB Audit Buffer', () => {
     test('should handle config change', async () => {
         const event = { id: '1' };
         buffer.bufferAuditInfluxEvent(event);
-        
+
         // Change config
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
@@ -289,9 +302,11 @@ describe('InfluxDB Audit Buffer', () => {
             }
             return null;
         });
-        
+
         buffer.bufferAuditInfluxEvent(event);
-        expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Destination config changed'));
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Destination config changed')
+        );
     });
 
     test('should handle v2/v3 with boolean fields and timestamps', async () => {
@@ -299,14 +314,19 @@ describe('InfluxDB Audit Buffer', () => {
             measurementName: 'audit',
             tags: { t1: 'v1' },
             fields: { f1: true, f2: 's1', f3: 123 },
-            timestampMs: 1234567890
+            timestampMs: 1234567890,
         });
 
         // Test v2
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
             if (key === 'Butler-SOS.auditEvents.destination.influxdb') {
-                return { version: 2, maxBatchSize: 1, writeFrequency: 0, v2Config: { org: 'o', bucket: 'b', retentionDuration: '1d' } };
+                return {
+                    version: 2,
+                    maxBatchSize: 1,
+                    writeFrequency: 0,
+                    v2Config: { org: 'o', bucket: 'b', retentionDuration: '1d' },
+                };
             }
             return null;
         });
@@ -318,14 +338,19 @@ describe('InfluxDB Audit Buffer', () => {
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
             if (key === 'Butler-SOS.auditEvents.destination.influxdb') {
-                return { version: 3, maxBatchSize: 1, writeFrequency: 0, v3Config: { database: 'd' } };
+                return {
+                    version: 3,
+                    maxBatchSize: 1,
+                    writeFrequency: 0,
+                    v3Config: { database: 'd' },
+                };
             }
             return null;
         });
         buffer.bufferAuditInfluxEvent({ id: 'v3' });
         await jest.runOnlyPendingTimersAsync();
         await Promise.resolve();
-        
+
         expect(mockLogger.verbose).toHaveBeenCalled();
     });
 
@@ -333,14 +358,19 @@ describe('InfluxDB Audit Buffer', () => {
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
             if (key === 'Butler-SOS.auditEvents.destination.influxdb') {
-                return { version: 2, maxBatchSize: 1, writeFrequency: 0, v2Config: { org: 'o', bucket: 'exists', retentionDuration: '1d' } };
+                return {
+                    version: 2,
+                    maxBatchSize: 1,
+                    writeFrequency: 0,
+                    v2Config: { org: 'o', bucket: 'exists', retentionDuration: '1d' },
+                };
             }
             return null;
         });
 
         const bucketsAPIInstance = {
             getBuckets: jest.fn().mockResolvedValue({ buckets: [{ id: 'b1' }] }),
-            postBuckets: jest.fn()
+            postBuckets: jest.fn(),
         };
         mockBucketsAPI.mockReturnValue(bucketsAPIInstance);
 
@@ -364,20 +394,27 @@ describe('InfluxDB Audit Buffer', () => {
         await jest.runOnlyPendingTimersAsync();
         await Promise.resolve();
 
-        expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Missing required audit InfluxDB v2 config'));
+        expect(mockLogger.error).toHaveBeenCalledWith(
+            expect.stringContaining('Missing required audit InfluxDB v2 config')
+        );
     });
 
     test('should handle v2 org not found', async () => {
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
             if (key === 'Butler-SOS.auditEvents.destination.influxdb') {
-                return { version: 2, maxBatchSize: 1, writeFrequency: 0, v2Config: { org: 'no-org', bucket: 'b', retentionDuration: '1d' } };
+                return {
+                    version: 2,
+                    maxBatchSize: 1,
+                    writeFrequency: 0,
+                    v2Config: { org: 'no-org', bucket: 'b', retentionDuration: '1d' },
+                };
             }
             return null;
         });
 
         const orgsAPIInstance = {
-            getOrgs: jest.fn().mockResolvedValue({ orgs: [] })
+            getOrgs: jest.fn().mockResolvedValue({ orgs: [] }),
         };
         mockOrgsAPI.mockReturnValue(orgsAPIInstance);
 
@@ -385,6 +422,8 @@ describe('InfluxDB Audit Buffer', () => {
         await jest.runOnlyPendingTimersAsync();
         await Promise.resolve();
 
-        expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('No organization named "no-org" found'));
+        expect(mockLogger.error).toHaveBeenCalledWith(
+            expect.stringContaining('No organization named "no-org" found')
+        );
     });
 });

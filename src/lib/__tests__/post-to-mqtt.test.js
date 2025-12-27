@@ -563,8 +563,14 @@ describe('post-to-mqtt', () => {
 
             // Should be called twice: once for base topic, once for subsystem topic
             expect(globals.mqttClient.publish).toHaveBeenCalledTimes(2);
-            expect(globals.mqttClient.publish).toHaveBeenCalledWith('butler-sos/log', expect.any(String));
-            expect(globals.mqttClient.publish).toHaveBeenCalledWith('butler-sos/log/engine/common', expect.any(String));
+            expect(globals.mqttClient.publish).toHaveBeenCalledWith(
+                'butler-sos/log',
+                expect.any(String)
+            );
+            expect(globals.mqttClient.publish).toHaveBeenCalledWith(
+                'butler-sos/log/engine/common',
+                expect.any(String)
+            );
 
             const payload = JSON.parse(globals.mqttClient.publish.mock.calls[0][1]);
             expect(payload.tags).toEqual({ tag1: 'val1' });
@@ -588,7 +594,10 @@ describe('post-to-mqtt', () => {
 
             await postLogEventToMQTT(msg);
 
-            expect(globals.mqttClient.publish).toHaveBeenCalledWith('butler-sos/log/engine/common', expect.any(String));
+            expect(globals.mqttClient.publish).toHaveBeenCalledWith(
+                'butler-sos/log/engine/common',
+                expect.any(String)
+            );
         });
 
         test('should handle errors', async () => {

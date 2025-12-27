@@ -125,9 +125,9 @@ jest.unstable_mockModule('systeminformation', () => ({
         system: jest.fn().mockResolvedValue({ uuid: 'test-uuid' }),
         mem: jest.fn().mockResolvedValue({ total: 1024 }),
         dockerInfo: jest.fn().mockResolvedValue({}),
-        networkInterfaces: jest.fn().mockResolvedValue([
-            { iface: 'eth0', mac: '00:00:00:00:00:00', ip4: '127.0.0.1' }
-        ]),
+        networkInterfaces: jest
+            .fn()
+            .mockResolvedValue([{ iface: 'eth0', mac: '00:00:00:00:00:00', ip4: '127.0.0.1' }]),
         networkInterfaceDefault: jest.fn().mockResolvedValue('eth0'),
     },
 }));

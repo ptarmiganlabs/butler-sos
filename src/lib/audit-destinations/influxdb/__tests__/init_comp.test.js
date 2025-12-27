@@ -93,25 +93,32 @@ describe('Audit InfluxDB Init', () => {
 
         test('should skip if dbName is missing', async () => {
             const cfgNoDb = { version: 1, v1Config: {} };
-            mockGlobals.config.get.mockReturnValueOnce(true) // enable
+            mockGlobals.config.get
+                .mockReturnValueOnce(true) // enable
                 .mockReturnValueOnce(true) // dest enable
                 .mockReturnValueOnce('influxdb') // type
                 .mockReturnValueOnce(cfgNoDb); // config
-            
+
             await initAuditInfluxDestination();
-            expect(mockGlobals.logger.warn).toHaveBeenCalledWith(expect.stringContaining('No v1 dbName configured'));
+            expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('No v1 dbName configured')
+            );
         });
 
         test('should skip if client is missing', async () => {
             getAuditInfluxClient.mockReturnValueOnce(null);
             await initAuditInfluxDestination();
-            expect(mockGlobals.logger.warn).toHaveBeenCalledWith(expect.stringContaining('No v1 client available'));
+            expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('No v1 client available')
+            );
         });
 
         test('should not create if database already exists', async () => {
             mockClient.getDatabaseNames.mockResolvedValue(['audit_db']);
             await initAuditInfluxDestination();
-            expect(mockGlobals.logger.info).toHaveBeenCalledWith(expect.stringContaining('Found InfluxDB v1 database: audit_db'));
+            expect(mockGlobals.logger.info).toHaveBeenCalledWith(
+                expect.stringContaining('Found InfluxDB v1 database: audit_db')
+            );
             expect(mockClient.createDatabase).not.toHaveBeenCalled();
         });
 
@@ -123,8 +130,13 @@ describe('Audit InfluxDB Init', () => {
             await initAuditInfluxDestination();
 
             expect(mockClient.createDatabase).toHaveBeenCalledWith('audit_db');
-            expect(mockClient.createRetentionPolicy).toHaveBeenCalledWith('audit_rp', expect.any(Object));
-            expect(mockGlobals.logger.info).toHaveBeenCalledWith(expect.stringContaining('Created new InfluxDB v1 database'));
+            expect(mockClient.createRetentionPolicy).toHaveBeenCalledWith(
+                'audit_rp',
+                expect.any(Object)
+            );
+            expect(mockGlobals.logger.info).toHaveBeenCalledWith(
+                expect.stringContaining('Created new InfluxDB v1 database')
+            );
         });
 
         test('should handle errors during database creation', async () => {
@@ -132,30 +144,37 @@ describe('Audit InfluxDB Init', () => {
             mockClient.createDatabase.mockRejectedValue(new Error('Failed'));
 
             await initAuditInfluxDestination();
-            expect(mockGlobals.logger.error).toHaveBeenCalledWith(expect.stringContaining('Error creating InfluxDB v1 database'));
+            expect(mockGlobals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error creating InfluxDB v1 database')
+            );
         });
 
         test('should handle missing retention policy config', async () => {
             const cfgNoRp = {
                 version: 1,
-                v1Config: { dbName: 'audit_db' }
+                v1Config: { dbName: 'audit_db' },
             };
-            mockGlobals.config.get.mockReturnValueOnce(true) // enable
+            mockGlobals.config.get
+                .mockReturnValueOnce(true) // enable
                 .mockReturnValueOnce(true) // dest enable
                 .mockReturnValueOnce('influxdb') // type
                 .mockReturnValueOnce(cfgNoRp); // config
-            
+
             mockClient.getDatabaseNames.mockResolvedValue([]);
             mockClient.createDatabase.mockResolvedValue();
 
             await initAuditInfluxDestination();
-            expect(mockGlobals.logger.warn).toHaveBeenCalledWith(expect.stringContaining('Missing v1 retentionPolicy config'));
+            expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('Missing v1 retentionPolicy config')
+            );
         });
 
         test('should handle error getting database names', async () => {
             mockClient.getDatabaseNames.mockRejectedValue(new Error('Network error'));
             await initAuditInfluxDestination();
-            expect(mockGlobals.logger.error).toHaveBeenCalledWith(expect.stringContaining('Error getting list of InfluxDB v1 databases'));
+            expect(mockGlobals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error getting list of InfluxDB v1 databases')
+            );
         });
 
         test('should handle error creating retention policy', async () => {
@@ -164,7 +183,9 @@ describe('Audit InfluxDB Init', () => {
             mockClient.createRetentionPolicy.mockRejectedValue(new Error('Policy failed'));
 
             await initAuditInfluxDestination();
-            expect(mockGlobals.logger.error).toHaveBeenCalledWith(expect.stringContaining('Error creating InfluxDB v1 retention policy'));
+            expect(mockGlobals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error creating InfluxDB v1 retention policy')
+            );
         });
     });
 
@@ -190,19 +211,24 @@ describe('Audit InfluxDB Init', () => {
 
         test('should skip if org or bucket is missing', async () => {
             const cfgIncomplete = { version: 2, v2Config: { org: 'my_org' } };
-            mockGlobals.config.get.mockReturnValueOnce(true) // enable
+            mockGlobals.config.get
+                .mockReturnValueOnce(true) // enable
                 .mockReturnValueOnce(true) // dest enable
                 .mockReturnValueOnce('influxdb') // type
                 .mockReturnValueOnce(cfgIncomplete); // config
-            
+
             await initAuditInfluxDestination();
-            expect(mockGlobals.logger.warn).toHaveBeenCalledWith(expect.stringContaining('Missing v2 org/bucket'));
+            expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('Missing v2 org/bucket')
+            );
         });
 
         test('should skip if client is missing', async () => {
             getAuditInfluxClient.mockReturnValueOnce(null);
             await initAuditInfluxDestination();
-            expect(mockGlobals.logger.warn).toHaveBeenCalledWith(expect.stringContaining('No v2 client available'));
+            expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('No v2 client available')
+            );
         });
 
         test('should create bucket if missing', async () => {
@@ -219,9 +245,14 @@ describe('Audit InfluxDB Init', () => {
             await initAuditInfluxDestination();
 
             expect(mockOrgsInstance.getOrgs).toHaveBeenCalledWith({ org: 'my_org' });
-            expect(mockBucketsInstance.getBuckets).toHaveBeenCalledWith({ orgID: 'org_id', name: 'audit_bucket' });
+            expect(mockBucketsInstance.getBuckets).toHaveBeenCalledWith({
+                orgID: 'org_id',
+                name: 'audit_bucket',
+            });
             expect(mockBucketsInstance.postBuckets).toHaveBeenCalled();
-            expect(mockGlobals.logger.info).toHaveBeenCalledWith(expect.stringContaining('Created new InfluxDB v2 bucket'));
+            expect(mockGlobals.logger.info).toHaveBeenCalledWith(
+                expect.stringContaining('Created new InfluxDB v2 bucket')
+            );
         });
 
         test('should not create if bucket already exists', async () => {
@@ -237,7 +268,9 @@ describe('Audit InfluxDB Init', () => {
 
             await initAuditInfluxDestination();
             expect(mockBucketsInstance.postBuckets).not.toHaveBeenCalled();
-            expect(mockGlobals.logger.info).toHaveBeenCalledWith(expect.stringContaining('Bucket named "audit_bucket" already exists'));
+            expect(mockGlobals.logger.info).toHaveBeenCalledWith(
+                expect.stringContaining('Bucket named "audit_bucket" already exists')
+            );
         });
 
         test('should handle error getting organization', async () => {
@@ -247,7 +280,9 @@ describe('Audit InfluxDB Init', () => {
             mockOrgsAPI.mockImplementation(() => mockOrgsInstance);
 
             await initAuditInfluxDestination();
-            expect(mockGlobals.logger.error).toHaveBeenCalledWith(expect.stringContaining('Error getting organisation'));
+            expect(mockGlobals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error getting organisation')
+            );
         });
 
         test('should handle error ensuring bucket exists', async () => {
@@ -261,7 +296,9 @@ describe('Audit InfluxDB Init', () => {
             mockBucketsAPI.mockImplementation(() => mockBucketsInstance);
 
             await initAuditInfluxDestination();
-            expect(mockGlobals.logger.error).toHaveBeenCalledWith(expect.stringContaining('Error ensuring bucket exists'));
+            expect(mockGlobals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error ensuring bucket exists')
+            );
         });
     });
 
@@ -277,7 +314,9 @@ describe('Audit InfluxDB Init', () => {
             });
 
             await initAuditInfluxDestination();
-            expect(mockGlobals.logger.info).toHaveBeenCalledWith(expect.stringContaining('InfluxDB v3 database is not auto-created'));
+            expect(mockGlobals.logger.info).toHaveBeenCalledWith(
+                expect.stringContaining('InfluxDB v3 database is not auto-created')
+            );
         });
     });
 
@@ -292,6 +331,8 @@ describe('Audit InfluxDB Init', () => {
         });
 
         await initAuditInfluxDestination();
-        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(expect.stringContaining('Unsupported InfluxDB version v4'));
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Unsupported InfluxDB version v4')
+        );
     });
 });

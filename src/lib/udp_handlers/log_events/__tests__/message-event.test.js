@@ -41,9 +41,15 @@ jest.unstable_mockModule(globalsPath, () => ({
                 if (path === 'Butler-SOS.mqttConfig.enable') return true;
                 if (path === 'Butler-SOS.logEvents.sendToMQTT.enable') return true;
                 if (path === 'Butler-SOS.logEvents.enginePerformanceMonitor.enable') return true;
-                if (path === 'Butler-SOS.logEvents.enginePerformanceMonitor.appNameLookup.enable') return true;
-                if (path === 'Butler-SOS.logEvents.enginePerformanceMonitor.monitorFilter') return { appSpecific: { enable: true }, allApps: { enable: true } };
-                if (path === 'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.enable') return true;
+                if (path === 'Butler-SOS.logEvents.enginePerformanceMonitor.appNameLookup.enable')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.enginePerformanceMonitor.monitorFilter')
+                    return { appSpecific: { enable: true }, allApps: { enable: true } };
+                if (
+                    path ===
+                    'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.enable'
+                )
+                    return true;
                 return undefined;
             }),
         },
@@ -99,7 +105,9 @@ describe('messageEventHandler', () => {
     });
 
     test('should process engine event', async () => {
-        const msg = Buffer.from('/qseow-engine/;1;20211109T153726.028+0200;2021-11-09 15:37:26,028;WARN;host1;sub1;user1;message1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;dir1;uid1;ts1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;v1;ts2;type1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b');
+        const msg = Buffer.from(
+            '/qseow-engine/;1;20211109T153726.028+0200;2021-11-09 15:37:26,028;WARN;host1;sub1;user1;message1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;dir1;uid1;ts1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;v1;ts2;type1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b'
+        );
         await messageEventHandler(msg, {});
 
         expect(globals.logger.verbose).toHaveBeenCalled();
@@ -111,35 +119,45 @@ describe('messageEventHandler', () => {
     });
 
     test('should process proxy event', async () => {
-        const msg = Buffer.from('/qseow-proxy/;1;20211109T153726.028+0200;2021-11-09 15:37:26,028;WARN;host1;sub1;user1;message1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;dir1;uid1;ts1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;v1;ts2;type1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b');
+        const msg = Buffer.from(
+            '/qseow-proxy/;1;20211109T153726.028+0200;2021-11-09 15:37:26,028;WARN;host1;sub1;user1;message1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;dir1;uid1;ts1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;v1;ts2;type1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b'
+        );
         await messageEventHandler(msg, {});
 
         expect(globals.logger.verbose).toHaveBeenCalled();
     });
 
     test('should process repository event', async () => {
-        const msg = Buffer.from('/qseow-repository/;1;20211109T153726.028+0200;2021-11-09 15:37:26,028;WARN;host1;sub1;user1;message1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;dir1;uid1;ts1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;v1;ts2;type1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b');
+        const msg = Buffer.from(
+            '/qseow-repository/;1;20211109T153726.028+0200;2021-11-09 15:37:26,028;WARN;host1;sub1;user1;message1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;dir1;uid1;ts1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;v1;ts2;type1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b'
+        );
         await messageEventHandler(msg, {});
 
         expect(globals.logger.verbose).toHaveBeenCalled();
     });
 
     test('should process scheduler event', async () => {
-        const msg = Buffer.from('/qseow-scheduler/;1;20211109T153726.028+0200;2021-11-09 15:37:26,028;WARN;host1;sub1;user1;message1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;dir1;uid1;ts1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;v1;ts2;type1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b');
+        const msg = Buffer.from(
+            '/qseow-scheduler/;1;20211109T153726.028+0200;2021-11-09 15:37:26,028;WARN;host1;sub1;user1;message1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;dir1;uid1;ts1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;v1;ts2;type1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b'
+        );
         await messageEventHandler(msg, {});
 
         expect(globals.logger.verbose).toHaveBeenCalled();
     });
 
     test('should process qix-perf event', async () => {
-        const msg = Buffer.from('/qseow-qix-perf/;1;20211109T153726.028+0200;2021-11-09 15:37:26,028;WARN;host1;sub1;user1;0;dir1;uid1;ts1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;uuid4;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;method1;100;100;100;100;100;1;obj1;100;100;type1');
+        const msg = Buffer.from(
+            '/qseow-qix-perf/;1;20211109T153726.028+0200;2021-11-09 15:37:26,028;WARN;host1;sub1;user1;0;dir1;uid1;ts1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;uuid4;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;method1;100;100;100;100;100;1;obj1;100;100;type1'
+        );
         await messageEventHandler(msg, {});
 
         expect(globals.logger.verbose).toHaveBeenCalled();
     });
 
     test('should process qix-perf event with user activity', async () => {
-        const msg = Buffer.from('/qseow-qix-perf/;1;20211109T153726.028+0200;2021-11-09 15:37:26,028;WARN;host1;sub1;user1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;dir1;uid1;ts1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;uuid4;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;method1;100;100;100;100;100;1;obj1;100;100;type1');
+        const msg = Buffer.from(
+            '/qseow-qix-perf/;1;20211109T153726.028+0200;2021-11-09 15:37:26,028;WARN;host1;sub1;user1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;dir1;uid1;ts1;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;uuid4;3b3b3b3b-3b3b-3b3b-3b3b-3b3b3b3b3b3b;method1;100;100;100;100;100;1;obj1;100;100;type1'
+        );
         await messageEventHandler(msg, {});
 
         expect(globals.logger.debug).toHaveBeenCalledWith(expect.stringContaining('user activity'));
@@ -152,26 +170,36 @@ describe('messageEventHandler', () => {
             return true;
         });
 
-        const msg = Buffer.from('/qseow-qix-perf/;1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;23;24;25');
+        const msg = Buffer.from(
+            '/qseow-qix-perf/;1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;23;24;25'
+        );
         await messageEventHandler(msg, {});
 
-        expect(globals.logger.debug).toHaveBeenCalledWith(expect.stringContaining('disabled in the configuration'));
+        expect(globals.logger.debug).toHaveBeenCalledWith(
+            expect.stringContaining('disabled in the configuration')
+        );
     });
 
     test('should skip qix-perf event if filters do not match', async () => {
         globals.config.get.mockImplementation((path) => {
             if (path === 'Butler-SOS.logEvents.enginePerformanceMonitor.enable') return true;
-            if (path === 'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.enable') return true;
-            if (path === 'Butler-SOS.logEvents.enginePerformanceMonitor.monitorFilter') return { appSpecific: { enable: true }, allApps: { enable: true } };
+            if (path === 'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.enable')
+                return true;
+            if (path === 'Butler-SOS.logEvents.enginePerformanceMonitor.monitorFilter')
+                return { appSpecific: { enable: true }, allApps: { enable: true } };
             return true;
         });
         processAppSpecificFilters.mockReturnValue(false);
         processAllAppsFilters.mockReturnValue(false);
 
-        const msg = Buffer.from('/qseow-qix-perf/;1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;23;24;25');
+        const msg = Buffer.from(
+            '/qseow-qix-perf/;1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;23;24;25'
+        );
         await messageEventHandler(msg, {});
 
-        expect(globals.logger.debug).toHaveBeenCalledWith(expect.stringContaining('does not match filters'));
+        expect(globals.logger.debug).toHaveBeenCalledWith(
+            expect.stringContaining('does not match filters')
+        );
         expect(globals.rejectedEvents.addRejectedLogEvent).toHaveBeenCalled();
     });
 
@@ -179,8 +207,12 @@ describe('messageEventHandler', () => {
         const msg = Buffer.from('/unknown/;1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18');
         await messageEventHandler(msg, {});
 
-        expect(globals.logger.warn).toHaveBeenCalledWith(expect.stringContaining('unrecognized log event'));
-        expect(globals.udpEvents.addLogEvent).toHaveBeenCalledWith(expect.objectContaining({ source: 'unknown' }));
+        expect(globals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('unrecognized log event')
+        );
+        expect(globals.udpEvents.addLogEvent).toHaveBeenCalledWith(
+            expect.objectContaining({ source: 'unknown' })
+        );
     });
 
     test('should handle disabled source', async () => {

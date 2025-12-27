@@ -508,9 +508,12 @@ describe('post-to-new-relic', () => {
             const tags = { host: 'server1.example.com' };
 
             globals.config.get.mockImplementation((path) => {
-                if (path === 'Butler-SOS.newRelic.metric.url') return 'https://metric-api.newrelic.com/metric/v1';
-                if (path === 'Butler-SOS.newRelic.metric.header') return [{ name: 'X-Custom', value: 'val' }];
-                if (path === 'Butler-SOS.userEvents.sendToNewRelic.destinationAccount') return ['account1'];
+                if (path === 'Butler-SOS.newRelic.metric.url')
+                    return 'https://metric-api.newrelic.com/metric/v1';
+                if (path === 'Butler-SOS.newRelic.metric.header')
+                    return [{ name: 'X-Custom', value: 'val' }];
+                if (path === 'Butler-SOS.userEvents.sendToNewRelic.destinationAccount')
+                    return ['account1'];
                 if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic')
                     return [{ accountName: 'account1', accountId: '12345', insertApiKey: 'key' }];
                 return undefined;
@@ -529,7 +532,7 @@ describe('post-to-new-relic', () => {
                 expect.any(String),
                 expect.any(Array),
                 expect.objectContaining({
-                    headers: expect.objectContaining({ 'X-Custom': 'val' })
+                    headers: expect.objectContaining({ 'X-Custom': 'val' }),
                 })
             );
         });
@@ -839,12 +842,16 @@ describe('post-to-new-relic', () => {
 
             globals.config.get.mockImplementation((path) => {
                 if (path === 'Butler-SOS.newRelic.event.url') return 'https://nr.com';
-                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.enable') return true;
-                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error') return true;
-                if (path === 'Butler-SOS.logEvents.sendToNewRelic.destinationAccount') return ['account1'];
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.enable')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.destinationAccount')
+                    return ['account1'];
                 if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic')
                     return [{ accountName: 'account1', accountId: '12345', insertApiKey: 'key' }];
-                if (path === 'Butler-SOS.newRelic.event.header') return [{ name: 'X-Log-Header', value: 'log-val' }];
+                if (path === 'Butler-SOS.newRelic.event.header')
+                    return [{ name: 'X-Log-Header', value: 'log-val' }];
                 if (path === 'Butler-SOS.logEvents.tags') return [];
                 if (path === 'Butler-SOS.newRelic.event.attribute.static') return [];
                 return undefined;
@@ -854,7 +861,8 @@ describe('post-to-new-relic', () => {
                 if (path === 'Butler-SOS.newRelic.event.header') return true;
                 if (path === 'Butler-SOS.logEvents.tags') return true;
                 if (path === 'Butler-SOS.newRelic.event.attribute.static') return true;
-                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error') return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
+                    return true;
                 return false;
             });
 
@@ -866,7 +874,7 @@ describe('post-to-new-relic', () => {
                 expect.any(String),
                 expect.any(Object),
                 expect.objectContaining({
-                    headers: expect.objectContaining({ 'X-Log-Header': 'log-val' })
+                    headers: expect.objectContaining({ 'X-Log-Header': 'log-val' }),
                 })
             );
         });
@@ -879,12 +887,16 @@ describe('post-to-new-relic', () => {
 
             globals.config.get.mockImplementation((path) => {
                 if (path === 'Butler-SOS.newRelic.event.url') return 'https://nr.com';
-                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.enable') return true;
-                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error') return true;
-                if (path === 'Butler-SOS.logEvents.sendToNewRelic.destinationAccount') return ['account1'];
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.enable')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.destinationAccount')
+                    return ['account1'];
                 if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic')
                     return [{ accountName: 'account1', accountId: '12345', insertApiKey: 'key' }];
-                if (path === 'Butler-SOS.newRelic.event.attribute.static') return [{ name: 'env', value: 'prod' }];
+                if (path === 'Butler-SOS.newRelic.event.attribute.static')
+                    return [{ name: 'env', value: 'prod' }];
                 if (path === 'Butler-SOS.logEvents.tags') return [{ name: 'tag1', value: 'val1' }];
                 return undefined;
             });
@@ -892,7 +904,8 @@ describe('post-to-new-relic', () => {
             globals.config.has.mockImplementation((path) => {
                 if (path === 'Butler-SOS.newRelic.event.attribute.static') return true;
                 if (path === 'Butler-SOS.logEvents.tags') return true;
-                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error') return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
+                    return true;
                 return false;
             });
 
@@ -904,7 +917,7 @@ describe('post-to-new-relic', () => {
                 expect.any(String),
                 expect.objectContaining({
                     env: 'prod',
-                    tag1: 'val1'
+                    tag1: 'val1',
                 }),
                 expect.any(Object)
             );
@@ -918,9 +931,12 @@ describe('post-to-new-relic', () => {
 
             globals.config.get.mockImplementation((path) => {
                 if (path === 'Butler-SOS.newRelic.event.url') return 'https://nr.com';
-                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.enable') return true;
-                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error') return true;
-                if (path === 'Butler-SOS.logEvents.sendToNewRelic.destinationAccount') return ['missing_account'];
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.enable')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.destinationAccount')
+                    return ['missing_account'];
                 if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic') return [];
                 if (path === 'Butler-SOS.logEvents.tags') return [];
                 if (path === 'Butler-SOS.newRelic.event.attribute.static') return [];
