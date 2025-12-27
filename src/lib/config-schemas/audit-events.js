@@ -69,6 +69,7 @@ export const auditEventsSchema = {
                                 type: 'object',
                                 properties: {
                                     database: { type: 'string' },
+                                    description: { type: 'string' },
                                     token: { type: 'string' },
                                     retentionDuration: { type: 'string' },
                                     writeTimeout: {
@@ -85,6 +86,7 @@ export const auditEventsSchema = {
                                 properties: {
                                     org: { type: 'string' },
                                     bucket: { type: 'string' },
+                                    description: { type: 'string' },
                                     token: { type: 'string' },
                                     retentionDuration: { type: 'string' },
                                 },
@@ -138,12 +140,14 @@ export const auditEventsSchema = {
                         allOf: [
                             {
                                 if: {
+                                    type: 'object',
                                     properties: {
                                         version: { const: 3 },
                                     },
                                     required: ['version'],
                                 },
                                 then: {
+                                    type: 'object',
                                     properties: {
                                         v3Config: { type: 'object' },
                                     },
@@ -155,6 +159,74 @@ export const auditEventsSchema = {
                 },
                 required: ['enable', 'type', 'influxdb'],
                 additionalProperties: false,
+                allOf: [
+                    {
+                        if: {
+                            type: 'object',
+                            properties: {
+                                enable: { const: true },
+                                influxdb: {
+                                    type: 'object',
+                                    properties: {
+                                        version: { const: 2 },
+                                    },
+                                    required: ['version'],
+                                },
+                            },
+                            required: ['enable', 'influxdb'],
+                        },
+                        then: {
+                            type: 'object',
+                            properties: {
+                                influxdb: {
+                                    type: 'object',
+                                    properties: {
+                                        v2Config: {
+                                            type: 'object',
+                                            properties: {
+                                                description: { type: 'string', minLength: 1 },
+                                            },
+                                            required: ['description'],
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    {
+                        if: {
+                            type: 'object',
+                            properties: {
+                                enable: { const: true },
+                                influxdb: {
+                                    type: 'object',
+                                    properties: {
+                                        version: { const: 3 },
+                                    },
+                                    required: ['version'],
+                                },
+                            },
+                            required: ['enable', 'influxdb'],
+                        },
+                        then: {
+                            type: 'object',
+                            properties: {
+                                influxdb: {
+                                    type: 'object',
+                                    properties: {
+                                        v3Config: {
+                                            type: 'object',
+                                            properties: {
+                                                description: { type: 'string', minLength: 1 },
+                                            },
+                                            required: ['description'],
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
             },
             tls: {
                 type: 'object',
@@ -170,12 +242,14 @@ export const auditEventsSchema = {
                 allOf: [
                     {
                         if: {
+                            type: 'object',
                             properties: {
                                 enable: { const: true },
                             },
                             required: ['enable'],
                         },
                         then: {
+                            type: 'object',
                             properties: {
                                 cert: { type: 'string', minLength: 1 },
                                 key: { type: 'string', minLength: 1 },
@@ -294,12 +368,14 @@ export const auditEventsSchema = {
                         allOf: [
                             {
                                 if: {
+                                    type: 'object',
                                     properties: {
                                         mode: { const: 'qpsTicket' },
                                     },
                                     required: ['mode'],
                                 },
                                 then: {
+                                    type: 'object',
                                     properties: {
                                         qps: { type: 'object' },
                                     },

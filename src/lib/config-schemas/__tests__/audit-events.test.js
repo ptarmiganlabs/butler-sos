@@ -46,6 +46,7 @@ describe('auditEvents schema', () => {
                         v2Config: {
                             org: 'test-org',
                             bucket: 'test-bucket',
+                            description: 'Audit events bucket',
                             token: 'test-token',
                             retentionDuration: '0s',
                         },
@@ -145,6 +146,7 @@ describe('auditEvents schema', () => {
                         v2Config: {
                             org: 'test-org',
                             bucket: 'test-bucket',
+                            description: 'Audit events bucket',
                             token: 'test-token',
                             retentionDuration: '0s',
                         },
@@ -244,6 +246,7 @@ describe('auditEvents schema', () => {
                         staticTags: [],
                         v3Config: {
                             database: 'butler_audit',
+                            description: 'Audit events database',
                             token: 'test-token',
                             retentionDuration: '0s',
                             queryTimeout: 60000,
@@ -251,6 +254,7 @@ describe('auditEvents schema', () => {
                         v2Config: {
                             org: 'test-org',
                             bucket: 'test-bucket',
+                            description: 'Audit events bucket',
                             token: 'test-token',
                             retentionDuration: '0s',
                         },
@@ -464,6 +468,193 @@ describe('auditEvents schema', () => {
         const invalidConfig = {
             auditEvents: {
                 enable: true,
+            },
+        };
+
+        expect(validate(invalidConfig)).toBe(false);
+    });
+
+    test('should require audit v3Config.description when destination enabled and version=3', () => {
+        const ajv = new Ajv({ allErrors: true });
+        addFormats(ajv);
+        addKeywords(ajv);
+
+        const schema = {
+            type: 'object',
+            properties: { auditEvents: auditEventsSchema.auditEvents },
+            required: ['auditEvents'],
+            additionalProperties: false,
+        };
+
+        const validate = ajv.compile(schema);
+
+        const invalidConfig = {
+            auditEvents: {
+                enable: true,
+                host: '0.0.0.0',
+                port: 8181,
+                apiToken: 'test-token',
+                destination: {
+                    enable: true,
+                    type: 'influxdb',
+                    influxdb: {
+                        host: 'localhost',
+                        port: 8086,
+                        version: 3,
+                        maxBatchSize: 1000,
+                        writeFrequency: 20000,
+                        measurementName: 'audit_event',
+                        auditEventSchemaVersion: '1',
+                        staticTags: [],
+                        v3Config: {
+                            database: 'butler_audit',
+                            token: 'test-token',
+                            retentionDuration: '0s',
+                        },
+                        v2Config: {
+                            org: 'test-org',
+                            bucket: 'test-bucket',
+                            description: 'Audit events bucket',
+                            token: 'test-token',
+                            retentionDuration: '0s',
+                        },
+                        v1Config: {
+                            auth: {
+                                enable: false,
+                                username: '',
+                                password: '',
+                            },
+                            dbName: 'butler_audit',
+                            retentionPolicy: {
+                                name: 'autogen',
+                                duration: '0s',
+                            },
+                        },
+                    },
+                },
+                queue: {
+                    messageQueue: {
+                        maxConcurrent: 10,
+                        maxSize: 200,
+                        backpressureThreshold: 80,
+                    },
+                    rateLimit: {
+                        enable: false,
+                        maxMessagesPerMinute: 600,
+                    },
+                    queueMetrics: {
+                        influxdb: {
+                            enable: false,
+                            writeFrequency: 20000,
+                            measurementName: 'audit_events_queue',
+                            tags: [],
+                        },
+                    },
+                },
+                screenshots: {
+                    enable: false,
+                    downloadTimeoutMs: 15000,
+                    auth: {
+                        mode: 'none',
+                    },
+                    storageTargets: null,
+                },
+                cors: {
+                    allowedOrigins: ['https://qliksense.company.com'],
+                },
+            },
+        };
+
+        expect(validate(invalidConfig)).toBe(false);
+    });
+
+    test('should require audit v2Config.description when destination enabled and version=2', () => {
+        const ajv = new Ajv({ allErrors: true });
+        addFormats(ajv);
+        addKeywords(ajv);
+
+        const schema = {
+            type: 'object',
+            properties: { auditEvents: auditEventsSchema.auditEvents },
+            required: ['auditEvents'],
+            additionalProperties: false,
+        };
+
+        const validate = ajv.compile(schema);
+
+        const invalidConfig = {
+            auditEvents: {
+                enable: true,
+                host: '0.0.0.0',
+                port: 8181,
+                apiToken: 'test-token',
+                destination: {
+                    enable: true,
+                    type: 'influxdb',
+                    influxdb: {
+                        host: 'localhost',
+                        port: 8086,
+                        version: 2,
+                        maxBatchSize: 1000,
+                        writeFrequency: 20000,
+                        measurementName: 'audit_event',
+                        auditEventSchemaVersion: '1',
+                        staticTags: [],
+                        v3Config: {
+                            database: 'butler_audit',
+                            token: 'test-token',
+                            retentionDuration: '0s',
+                        },
+                        v2Config: {
+                            org: 'test-org',
+                            bucket: 'test-bucket',
+                            token: 'test-token',
+                            retentionDuration: '0s',
+                        },
+                        v1Config: {
+                            auth: {
+                                enable: false,
+                                username: '',
+                                password: '',
+                            },
+                            dbName: 'butler_audit',
+                            retentionPolicy: {
+                                name: 'autogen',
+                                duration: '0s',
+                            },
+                        },
+                    },
+                },
+                queue: {
+                    messageQueue: {
+                        maxConcurrent: 10,
+                        maxSize: 200,
+                        backpressureThreshold: 80,
+                    },
+                    rateLimit: {
+                        enable: false,
+                        maxMessagesPerMinute: 600,
+                    },
+                    queueMetrics: {
+                        influxdb: {
+                            enable: false,
+                            writeFrequency: 20000,
+                            measurementName: 'audit_events_queue',
+                            tags: [],
+                        },
+                    },
+                },
+                screenshots: {
+                    enable: false,
+                    downloadTimeoutMs: 15000,
+                    auth: {
+                        mode: 'none',
+                    },
+                    storageTargets: null,
+                },
+                cors: {
+                    allowedOrigins: ['https://qliksense.company.com'],
+                },
             },
         };
 

@@ -56,6 +56,7 @@ Butler-SOS:
                 # Settings for InfluxDB v3.x only, i.e. Butler-SOS.auditEvents.destination.influxdb.version=3
                 v3Config:
                     database: <database name>
+                    description: <database description>
                     token: <token>
                     retentionDuration: 0s
                     writeTimeout: 10000
@@ -64,6 +65,7 @@ Butler-SOS:
                 v2Config:
                     org: <org>
                     bucket: <bucket>
+                    description: <bucket description>
                     token: <token>
                     retentionDuration: 0s
 

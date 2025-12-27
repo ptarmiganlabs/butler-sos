@@ -44,7 +44,9 @@ function createConditionalSchema(parsedConfig, baseSchema) {
             },
             required: ['enable'],
             if: {
+                type: 'object',
                 properties: { enable: { const: true } },
+                required: ['enable'],
             },
             then: originalSchema,
             else: {

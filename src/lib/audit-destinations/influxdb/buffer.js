@@ -1,5 +1,6 @@
-import { Point } from '@influxdata/influxdb-client';
+import { Point, HttpError } from '@influxdata/influxdb-client';
 import { Point as Point3 } from '@influxdata/influxdb3-client';
+import { OrgsAPI, BucketsAPI } from '@influxdata/influxdb-client-apis';
 
 import globals from '../../../globals.js';
 import { writeToInfluxWithRetry } from '../../influxdb/shared/utils.js';
@@ -11,6 +12,100 @@ let auditInfluxBuffer = [];
 let flushTimer = null;
 let flushQueued = false;
 let configKey = null;
+let ensuredBucketKey = null;
+
+/**
+ * Ensure the audit InfluxDB v2 bucket exists.
+ * Mirrors the behavior used for metrics (create bucket on 404 and include description).
+ *
+ * @param {object} cfg Influx destination config.
+ * @param {unknown} client Influx v2 client.
+ * @returns {Promise<void>}
+ */
+async function ensureAuditInfluxBucketV2(cfg, client) {
+    const key = getConfigKey(cfg);
+    if (ensuredBucketKey === key) return;
+
+    const org = cfg?.v2Config?.org;
+    const bucketName = cfg?.v2Config?.bucket;
+    const description = cfg?.v2Config?.description;
+    const retentionDuration = cfg?.v2Config?.retentionDuration;
+
+    if (!org || !bucketName || !retentionDuration) {
+        throw new Error('Missing required audit InfluxDB v2 config (org/bucket/retentionDuration)');
+    }
+
+    let orgID;
+    try {
+        const orgsAPI = new OrgsAPI(client);
+        const organizations = await orgsAPI.getOrgs({ org });
+
+        if (!organizations || !organizations.orgs || !organizations.orgs.length) {
+            throw new Error(`No organization named "${org}" found`);
+        }
+
+        orgID = organizations.orgs[0].id;
+        globals.logger.verbose(
+            `AUDIT INFLUX V2: Using organization "${org}" identified by "${orgID}"`
+        );
+    } catch (err) {
+        throw new Error(`Failed to resolve audit InfluxDB v2 org: ${globals.getErrorMessage(err)}`);
+    }
+
+    try {
+        const bucketsAPI = new BucketsAPI(client);
+        try {
+            const buckets = await bucketsAPI.getBuckets({ orgID, name: bucketName });
+            if (buckets && buckets.buckets && buckets.buckets.length > 0) {
+                const bucketID = buckets.buckets[0].id;
+                globals.logger.verbose(
+                    `AUDIT INFLUX V2: Bucket named "${bucketName}" already exists, bucket ID="${bucketID}"`
+                );
+                ensuredBucketKey = key;
+                return;
+            }
+        } catch (e) {
+            if (e instanceof HttpError && e.statusCode === 404) {
+                globals.logger.info(
+                    `AUDIT INFLUX V2: Bucket named "${bucketName}" not found, creating it...`
+                );
+
+                await bucketsAPI.postBuckets({
+                    body: {
+                        orgID,
+                        name: bucketName,
+                        description,
+                        rp: retentionDuration,
+                    },
+                });
+
+                ensuredBucketKey = key;
+                return;
+            }
+            throw e;
+        }
+
+        // If we get here, getBuckets didn't error but also didn't return a bucket.
+        // Treat as non-existent and try to create.
+        globals.logger.info(
+            `AUDIT INFLUX V2: Bucket named "${bucketName}" not found, creating it...`
+        );
+        await bucketsAPI.postBuckets({
+            body: {
+                orgID,
+                name: bucketName,
+                description,
+                rp: retentionDuration,
+            },
+        });
+
+        ensuredBucketKey = key;
+    } catch (err) {
+        throw new Error(
+            `Failed to ensure audit InfluxDB v2 bucket: ${globals.getErrorMessage(err)}`
+        );
+    }
+}
 
 /**
  * Split an array into chunks.
@@ -360,6 +455,7 @@ async function writeBufferedPoints(pointsToWrite, cfg) {
     }
 
     if (cfg.version === 2) {
+        await ensureAuditInfluxBucketV2(cfg, clientInfo.client);
         await writeBatchV2(
             pointsToWrite,
             clientInfo.client,
