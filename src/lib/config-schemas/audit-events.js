@@ -333,6 +333,7 @@ export const auditEventsSchema = {
                             appId: { type: 'boolean', default: false },
                             appName: { type: 'boolean', default: false },
                             sheetName: { type: 'boolean', default: false },
+                            viewingDuration: { type: 'boolean', default: false },
                         },
                         additionalProperties: false,
                     },

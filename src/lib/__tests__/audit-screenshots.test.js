@@ -384,6 +384,73 @@ describe('audit-screenshots', () => {
         expect(logger.error).not.toHaveBeenCalled();
     });
 
+    test('adds viewing duration to metadata header when enabled', async () => {
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const logger = {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+        };
+
+        const srcPng = new PNG({ width: 20, height: 10 });
+        const srcBuffer = PNG.sync.write(srcPng);
+
+        mockAxios.request.mockResolvedValue({
+            status: 200,
+            headers: { 'content-type': 'image/png' },
+            data: srcBuffer,
+        });
+
+        await downloadScreenshot(
+            'https://example.com/screenshot.png',
+            {
+                timestamp: '2025-12-22T12:34:56.000Z',
+                eventId: 'evt-1',
+                correlationId: 'corr-1',
+                payload: {
+                    context: {
+                        user: 'LAB\\test-user',
+                    },
+                    event: {
+                        objectId: 'obj-1',
+                        screenshotUrl: 'https://example.com/screenshot.png',
+                        type: 'screenshot',
+                        format: 'png',
+                        width: 20,
+                        height: 10,
+                        duration: 5500, // 5.5 seconds
+                    },
+                },
+            },
+            {
+                enable: true,
+                downloadTimeoutMs: 15000,
+                addInImageMetadata: {
+                    viewingDuration: true,
+                },
+                storageTargets: [
+                    {
+                        enable: true,
+                        type: 'flat',
+                        directory: 'screenshots/audit',
+                    },
+                ],
+            },
+            logger
+        );
+
+        expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(2);
+
+        const secondWrittenBuffer = mockFsPromises.writeFile.mock.calls[1][1];
+        const outPng = PNG.sync.read(secondWrittenBuffer);
+
+        // The header should be present.
+        expect(outPng.height).toBeGreaterThan(srcPng.height);
+
+        expect(logger.error).not.toHaveBeenCalled();
+    });
+
     test('expands PNG width to fit long (capped) metadata values', async () => {
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 

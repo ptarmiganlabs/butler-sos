@@ -233,6 +233,7 @@ function extractAuditContext(envelope) {
         objectId: readString(eventObj, 'objectId'),
         objectName: readString(eventObj, 'objectName'),
         objectType: readString(eventObj, 'objectType'),
+        viewingDuration: readNumber(eventObj, 'duration'),
         screenshotFormat: readString(eventObj, 'format'),
         screenshotWidth: readNumber(eventObj, 'width'),
         screenshotHeight: readNumber(eventObj, 'height'),
@@ -255,6 +256,7 @@ function extractAuditContext(envelope) {
  * @property {string} [objectId] Object identifier.
  * @property {string} [objectName] Object name.
  * @property {string} [objectType] Object type.
+ * @property {number} [viewingDuration] Duration the object was in view (ms).
  * @property {string} [screenshotFormat] Screenshot format (e.g. png/jpg).
  * @property {number} [screenshotWidth] Screenshot width in pixels.
  * @property {number} [screenshotHeight] Screenshot height in pixels.
@@ -473,6 +475,12 @@ function buildScreenshotMetadataLines(envelope, auditCtx, flags) {
         lines.push({ key: 'APP NAME', value: safeMetadataValue(auditCtx?.appName) });
     if (flags.sheetName === true)
         lines.push({ key: 'SHEET NAME', value: safeMetadataValue(auditCtx?.sheetName) });
+
+    if (flags.viewingDuration === true) {
+        const durationMs = auditCtx?.viewingDuration;
+        const durationSec = typeof durationMs === 'number' ? (durationMs / 1000).toFixed(2) : 'n/a';
+        lines.push({ key: 'VIEWING DURATION (S)', value: durationSec });
+    }
 
     return lines;
 }

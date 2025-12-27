@@ -118,15 +118,15 @@ Butler-SOS:
             # Enabled fields are rendered as text into the image itself.
             # When date is enabled, both UTC and server-local time are shown.
             addInImageMetadata:
-                date: false
-                eventId: false
-                correlationId: false
-                selectionTxnId: false
-                # Full user identifier as provided by the audit event (often DOMAIN\\user).
-                userId: false
-                appId: false
-                appName: false
-                sheetName: false
+                date: false # Date and time when the screenshot was taken.
+                eventId: false # Unique event identifier.
+                correlationId: false # Correlation ID to link related events.
+                selectionTxnId: false # Selection transaction ID.
+                userId: false # Full user identifier as provided by the audit event (often DOMAIN\\user).
+                appId: false # App ID (GUID).
+                appName: false # App name.
+                sheetName: false # Sheet name.
+                viewingDuration: false # Duration the object was in view before the screenshot was taken (seconds).
             # Optional: authenticate screenshot downloads against Qlik Sense using a QPS ticket (mutual TLS).
             # Certificates are reused from Butler-SOS.cert.*
             # TLS server certificate verification is controlled via Butler-SOS.serversToMonitor.rejectUnauthorized.
