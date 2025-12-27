@@ -402,10 +402,258 @@ describe('config-file-schema', () => {
             const config = {
                 'Butler-SOS': {
                     logLevel,
-                    // Add minimal required properties for testing
                     fileLogging: true,
                     logDirectory: './log',
                     anonTelemetry: false,
+                    systemInfo: { enable: true },
+                    configVisualisation: {
+                        enable: false,
+                        host: 'localhost',
+                        port: 3000,
+                        obfuscate: false,
+                    },
+                    heartbeat: {
+                        enable: false,
+                        remoteURL: 'http://localhost:3001/ping',
+                        frequency: '60s',
+                    },
+                    dockerHealthCheck: { enable: false, port: 12398 },
+                    uptimeMonitor: {
+                        enable: false,
+                        frequency: '60s',
+                        logLevel: 'info',
+                        storeInInfluxdb: { butlerSOSMemoryUsage: false, instanceTag: 'DEV' },
+                        storeNewRelic: {
+                            enable: false,
+                            destinationAccount: [],
+                            metric: {
+                                dynamic: {
+                                    butlerMemoryUsage: { enable: false },
+                                    butlerUptime: { enable: false },
+                                },
+                            },
+                            attribute: {
+                                static: [],
+                                dynamic: { butlerVersion: { enable: false } },
+                            },
+                        },
+                    },
+                    thirdPartyToolsCredentials: { newRelic: [] },
+                    qlikSenseEvents: {
+                        influxdb: { enable: false, writeFrequency: 5000 },
+                        eventCount: {
+                            enable: false,
+                            influxdb: { measurementName: 'qlik_sense_events', tags: [] },
+                        },
+                        rejectedEventCount: {
+                            enable: false,
+                            influxdb: { measurementName: 'qlik_sense_events_rejected' },
+                        },
+                    },
+                    userEvents: {
+                        enable: false,
+                        excludeUser: [],
+                        udpServerConfig: {
+                            serverHost: 'localhost',
+                            portUserActivityEvents: 9999,
+                            messageQueue: {
+                                maxConcurrent: 10,
+                                maxSize: 200,
+                                backpressureThreshold: 80,
+                            },
+                            rateLimit: { enable: false, maxMessagesPerMinute: 600 },
+                            maxMessageSize: 65507,
+                            queueMetrics: {
+                                influxdb: {
+                                    enable: false,
+                                    writeFrequency: 20000,
+                                    measurementName: 'user_events_queue',
+                                    tags: [],
+                                },
+                            },
+                        },
+                        tags: null,
+                        sendToMQTT: {
+                            enable: false,
+                            postTo: {
+                                everythingTopic: { enable: false, topic: 'butlersos/user_events' },
+                                sessionStartTopic: {
+                                    enable: false,
+                                    topic: 'butlersos/session_start',
+                                },
+                                sessionStopTopic: {
+                                    enable: false,
+                                    topic: 'butlersos/session_stop',
+                                },
+                                connectionOpenTopic: {
+                                    enable: false,
+                                    topic: 'butlersos/connection_open',
+                                },
+                                connectionCloseTopic: {
+                                    enable: false,
+                                    topic: 'butlersos/connection_close',
+                                },
+                            },
+                        },
+                        sendToInfluxdb: { enable: false },
+                        sendToNewRelic: { enable: false, destinationAccount: [], scramble: false },
+                    },
+                    logEvents: {
+                        tags: null,
+                        categorise: {
+                            enable: false,
+                            rules: [],
+                            ruleDefault: { enable: false, category: null },
+                        },
+                        udpServerConfig: {
+                            serverHost: 'localhost',
+                            portLogEvents: 9998,
+                            messageQueue: {
+                                maxConcurrent: 10,
+                                maxSize: 200,
+                                backpressureThreshold: 80,
+                            },
+                            rateLimit: { enable: false, maxMessagesPerMinute: 600 },
+                            maxMessageSize: 65507,
+                            queueMetrics: {
+                                influxdb: {
+                                    enable: false,
+                                    writeFrequency: 20000,
+                                    measurementName: 'log_events_queue',
+                                    tags: [],
+                                },
+                            },
+                        },
+                        source: {
+                            engine: { enable: false },
+                            proxy: { enable: false },
+                            repository: { enable: false },
+                            scheduler: { enable: false },
+                            qixPerf: { enable: false },
+                        },
+                        enginePerformanceMonitor: {
+                            enable: false,
+                            appNameLookup: { enable: false },
+                            trackRejectedEvents: { enable: false, tags: [] },
+                            monitorFilter: {
+                                allApps: { enable: false, appExclude: [] },
+                                appSpecific: { enable: false, app: [] },
+                            },
+                        },
+                        sendToMQTT: {
+                            enable: false,
+                            baseTopic: 'butlersos/log_events',
+                            postTo: { baseTopic: false, subsystemTopics: false },
+                        },
+                        sendToInfluxdb: { enable: false },
+                        sendToNewRelic: {
+                            enable: false,
+                            destinationAccount: [],
+                            source: {
+                                engine: { enable: false, logLevel: { error: false, warn: false } },
+                                proxy: { enable: false, logLevel: { error: false, warn: false } },
+                                repository: {
+                                    enable: false,
+                                    logLevel: { error: false, warn: false },
+                                },
+                                scheduler: {
+                                    enable: false,
+                                    logLevel: { error: false, warn: false },
+                                },
+                            },
+                        },
+                    },
+                    cert: {
+                        clientCert: '/path/to/cert.pem',
+                        clientCertKey: '/path/to/key.pem',
+                        clientCertCA: '/path/to/ca.pem',
+                    },
+                    mqttConfig: {
+                        enable: false,
+                        brokerHost: 'localhost',
+                        brokerPort: 1883,
+                        baseTopic: 'butlersos',
+                    },
+                    newRelic: {
+                        enable: false,
+                        event: {
+                            url: 'https://insights-collector.newrelic.com/v1/accounts/YOUR_ACCOUNT_ID/events',
+                            header: null,
+                            attribute: {
+                                static: null,
+                                dynamic: { butlerSosVersion: { enable: false } },
+                            },
+                        },
+                        metric: {
+                            destinationAccount: null,
+                            url: 'https://metric-api.newrelic.com/metric/v1',
+                            header: null,
+                            dynamic: {
+                                engine: {
+                                    memory: { enable: false },
+                                    cpu: { enable: false },
+                                    calls: { enable: false },
+                                    selections: { enable: false },
+                                    sessions: { enable: false },
+                                    users: { enable: false },
+                                    saturated: { enable: false },
+                                },
+                                apps: {
+                                    docCount: { enable: false },
+                                    activeDocs: { enable: false },
+                                    loadedDocs: { enable: false },
+                                    inMemoryDocs: { enable: false },
+                                },
+                                cache: { cache: { enable: false } },
+                                proxy: { sessions: { enable: false } },
+                            },
+                            attribute: {
+                                static: null,
+                                dynamic: { butlerSosVersion: { enable: false } },
+                            },
+                        },
+                    },
+                    prometheus: { enable: false, port: 9842 },
+                    influxdbConfig: {
+                        enable: false,
+                        host: 'localhost',
+                        port: 8086,
+                        version: 2,
+                        maxBatchSize: 1000,
+                        v2Config: {
+                            org: 'myorg',
+                            bucket: 'mybucket',
+                            description: 'My bucket',
+                            token: 'mytoken',
+                            retentionDuration: '30d',
+                        },
+                        v1Config: {
+                            auth: { enable: false, username: 'user', password: 'pass' },
+                            dbName: 'mydb',
+                            retentionPolicy: { name: 'mypolicy', duration: '30d' },
+                        },
+                        includeFields: {
+                            activeDocs: false,
+                            loadedDocs: false,
+                            inMemoryDocs: false,
+                        },
+                    },
+                    appNames: {
+                        enableAppNameExtract: false,
+                        extractInterval: 21600000,
+                        hostIP: '127.0.0.1',
+                    },
+                    userSessions: {
+                        enableSessionExtract: false,
+                        pollingInterval: 60000,
+                        excludeUser: [],
+                    },
+                    serversToMonitor: {
+                        pollingInterval: 30000,
+                        rejectUnauthorized: true,
+                        serverTagsDefinition: [],
+                        servers: [],
+                    },
                 },
             };
 
@@ -416,8 +664,6 @@ describe('config-file-schema', () => {
                 console.error(`Failed for logLevel ${logLevel}:`, validate.errors);
             }
 
-            // Note: This will fail because other required properties are missing
-            // but we're specifically testing that logLevel validation passes
             const logLevelErrors = validate.errors?.filter(
                 (error) => error.instancePath === '/Butler-SOS/logLevel'
             );
@@ -432,6 +678,236 @@ describe('config-file-schema', () => {
                 fileLogging: true,
                 logDirectory: './log',
                 anonTelemetry: false,
+                systemInfo: { enable: true },
+                configVisualisation: {
+                    enable: false,
+                    host: 'localhost',
+                    port: 3000,
+                    obfuscate: false,
+                },
+                heartbeat: {
+                    enable: false,
+                    remoteURL: 'http://localhost:3001/ping',
+                    frequency: '60s',
+                },
+                dockerHealthCheck: { enable: false, port: 12398 },
+                uptimeMonitor: {
+                    enable: false,
+                    frequency: '60s',
+                    logLevel: 'info',
+                    storeInInfluxdb: { butlerSOSMemoryUsage: false, instanceTag: 'DEV' },
+                    storeNewRelic: {
+                        enable: false,
+                        destinationAccount: [],
+                        metric: {
+                            dynamic: {
+                                butlerMemoryUsage: { enable: false },
+                                butlerUptime: { enable: false },
+                            },
+                        },
+                        attribute: { static: [], dynamic: { butlerVersion: { enable: false } } },
+                    },
+                },
+                thirdPartyToolsCredentials: { newRelic: [] },
+                qlikSenseEvents: {
+                    influxdb: { enable: false, writeFrequency: 5000 },
+                    eventCount: {
+                        enable: false,
+                        influxdb: { measurementName: 'qlik_sense_events', tags: [] },
+                    },
+                    rejectedEventCount: {
+                        enable: false,
+                        influxdb: { measurementName: 'qlik_sense_events_rejected' },
+                    },
+                },
+                userEvents: {
+                    enable: false,
+                    excludeUser: [],
+                    udpServerConfig: {
+                        serverHost: 'localhost',
+                        portUserActivityEvents: 9999,
+                        messageQueue: {
+                            maxConcurrent: 10,
+                            maxSize: 200,
+                            backpressureThreshold: 80,
+                        },
+                        rateLimit: { enable: false, maxMessagesPerMinute: 600 },
+                        maxMessageSize: 65507,
+                        queueMetrics: {
+                            influxdb: {
+                                enable: false,
+                                writeFrequency: 20000,
+                                measurementName: 'user_events_queue',
+                                tags: [],
+                            },
+                        },
+                    },
+                    tags: null,
+                    sendToMQTT: {
+                        enable: false,
+                        postTo: {
+                            everythingTopic: { enable: false, topic: 'butlersos/user_events' },
+                            sessionStartTopic: { enable: false, topic: 'butlersos/session_start' },
+                            sessionStopTopic: { enable: false, topic: 'butlersos/session_stop' },
+                            connectionOpenTopic: {
+                                enable: false,
+                                topic: 'butlersos/connection_open',
+                            },
+                            connectionCloseTopic: {
+                                enable: false,
+                                topic: 'butlersos/connection_close',
+                            },
+                        },
+                    },
+                    sendToInfluxdb: { enable: false },
+                    sendToNewRelic: { enable: false, destinationAccount: [], scramble: false },
+                },
+                logEvents: {
+                    tags: null,
+                    categorise: {
+                        enable: false,
+                        rules: [],
+                        ruleDefault: { enable: false, category: null },
+                    },
+                    udpServerConfig: {
+                        serverHost: 'localhost',
+                        portLogEvents: 9998,
+                        messageQueue: {
+                            maxConcurrent: 10,
+                            maxSize: 200,
+                            backpressureThreshold: 80,
+                        },
+                        rateLimit: { enable: false, maxMessagesPerMinute: 600 },
+                        maxMessageSize: 65507,
+                        queueMetrics: {
+                            influxdb: {
+                                enable: false,
+                                writeFrequency: 20000,
+                                measurementName: 'log_events_queue',
+                                tags: [],
+                            },
+                        },
+                    },
+                    source: {
+                        engine: { enable: false },
+                        proxy: { enable: false },
+                        repository: { enable: false },
+                        scheduler: { enable: false },
+                        qixPerf: { enable: false },
+                    },
+                    enginePerformanceMonitor: {
+                        enable: false,
+                        appNameLookup: { enable: false },
+                        trackRejectedEvents: { enable: false, tags: [] },
+                        monitorFilter: {
+                            allApps: { enable: false, appExclude: [] },
+                            appSpecific: { enable: false, app: [] },
+                        },
+                    },
+                    sendToMQTT: {
+                        enable: false,
+                        baseTopic: 'butlersos/log_events',
+                        postTo: { baseTopic: false, subsystemTopics: false },
+                    },
+                    sendToInfluxdb: { enable: false },
+                    sendToNewRelic: {
+                        enable: false,
+                        destinationAccount: [],
+                        source: {
+                            engine: { enable: false, logLevel: { error: false, warn: false } },
+                            proxy: { enable: false, logLevel: { error: false, warn: false } },
+                            repository: { enable: false, logLevel: { error: false, warn: false } },
+                            scheduler: { enable: false, logLevel: { error: false, warn: false } },
+                        },
+                    },
+                },
+                cert: {
+                    clientCert: '/path/to/cert.pem',
+                    clientCertKey: '/path/to/key.pem',
+                    clientCertCA: '/path/to/ca.pem',
+                },
+                mqttConfig: {
+                    enable: false,
+                    brokerHost: 'localhost',
+                    brokerPort: 1883,
+                    baseTopic: 'butlersos',
+                },
+                newRelic: {
+                    enable: false,
+                    event: {
+                        url: 'https://insights-collector.newrelic.com/v1/accounts/YOUR_ACCOUNT_ID/events',
+                        header: null,
+                        attribute: {
+                            static: null,
+                            dynamic: { butlerSosVersion: { enable: false } },
+                        },
+                    },
+                    metric: {
+                        destinationAccount: null,
+                        url: 'https://metric-api.newrelic.com/metric/v1',
+                        header: null,
+                        dynamic: {
+                            engine: {
+                                memory: { enable: false },
+                                cpu: { enable: false },
+                                calls: { enable: false },
+                                selections: { enable: false },
+                                sessions: { enable: false },
+                                users: { enable: false },
+                                saturated: { enable: false },
+                            },
+                            apps: {
+                                docCount: { enable: false },
+                                activeDocs: { enable: false },
+                                loadedDocs: { enable: false },
+                                inMemoryDocs: { enable: false },
+                            },
+                            cache: { cache: { enable: false } },
+                            proxy: { sessions: { enable: false } },
+                        },
+                        attribute: {
+                            static: null,
+                            dynamic: { butlerSosVersion: { enable: false } },
+                        },
+                    },
+                },
+                prometheus: { enable: false, port: 9842 },
+                influxdbConfig: {
+                    enable: false,
+                    host: 'localhost',
+                    port: 8086,
+                    version: 2,
+                    maxBatchSize: 1000,
+                    v2Config: {
+                        org: 'myorg',
+                        bucket: 'mybucket',
+                        description: 'My bucket',
+                        token: 'mytoken',
+                        retentionDuration: '30d',
+                    },
+                    v1Config: {
+                        auth: { enable: false, username: 'user', password: 'pass' },
+                        dbName: 'mydb',
+                        retentionPolicy: { name: 'mypolicy', duration: '30d' },
+                    },
+                    includeFields: { activeDocs: false, loadedDocs: false, inMemoryDocs: false },
+                },
+                appNames: {
+                    enableAppNameExtract: false,
+                    extractInterval: 21600000,
+                    hostIP: '127.0.0.1',
+                },
+                userSessions: {
+                    enableSessionExtract: false,
+                    pollingInterval: 60000,
+                    excludeUser: [],
+                },
+                serversToMonitor: {
+                    pollingInterval: 30000,
+                    rejectUnauthorized: true,
+                    serverTagsDefinition: [],
+                    servers: [],
+                },
             },
         };
 
