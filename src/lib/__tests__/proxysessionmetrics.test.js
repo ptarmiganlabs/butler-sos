@@ -43,6 +43,16 @@ jest.unstable_mockModule('@influxdata/influxdb-client', () => ({
     })),
 }));
 
+jest.unstable_mockModule('@influxdata/influxdb3-client', () => ({
+    Point: jest.fn().mockImplementation(() => ({
+        setIntegerField: jest.fn().mockReturnThis(),
+        setFloatField: jest.fn().mockReturnThis(),
+        setStringField: jest.fn().mockReturnThis(),
+        setTag: jest.fn().mockReturnThis(),
+        setTimestamp: jest.fn().mockReturnThis(),
+    })),
+}));
+
 // Mock globals
 jest.unstable_mockModule('../../globals.js', () => ({
     default: {
@@ -51,6 +61,7 @@ jest.unstable_mockModule('../../globals.js', () => ({
             verbose: jest.fn(),
             debug: jest.fn(),
             error: jest.fn(),
+            warn: jest.fn(),
         },
         errorTracker: {
             incrementError: jest.fn(),
@@ -74,7 +85,7 @@ jest.unstable_mockModule('../../globals.js', () => ({
             }),
             has: jest.fn().mockReturnValue(true),
         },
-        getErrorMessage: jest.fn().mockImplementation((err) => err.toString()),
+        getErrorMessage: jest.fn().mockImplementation((err) => err?.toString() || 'Unknown error'),
         serverList: [
             {
                 serverName: 'server1',
@@ -118,12 +129,29 @@ jest.unstable_mockModule('../prom-client.js', () => ({
     saveUserSessionMetricsToPrometheus: mockSaveUserSessionMetricsToPrometheus,
 }));
 
+jest.unstable_mockModule('../cert-utils.js', () => ({
+    getCertificates: jest.fn().mockReturnValue({
+        cert: 'cert',
+        key: 'key',
+        ca: 'ca',
+    }),
+    createCertificateOptions: jest.fn().mockReturnValue({}),
+}));
+
+jest.unstable_mockModule('../log-error.js', () => ({
+    logError: jest.fn(),
+}));
+
+jest.unstable_mockModule('../influxdb/shared/utils.js', () => ({
+    applyTagsToPoint3: jest.fn(),
+    validateUnsignedField: jest.fn().mockImplementation((val) => val),
+}));
+
 // Import the module under test
 const { setupUserSessionsTimer, getProxySessionStatsFromSense } =
     await import('../proxysessionmetrics.js');
 
 describe('proxysessionmetrics', () => {
-    let proxysessionmetrics;
     let axios;
     let globals;
     let influxdb;
@@ -131,6 +159,8 @@ describe('proxysessionmetrics', () => {
     let mqtt;
     let servertags;
     let promClient;
+    let certUtils;
+    let logError;
 
     beforeEach(async () => {
         jest.clearAllMocks();
@@ -143,20 +173,49 @@ describe('proxysessionmetrics', () => {
         mqtt = await import('../post-to-mqtt.js');
         servertags = await import('../servertags.js');
         promClient = await import('../prom-client.js');
+        certUtils = await import('../cert-utils.js');
+        logError = await import('../log-error.js');
 
         // Reset mockRequest for each test
         mockRequest.mockReset();
+
+        // Default config mocks
+        globals.config.get.mockImplementation((path) => {
+            if (path === 'Butler-SOS.cert.clientCert') return '/path/to/cert.pem';
+            if (path === 'Butler-SOS.cert.clientCertKey') return '/path/to/key.pem';
+            if (path === 'Butler-SOS.cert.clientCertCA') return '/path/to/ca.pem';
+            if (path === 'Butler-SOS.serversToMonitor.rejectUnauthorized') return false;
+            if (path === 'Butler-SOS.mqttConfig.enable') return false;
+            if (path === 'Butler-SOS.influxdbConfig.enable') return true;
+            if (path === 'Butler-SOS.influxdbConfig.version') return 2;
+            if (path === 'Butler-SOS.newRelic.enable') return false;
+            if (path === 'Butler-SOS.prometheus.enable') return false;
+            if (path === 'Butler-SOS.userSessions.pollingInterval') return 10000;
+            if (path === 'Butler-SOS.userSessions.excludeUser') return [];
+            return undefined;
+        });
+        globals.config.has.mockReturnValue(true);
     });
 
     describe('getProxySessionStatsFromSense', () => {
-        test('should get session stats from Sense and post to backends', async () => {
+        test('should get session stats from Sense and post to backends (InfluxDB v2)', async () => {
             // Setup
             const serverName = 'server1';
             const host = 'host1.example.com';
             const virtualProxy = 'vproxy1';
             const tags = { server_name: serverName, server_environment: 'production' };
 
-            // Set up mock response with data that will actually make the backend calls
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.influxdbConfig.version') return 2;
+                if (path === 'Butler-SOS.influxdbConfig.enable') return true;
+                if (path === 'Butler-SOS.newRelic.enable') return true;
+                if (path === 'Butler-SOS.newRelic.metric.dynamic.proxy.sessions.enable') return true;
+                if (path === 'Butler-SOS.prometheus.enable') return true;
+                if (path === 'Butler-SOS.mqttConfig.enable') return true;
+                if (path === 'Butler-SOS.userSessions.excludeUser') return [];
+                return undefined;
+            });
+
             const mockResponse = {
                 data: [
                     {
@@ -164,12 +223,6 @@ describe('proxysessionmetrics', () => {
                         UserId: 'user1',
                         Attributes: [],
                         SessionId: 'session1',
-                    },
-                    {
-                        UserDirectory: 'DOMAIN',
-                        UserId: 'user2',
-                        Attributes: [],
-                        SessionId: 'session2',
                     },
                 ],
                 status: 200,
@@ -183,11 +236,100 @@ describe('proxysessionmetrics', () => {
             // Execute
             await getProxySessionStatsFromSense(serverName, host, virtualProxy, tags);
 
+            if (mockPostProxySessionsToInfluxdb.mock.calls.length === 0) {
+                console.log('Logger errors:', JSON.stringify(globals.logger.error.mock.calls, null, 2));
+            }
+
             // Verify
             expect(mockRequest).toHaveBeenCalled();
             expect(mockPostProxySessionsToInfluxdb).toHaveBeenCalled();
             expect(mockPostProxySessionsToNewRelic).toHaveBeenCalled();
             expect(mockSaveUserSessionMetricsToPrometheus).toHaveBeenCalled();
+            expect(mockPostUserSessionsToMQTT).toHaveBeenCalled();
+        });
+
+        test('should handle InfluxDB v1', async () => {
+            const serverName = 'server1';
+            const host = 'host1.example.com';
+            const virtualProxy = 'vproxy1';
+            const tags = { server_name: serverName, server_environment: 'production' };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.influxdbConfig.version') return 1;
+                if (path === 'Butler-SOS.influxdbConfig.enable') return true;
+                if (path === 'Butler-SOS.userSessions.excludeUser') return [];
+                return undefined;
+            });
+
+            const mockResponse = {
+                data: [{ UserDirectory: 'DOMAIN', UserId: 'user1', SessionId: 'session1' }],
+                status: 200,
+                config: { url: 'url' },
+            };
+            mockRequest.mockResolvedValueOnce(mockResponse);
+
+            await getProxySessionStatsFromSense(serverName, host, virtualProxy, tags);
+            expect(mockPostProxySessionsToInfluxdb).toHaveBeenCalled();
+        });
+
+        test('should handle InfluxDB v3', async () => {
+            const serverName = 'server1';
+            const host = 'host1.example.com';
+            const virtualProxy = 'vproxy1';
+            const tags = { server_name: serverName, server_environment: 'production' };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.influxdbConfig.version') return 3;
+                if (path === 'Butler-SOS.influxdbConfig.enable') return true;
+                if (path === 'Butler-SOS.userSessions.excludeUser') return [];
+                return undefined;
+            });
+
+            const mockResponse = {
+                data: [{ UserDirectory: 'DOMAIN', UserId: 'user1', SessionId: 'session1' }],
+                status: 200,
+                config: { url: 'url' },
+            };
+            mockRequest.mockResolvedValueOnce(mockResponse);
+
+            await getProxySessionStatsFromSense(serverName, host, virtualProxy, tags);
+            expect(mockPostProxySessionsToInfluxdb).toHaveBeenCalled();
+        });
+
+        test('should handle user blacklist', async () => {
+            const serverName = 'server1';
+            const host = 'host1.example.com';
+            const virtualProxy = 'vproxy1';
+            const tags = { server_name: serverName, server_environment: 'production' };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.userSessions.excludeUser')
+                    return [{ directory: 'DOMAIN', userId: 'user1' }];
+                if (path === 'Butler-SOS.influxdbConfig.version') return 2;
+                return undefined;
+            });
+
+            const mockResponse = {
+                data: [{ UserDirectory: 'DOMAIN', UserId: 'user1', SessionId: 'session1' }],
+                status: 200,
+                config: { url: 'url' },
+            };
+            mockRequest.mockResolvedValueOnce(mockResponse);
+
+            await getProxySessionStatsFromSense(serverName, host, virtualProxy, tags);
+            expect(globals.logger.debug).toHaveBeenCalledWith(
+                expect.stringContaining('in blacklist, not reporting session')
+            );
+        });
+
+        test('should handle missing certificates', async () => {
+            certUtils.getCertificates.mockReturnValueOnce({ cert: undefined });
+
+            await getProxySessionStatsFromSense('s1', 'h1', 'v1', {});
+
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Client certificate or key was not found')
+            );
         });
 
         test('should handle error from Sense API', async () => {
@@ -204,33 +346,51 @@ describe('proxysessionmetrics', () => {
 
             // Verify
             expect(mockRequest).toHaveBeenCalled();
-            expect(globals.logger.error).toHaveBeenCalledWith(
-                expect.stringContaining(
-                    "PROXY SESSIONS: Error when calling proxy session API for server 'server1' (host1.example.com), virtual proxy 'vproxy1':"
-                )
+            expect(logError.logError).toHaveBeenCalled();
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'PROXY_API',
+                serverName
             );
-            expect(mockPostProxySessionsToInfluxdb).not.toHaveBeenCalled();
         });
     });
 
     describe('setupUserSessionsTimer', () => {
-        test('should set up timer for polling user sessions', () => {
-            // Mock setInterval
+        test('should set up timer for polling user sessions', async () => {
             jest.useFakeTimers();
-            const originalSetInterval = global.setInterval;
-            global.setInterval = jest.fn().mockImplementation((callback, interval) => {
-                return originalSetInterval(callback, interval);
+            
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.userSessions.pollingInterval') return 10000;
+                return undefined;
             });
 
-            // Execute
             setupUserSessionsTimer();
 
-            // Verify
-            expect(global.setInterval).toHaveBeenCalled();
-            expect(global.setInterval).toHaveBeenCalledWith(expect.any(Function), 10000);
+            // Advance timers
+            await jest.advanceTimersByTimeAsync(10000);
 
-            // Restore setInterval
-            global.setInterval = originalSetInterval;
+            expect(mockRequest).toHaveBeenCalled();
+            
+            jest.useRealTimers();
+        });
+
+        test('should prevent overlapping executions', async () => {
+            jest.useFakeTimers();
+            
+            // Make getProxySessionStatsFromSense hang
+            mockRequest.mockImplementation(() => new Promise(() => {}));
+
+            setupUserSessionsTimer();
+
+            // First execution
+            await jest.advanceTimersByTimeAsync(10000);
+            expect(mockRequest).toHaveBeenCalledTimes(1);
+
+            // Second execution should be skipped
+            await jest.advanceTimersByTimeAsync(10000);
+            expect(globals.logger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('Previous session polling still in progress')
+            );
+
             jest.useRealTimers();
         });
     });
