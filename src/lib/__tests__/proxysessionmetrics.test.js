@@ -209,7 +209,8 @@ describe('proxysessionmetrics', () => {
                 if (path === 'Butler-SOS.influxdbConfig.version') return 2;
                 if (path === 'Butler-SOS.influxdbConfig.enable') return true;
                 if (path === 'Butler-SOS.newRelic.enable') return true;
-                if (path === 'Butler-SOS.newRelic.metric.dynamic.proxy.sessions.enable') return true;
+                if (path === 'Butler-SOS.newRelic.metric.dynamic.proxy.sessions.enable')
+                    return true;
                 if (path === 'Butler-SOS.prometheus.enable') return true;
                 if (path === 'Butler-SOS.mqttConfig.enable') return true;
                 if (path === 'Butler-SOS.userSessions.excludeUser') return [];
@@ -237,7 +238,10 @@ describe('proxysessionmetrics', () => {
             await getProxySessionStatsFromSense(serverName, host, virtualProxy, tags);
 
             if (mockPostProxySessionsToInfluxdb.mock.calls.length === 0) {
-                console.log('Logger errors:', JSON.stringify(globals.logger.error.mock.calls, null, 2));
+                console.log(
+                    'Logger errors:',
+                    JSON.stringify(globals.logger.error.mock.calls, null, 2)
+                );
             }
 
             // Verify
@@ -357,7 +361,7 @@ describe('proxysessionmetrics', () => {
     describe('setupUserSessionsTimer', () => {
         test('should set up timer for polling user sessions', async () => {
             jest.useFakeTimers();
-            
+
             globals.config.get.mockImplementation((path) => {
                 if (path === 'Butler-SOS.userSessions.pollingInterval') return 10000;
                 return undefined;
@@ -369,13 +373,13 @@ describe('proxysessionmetrics', () => {
             await jest.advanceTimersByTimeAsync(10000);
 
             expect(mockRequest).toHaveBeenCalled();
-            
+
             jest.useRealTimers();
         });
 
         test('should prevent overlapping executions', async () => {
             jest.useFakeTimers();
-            
+
             // Make getProxySessionStatsFromSense hang
             mockRequest.mockImplementation(() => new Promise(() => {}));
 

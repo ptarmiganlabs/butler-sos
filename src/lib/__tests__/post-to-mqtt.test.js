@@ -29,13 +29,14 @@ jest.unstable_mockModule('../log-error.js', () => ({
 }));
 
 // Import the module under test
-const { postHealthToMQTT, postUserSessionsToMQTT, postUserEventToMQTT } =
+const { postHealthToMQTT, postUserSessionsToMQTT, postUserEventToMQTT, postLogEventToMQTT } =
     await import('../post-to-mqtt.js');
 
 describe('post-to-mqtt', () => {
     beforeEach(() => {
         // Reset all mocks before each test
         jest.clearAllMocks();
+        globals.mqttClient.publish.mockImplementation(() => {});
         // Setup default config values
         globals.config.get.mockImplementation((path) => {
             if (path === 'Butler-SOS.mqttConfig.baseTopic') {
@@ -533,6 +534,73 @@ describe('post-to-mqtt', () => {
                 expect.stringContaining('USER EVENT MQTT: Failed posting message to MQTT'),
                 expect.any(Error)
             );
+        });
+    });
+
+    describe('postLogEventToMQTT', () => {
+        test('should publish log event to MQTT topics', async () => {
+            const msg = {
+                source: 'qseow-engine',
+                level: 'ERROR',
+                message: 'Test message',
+                subsystem: 'Engine.Common',
+            };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.logEvents.sendToMQTT.baseTopic') return 'butler-sos/log';
+                if (path === 'Butler-SOS.logEvents.tags') return [{ name: 'tag1', value: 'val1' }];
+                if (path === 'Butler-SOS.logEvents.sendToMQTT.postTo.baseTopic') return true;
+                if (path === 'Butler-SOS.logEvents.sendToMQTT.postTo.subsystemTopics') return true;
+                return null;
+            });
+
+            globals.config.has.mockImplementation((path) => {
+                if (path === 'Butler-SOS.logEvents.tags') return true;
+                return false;
+            });
+
+            await postLogEventToMQTT(msg);
+
+            // Should be called twice: once for base topic, once for subsystem topic
+            expect(globals.mqttClient.publish).toHaveBeenCalledTimes(2);
+            expect(globals.mqttClient.publish).toHaveBeenCalledWith('butler-sos/log', expect.any(String));
+            expect(globals.mqttClient.publish).toHaveBeenCalledWith('butler-sos/log/engine/common', expect.any(String));
+
+            const payload = JSON.parse(globals.mqttClient.publish.mock.calls[0][1]);
+            expect(payload.tags).toEqual({ tag1: 'val1' });
+        });
+
+        test('should handle baseTopic with trailing slash', async () => {
+            const msg = {
+                source: 'qseow-engine',
+                level: 'ERROR',
+                message: 'Test message',
+                subsystem: 'Engine.Common',
+            };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.logEvents.sendToMQTT.baseTopic') return 'butler-sos/log/';
+                if (path === 'Butler-SOS.logEvents.sendToMQTT.postTo.baseTopic') return false;
+                if (path === 'Butler-SOS.logEvents.sendToMQTT.postTo.subsystemTopics') return true;
+                return null;
+            });
+            globals.config.has.mockReturnValue(false);
+
+            await postLogEventToMQTT(msg);
+
+            expect(globals.mqttClient.publish).toHaveBeenCalledWith('butler-sos/log/engine/common', expect.any(String));
+        });
+
+        test('should handle errors', async () => {
+            const msg = { subsystem: 'test' };
+            globals.config.get.mockImplementation(() => {
+                throw new Error('Config error');
+            });
+
+            await postLogEventToMQTT(msg);
+
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith('MQTT_PUBLISH', '');
+            expect(mockLogError).toHaveBeenCalled();
         });
     });
 });

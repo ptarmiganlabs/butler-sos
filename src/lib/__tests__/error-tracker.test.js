@@ -61,7 +61,9 @@ describe('ErrorTracker', () => {
     test('resets counters when date changes', async () => {
         tracker.lastResetDate = '2000-01-01';
         await tracker.incrementError('API_1', 'Server_1');
-        expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringContaining('resetting counters'));
+        expect(mockLogger.debug).toHaveBeenCalledWith(
+            expect.stringContaining('resetting counters')
+        );
         const counts = await tracker.getErrorCounts();
         expect(counts).toHaveLength(1);
         expect(counts[0].count).toBe(1); // Reset then incremented
@@ -86,7 +88,9 @@ describe('ErrorTracker', () => {
     test('logErrorSummary logs summary if errors exist', async () => {
         await tracker.incrementError('API_1', 'Server_1');
         await tracker.logErrorSummary();
-        expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('ERROR TRACKER: Error counts today (UTC)'));
+        expect(mockLogger.info).toHaveBeenCalledWith(
+            expect.stringContaining('ERROR TRACKER: Error counts today (UTC)')
+        );
     });
 });
 
@@ -107,13 +111,15 @@ describe('setupErrorCounterReset', () => {
         globals.errorTracker = new ErrorTracker(mockLogger);
 
         setupErrorCounterReset();
-        expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('Scheduled next error counter reset'));
+        expect(mockLogger.info).toHaveBeenCalledWith(
+            expect.stringContaining('Scheduled next error counter reset')
+        );
 
         // Fast forward to midnight
         // We need to be careful here because the delay is calculated based on real time.
         // But since we use fake timers, we can just advance by a large enough amount.
         // Or better, we can mock Date to return a fixed time.
-        
+
         const now = new Date();
         const nextMidnight = new Date(now);
         nextMidnight.setUTCHours(24, 0, 0, 0);
@@ -125,6 +131,8 @@ describe('setupErrorCounterReset', () => {
         await Promise.resolve();
         await Promise.resolve();
 
-        expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('Midnight UTC reached'));
+        expect(mockLogger.info).toHaveBeenCalledWith(
+            expect.stringContaining('Midnight UTC reached')
+        );
     });
 });

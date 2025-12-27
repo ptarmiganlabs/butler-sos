@@ -281,7 +281,7 @@ describe('audit-events-api queue manager', () => {
                     event: {
                         selectionTxnId: 'txn-1',
                         details: [],
-                    }
+                    },
                 },
             },
         });
@@ -324,14 +324,16 @@ describe('audit-events-api queue manager', () => {
                     event: {
                         selectionTxnId: 'txn-1',
                         details: [],
-                    }
+                    },
                 },
             },
         });
 
         expect(res.statusCode).toBe(202);
         expect(mockGlobals.auditEventsQueueManager.handleRateLimitDrop).toHaveBeenCalled();
-        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(expect.stringContaining('Dropped audit event due to queue rate limit'));
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Dropped audit event due to queue rate limit')
+        );
     });
 
     test('logs warning when queue is full', async () => {
@@ -367,13 +369,15 @@ describe('audit-events-api queue manager', () => {
                     event: {
                         selectionTxnId: 'txn-1',
                         details: [],
-                    }
+                    },
                 },
             },
         });
 
         expect(res.statusCode).toBe(202);
-        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(expect.stringContaining('Dropped audit event due to full queue'));
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Dropped audit event due to full queue')
+        );
     });
 
     test('logs error when queue manager throws', async () => {
@@ -409,7 +413,7 @@ describe('audit-events-api queue manager', () => {
                     event: {
                         selectionTxnId: 'txn-1',
                         details: [],
-                    }
+                    },
                 },
             },
         });
@@ -456,7 +460,7 @@ describe('audit-events-api queue manager', () => {
                     event: {
                         selectionTxnId: 'txn-1',
                         details: [],
-                    }
+                    },
                 },
             },
         });
@@ -480,7 +484,9 @@ describe('setupAuditEventsApiServer', () => {
 
         await setupAuditEventsApiServer();
 
-        expect(mockGlobals.logger.info).toHaveBeenCalledWith('AUDIT API: Audit events API is disabled.');
+        expect(mockGlobals.logger.info).toHaveBeenCalledWith(
+            'AUDIT API: Audit events API is disabled.'
+        );
     });
 
     test('logs error when setup fails', async () => {

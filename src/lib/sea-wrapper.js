@@ -37,13 +37,9 @@ const seaWrapper = {
      * @returns {any} The asset content or undefined
      */
     getAsset(key, encoding) {
-        try {
-            // In actual SEA environments, this will be replaced by the real implementation
-            // For now, return undefined as fallback
-            return undefined;
-        } catch (error) {
-            return undefined;
-        }
+        // In actual SEA environments, this will be replaced by the real implementation
+        // For now, return undefined as fallback
+        return undefined;
     },
 
     /**

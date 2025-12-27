@@ -79,7 +79,7 @@ let instance = null;
  * @property {boolean} initialised - Flag to track initialization status of globals object.
  * @property {object} hostInfo - Information about the host system where Butler SOS is running.
  */
-class Settings {
+export class Settings {
     /**
      * Creates a new Settings instance or returns the existing singleton instance.
      * Implements the singleton pattern for global application settings.

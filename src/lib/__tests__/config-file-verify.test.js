@@ -98,7 +98,10 @@ describe('config-file-verify', () => {
 
             const result = await verifyAppConfig(mockCfg);
             expect(result).toBe(true); // It warns and sets default, doesn't return false
-            expect(mockCfg.set).toHaveBeenCalledWith('Butler-SOS.influxdbConfig.maxBatchSize', 1000);
+            expect(mockCfg.set).toHaveBeenCalledWith(
+                'Butler-SOS.influxdbConfig.maxBatchSize',
+                1000
+            );
         });
 
         test('validates telemetry vs system info', async () => {
@@ -119,9 +122,8 @@ describe('config-file-verify', () => {
                 if (key === 'Butler-SOS.anonTelemetry') return false;
                 if (key === 'Butler-SOS.systemInfo.enable') return false;
                 if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') return ['tag1'];
-                if (key === 'Butler-SOS.serversToMonitor.servers') return [
-                    { serverName: 'S1', serverTags: {} }
-                ];
+                if (key === 'Butler-SOS.serversToMonitor.servers')
+                    return [{ serverName: 'S1', serverTags: {} }];
                 return null;
             });
 
@@ -135,9 +137,8 @@ describe('config-file-verify', () => {
                 if (key === 'Butler-SOS.anonTelemetry') return false;
                 if (key === 'Butler-SOS.systemInfo.enable') return false;
                 if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') return ['tag1'];
-                if (key === 'Butler-SOS.serversToMonitor.servers') return [
-                    { serverName: 'S1', serverTags: { tag1: 'v1', tag2: 'v2' } }
-                ];
+                if (key === 'Butler-SOS.serversToMonitor.servers')
+                    return [{ serverName: 'S1', serverTags: { tag1: 'v1', tag2: 'v2' } }];
                 return null;
             });
 

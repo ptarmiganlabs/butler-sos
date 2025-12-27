@@ -590,8 +590,13 @@ export function bufferAuditInfluxEvent(envelope, extras = {}) {
     ensureFlushTimer(cfg);
 
     const model = buildAuditInfluxPointModel(envelope, extras);
+    if (!model) return;
+
     const point = buildPointForVersion(model, cfg.version);
-    if (!point) return;
+    if (!point) {
+        globals.logger.warn(`AUDIT INFLUX BUFFER: Unsupported InfluxDB version v${cfg.version}`);
+        return;
+    }
 
     auditInfluxBuffer.push(point);
 
@@ -608,6 +613,19 @@ export function bufferAuditInfluxEvent(envelope, extras = {}) {
     if (writeFrequency <= 0) {
         requestFlush('immediate');
     }
+}
+
+/**
+ * Internal state reset for testing.
+ *
+ * @returns {void}
+ */
+export function _resetState() {
+    auditInfluxBuffer = [];
+    stopFlushTimer();
+    flushQueued = false;
+    configKey = null;
+    ensuredBucketKey = null;
 }
 
 /**

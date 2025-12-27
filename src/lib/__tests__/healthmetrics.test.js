@@ -22,6 +22,7 @@ jest.unstable_mockModule('../../globals.js', () => ({
             error: jest.fn(),
             verbose: jest.fn(),
             debug: jest.fn(),
+            warn: jest.fn(),
         },
         errorTracker: {
             incrementError: jest.fn(),
@@ -65,15 +66,35 @@ jest.unstable_mockModule('../prom-client.js', () => ({
 }));
 const { saveHealthMetricsToPrometheus } = await import('../prom-client.js');
 
+jest.unstable_mockModule('../cert-utils.js', () => ({
+    getCertificates: jest.fn(),
+    createCertificateOptions: jest.fn(),
+}));
+const { getCertificates, createCertificateOptions } = await import('../cert-utils.js');
+
+jest.unstable_mockModule('../log-error.js', () => ({
+    logError: jest.fn(),
+}));
+const { logError } = await import('../log-error.js');
+
 // Import the module to test
-const { getHealthStatsFromSense } = await import('../healthmetrics.js');
+const { getHealthStatsFromSense, setupHealthMetricsTimer } = await import('../healthmetrics.js');
 
 describe('healthmetrics', () => {
     afterEach(() => {
         jest.clearAllMocks();
+        jest.useRealTimers();
     });
 
     test('should successfully get health metrics from Sense', async () => {
+        // Mock certificate utils
+        createCertificateOptions.mockReturnValue({ CertificatePassphrase: 'pass' });
+        getCertificates.mockReturnValue({
+            cert: 'CERT',
+            key: 'KEY',
+            ca: 'CA',
+        });
+
         // Mock configuration
         globals.config.get.mockImplementation((key) => {
             switch (key) {
@@ -179,6 +200,14 @@ describe('healthmetrics', () => {
     });
 
     test('should handle HTTP errors when getting health stats', async () => {
+        // Mock certificate utils
+        createCertificateOptions.mockReturnValue({});
+        getCertificates.mockReturnValue({
+            cert: 'CERT',
+            key: 'KEY',
+            ca: 'CA',
+        });
+
         // Mock configuration
         globals.config.get.mockImplementation((key) => {
             switch (key) {
@@ -223,10 +252,11 @@ describe('healthmetrics', () => {
 
         // Expectations
         expect(axios.request).toHaveBeenCalled();
-        expect(globals.logger.error).toHaveBeenCalledWith(
+        expect(logError).toHaveBeenCalledWith(
             expect.stringContaining(
-                "HEALTH: Error when calling health check API for server 'server1' (server1.example.com):"
-            )
+                "HEALTH: Error when calling health check API for server 'server1' (server1.example.com)"
+            ),
+            expect.any(Error)
         );
 
         // Verify that no metrics were posted
@@ -234,5 +264,179 @@ describe('healthmetrics', () => {
         expect(postHealthMetricsToNewRelic).not.toHaveBeenCalled();
         expect(postHealthToMQTT).not.toHaveBeenCalled();
         expect(saveHealthMetricsToPrometheus).not.toHaveBeenCalled();
+    });
+
+    test('should handle missing certificates', async () => {
+        // Mock certificate utils to return missing certs
+        createCertificateOptions.mockReturnValue({});
+        getCertificates.mockReturnValue({
+            cert: undefined,
+            key: 'KEY',
+            ca: 'CA',
+        });
+
+        // Call the function
+        await getHealthStatsFromSense('server1', 'host1', {}, {});
+
+        // Expectations
+        expect(globals.logger.error).toHaveBeenCalledWith('HEALTH: Client certificate or key was not found');
+    });
+
+    test('should handle non-200 response code', async () => {
+        // Mock certificate utils
+        createCertificateOptions.mockReturnValue({});
+        getCertificates.mockReturnValue({
+            cert: 'CERT',
+            key: 'KEY',
+            ca: 'CA',
+        });
+
+        // Mock axios to return 404
+        axios.request = jest.fn().mockResolvedValue({
+            status: 404,
+        });
+
+        // Call the function
+        await getHealthStatsFromSense('server1', 'host1', { host: 'host1' }, {});
+
+        // Expectations
+        expect(globals.logger.error).toHaveBeenCalledWith(
+            expect.stringContaining('HEALTH: Received non-200 response code (404)')
+        );
+    });
+
+    test('should setup health metrics timer and collect stats', async () => {
+        jest.useFakeTimers();
+
+        // Mock configuration
+        globals.config.get.mockImplementation((key) => {
+            if (key === 'Butler-SOS.serversToMonitor.pollingInterval') return 1000;
+            return undefined;
+        });
+
+        // Mock server list
+        globals.serverList = [
+            {
+                serverName: 'server1',
+                host: 'host1',
+            },
+        ];
+
+        // Mock tags and headers
+        getServerTags.mockReturnValue({ host: 'host1' });
+        getServerHeaders.mockReturnValue({});
+
+        // Mock axios to succeed
+        axios.request = jest.fn().mockResolvedValue({
+            status: 200,
+            data: {},
+        });
+
+        // Start the timer
+        setupHealthMetricsTimer();
+
+        // Fast-forward time
+        jest.advanceTimersByTime(1000);
+
+        // Allow async interval callback to run
+        await jest.runOnlyPendingTimersAsync();
+
+        // Expectations
+        expect(globals.logger.verbose).toHaveBeenCalledWith('HEALTH: Event started: Statistics collection');
+        expect(globals.logger.verbose).toHaveBeenCalledWith('HEALTH: Getting stats for server: server1');
+        expect(axios.request).toHaveBeenCalled();
+    });
+
+    test('should skip collection if previous one is still in progress', async () => {
+        jest.useFakeTimers();
+
+        // Mock configuration
+        globals.config.get.mockImplementation((key) => {
+            if (key === 'Butler-SOS.serversToMonitor.pollingInterval') return 1000;
+            return undefined;
+        });
+
+        // Mock server list with a slow server
+        globals.serverList = [
+            {
+                serverName: 'server1',
+                host: 'host1',
+            },
+        ];
+
+        // Mock axios to be slow
+        let resolveAxios;
+        const axiosPromise = new Promise((resolve) => {
+            resolveAxios = resolve;
+        });
+        axios.request = jest.fn().mockReturnValue(axiosPromise);
+
+        // Start the timer
+        setupHealthMetricsTimer();
+
+        // First interval
+        jest.advanceTimersByTime(1000);
+        // We don't await runOnlyPendingTimersAsync here because it would wait for axiosPromise
+        // Instead we just let the interval callback start
+        await Promise.resolve(); 
+        await Promise.resolve();
+
+        expect(globals.logger.verbose).toHaveBeenCalledWith('HEALTH: Event started: Statistics collection');
+
+        // Second interval while first is still running
+        jest.advanceTimersByTime(1000);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(globals.logger.warn).toHaveBeenCalledWith(
+            'HEALTH: Previous health check collection still in progress, skipping this interval'
+        );
+
+        // Resolve first one
+        resolveAxios({ status: 200, data: {} });
+        await Promise.resolve();
+        await Promise.resolve();
+
+        // Third interval should now run
+        jest.advanceTimersByTime(1000);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(globals.logger.verbose).toHaveBeenCalledWith('HEALTH: Event started: Statistics collection');
+    });
+
+    test('should handle errors in the server loop', async () => {
+        jest.useFakeTimers();
+
+        // Mock configuration
+        globals.config.get.mockImplementation((key) => {
+            if (key === 'Butler-SOS.serversToMonitor.pollingInterval') return 1000;
+            return undefined;
+        });
+
+        // Mock server list
+        globals.serverList = [
+            {
+                serverName: 'server1',
+                host: 'host1',
+            },
+        ];
+
+        // Mock getServerTags to throw
+        getServerTags.mockImplementation(() => {
+            throw new Error('Tags error');
+        });
+
+        // Start the timer
+        setupHealthMetricsTimer();
+
+        // Fast-forward time
+        jest.advanceTimersByTime(1000);
+        await jest.runOnlyPendingTimersAsync();
+
+        // Expectations
+        expect(globals.logger.error).toHaveBeenCalledWith(
+            expect.stringContaining("HEALTH: Unexpected error processing health stats for server 'server1'")
+        );
     });
 });
