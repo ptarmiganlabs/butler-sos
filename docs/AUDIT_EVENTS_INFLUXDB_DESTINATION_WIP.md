@@ -104,7 +104,54 @@ flowchart LR
 
 ### Extension “view duration” event
 
-- The extension already emits a duration metric on object visibility: envelope type `object.visibility.changed`, payload includes `payload.event.duration` (milliseconds) and `payload.event.objectId`.
+- The extension emits a duration metric when an audited object leaves the viewport: envelope type `object.view.duration`.
+- **Emission threshold:** The event is only sent when `durationMs >= 1000` (i.e. object was visible for at least 1 second). This reduces noise from fast scrolling or brief view changes.
+- Payload includes `payload.event.objectId` (Qlik object id).
+- Payload includes `payload.event.enteredAt` (ISO string, best effort; may be `null`).
+- Payload includes `payload.event.leftAt` (ISO string).
+- Payload includes `payload.event.duration` (milliseconds).
+- Payload includes `payload.event.visible=false` (this event represents leaving view).
+- Payload includes `payload.event.enterSelectionTxnId` and `payload.event.leaveSelectionTxnId` (best-effort snapshots).
+- `payload.event.selectionTxnId` is set to `leaveSelectionTxnId` when available, otherwise `enterSelectionTxnId` (used for correlationId/tagging).
+
+Example envelope (`object.view.duration`):
+
+```json
+{
+    "schemaVersion": 1,
+    "eventId": "9d8d66f6-9df8-4a8c-a4a6-5d0c6e0c1f9e",
+    "correlationId": "0346f48f-0abb-4786-b1ce-52f8672f6a1b",
+    "timestamp": "2025-12-27T05:46:40.337Z",
+    "type": "object.view.duration",
+    "source": {
+        "kind": "qlik-sense-extension",
+        "name": "butler-sos-audit"
+    },
+    "payload": {
+        "timestamp": "2025-12-27T05:46:40.337Z",
+        "context": {
+            "appId": "7d5f6e2a-1111-2222-3333-444444444444",
+            "appName": "Operations Dashboard",
+            "user": "ACME\\jane.doe",
+            "userAgent": "Mozilla/5.0 (...)",
+            "sheetId": "a1b2c3d4-e5f6-7890-abcd-ef0123456789",
+            "sheetName": "Overview"
+        },
+        "event": {
+            "type": "view.duration",
+            "objectId": "WpLRKj",
+            "enteredAt": "2025-12-27T05:46:20.337Z",
+            "leftAt": "2025-12-27T05:46:40.337Z",
+            "duration": 20000,
+            "visible": false,
+            "selectionTxnId": "0346f48f-0abb-4786-b1ce-52f8672f6a1b",
+            "enterSelectionTxnId": "0aa00000-0000-0000-0000-000000000000",
+            "leaveSelectionTxnId": "0346f48f-0abb-4786-b1ce-52f8672f6a1b",
+            "dataStateId": 1766814362573
+        }
+    }
+}
+```
 
 ## Configuration
 
@@ -173,15 +220,16 @@ Notes:
 ### Startup initialization (v1/v2 only)
 
 - When `auditEvents.enable=true` and `auditEvents.destination.enable=true`, Butler SOS will attempt to ensure the configured audit Influx target exists at startup:
-    - InfluxDB v1: create database + retention policy if missing.
-    - InfluxDB v2: create bucket if missing (uses `v2Config.description`).
+- When `auditEvents.enable=true` and `auditEvents.destination.enable=true`, Butler SOS will attempt to ensure the configured audit Influx target exists at startup (v1/v2 only).
+- InfluxDB v1: create database + retention policy if missing.
+- InfluxDB v2: create bucket if missing (uses `v2Config.description`).
 - InfluxDB v3 is **not** auto-created (same as metrics InfluxDB v3); you must create the database ahead of time.
 
 ### Required description fields
 
 - When `auditEvents.destination.enable=true`:
-    - InfluxDB v2 requires `v2Config.description`.
-    - InfluxDB v3 requires `v3Config.description`.
+- When `auditEvents.destination.enable=true`, InfluxDB v2 requires `v2Config.description`.
+- When `auditEvents.destination.enable=true`, InfluxDB v3 requires `v3Config.description`.
 
 ## Destination Concept
 
@@ -234,8 +282,12 @@ Common fields:
 
 Duration-related fields:
 
-- `durationMs` (payload.event.duration for `object.visibility.changed`)
-- `visible` (payload.event.visible for `object.visibility.changed`)
+- `durationMs` (payload.event.duration for `object.view.duration`)
+- `visible` (payload.event.visible for `object.view.duration`)
+- `enteredAt` (payload.event.enteredAt for `object.view.duration`, ISO string)
+- `leftAt` (payload.event.leftAt for `object.view.duration`, ISO string)
+- `enterSelectionTxnId` (payload.event.enterSelectionTxnId for `object.view.duration`)
+- `leaveSelectionTxnId` (payload.event.leaveSelectionTxnId for `object.view.duration`)
 
 Screenshot-related fields:
 

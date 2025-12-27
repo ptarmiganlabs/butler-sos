@@ -332,11 +332,34 @@ function createTypeHandlers(logger) {
         return undefined;
     }
 
+    /**
+     * Handles a view duration event (object was visible for a measured duration).
+     *
+     * @param {unknown} envelope - The received audit event envelope.
+     * @param {AuditRequestContext} requestContext - Minimal request context.
+     *
+     * @returns {Promise<object | undefined>} Optional metadata for downstream destinations.
+     */
+    async function handleObjectViewDuration(envelope, requestContext) {
+        const objectId = envelope?.payload?.event?.objectId;
+        const durationMs = envelope?.payload?.event?.duration;
+        const enteredAt = envelope?.payload?.event?.enteredAt;
+        const leftAt = envelope?.payload?.event?.leftAt;
+        const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
+        const enterSelectionTxnId = envelope?.payload?.event?.enterSelectionTxnId;
+        const leaveSelectionTxnId = envelope?.payload?.event?.leaveSelectionTxnId;
+
+        logger.info(
+            `AUDIT API: object.view.duration eventId=${envelope?.eventId} objectId=${objectId} durationMs=${durationMs} enteredAt=${enteredAt} leftAt=${leftAt} selectionTxnId=${selectionTxnId} enterSelectionTxnId=${enterSelectionTxnId} leaveSelectionTxnId=${leaveSelectionTxnId} ip=${requestContext.ip}`
+        );
+    }
+
     return {
         'selection.transaction.finalized': handleSelectionTransactionFinalized,
         'selection.state.changed': handleSelectionStateChanged,
         'app.model.validated': handleAppModelValidated,
         'screenshot.url.received': handleScreenshotUrlReceived,
+        'object.view.duration': handleObjectViewDuration,
     };
 }
 
@@ -442,6 +465,35 @@ function createPayloadValidators() {
         additionalProperties: true,
     };
 
+    /**
+     * Payload schema for object.view.duration.
+     *
+     * Expected shape: { event: { objectId: string, duration: number, leftAt: ISO string, enteredAt?: ISO string|null } }
+     */
+    const objectViewDurationPayloadSchema = {
+        type: 'object',
+        properties: {
+            event: {
+                type: 'object',
+                properties: {
+                    objectId: { type: 'string', minLength: 1 },
+                    duration: { type: 'number', minimum: 0 },
+                    enteredAt: { type: ['string', 'null'], format: 'date-time' },
+                    leftAt: { type: 'string', format: 'date-time' },
+                    visible: { type: ['boolean', 'null'] },
+                    selectionTxnId: { type: ['string', 'null'] },
+                    enterSelectionTxnId: { type: ['string', 'null'] },
+                    leaveSelectionTxnId: { type: ['string', 'null'] },
+                    dataStateId: { type: ['integer', 'null'] },
+                },
+                required: ['objectId', 'duration', 'leftAt'],
+                additionalProperties: true,
+            },
+        },
+        required: ['event'],
+        additionalProperties: true,
+    };
+
     return {
         validatePayloadByType: {
             'selection.transaction.finalized': ajv.compile(
@@ -450,6 +502,7 @@ function createPayloadValidators() {
             'selection.state.changed': ajv.compile(selectionStateChangedPayloadSchema),
             'app.model.validated': ajv.compile(appModelValidatedPayloadSchema),
             'screenshot.url.received': ajv.compile(screenshotUrlReceivedPayloadSchema),
+            'object.view.duration': ajv.compile(objectViewDurationPayloadSchema),
         },
     };
 }

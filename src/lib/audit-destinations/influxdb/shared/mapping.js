@@ -119,6 +119,19 @@ export function buildAuditInfluxPointModel(envelope, extras = {}) {
     const visible = readBoolean(event.visible);
     if (visible !== undefined) fields.visible = visible;
 
+    // Object view duration (ISO timestamps + txn id snapshots)
+    const enteredAt = readString(event.enteredAt);
+    if (enteredAt) fields.enteredAt = enteredAt;
+
+    const leftAt = readString(event.leftAt);
+    if (leftAt) fields.leftAt = leftAt;
+
+    const enterSelectionTxnId = readString(event.enterSelectionTxnId);
+    if (enterSelectionTxnId) fields.enterSelectionTxnId = enterSelectionTxnId;
+
+    const leaveSelectionTxnId = readString(event.leaveSelectionTxnId);
+    if (leaveSelectionTxnId) fields.leaveSelectionTxnId = leaveSelectionTxnId;
+
     // Screenshot URL
     const screenshotUrl = readString(event.screenshotUrl);
     if (screenshotUrl) fields.screenshotUrl = screenshotUrl;
