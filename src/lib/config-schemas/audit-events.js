@@ -18,7 +18,6 @@ export const auditEventsSchema = {
                     enable: { type: 'boolean', default: false },
                     type: {
                         type: 'string',
-                        enum: ['influxdb'],
                         default: 'influxdb',
                     },
                     influxdb: {
@@ -165,8 +164,40 @@ export const auditEventsSchema = {
                             },
                         ],
                     },
+                    parquet: {
+                        type: 'object',
+                        properties: {
+                            exportDirectory: { type: 'string' },
+                            maxBatchSize: {
+                                type: 'integer',
+                                default: 1000,
+                                minimum: 1,
+                                maximum: 10000,
+                            },
+                            writeFrequency: {
+                                type: 'number',
+                                default: 20000,
+                                minimum: 0,
+                            },
+                            staticTags: {
+                                type: ['array', 'null'],
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        name: { type: 'string' },
+                                        value: { type: 'string' },
+                                    },
+                                    required: ['name', 'value'],
+                                    additionalProperties: false,
+                                },
+                                default: null,
+                            },
+                        },
+                        required: ['exportDirectory', 'maxBatchSize', 'writeFrequency'],
+                        additionalProperties: false,
+                    },
                 },
-                required: ['enable', 'type', 'influxdb'],
+                required: ['enable', 'type'],
                 additionalProperties: false,
                 allOf: [
                     {

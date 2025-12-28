@@ -1,5 +1,6 @@
 import globals from '../../globals.js';
 import { writeAuditEventToInfluxdb } from './influxdb/index.js';
+import { writeAuditEventToParquet } from './parquet/index.js';
 
 /**
  * Write an audit event to all configured audit destinations.
@@ -20,15 +21,19 @@ export async function writeAuditEventToDestinations(envelope, extras = {}) {
         if (!destinationEnabled) return;
 
         const destinationType = globals.config.get('Butler-SOS.auditEvents.destination.type');
+        const destinations = destinationType.split(',').map((d) => d.trim().toLowerCase());
 
-        if (destinationType === 'influxdb') {
-            await writeAuditEventToInfluxdb(envelope, extras);
-            return;
+        for (const destination of destinations) {
+            if (destination === 'influxdb') {
+                await writeAuditEventToInfluxdb(envelope, extras);
+            } else if (destination === 'parquet') {
+                await writeAuditEventToParquet(envelope, extras);
+            } else {
+                globals.logger.warn(
+                    `AUDIT DESTINATION: Unknown destination type='${destination}'. Event not stored.`
+                );
+            }
         }
-
-        globals.logger.warn(
-            `AUDIT DESTINATION: Unknown destination type='${destinationType}'. Event not stored.`
-        );
     } catch (err) {
         globals.logger.error(
             `AUDIT DESTINATION: Error writing audit event to destination(s): ${globals.getErrorMessage(

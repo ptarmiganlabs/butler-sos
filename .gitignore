@@ -22,6 +22,7 @@ screenshots/audit/
 butler-sos
 src/config/production_vac.yaml
 tmp/
+audit-events/parquet/
 
 
 # Logs

@@ -26,7 +26,7 @@ Butler-SOS:
         # InfluxDB instance/version/database/bucket than other Butler SOS metrics.
         destination:
             enable: false # Set to true to store incoming audit events in one or more destinations.
-            type: influxdb # Future-proofing: additional destination types may be added later.
+            type: influxdb # Comma-delimited list of destinations. Valid values: influxdb, parquet.
             influxdb:
                 host: influxdb-v1
                 port: 8086
@@ -65,6 +65,14 @@ Butler-SOS:
                     retentionPolicy:
                         name: 10d
                         duration: 10d
+
+            parquet:
+                exportDirectory: audit-events/parquet # Directory where Parquet files will be stored.
+                maxBatchSize: 1000 # Flush immediately when this many audit events are buffered.
+                writeFrequency: 20000 # Flush buffered audit events this often (ms). Use 0 to write immediately per event.
+                staticTags: # Optional static tags added to all audit event points.
+                    - name: qs_env
+                      value: docker-v1
 
         # Optional: serve the audit events API over HTTPS.
         # This is required if the Qlik Sense client is served over HTTPS, otherwise browsers will block calls to an HTTP endpoint (mixed content).

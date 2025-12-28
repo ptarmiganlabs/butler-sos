@@ -40,7 +40,7 @@ Butler-SOS:
         # InfluxDB instance/version/database/bucket than other Butler SOS metrics.
         destination:
             enable: false # Set to true to store incoming audit events in one or more destinations.
-            type: influxdb # Future-proofing: additional destination types may be added later.
+            type: influxdb # Comma-delimited list of destinations. Valid values: influxdb, parquet.
             influxdb:
                 host: localhost
                 port: 8086
@@ -58,7 +58,7 @@ Butler-SOS:
                     database: <database name>
                     description: <database description>
                     token: <token>
-                    retentionDuration: 0s
+                    retentionDuration: 10d
                     writeTimeout: 10000
 
                 # Settings for InfluxDB v2.x only, i.e. Butler-SOS.auditEvents.destination.influxdb.version=2
@@ -67,7 +67,7 @@ Butler-SOS:
                     bucket: <bucket>
                     description: <bucket description>
                     token: <token>
-                    retentionDuration: 0s
+                    retentionDuration: 10d
 
                 # Settings below are for InfluxDB v1.x only, i.e. Butler-SOS.auditEvents.destination.influxdb.version=1
                 v1Config:
@@ -78,7 +78,15 @@ Butler-SOS:
                     dbName: <db name>
                     retentionPolicy:
                         name: <retention policy>
-                        duration: 0s
+                        duration: 10d
+
+            parquet:
+                exportDirectory: audit-events/parquet # Directory where Parquet files will be stored.
+                maxBatchSize: 1000 # Flush immediately when this many audit events are buffered.
+                writeFrequency: 20000 # Flush buffered audit events this often (ms). Use 0 to write immediately per event.
+                staticTags: # Optional static tags added to all audit event points.
+                    - name: qs_env
+                      value: dev
 
         # Optional: serve the audit events API over HTTPS.
         # This is required if the Qlik Sense client is served over HTTPS, otherwise browsers will block calls to an HTTP endpoint (mixed content).

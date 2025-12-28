@@ -67,6 +67,7 @@
         "fastify-metrics": "^12.1.0",
         "fs-extra": "^11.3.3",
         "handlebars": "^4.7.8",
+        "hyparquet-writer": "^0.11.2",
         "influx": "^5.11.0",
         "js-yaml": "^4.1.1",
         "lodash.clonedeep": "^4.5.0",
