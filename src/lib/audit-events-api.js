@@ -239,12 +239,18 @@ function createTypeHandlers(logger) {
     async function handleSelectionStateChanged(envelope, requestContext) {
         const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
         const details = envelope?.payload?.event?.details;
+        const selectionDetails = pickSelectionDetailsForLog(details);
+
         logger.info(
             `AUDIT API: selection.state.changed eventId=${envelope?.eventId} selectionTxnId=${selectionTxnId} details=${safeJsonForLog(
-                pickSelectionDetailsForLog(details),
+                selectionDetails,
                 20000
             )} ip=${requestContext.ip}`
         );
+
+        return {
+            selectionDetails,
+        };
     }
 
     /**
@@ -261,6 +267,10 @@ function createTypeHandlers(logger) {
         logger.info(
             `AUDIT API: app.model.validated eventId=${envelope?.eventId} selectionTxnId=${selectionTxnId} dataStateId=${dataStateId} ip=${requestContext.ip}`
         );
+
+        return {
+            dataStateId,
+        };
     }
 
     /**

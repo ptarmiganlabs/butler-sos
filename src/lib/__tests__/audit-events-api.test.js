@@ -229,6 +229,88 @@ describe('audit-events-api event types', () => {
         expect(res.statusCode).toBe(202);
         expect(downloadScreenshot).toHaveBeenCalled();
     });
+
+    test('handles selection.state.changed and passes selectionDetails to destinations', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { writeAuditEventToDestinations } = await import('../audit-destinations/index.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const payload = {
+            schemaVersion: 1,
+            eventId: 'evt-selection-1',
+            timestamp: '2025-01-01T00:00:00.000Z',
+            type: 'selection.state.changed',
+            payload: {
+                event: {
+                    selectionTxnId: 'txn-123',
+                    details: [
+                        { qField: 'Dim1', qSelectedCount: 1, qSelected: 'A', extra: 'ignored' },
+                    ],
+                },
+            },
+        };
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                authorization: 'Bearer secret',
+            },
+            payload,
+        });
+
+        expect(res.statusCode).toBe(202);
+        expect(writeAuditEventToDestinations).toHaveBeenCalledWith(
+            expect.objectContaining({ eventId: 'evt-selection-1' }),
+            expect.objectContaining({
+                selectionDetails: [{ qField: 'Dim1', qSelectedCount: 1, qSelected: 'A' }],
+            })
+        );
+    });
+
+    test('handles app.model.validated and passes dataStateId to destinations', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { writeAuditEventToDestinations } = await import('../audit-destinations/index.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const payload = {
+            schemaVersion: 1,
+            eventId: 'evt-validated-1',
+            timestamp: '2025-01-01T00:00:00.000Z',
+            type: 'app.model.validated',
+            payload: {
+                event: {
+                    selectionTxnId: 'txn-123',
+                    dataStateId: 1766865955336,
+                },
+            },
+        };
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                authorization: 'Bearer secret',
+            },
+            payload,
+        });
+
+        expect(res.statusCode).toBe(202);
+        expect(writeAuditEventToDestinations).toHaveBeenCalledWith(
+            expect.objectContaining({ eventId: 'evt-validated-1' }),
+            expect.objectContaining({
+                dataStateId: 1766865955336,
+            })
+        );
+    });
 });
 
 describe('audit-events-api queue manager', () => {

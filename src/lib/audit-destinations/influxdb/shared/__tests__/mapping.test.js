@@ -205,4 +205,50 @@ describe('audit-destinations/influxdb/shared/mapping', () => {
         const model = buildAuditInfluxPointModel(envelope, {});
         expect(model.fields.screenshotSavedPaths).toBeUndefined();
     });
+
+    test('maps dataStateId and selectionDetails from extras into fields', async () => {
+        const { buildAuditInfluxPointModel } = await import('../mapping.js');
+
+        const envelope = {
+            type: 'selection.state.changed',
+            eventId: 'evt-1',
+            timestamp: '2025-01-01T00:00:00.000Z',
+            payload: {
+                context: { appId: 'app-1' },
+                event: { selectionTxnId: 'txn-1' },
+            },
+        };
+
+        const selectionDetails = [{ qField: 'Dim1', qSelectedCount: 1, qSelected: 'A' }];
+        const extras = {
+            selectionDetails,
+            dataStateId: 123456789,
+        };
+
+        const model = buildAuditInfluxPointModel(envelope, extras);
+
+        expect(model.fields.dataStateId).toBe(123456789);
+        expect(model.fields.selectionDetails).toBe(JSON.stringify(selectionDetails));
+    });
+
+    test('maps dataStateId from envelope payload if present', async () => {
+        const { buildAuditInfluxPointModel } = await import('../mapping.js');
+
+        const envelope = {
+            type: 'app.model.validated',
+            eventId: 'evt-1',
+            timestamp: '2025-01-01T00:00:00.000Z',
+            payload: {
+                context: { appId: 'app-1' },
+                event: {
+                    selectionTxnId: 'txn-1',
+                    dataStateId: 987654321,
+                },
+            },
+        };
+
+        const model = buildAuditInfluxPointModel(envelope, {});
+
+        expect(model.fields.dataStateId).toBe(987654321);
+    });
 });

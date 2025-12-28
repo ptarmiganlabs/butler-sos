@@ -132,6 +132,16 @@ export function buildAuditInfluxPointModel(envelope, extras = {}) {
     const leaveSelectionTxnId = readString(event.leaveSelectionTxnId);
     if (leaveSelectionTxnId) fields.leaveSelectionTxnId = leaveSelectionTxnId;
 
+    // Data state ID (high-cardinality timestamp-based ID)
+    const dataStateId = readNumber(event.dataStateId) || readNumber(extras.dataStateId);
+    if (dataStateId !== undefined) fields.dataStateId = dataStateId;
+
+    // Selection details (JSON string)
+    const selectionDetails = extras.selectionDetails;
+    if (Array.isArray(selectionDetails) && selectionDetails.length > 0) {
+        fields.selectionDetails = JSON.stringify(selectionDetails);
+    }
+
     // Screenshot URL
     const screenshotUrl = readString(event.screenshotUrl);
     if (screenshotUrl) fields.screenshotUrl = screenshotUrl;
