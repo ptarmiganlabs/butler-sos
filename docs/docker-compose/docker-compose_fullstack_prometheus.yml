@@ -13,8 +13,7 @@ services:
             # Make config file and log files accessible outside of container
             - './config:/nodeapp/config'
             - './log:/nodeapp/log'
-            - './audit-events:/nodeapp/audit-events'
-        command: ['node', 'src/butler-sos.js', '-c', '/nodeapp/config/production_prometheus.yaml']
+            - './audit-events:/nodeapp/audit-events'            - "./audit-events-qvd:/nodeapp/audit-events/qvd"        command: ['node', 'src/butler-sos.js', '-c', '/nodeapp/config/production_prometheus.yaml']
         logging:
             driver: 'json-file'
             options:

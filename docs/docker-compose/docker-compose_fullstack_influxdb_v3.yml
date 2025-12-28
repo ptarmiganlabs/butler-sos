@@ -16,6 +16,7 @@ services:
             - './config:/nodeapp/config'
             - './test_data/v3/log:/nodeapp/log'
             - './test_data/v3/audit-events:/nodeapp/audit-events'
+            - './test_data/v3/audit-events-qvd:/nodeapp/audit-events/qvd'
         command: ['node', 'src/butler-sos.js', '-c', '/nodeapp/config/${BUTLER_SOS_CONFIG_FILE}']
         logging:
             driver: 'json-file'

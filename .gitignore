@@ -23,7 +23,7 @@ butler-sos
 src/config/production_vac.yaml
 tmp/
 audit-events/parquet/
-
+audit-events/qvd/
 
 # Logs
 log/

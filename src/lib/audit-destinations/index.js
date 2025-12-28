@@ -1,6 +1,7 @@
 import globals from '../../globals.js';
 import { writeAuditEventToInfluxdb } from './influxdb/index.js';
 import { writeAuditEventToParquet } from './parquet/index.js';
+import { writeAuditEventToQvd } from './qvd/index.js';
 
 /**
  * Write an audit event to all configured audit destinations.
@@ -28,6 +29,8 @@ export async function writeAuditEventToDestinations(envelope, extras = {}) {
                 await writeAuditEventToInfluxdb(envelope, extras);
             } else if (destination === 'parquet') {
                 await writeAuditEventToParquet(envelope, extras);
+            } else if (destination === 'qvd') {
+                await writeAuditEventToQvd(envelope, extras);
             } else {
                 globals.logger.warn(
                     `AUDIT DESTINATION: Unknown destination type='${destination}'. Event not stored.`

@@ -14,6 +14,7 @@ services:
             - './config:/nodeapp/config'
             - './test_data/v2/log:/nodeapp/log'
             - './test_data/v2/audit-events:/nodeapp/audit-events'
+            - './test_data/v2/audit-events-qvd:/nodeapp/audit-events/qvd'
         command: ['node', 'src/butler-sos.js', '-c', '/nodeapp/config/production_influxdb_v2.yaml']
         logging:
             driver: 'json-file'

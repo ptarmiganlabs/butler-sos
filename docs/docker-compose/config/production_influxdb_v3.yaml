@@ -26,7 +26,7 @@ Butler-SOS:
         # InfluxDB instance/version/database/bucket than other Butler SOS metrics.
         destination:
             enable: false # Set to true to store incoming audit events in one or more destinations.
-            type: influxdb # Comma-delimited list of destinations. Valid values: influxdb, parquet.
+            type: influxdb # Comma-delimited list of destinations. Valid values: influxdb, parquet, qvd.
             influxdb:
                 host: influxdb-v3-core
                 port: 8181
@@ -68,6 +68,14 @@ Butler-SOS:
 
             parquet:
                 exportDirectory: audit-events/parquet # Directory where Parquet files will be stored.
+                maxBatchSize: 1000 # Flush immediately when this many audit events are buffered.
+                writeFrequency: 20000 # Flush buffered audit events this often (ms). Use 0 to write immediately per event.
+                staticTags: # Optional static tags added to all audit event points.
+                    - name: qs_env
+                      value: docker-v3
+
+            qvd:
+                exportDirectory: audit-events/qvd # Directory where QVD files will be stored.
                 maxBatchSize: 1000 # Flush immediately when this many audit events are buffered.
                 writeFrequency: 20000 # Flush buffered audit events this often (ms). Use 0 to write immediately per event.
                 staticTags: # Optional static tags added to all audit event points.
