@@ -198,7 +198,7 @@ async function flushAuditQvdBuffer(reason) {
             r.objectId,
             r.selectionTxnId,
             r.durationMs !== null ? Number(r.durationMs) : null,
-            r.visible,
+            r.visible === null ? null : r.visible ? -1 : 0,
             r.enteredAt,
             r.leftAt,
             r.dataStateId !== null ? Number(r.dataStateId) : null,

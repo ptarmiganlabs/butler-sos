@@ -698,6 +698,26 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
         reply.code(202).send({ status: 'accepted', receivedAt: new Date().toISOString() });
     }
 
+    /**
+     * Fastify handler for the test connection endpoint.
+     *
+     * This endpoint is covered by the `auditEventAuthPreHandler` hook,
+     * so it requires a valid API token if one is configured.
+     *
+     * @param {import('fastify').FastifyRequest} request - Fastify request.
+     * @param {import('fastify').FastifyReply} reply - Fastify reply.
+     *
+     * @returns {Promise<void>} Resolves when the response is sent.
+     */
+    async function handleTestConnectionGet(request, reply) {
+        reply.code(200).send({
+            status: 'ok',
+            message: 'Butler SOS Audit API is reachable',
+            timestamp: new Date().toISOString(),
+        });
+    }
+
+    fastify.get('/api/v1/test-connection', handleTestConnectionGet);
     fastify.post('/api/v1/audit-event', { schema: getAuditEventSchema() }, handleAuditEventPost);
 }
 
