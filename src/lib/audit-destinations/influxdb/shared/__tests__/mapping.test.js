@@ -235,7 +235,7 @@ describe('audit-destinations/influxdb/shared/mapping', () => {
         const { buildAuditInfluxPointModel } = await import('../mapping.js');
 
         const envelope = {
-            type: 'app.model.validated',
+            type: 'app.validation.settled',
             eventId: 'evt-1',
             timestamp: '2025-01-01T00:00:00.000Z',
             payload: {

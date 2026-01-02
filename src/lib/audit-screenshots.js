@@ -479,7 +479,7 @@ function buildScreenshotMetadataLines(envelope, auditCtx, flags) {
     if (flags.viewingDuration === true) {
         const durationMs = auditCtx?.viewingDuration;
         const durationSec = typeof durationMs === 'number' ? (durationMs / 1000).toFixed(2) : 'n/a';
-        lines.push({ key: 'VIEWING DURATION (S)', value: durationSec });
+        lines.push({ key: 'VIEWING DURATION (s)', value: durationSec });
     }
 
     return lines;
