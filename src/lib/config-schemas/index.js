@@ -10,6 +10,7 @@ import { logEventsSchema } from './log-events.js';
 import { destinationsSchema } from './destinations.js';
 import { appSessionsSchema } from './app-sessions.js';
 import { serversSchema } from './servers.js';
+import { auditEventsSchema } from './audit-events.js';
 
 // Complete Butler-SOS configuration schema
 const configFileSchema = {
@@ -34,6 +35,9 @@ const configFileSchema = {
 
                 // Destination systems
                 ...destinationsSchema,
+
+                // Audit events API (from browser-based extension)
+                ...auditEventsSchema,
 
                 // Application and session management
                 ...appSessionsSchema,

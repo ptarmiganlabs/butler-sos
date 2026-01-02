@@ -140,6 +140,8 @@ export const monitoringServicesSchema = {
                         required: ['static', 'dynamic'],
                     },
                 },
+                required: ['enable', 'destinationAccount', 'metric', 'attribute'],
+                additionalProperties: false,
             },
         },
         required: ['enable', 'frequency', 'logLevel', 'storeInInfluxdb', 'storeNewRelic'],

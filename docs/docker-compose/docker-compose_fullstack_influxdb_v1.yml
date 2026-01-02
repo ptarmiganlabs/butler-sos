@@ -13,6 +13,8 @@ services:
             # Make config file and log files accessible outside of container
             - './config:/nodeapp/config'
             - './test_data/v1/log:/nodeapp/log'
+            - './test_data/v1/audit-events:/nodeapp/audit-events'
+            - './test_data/v1/audit-events-qvd:/nodeapp/audit-events/qvd'
         command: ['node', 'src/butler-sos.js', '-c', '/nodeapp/config/production_influxdb_v1.yaml']
         logging:
             driver: 'json-file'

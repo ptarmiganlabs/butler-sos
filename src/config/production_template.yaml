@@ -26,6 +26,146 @@ Butler-SOS:
         port: 3100 # Port where the web server will listen. Change if port 3100 is already in use.
         obfuscate: true # Should the config file shown in the web UI be obfuscated?
 
+    # Audit events API
+    # Receives audit events from the Butler SOS audit extension running in the browser.
+    # Calls are authenticated using a simple bearer token (see apiToken), and CORS must be configured.
+    auditEvents:
+        enable: false
+        host: 0.0.0.0 # IP/FQDN to bind to. Use 0.0.0.0 to listen on all interfaces.
+        port: 8181
+        apiToken: '' # Recommended: set a strong token and configure the same token in the extension.
+
+        # Destination(s) for audit events.
+        # This is intentionally separate from Butler-SOS.influxdbConfig so audit data can be stored in a separate
+        # InfluxDB instance/version/database/bucket than other Butler SOS metrics.
+        destination:
+            enable: false # Set to true to store incoming audit events in one or more destinations.
+            type: influxdb # Comma-delimited list of destinations. Valid values: influxdb, parquet, qvd.
+            influxdb:
+                host: localhost
+                port: 8086
+                version: 2 # 1 | 2 | 3
+                maxBatchSize: 1000 # Flush immediately when this many audit events are buffered.
+                writeFrequency: 20000 # Flush buffered audit events this often (ms). Use 0 to write immediately per event.
+                measurementName: audit_event # Single measurement for all audit events.
+                auditEventSchemaVersion: '1' # Stored as tag auditEventSchemaVersion.
+                staticTags: # Optional static tags added to all audit event points.
+                    - name: qs_env
+                      value: dev
+
+                # Settings for InfluxDB v3.x only, i.e. Butler-SOS.auditEvents.destination.influxdb.version=3
+                v3Config:
+                    database: <database name>
+                    description: <database description>
+                    token: <token>
+                    retentionDuration: 10d
+                    writeTimeout: 10000
+
+                # Settings for InfluxDB v2.x only, i.e. Butler-SOS.auditEvents.destination.influxdb.version=2
+                v2Config:
+                    org: <org>
+                    bucket: <bucket>
+                    description: <bucket description>
+                    token: <token>
+                    retentionDuration: 10d
+
+                # Settings below are for InfluxDB v1.x only, i.e. Butler-SOS.auditEvents.destination.influxdb.version=1
+                v1Config:
+                    auth:
+                        enable: false
+                        username: <username>
+                        password: <password>
+                    dbName: <db name>
+                    retentionPolicy:
+                        name: <retention policy>
+                        duration: 10d
+
+            parquet:
+                exportDirectory: audit-events/parquet # Directory where Parquet files will be stored.
+                maxBatchSize: 1000 # Flush immediately when this many audit events are buffered.
+                writeFrequency: 20000 # Flush buffered audit events this often (ms). Use 0 to write immediately per event.
+                staticTags: # Optional static tags added to all audit event points.
+                    - name: qs_env
+                      value: dev
+
+            qvd:
+                exportDirectory: audit-events/qvd # Directory where QVD files will be stored.
+                maxBatchSize: 1000 # Flush immediately when this many audit events are buffered.
+                writeFrequency: 20000 # Flush buffered audit events this often (ms). Use 0 to write immediately per event.
+                staticTags: # Optional static tags added to all audit event points.
+                    - name: qs_env
+                      value: dev
+
+        # Optional: serve the audit events API over HTTPS.
+        # This is required if the Qlik Sense client is served over HTTPS, otherwise browsers will block calls to an HTTP endpoint (mixed content).
+        # Note: if you use a self-signed certificate, the browser must trust it (import into OS/browser trust store).
+        # There is no way for a client-side Qlik Sense extension to bypass TLS validation for fetch() calls.
+        tls:
+            enable: false
+            cert: <path/to/server.crt>
+            key: <path/to/server.key>
+            # ca: <path/to/ca.pem>
+            # passphrase: <optional key passphrase>
+        # Message queue settings for handling incoming HTTP audit events
+        queue:
+            messageQueue:
+                maxConcurrent: 10 # Max number of messages being processed simultaneously (default: 10)
+                maxSize: 200 # Max queue size before messages are dropped (default: 200)
+                backpressureThreshold: 80 # Warn when queue utilization reaches this % (default: 80)
+            # Rate limiting to prevent message flooding (in addition to HTTP rate limiting)
+            rateLimit:
+                enable: false # Enable rate limiting (default: false)
+                maxMessagesPerMinute: 600 # Max messages per minute, ~10/sec (default: 600)
+            # Queue metrics storage in InfluxDB
+            queueMetrics:
+                influxdb:
+                    enable: false # Store queue metrics in InfluxDB (default: false)
+                    writeFrequency: 20000 # How often to write metrics, milliseconds (default: 20000)
+                    measurementName: audit_events_queue # InfluxDB measurement name (default: audit_events_queue)
+                    tags: # Optional tags added to queue metrics
+                        - name: qs_env
+                          value: dev
+        # Optional: download screenshots referenced by screenshot.url.received events.
+        # Multiple storage targets can be enabled at the same time.
+        screenshots:
+            enable: false
+            downloadTimeoutMs: 15000
+            # Optional: add a metadata header above downloaded PNG screenshots.
+            # Enabled fields are rendered as text into the image itself.
+            # When date is enabled, both UTC and server-local time are shown.
+            addInImageMetadata:
+                date: false # Date and time when the screenshot was taken.
+                eventId: false # Unique event identifier.
+                correlationId: false # Correlation ID to link related events.
+                selectionTxnId: false # Selection transaction ID.
+                userId: false # Full user identifier as provided by the audit event (often DOMAIN\\user).
+                appId: false # App ID (GUID).
+                appName: false # App name.
+                sheetName: false # Sheet name.
+                viewingDuration: false # Duration the object was in view before the screenshot was taken (seconds).
+            # Optional: authenticate screenshot downloads against Qlik Sense using a QPS ticket (mutual TLS).
+            # Certificates are reused from Butler-SOS.cert.*
+            # TLS server certificate verification is controlled via Butler-SOS.serversToMonitor.rejectUnauthorized.
+            auth:
+                mode: none # none | qpsTicket
+                qps:
+                    host: <Qlik Sense host/IP>
+                    port: 4243
+                    userDirectory: <User directory>
+                    userId: <User id>
+                    ticketTimeoutMs: 5000
+            storageTargets:
+                - enable: true
+                  type: flat
+                  directory: screenshots/audit
+        cors:
+            allowedOrigins:
+                # - https://qliksense.company.com
+                # - https://qlikcloud.com
+                # Note: browsers send an unauthenticated OPTIONS preflight before the real POST.
+                # If that OPTIONS request is blocked, the browser will block the POST due to CORS.
+                - '*'
+
     # Heartbeats can be used to send "I'm alive" messages to some other tool, e.g. an infrastructure monitoring tool
     # The concept is simple: The remoteURL will be called at the specified frequency. The receiving tool will then know
     # that Butler SOS is alive.

@@ -170,6 +170,19 @@ jobs:
           github.repository_owner == 'ptarmiganlabs'
         run: echo ${{ steps.docker_build.outputs.digest }}
 
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        if: |
+          github.event_name != 'pull_request' &&
+          github.repository_owner == 'ptarmiganlabs'
+        with:
+          image-ref: '${{ github.repository }}:${{ env.TAG }}'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
       # - name: Send job status to MQTT when done
       #   uses: potaesm/github-actions-mqtt-request@1.0.0
       #   if: always()

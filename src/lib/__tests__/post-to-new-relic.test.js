@@ -499,6 +499,44 @@ describe('post-to-new-relic', () => {
             );
         });
 
+        test('should post health metrics with custom headers', async () => {
+            const host = 'server1.example.com';
+            const body = {
+                started: '20240101T120000',
+                apps: { active_docs: [], loaded_docs: [], in_memory_docs: [] },
+            };
+            const tags = { host: 'server1.example.com' };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.newRelic.metric.url')
+                    return 'https://metric-api.newrelic.com/metric/v1';
+                if (path === 'Butler-SOS.newRelic.metric.header')
+                    return [{ name: 'X-Custom', value: 'val' }];
+                if (path === 'Butler-SOS.userEvents.sendToNewRelic.destinationAccount')
+                    return ['account1'];
+                if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic')
+                    return [{ accountName: 'account1', accountId: '12345', insertApiKey: 'key' }];
+                return undefined;
+            });
+
+            globals.config.has.mockImplementation((path) => {
+                if (path === 'Butler-SOS.newRelic.metric.header') return true;
+                return false;
+            });
+
+            axios.post.mockResolvedValue({ status: 200 });
+
+            await newRelic.postHealthMetricsToNewRelic(host, body, tags);
+
+            expect(axios.post).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.any(Array),
+                expect.objectContaining({
+                    headers: expect.objectContaining({ 'X-Custom': 'val' }),
+                })
+            );
+        });
+
         test('should handle errors gracefully', async () => {
             const host = 'server1.example.com';
             const body = {
@@ -753,6 +791,173 @@ describe('post-to-new-relic', () => {
     });
 
     describe('postLogEventToNewRelic', () => {
+        test('should post log event successfully', async () => {
+            const logEvent = {
+                source: 'qseow-engine',
+                level: 'ERROR',
+                host: 'server1.example.com',
+            };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.newRelic.event.url')
+                    return 'https://insights-collector.newrelic.com';
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.enable')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.destinationAccount')
+                    return ['account1'];
+                if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic')
+                    return [
+                        {
+                            accountName: 'account1',
+                            accountId: '12345',
+                            insertApiKey: 'test-insert-key',
+                        },
+                    ];
+                return undefined;
+            });
+
+            globals.config.has.mockImplementation((path) => {
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
+                    return true;
+                return false;
+            });
+
+            axios.post.mockResolvedValue({ status: 200, statusText: 'OK' });
+
+            await newRelic.postLogEventToNewRelic(logEvent);
+
+            expect(axios.post).toHaveBeenCalled();
+            expect(globals.logger.verbose).toHaveBeenCalledWith(
+                expect.stringContaining('Sent log event to New Relic account 12345')
+            );
+        });
+
+        test('should post log event with custom headers', async () => {
+            const logEvent = {
+                source: 'qseow-engine',
+                level: 'ERROR',
+            };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.newRelic.event.url') return 'https://nr.com';
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.enable')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.destinationAccount')
+                    return ['account1'];
+                if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic')
+                    return [{ accountName: 'account1', accountId: '12345', insertApiKey: 'key' }];
+                if (path === 'Butler-SOS.newRelic.event.header')
+                    return [{ name: 'X-Log-Header', value: 'log-val' }];
+                if (path === 'Butler-SOS.logEvents.tags') return [];
+                if (path === 'Butler-SOS.newRelic.event.attribute.static') return [];
+                return undefined;
+            });
+
+            globals.config.has.mockImplementation((path) => {
+                if (path === 'Butler-SOS.newRelic.event.header') return true;
+                if (path === 'Butler-SOS.logEvents.tags') return true;
+                if (path === 'Butler-SOS.newRelic.event.attribute.static') return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
+                    return true;
+                return false;
+            });
+
+            axios.post.mockResolvedValue({ status: 200 });
+
+            await newRelic.postLogEventToNewRelic(logEvent);
+
+            expect(axios.post).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.any(Object),
+                expect.objectContaining({
+                    headers: expect.objectContaining({ 'X-Log-Header': 'log-val' }),
+                })
+            );
+        });
+
+        test('should post log event with static attributes', async () => {
+            const logEvent = {
+                source: 'qseow-engine',
+                level: 'ERROR',
+            };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.newRelic.event.url') return 'https://nr.com';
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.enable')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.destinationAccount')
+                    return ['account1'];
+                if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic')
+                    return [{ accountName: 'account1', accountId: '12345', insertApiKey: 'key' }];
+                if (path === 'Butler-SOS.newRelic.event.attribute.static')
+                    return [{ name: 'env', value: 'prod' }];
+                if (path === 'Butler-SOS.logEvents.tags') return [{ name: 'tag1', value: 'val1' }];
+                return undefined;
+            });
+
+            globals.config.has.mockImplementation((path) => {
+                if (path === 'Butler-SOS.newRelic.event.attribute.static') return true;
+                if (path === 'Butler-SOS.logEvents.tags') return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
+                    return true;
+                return false;
+            });
+
+            axios.post.mockResolvedValue({ status: 200 });
+
+            await newRelic.postLogEventToNewRelic(logEvent);
+
+            expect(axios.post).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({
+                    env: 'prod',
+                    tag1: 'val1',
+                }),
+                expect.any(Object)
+            );
+        });
+
+        test('should handle missing account config', async () => {
+            const logEvent = {
+                source: 'qseow-engine',
+                level: 'ERROR',
+            };
+
+            globals.config.get.mockImplementation((path) => {
+                if (path === 'Butler-SOS.newRelic.event.url') return 'https://nr.com';
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.enable')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
+                    return true;
+                if (path === 'Butler-SOS.logEvents.sendToNewRelic.destinationAccount')
+                    return ['missing_account'];
+                if (path === 'Butler-SOS.thirdPartyToolsCredentials.newRelic') return [];
+                if (path === 'Butler-SOS.logEvents.tags') return [];
+                if (path === 'Butler-SOS.newRelic.event.attribute.static') return [];
+                if (path === 'Butler-SOS.newRelic.event.header') return [];
+                return undefined;
+            });
+
+            globals.config.has.mockImplementation((path) => {
+                if (path === 'Butler-SOS.logEvents.tags') return true;
+                if (path === 'Butler-SOS.newRelic.event.attribute.static') return true;
+                if (path === 'Butler-SOS.newRelic.event.header') return true;
+                return true;
+            });
+
+            await newRelic.postLogEventToNewRelic(logEvent);
+
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('New Relic config "missing_account" does not exist')
+            );
+        });
+
         test('should handle log event posting errors', async () => {
             const logEvent = {
                 source: 'qseow-engine',
