@@ -4,10 +4,12 @@ import crypto from 'node:crypto';
 import https from 'node:https';
 import axios from 'axios';
 import { DateTime } from 'luxon';
+import setCookieParser from 'set-cookie-parser';
 
 import globals from '../globals.js';
 import { createCertificateOptions, getCertificates } from './cert-utils.js';
 import { addTextHeaderToPng } from './audit-screenshot-metadata-image.js';
+import { extractVirtualProxyFromSessionCookieName } from './util/qlik-session-utils.js';
 
 /**
  * Minimal logger interface used by this module.
@@ -161,6 +163,42 @@ async function requestQpsTicket(qps, logger) {
     }
 
     return ticket;
+}
+
+/**
+ * Deletes a Qlik Sense session.
+ *
+ * @param {object} qps QPS settings.
+ * @param {string} cookieName The name of the session cookie.
+ * @param {string} sessionId The session ID to delete.
+ * @param {Logger} logger Logger.
+ */
+async function deleteQpsSession(qps, cookieName, sessionId, logger) {
+    if (!sessionId || !cookieName) return;
+
+    try {
+        const xrfkey = generateXrfkey();
+        const httpsAgent = createQlikMutualTlsAgent();
+        const vp = extractVirtualProxyFromSessionCookieName(cookieName);
+
+        // Endpoint to delete a specific session: /qps/{vp}/session/{id}
+        const vpPath = vp ? `${vp}/` : '';
+        const url = `https://${qps.host}:${qps.port}/qps/${vpPath}session/${sessionId}?Xrfkey=${xrfkey}`;
+
+        await axios.request({
+            url,
+            method: 'delete',
+            headers: { 'X-Qlik-Xrfkey': xrfkey },
+            httpsAgent,
+            timeout: 5000,
+        });
+
+        logger.info(
+            `AUDIT API: Successfully deleted QPS session ${sessionId} for virtual proxy "${vp}"`
+        );
+    } catch (err) {
+        logger.warn(`AUDIT API: Failed to delete QPS session ${sessionId}: ${err.message}`);
+    }
 }
 
 /**
@@ -605,6 +643,7 @@ export async function downloadScreenshot(url, envelope, config, logger) {
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         let downloadUrl = url;
         let httpsAgent;
+        let sessionCookieHeader = null;
 
         try {
             if (authMode === 'qpsTicket') {
@@ -630,6 +669,20 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 maxRedirects: 5,
                 validateStatus: acceptAllHttpStatuses,
             });
+
+            // Extract session cookie immediately using set-cookie-parser for reliability.
+            // set-cookie-parser handles joined header strings and complex attributes.
+            const cookies = setCookieParser.parse(response, { decodeValues: false });
+            const sessionCookie = cookies.find((c) =>
+                c.name.toLowerCase().startsWith('x-qlik-session-')
+            );
+
+            if (sessionCookie) {
+                sessionCookieHeader = {
+                    name: sessionCookie.name,
+                    value: sessionCookie.value,
+                };
+            }
 
             const contentType = response.headers?.['content-type'] || null;
             const buffer = Buffer.from(response.data);
@@ -757,6 +810,15 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 )} url=${downloadUrl} (original=${url}) ${auditCtxStr}`
             );
             return null;
+        } finally {
+            if (sessionCookieHeader && authMode === 'qpsTicket') {
+                await deleteQpsSession(
+                    config.auth.qps,
+                    sessionCookieHeader.name,
+                    sessionCookieHeader.value,
+                    logger
+                );
+            }
         }
     }
 
