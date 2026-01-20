@@ -220,12 +220,12 @@ export function setupUdpQueueMetricsStorage() {
         intervalIds.auditEvents = setInterval(async () => {
             try {
                 globals.logger.verbose(
-                    'UDP QUEUE METRICS: Timer for storing audit event queue metrics to InfluxDB triggered'
+                    'AUDIT QUEUE METRICS: Timer for storing audit event queue metrics to InfluxDB triggered'
                 );
                 await postAuditEventQueueMetricsToInfluxdb();
             } catch (err) {
                 globals.logger.error(
-                    `UDP QUEUE METRICS: Error storing audit event queue metrics to InfluxDB: ${
+                    `AUDIT QUEUE METRICS: Error storing audit event queue metrics to InfluxDB: ${
                         err && err.stack ? err.stack : err
                     }`
                 );
@@ -233,11 +233,11 @@ export function setupUdpQueueMetricsStorage() {
         }, writeFrequency);
 
         globals.logger.info(
-            `UDP QUEUE METRICS: Set up timer for storing audit event queue metrics to InfluxDB (interval: ${writeFrequency} ms)`
+            `AUDIT QUEUE METRICS: Set up timer for storing audit event queue metrics to InfluxDB (interval: ${writeFrequency} ms)`
         );
     } else {
         globals.logger.info(
-            'UDP QUEUE METRICS: Audit event queue metrics storage to InfluxDB is disabled'
+            'AUDIT QUEUE METRICS: Audit event queue metrics storage to InfluxDB is disabled'
         );
     }
 
