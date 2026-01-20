@@ -343,6 +343,30 @@ function createTypeHandlers(logger) {
     }
 
     /**
+     * Handles an "unsupported visualization" warning emitted by the audit extension.
+     *
+     * This is used when the extension falls back to the default handler for a visualization
+     * type (for example box plots), which may lead to empty screenshots.
+     *
+     * @param {unknown} envelope - The received audit event envelope.
+     * @param {AuditRequestContext} requestContext - Minimal request context.
+     *
+     * @returns {Promise<void>}
+     */
+    async function handleUnsupportedVisualization(envelope, requestContext) {
+        const objectId = envelope?.payload?.event?.objectId;
+        const vizType = envelope?.payload?.event?.vizType;
+        const title = envelope?.payload?.event?.title;
+        const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
+        const dataStateId = envelope?.payload?.event?.dataStateId;
+        const trigger = envelope?.payload?.event?.trigger;
+
+        logger.warn(
+            `AUDIT API: event.unsupported.visualization eventId=${envelope?.eventId} objectId=${objectId} vizType=${vizType} title=${title} selectionTxnId=${selectionTxnId} dataStateId=${dataStateId} trigger=${trigger} ip=${requestContext.ip}`
+        );
+    }
+
+    /**
      * Handles a view duration event (object was visible for a measured duration).
      *
      * @param {unknown} envelope - The received audit event envelope.
@@ -369,6 +393,7 @@ function createTypeHandlers(logger) {
         'selection.state.changed': handleSelectionStateChanged,
         'app.model.validated': handleAppModelValidated,
         'screenshot.url.received': handleScreenshotUrlReceived,
+        'event.unsupported.visualization': handleUnsupportedVisualization,
         'object.view.duration': handleObjectViewDuration,
     };
 }
@@ -400,6 +425,32 @@ function createPayloadValidators() {
                     selectionTxnId: { type: 'string', minLength: 1 },
                 },
                 required: ['screenshotUrl', 'selectionTxnId'],
+                additionalProperties: true,
+            },
+        },
+        required: ['event'],
+        additionalProperties: true,
+    };
+
+    /**
+     * Payload schema for event.unsupported.visualization.
+     *
+     * Expected shape: { event: { objectId?: string, vizType: string, selectionTxnId: string } }
+     */
+    const unsupportedVisualizationPayloadSchema = {
+        type: 'object',
+        properties: {
+            event: {
+                type: 'object',
+                properties: {
+                    objectId: { type: ['string', 'null'] },
+                    vizType: { type: 'string', minLength: 1 },
+                    title: { type: ['string', 'null'] },
+                    trigger: { type: ['string', 'null'] },
+                    dataStateId: { type: ['number', 'string', 'null'] },
+                    selectionTxnId: { type: 'string', minLength: 1 },
+                },
+                required: ['vizType', 'selectionTxnId'],
                 additionalProperties: true,
             },
         },
@@ -512,6 +563,7 @@ function createPayloadValidators() {
             'selection.state.changed': ajv.compile(selectionStateChangedPayloadSchema),
             'app.model.validated': ajv.compile(appModelValidatedPayloadSchema),
             'screenshot.url.received': ajv.compile(screenshotUrlReceivedPayloadSchema),
+            'event.unsupported.visualization': ajv.compile(unsupportedVisualizationPayloadSchema),
             'object.view.duration': ajv.compile(objectViewDurationPayloadSchema),
         },
     };
