@@ -43,7 +43,7 @@ You are an expert code simplification specialist focused on enhancing code clari
 
 ## Your Mission
 
-Analyze recently modified code from the last 24 hours and apply refinements that improve code quality while preserving all functionality. Create a pull request with the simplified code if improvements are found.
+Analyze recently modified code from the last 14 days and apply refinements that improve code quality while preserving all functionality. Create a pull request with the simplified code if improvements are found.
 
 ## Current Context
 
@@ -55,35 +55,35 @@ Analyze recently modified code from the last 24 hours and apply refinements that
 
 ### 1.1 Find Recent Changes
 
-Search for merged pull requests and commits from the last 24 hours:
+Search for merged pull requests and commits from the last 14 days:
 
 ```bash
-# Get yesterday's date in ISO format
-YESTERDAY=$(date -d '1 day ago' '+%Y-%m-%d' 2>/dev/null || date -v-1d '+%Y-%m-%d')
+# Get the date 14 days ago in ISO format
+SINCE_DATE=$(date -d '14 days ago' '+%Y-%m-%d' 2>/dev/null || date -v-14d '+%Y-%m-%d')
 
 # List recent commits
-git log --since="24 hours ago" --pretty=format:"%H %s" --no-merges
+git log --since="14 days ago" --pretty=format:"%H %s" --no-merges
 ```
 
 Use GitHub tools to:
-- Search for pull requests merged in the last 24 hours: `repo:${{ github.repository }} is:pr is:merged merged:>=${YESTERDAY}`
+- Search for pull requests merged in the last 14 days: `repo:${{ github.repository }} is:pr is:merged merged:>=${SINCE_DATE}`
 - Get details of merged PRs to understand what files were changed
-- List commits from the last 24 hours to identify modified files
+- List commits from the last 14 days to identify modified files
 
 ### 1.2 Extract Changed Files
 
 For each merged PR or recent commit:
 - Use `pull_request_read` with `method: get_files` to list changed files
 - Use `get_commit` to see file changes in recent commits
-- Focus on source code files (`.go`, `.js`, `.ts`, `.tsx`, `.cjs`, `.py`, `.cs`, etc.)
+- Focus on source code files (`.js`, `.ts`, `.tsx`, `.cjs`, `.mjs`, etc.)
 - Exclude test files, lock files, and generated files
 
 ### 1.3 Determine Scope
 
-If **no files were changed in the last 24 hours**, exit gracefully without creating a PR:
+If **no files were changed in the last 14 days**, exit gracefully without creating a PR:
 
 ```
-✅ No code changes detected in the last 24 hours.
+✅ No code changes detected in the last 14 days.
 Code simplifier has nothing to process today.
 ```
 
@@ -95,10 +95,7 @@ If **files were changed**, proceed to Phase 2.
 
 Before simplifying, review the project's coding standards from relevant documentation:
 
-- For Go projects: Check `AGENTS.md`, `DEVGUIDE.md`, or similar files
 - For JavaScript/TypeScript: Look for `CLAUDE.md`, style guides, or coding conventions
-- For Python: Check for style guides, PEP 8 adherence, or project-specific conventions
-- For .NET/C#: Check `.editorconfig`, `Directory.Build.props`, or coding conventions in docs
 
 **Key Standards to Apply:**
 
@@ -109,27 +106,6 @@ For **JavaScript/TypeScript** projects:
 - Follow proper React component patterns with explicit Props types
 - Use proper error handling patterns (avoid try/catch when possible)
 - Maintain consistent naming conventions
-
-For **Go** projects:
-- Use `any` instead of `interface{}`
-- Follow console formatting for CLI output
-- Use semantic type aliases for domain concepts
-- Prefer small, focused files (200-500 lines ideal)
-- Use table-driven tests with descriptive names
-
-For **Python** projects:
-- Follow PEP 8 style guide
-- Use type hints for function signatures
-- Prefer explicit over implicit code
-- Use list/dict comprehensions where they improve clarity (not complexity)
-
-For **.NET/C#** projects:
-- Follow Microsoft C# coding conventions
-- Use `var` only when the type is obvious from the right side
-- Use file-scoped namespaces (`namespace X;`) where supported
-- Prefer pattern matching over type casting
-- Use `async`/`await` consistently, avoid `.Result` or `.Wait()`
-- Use nullable reference types and annotate nullability
 
 ### 2.2 Simplification Principles
 
@@ -207,17 +183,7 @@ Use the **edit** tool to modify files:
 After making simplifications, run the project's test suite to ensure no functionality was broken:
 
 ```bash
-# For Go projects
-make test-unit
-
-# For JavaScript/TypeScript projects
 npm test
-
-# For Python projects
-pytest
-
-# For .NET projects
-dotnet test
 ```
 
 If tests fail:
@@ -231,17 +197,7 @@ If tests fail:
 Ensure code style is consistent:
 
 ```bash
-# For Go projects
-make lint
-
-# For JavaScript/TypeScript projects
 npm run lint
-
-# For Python projects
-flake8 . || pylint .
-
-# For .NET projects
-dotnet format --verify-no-changes
 ```
 
 Fix any linting issues introduced by the simplifications.
@@ -251,18 +207,7 @@ Fix any linting issues introduced by the simplifications.
 Verify the project still builds successfully:
 
 ```bash
-# For Go projects
-make build
-
-# For JavaScript/TypeScript projects
 npm run build
-
-# For Python projects
-# (typically no build step, but check imports)
-python -m py_compile changed_files.py
-
-# For .NET projects
-dotnet build
 ```
 
 ## Phase 4: Create Pull Request
@@ -294,13 +239,12 @@ This PR simplifies recently modified code to improve clarity, consistency, and m
 
 ### Files Simplified
 
-- `path/to/file1.go` - [Brief description of improvements]
-- `path/to/file2.js` - [Brief description of improvements]
+- `path/to/file.js` - [Brief description of improvements]
 
 ### Improvements Made
 
 1. **Reduced Complexity**
-   - Simplified nested conditionals in `file1.go`
+   - Simplified nested conditionals in `file1.js`
    - Extracted helper function for repeated logic
 
 2. **Enhanced Clarity**
@@ -321,9 +265,9 @@ Recent changes from:
 
 ### Testing
 
-- ✅ All tests pass (`make test-unit`)
-- ✅ Linting passes (`make lint`)
-- ✅ Build succeeds (`make build`)
+- ✅ All tests pass (`npm test`)
+- ✅ Linting passes (`npm run lint`)
+- ✅ Build succeeds (`npm run build`)
 - ✅ No functional changes - behavior is identical
 
 ### Review Focus
