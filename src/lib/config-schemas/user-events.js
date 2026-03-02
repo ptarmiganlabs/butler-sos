@@ -200,7 +200,15 @@ export const userEventsSchema = {
                 additionalProperties: false,
             },
         },
-        required: ['enable', 'excludeUser', 'udpServerConfig', 'tags'],
+        required: [
+            'enable',
+            'excludeUser',
+            'udpServerConfig',
+            'tags',
+            'sendToMQTT',
+            'sendToInfluxdb',
+            'sendToNewRelic',
+        ],
         additionalProperties: false,
     },
 };

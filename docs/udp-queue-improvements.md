@@ -261,7 +261,7 @@ Two separate measurements for the two UDP servers:
 
 **Queue Utilization Over Time**:
 
-```flux
+```txt
 from(bucket: "butler-sos")
   |> range(start: -1h)
   |> filter(fn: (r) => r["_measurement"] == "user_events_queue" or r["_measurement"] == "log_events_queue")
@@ -270,7 +270,7 @@ from(bucket: "butler-sos")
 
 **Messages Dropped by Reason**:
 
-```flux
+```txt
 from(bucket: "butler-sos")
   |> range(start: -1h)
   |> filter(fn: (r) => r["_measurement"] == "user_events_queue")
@@ -280,7 +280,7 @@ from(bucket: "butler-sos")
 
 **Processing Time Percentiles**:
 
-```flux
+```txt
 from(bucket: "butler-sos")
   |> range(start: -1h)
   |> filter(fn: (r) => r["_measurement"] == "log_events_queue")
@@ -289,7 +289,7 @@ from(bucket: "butler-sos")
 
 **Backpressure Events**:
 
-```flux
+```txt
 from(bucket: "butler-sos")
   |> range(start: -24h)
   |> filter(fn: (r) => r["_field"] == "backpressure_active")

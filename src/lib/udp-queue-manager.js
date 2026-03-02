@@ -195,12 +195,17 @@ export class UdpQueueManager {
      * @param {object} config.rateLimit - Rate limit configuration
      * @param {boolean} config.rateLimit.enable - Enable rate limiting
      * @param {number} config.rateLimit.maxMessagesPerMinute - Max messages per minute
-     * @param {number} config.maxMessageSize - Maximum message size in bytes
+     * @param {number} [config.maxMessageSize] - Maximum message size in bytes (optional)
      * @param {object} logger - Logger instance
      * @param {string} queueType - Type of queue ('user_events' or 'log_events')
      */
     constructor(config, logger, queueType) {
-        this.config = config;
+        this.config = {
+            ...config,
+            maxMessageSize: Number.isFinite(config?.maxMessageSize)
+                ? config.maxMessageSize
+                : Number.POSITIVE_INFINITY,
+        };
         this.logger = logger;
         this.queueType = queueType;
 

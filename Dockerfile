@@ -1,25 +1,30 @@
-# Build Docker image for Amd64
-FROM node:22-bullseye-slim
+# Stage 1: Build
+FROM node:22-bookworm-slim AS build
+
+WORKDIR /nodeapp
+
+# Install app dependencies
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+# Stage 2: Runtime
+FROM node:22-bookworm-slim
 
 # Add metadata about the image
 LABEL maintainer="Göran Sander mountaindude@ptarmiganlabs.com"
 LABEL description="Real-time operational metrics for Qlik Sense Enterprise on Windows."
 
-# Create app dir inside container
+# Set environment to production
+ENV NODE_ENV=production
+
 WORKDIR /nodeapp
 
-# Install app dependencies separately (creating a separate layer for node_modules, effectively caching them between image rebuilds)
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+# Copy only necessary files from build stage
+COPY --from=build --chown=node:node /nodeapp/node_modules ./node_modules
+COPY --chown=node:node . .
 
-# Copy app's source files
-COPY . .
-
-# Create and use non-root user 
-RUN groupadd -r nodejs \
-   && useradd -m -r -g nodejs nodejs
-
-USER nodejs
+# Use the built-in non-root user
+USER node
 
 # Set up Docker healthcheck
 HEALTHCHECK --interval=12s --timeout=12s --start-period=30s CMD ["node", "src/docker-healthcheck.js"]

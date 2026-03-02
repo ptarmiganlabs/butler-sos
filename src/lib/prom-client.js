@@ -5,7 +5,7 @@ import client from 'prom-client';
 import globals from '../globals.js';
 import { getServerTags } from './servertags.js';
 
-let promLabels = null;
+let promLabels = [];
 
 let promMetricAppsCalls = null;
 let promMetricAppsSelections = null;
@@ -57,14 +57,26 @@ export async function setupPromClient(promServer, promPort, promHost) {
             return;
         }
 
-        // Create array with all defined server tags that should be used as Prometheus labels
-        globals.serverList.forEach((server) => {
+        // Create array with all defined server tags that should be used as Prometheus labels.
+        // prom-client expects labelNames to be an array; if no servers are configured, keep it empty.
+        promLabels = [];
+        (globals.serverList ?? []).forEach((server) => {
             globals.logger.verbose(
                 `PROM: Setting up Prometheus client for server: ${server.serverName}`
             );
             globals.logger.debug(`PROM: Server details: ${JSON.stringify(server)}`);
 
-            promLabels = Object.keys(getServerTags(globals.logger, server));
+            const serverTags = getServerTags(globals.logger, server);
+            const serverLabelNames =
+                serverTags && typeof serverTags === 'object' ? Object.keys(serverTags) : [];
+
+            serverLabelNames.forEach((labelName) => {
+                if (typeof labelName === 'string' && labelName.length > 0) {
+                    if (!promLabels.includes(labelName)) {
+                        promLabels.push(labelName);
+                    }
+                }
+            });
         });
 
         // Define Butler SOS metrics, Prometheus style

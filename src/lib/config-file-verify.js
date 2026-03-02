@@ -28,8 +28,9 @@ function createConditionalSchema(parsedConfig, baseSchema) {
      * Creates conditional validation for a feature based on its enable status
      *
      * @param {string} featureName - The name of the feature to make conditional
+     * @param {string} enablePropertyName - The name of the property that enables the feature (default: 'enable')
      */
-    const makeFeatureConditional = (featureName) => {
+    const makeFeatureConditional = (featureName, enablePropertyName = 'enable') => {
         const featureSchema = butlerSchema.properties[featureName];
         if (!featureSchema) return;
 
@@ -40,19 +41,21 @@ function createConditionalSchema(parsedConfig, baseSchema) {
         butlerSchema.properties[featureName] = {
             type: 'object',
             properties: {
-                enable: { type: 'boolean' },
+                [enablePropertyName]: { type: 'boolean' },
             },
-            required: ['enable'],
+            required: [enablePropertyName],
             if: {
-                properties: { enable: { const: true } },
+                type: 'object',
+                properties: { [enablePropertyName]: { const: true } },
+                required: [enablePropertyName],
             },
             then: originalSchema,
             else: {
                 type: 'object',
                 properties: {
-                    enable: { type: 'boolean' },
+                    [enablePropertyName]: { type: 'boolean' },
                 },
-                required: ['enable'],
+                required: [enablePropertyName],
                 additionalProperties: true, // Allow any additional properties when disabled
             },
         };
@@ -61,12 +64,16 @@ function createConditionalSchema(parsedConfig, baseSchema) {
     // Apply conditional validation to features with enable flags
     makeFeatureConditional('mqttConfig');
     makeFeatureConditional('newRelic');
+    makeFeatureConditional('auditEvents');
     makeFeatureConditional('userEvents');
     makeFeatureConditional('prometheus');
     makeFeatureConditional('influxdbConfig');
     makeFeatureConditional('configVisualisation');
     makeFeatureConditional('heartbeat');
     makeFeatureConditional('dockerHealthCheck');
+    makeFeatureConditional('uptimeMonitor');
+    makeFeatureConditional('appNames', 'enableAppNameExtract');
+    makeFeatureConditional('userSessions', 'enableSessionExtract');
 
     return schema;
 }

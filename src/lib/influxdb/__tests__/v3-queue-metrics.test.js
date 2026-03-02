@@ -22,6 +22,7 @@ const mockGlobals = {
     influxDefaultDb: 'test-db',
     udpQueueManagerUserActivity: null,
     udpQueueManagerLogEvents: null,
+    auditEventsQueueManager: null,
     hostInfo: {
         hostname: 'test-host',
     },
@@ -330,6 +331,87 @@ describe('InfluxDB v3 Queue Metrics', () => {
                     'LOG EVENT QUEUE METRICS INFLUXDB V3: Error posting queue metrics'
                 )
             );
+        });
+    });
+
+    describe('postAuditEventQueueMetricsToInfluxdbV3', () => {
+        test('should return early when queue metrics are disabled', async () => {
+            globals.config.get.mockReturnValue(false);
+
+            await queueMetrics.postAuditEventQueueMetricsToInfluxdbV3();
+
+            expect(Point3).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).not.toHaveBeenCalled();
+        });
+
+        test('should warn when queue manager is not initialized', async () => {
+            globals.config.get.mockReturnValue(true);
+            globals.auditEventsQueueManager = null;
+
+            await queueMetrics.postAuditEventQueueMetricsToInfluxdbV3();
+
+            expect(globals.logger.warn).toHaveBeenCalledWith(
+                'AUDIT EVENT QUEUE METRICS INFLUXDB V3: Queue manager not initialized'
+            );
+            expect(Point3).not.toHaveBeenCalled();
+        });
+
+        test('should successfully write queue metrics', async () => {
+            const mockMetrics = {
+                queueSize: 1,
+                queueMaxSize: 10,
+                queueUtilizationPct: 10.0,
+                queuePending: 0,
+                messagesReceived: 10,
+                messagesQueued: 9,
+                messagesProcessed: 9,
+                messagesFailed: 0,
+                messagesDroppedTotal: 1,
+                messagesDroppedRateLimit: 1,
+                messagesDroppedQueueFull: 0,
+                messagesDroppedSize: 0,
+                processingTimeAvgMs: 1.0,
+                processingTimeP95Ms: 2.0,
+                processingTimeMaxMs: 3.0,
+                rateLimitCurrent: 10,
+                backpressureActive: 0,
+            };
+
+            globals.config.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable') {
+                    return true;
+                }
+                if (key === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.measurementName') {
+                    return 'audit_events_queue';
+                }
+                if (key === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.tags') {
+                    return [];
+                }
+                if (key === 'Butler-SOS.influxdbConfig.v3Config.database') {
+                    return 'test-db';
+                }
+                if (key === 'Butler-SOS.influxdbConfig.maxBatchSize') {
+                    return 100;
+                }
+                return null;
+            });
+
+            globals.auditEventsQueueManager = {
+                getMetrics: jest.fn().mockResolvedValue(mockMetrics),
+                clearMetrics: jest.fn().mockResolvedValue(),
+            };
+
+            await queueMetrics.postAuditEventQueueMetricsToInfluxdbV3();
+
+            expect(Point3).toHaveBeenCalledWith('audit_events_queue');
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalledWith(
+                expect.any(Array),
+                'test-db',
+                'Audit event queue metrics',
+                'audit-events-queue',
+                100
+            );
+            expect(globals.auditEventsQueueManager.clearMetrics).toHaveBeenCalled();
         });
     });
 });
