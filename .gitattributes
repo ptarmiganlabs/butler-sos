@@ -39,3 +39,5 @@ release-macos export-ignore
 *.jpeg binary
 *.qvf binary
 *.zip binary
+
+.github/workflows/*.lock.yml linguist-generated=true merge=ours
