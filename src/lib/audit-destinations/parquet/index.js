@@ -176,6 +176,7 @@ async function flushAuditParquetBuffer(reason) {
             { name: 'sheetId', type: 'STRING', data: rowsToWrite.map((r) => r.sheetId) },
             { name: 'sheetName', type: 'STRING', data: rowsToWrite.map((r) => r.sheetName) },
             { name: 'objectId', type: 'STRING', data: rowsToWrite.map((r) => r.objectId) },
+            { name: 'objectType', type: 'STRING', data: rowsToWrite.map((r) => r.objectType) },
             {
                 name: 'selectionTxnId',
                 type: 'STRING',
@@ -200,6 +201,11 @@ async function flushAuditParquetBuffer(reason) {
                 name: 'screenshotSavedPaths',
                 type: 'STRING',
                 data: rowsToWrite.map((r) => r.screenshotSavedPaths),
+            },
+            {
+                name: 'objectData',
+                type: 'STRING',
+                data: rowsToWrite.map((r) => r.objectData),
             },
             { name: 'tags', type: 'STRING', data: rowsToWrite.map((r) => r.tags) },
         ];
@@ -274,6 +280,21 @@ export function bufferAuditParquetEvent(envelope, extras = {}) {
         row.screenshotSavedPaths = JSON.stringify(savedPaths);
     } else {
         row.screenshotSavedPaths = null;
+    }
+
+    // Object data and object type
+    const includeObjectData =
+        !globals.config.has('Butler-SOS.auditEvents.destination.parquet.includeObjectData') ||
+        globals.config.get('Butler-SOS.auditEvents.destination.parquet.includeObjectData') !==
+            false;
+
+    const dimData = asObject(event.objectData);
+    if (includeObjectData && dimData) {
+        row.objectType = readString(dimData.objectType) ?? null;
+        row.objectData = JSON.stringify(dimData);
+    } else {
+        row.objectType = null;
+        row.objectData = null;
     }
 
     // Timestamp and Date

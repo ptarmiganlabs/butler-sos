@@ -251,4 +251,104 @@ describe('audit-destinations/influxdb/shared/mapping', () => {
 
         expect(model.fields.dataStateId).toBe(987654321);
     });
+
+    test('maps objectData as field and objectType as tag when present', async () => {
+        const { buildAuditInfluxPointModel } = await import('../mapping.js');
+
+        const objectData = {
+            schemaVersion: 1,
+            objectType: 'barchart',
+            extractedAt: '2025-01-01T00:00:00.000Z',
+            dimensions: [
+                { fieldName: 'Dim1', label: 'Dimension 1', values: ['A', 'B'] },
+            ],
+            measures: [
+                { label: 'Sales', values: ['100', '200'] },
+            ],
+        };
+
+        const envelope = {
+            type: 'screenshot.url.received',
+            eventId: 'evt-dim-1',
+            timestamp: '2025-01-01T00:00:00.000Z',
+            payload: {
+                context: { appId: 'app-1', appName: 'Test App' },
+                event: {
+                    objectId: 'obj-1',
+                    screenshotUrl: 'data:image/png;base64,...',
+                    objectData,
+                },
+            },
+        };
+
+        const model = buildAuditInfluxPointModel(envelope, {});
+
+        expect(model.tags.objectType).toBe('barchart');
+        expect(model.fields.objectData).toBe(JSON.stringify(objectData));
+    });
+
+    test('does not include objectData field or objectType tag when objectData is absent', async () => {
+        const { buildAuditInfluxPointModel } = await import('../mapping.js');
+
+        const envelope = {
+            type: 'screenshot.url.received',
+            eventId: 'evt-no-dim-1',
+            timestamp: '2025-01-01T00:00:00.000Z',
+            payload: {
+                context: { appId: 'app-1' },
+                event: {
+                    objectId: 'obj-1',
+                    screenshotUrl: 'data:image/png;base64,...',
+                },
+            },
+        };
+
+        const model = buildAuditInfluxPointModel(envelope, {});
+
+        expect(model.tags.objectType).toBeUndefined();
+        expect(model.fields.objectData).toBeUndefined();
+    });
+
+    test('excludes objectData when includeObjectData config is false', async () => {
+        mockGlobals.config.has.mockImplementation((key) => {
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.includeObjectData')
+                return true;
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.staticTags') return false;
+            return false;
+        });
+
+        mockGlobals.config.get.mockImplementation((key) => {
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.measurementName')
+                return 'audit_event';
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.auditEventSchemaVersion')
+                return '1';
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.includeObjectData')
+                return false;
+            throw new Error(`Unexpected config.get key: ${key}`);
+        });
+
+        const { buildAuditInfluxPointModel } = await import('../mapping.js');
+
+        const envelope = {
+            type: 'screenshot.url.received',
+            eventId: 'evt-dim-off-1',
+            timestamp: '2025-01-01T00:00:00.000Z',
+            payload: {
+                context: { appId: 'app-1' },
+                event: {
+                    objectId: 'obj-1',
+                    objectData: {
+                        objectType: 'barchart',
+                        dimensions: [{ fieldName: 'Dim1', label: 'D1', values: ['A'] }],
+                        measures: [],
+                    },
+                },
+            },
+        };
+
+        const model = buildAuditInfluxPointModel(envelope, {});
+
+        expect(model.tags.objectType).toBeUndefined();
+        expect(model.fields.objectData).toBeUndefined();
+    });
 });

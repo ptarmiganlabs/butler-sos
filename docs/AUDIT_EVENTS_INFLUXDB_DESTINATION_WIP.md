@@ -185,6 +185,7 @@ Butler-SOS:
                 measurementName: audit_event
                 auditEventSchemaVersion: '1' # stored as tag
                 staticTags: [] # optional: array of {name,value}
+                includeObjectData: true # Include object data (dimensions/measures) from visualizations.
 
                 v1Config:
                     dbName: butler-audit
@@ -266,6 +267,7 @@ Always attempt to set these tags:
 - `userId` (payload.context.user if present)
 - `appId` (payload.context.appId)
 - `appName` (payload.context.appName)
+- `objectType` (payload.event.objectData.objectType, e.g. `barchart`, `table` — only when `includeObjectData` is `true` and `objectData` is present)
 - `auditEventSchemaVersion` (from config, low cardinality)
 
 Optional tags (only if stable/low-cardinality and present):
@@ -293,6 +295,10 @@ Screenshot-related fields:
 
 - `screenshotUrl` (payload.event.screenshotUrl for `screenshot.url.received`)
 - `screenshotSavedPaths` (string or JSON string) when Butler SOS downloads the screenshot
+
+Dimension data fields (only when `includeObjectData` config is `true`, which is the default):
+
+- `objectData` (JSON string containing extracted dimension/measure values from the visualization — can be large; see [Object Data](#object-data) below)
 
 ### Timestamp
 
@@ -354,3 +360,48 @@ The per-version modules exist for compatibility/experimentation, but the default
 - Audit data is sensitive.
 - The audit destination must allow a separate InfluxDB instance/version/bucket/database.
 - Avoid logging full payloads at info-level in production; keep detailed logs behind debug/silly.
+
+## Object Data
+
+When `includeObjectData` is `true` (default), the `objectData` field is stored as a JSON string containing the actual dimension and measure values extracted from the visualization. The `objectType` is also extracted as a separate tag for efficient filtering.
+
+**Important for InfluxDB**: The `objectData` field can be large (up to several MB in extreme cases). This is stored as an InfluxDB field (not a tag), so it is not indexed. Consider setting `includeObjectData: false` if write performance is a concern or if object data is not needed in InfluxDB.
+
+### Structure
+
+```json
+{
+    "schemaVersion": 1,
+    "objectType": "barchart",
+    "extractedAt": "2026-02-08T07:30:00.000Z",
+    "visibleRange": {
+        "rowStart": 0,
+        "rowEnd": 10,
+        "colStart": 0,
+        "colEnd": 4,
+        "source": "scroll-state"
+    },
+    "dimensions": [
+        {
+            "fieldName": "Region",
+            "label": "Sales Region",
+            "values": ["North", "South", "East", "West"]
+        }
+    ],
+    "measures": [
+        {
+            "label": "Revenue",
+            "values": ["15000.50", "22000.00", "18500.75", "30000.00"]
+        }
+    ]
+}
+```
+
+### Size Constraints
+
+The audit extension enforces the following limits before sending:
+
+- Max 50 dimensions, max 50 measures
+- Max 10,000 values per dimension/measure
+- Max 1,000 characters per value (truncated with `...`)
+- `objectData` is `null` when data is unavailable, extraction fails, or the visualization type is unsupported

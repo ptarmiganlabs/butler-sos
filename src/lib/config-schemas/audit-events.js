@@ -64,6 +64,10 @@ export const auditEventsSchema = {
                                 },
                                 default: null,
                             },
+                            includeObjectData: {
+                                type: 'boolean',
+                                default: true,
+                            },
                             v3Config: {
                                 type: 'object',
                                 properties: {
@@ -192,6 +196,10 @@ export const auditEventsSchema = {
                                 },
                                 default: null,
                             },
+                            includeObjectData: {
+                                type: 'boolean',
+                                default: true,
+                            },
                         },
                         required: ['exportDirectory', 'maxBatchSize', 'writeFrequency'],
                         additionalProperties: false,
@@ -223,6 +231,10 @@ export const auditEventsSchema = {
                                     additionalProperties: false,
                                 },
                                 default: null,
+                            },
+                            includeObjectData: {
+                                type: 'boolean',
+                                default: true,
                             },
                         },
                         required: ['exportDirectory', 'maxBatchSize', 'writeFrequency'],

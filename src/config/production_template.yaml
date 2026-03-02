@@ -52,6 +52,7 @@ Butler-SOS:
                 staticTags: # Optional static tags added to all audit event points.
                     - name: qs_env
                       value: dev
+                includeObjectData: true # Include object data (dimensions/measures) from visualizations in audit events.
 
                 # Settings for InfluxDB v3.x only, i.e. Butler-SOS.auditEvents.destination.influxdb.version=3
                 v3Config:
@@ -87,6 +88,7 @@ Butler-SOS:
                 staticTags: # Optional static tags added to all audit event points.
                     - name: qs_env
                       value: dev
+                includeObjectData: true # Include object data (dimensions/measures) from visualizations in audit events.
 
             qvd:
                 exportDirectory: audit-events/qvd # Directory where QVD files will be stored.
@@ -95,6 +97,7 @@ Butler-SOS:
                 staticTags: # Optional static tags added to all audit event points.
                     - name: qs_env
                       value: dev
+                includeObjectData: true # Include object data (dimensions/measures) from visualizations in audit events.
 
         # Optional: serve the audit events API over HTTPS.
         # This is required if the Qlik Sense client is served over HTTPS, otherwise browsers will block calls to an HTTP endpoint (mixed content).

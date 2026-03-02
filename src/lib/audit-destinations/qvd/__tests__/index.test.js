@@ -33,6 +33,12 @@ jest.unstable_mockModule(globalsPath, () => ({
     default: {
         logger: mockLogger,
         config: mockConfig,
+        /**
+         * Extracts a human-readable error message from an error object, handling various error shapes.
+         *
+         * @param {unknown} err - The error object to extract the message from.
+         * @returns {string} A human-readable error message.
+         */
         getErrorMessage: (err) => err.message,
     },
 }));
@@ -257,12 +263,138 @@ describe('QVD Audit Destination', () => {
         expect(typeof row[0]).toBe('number');
         expect(row[0]).toBe(Date.parse('2023-10-27T10:00:00Z'));
 
-        // durationMs is at index 12
-        expect(typeof row[12]).toBe('number');
-        expect(row[12]).toBe(1234);
+        // durationMs is at index 13 (after objectType at index 11)
+        expect(typeof row[13]).toBe('number');
+        expect(row[13]).toBe(1234);
 
-        // dataStateId is at index 16
-        expect(typeof row[16]).toBe('number');
-        expect(row[16]).toBe(5678);
+        // dataStateId is at index 17
+        expect(typeof row[17]).toBe('number');
+        expect(row[17]).toBe(5678);
+    });
+
+    test('Stores objectData and objectType when present', async () => {
+        const event = {
+            eventId: 'dim-1',
+            timestamp: '2023-10-27T10:00:00Z',
+            payload: {
+                context: { user: 'user1' },
+                event: {
+                    objectId: 'obj1',
+                    screenshotUrl: 'data:image/png;base64,...',
+                    objectData: {
+                        schemaVersion: 1,
+                        objectType: 'barchart',
+                        extractedAt: '2023-10-27T10:00:00.000Z',
+                        dimensions: [
+                            { fieldName: 'Dim1', label: 'Dimension 1', values: ['A', 'B'] },
+                        ],
+                        measures: [{ label: 'Sales', values: ['100', '200'] }],
+                    },
+                },
+            },
+        };
+
+        qvd.bufferAuditQvdEvent(event);
+        qvd.bufferAuditQvdEvent(event);
+
+        await Promise.resolve();
+        await Promise.resolve();
+
+        const callArgs = mockQvdDataFrame.fromDict.mock.calls[0][0];
+        expect(callArgs.columns).toContain('objectType');
+        expect(callArgs.columns).toContain('objectData');
+
+        const row = callArgs.data[0];
+        const objectTypeIdx = callArgs.columns.indexOf('objectType');
+        const objectDataIdx = callArgs.columns.indexOf('objectData');
+
+        expect(row[objectTypeIdx]).toBe('barchart');
+        expect(JSON.parse(row[objectDataIdx])).toMatchObject({
+            objectType: 'barchart',
+            dimensions: expect.any(Array),
+            measures: expect.any(Array),
+        });
+    });
+
+    test('Stores null for objectData when not present', async () => {
+        const event = {
+            eventId: 'no-dim-1',
+            timestamp: '2023-10-27T10:00:00Z',
+            payload: {
+                context: { user: 'user1' },
+                event: { objectId: 'obj1' },
+            },
+        };
+
+        qvd.bufferAuditQvdEvent(event);
+        qvd.bufferAuditQvdEvent(event);
+
+        await Promise.resolve();
+        await Promise.resolve();
+
+        const callArgs = mockQvdDataFrame.fromDict.mock.calls[0][0];
+        const row = callArgs.data[0];
+        const objectTypeIdx = callArgs.columns.indexOf('objectType');
+        const objectDataIdx = callArgs.columns.indexOf('objectData');
+
+        expect(row[objectTypeIdx]).toBeNull();
+        expect(row[objectDataIdx]).toBeNull();
+    });
+
+    test('Excludes objectData when includeObjectData config is false', async () => {
+        mockConfig.has.mockImplementation((key) => {
+            if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.qvd') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.qvd.staticTags') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.qvd.includeObjectData') return true;
+            return false;
+        });
+
+        mockConfig.get.mockImplementation((key) => {
+            if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.qvd') {
+                return {
+                    exportDirectory: './audit-events/qvd',
+                    maxBatchSize: 2,
+                    writeFrequency: 5000,
+                };
+            }
+            if (key === 'Butler-SOS.auditEvents.destination.qvd.staticTags') {
+                return [{ name: 'env', value: 'prod' }];
+            }
+            if (key === 'Butler-SOS.auditEvents.destination.qvd.includeObjectData') return false;
+            return null;
+        });
+
+        const event = {
+            eventId: 'dim-off-1',
+            timestamp: '2023-10-27T10:00:00Z',
+            payload: {
+                context: { user: 'user1' },
+                event: {
+                    objectId: 'obj1',
+                    objectData: {
+                        schemaVersion: 1,
+                        objectType: 'barchart',
+                        dimensions: [{ fieldName: 'Dim1', label: 'D1', values: ['A'] }],
+                        measures: [],
+                    },
+                },
+            },
+        };
+
+        qvd.bufferAuditQvdEvent(event);
+        qvd.bufferAuditQvdEvent(event);
+
+        await Promise.resolve();
+        await Promise.resolve();
+
+        const callArgs = mockQvdDataFrame.fromDict.mock.calls[0][0];
+        const row = callArgs.data[0];
+        const objectTypeIdx = callArgs.columns.indexOf('objectType');
+        const objectDataIdx = callArgs.columns.indexOf('objectData');
+
+        expect(row[objectTypeIdx]).toBeNull();
+        expect(row[objectDataIdx]).toBeNull();
     });
 });

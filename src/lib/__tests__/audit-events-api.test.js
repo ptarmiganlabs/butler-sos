@@ -3,6 +3,7 @@ import Fastify from 'fastify';
 
 const mockGlobals = {
     logger: {
+        debug: jest.fn(),
         info: jest.fn(),
         warn: jest.fn(),
         error: jest.fn(),
@@ -228,6 +229,67 @@ describe('audit-events-api event types', () => {
 
         expect(res.statusCode).toBe(202);
         expect(downloadScreenshot).toHaveBeenCalled();
+    });
+
+    test('logs objectData at debug level for screenshot.url.received', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+        downloadScreenshot.mockResolvedValue({ savedPaths: ['/path/to/screenshot.png'] });
+
+        mockGlobals.config.has.mockImplementation((key) => {
+            if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
+            return false;
+        });
+        mockGlobals.config.get.mockImplementation((key) => {
+            if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.screenshots.storageTargets') return ['local'];
+            return null;
+        });
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const objectData = {
+            schemaVersion: 1,
+            objectType: 'barchart',
+            extractedAt: '2025-01-01T00:00:00.000Z',
+            dimensions: [{ fieldName: 'Country', label: 'Country', values: ['Sweden', 'Norway'] }],
+            measures: [{ label: 'Sales', values: ['1000', '2000'] }],
+        };
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                authorization: 'Bearer secret',
+            },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'evt-dim-debug-1',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'screenshot.url.received',
+                payload: {
+                    event: {
+                        screenshotUrl: 'https://example.com/screenshot.png',
+                        selectionTxnId: 'txn-1',
+                        objectData,
+                    },
+                },
+            },
+        });
+
+        expect(res.statusCode).toBe(202);
+
+        // Verify the debug logging of objectData
+        const debugCalls = mockGlobals.logger.debug.mock.calls.map((c) => c[0]);
+        expect(debugCalls).toEqual(
+            expect.arrayContaining([
+                expect.stringContaining('objectData for eventId=evt-dim-debug-1'),
+                expect.stringContaining('objectType=barchart'),
+            ])
+        );
     });
 
     test('handles selection.state.changed and passes selectionDetails to destinations', async () => {

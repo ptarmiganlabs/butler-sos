@@ -660,4 +660,165 @@ describe('auditEvents schema', () => {
 
         expect(validate(invalidConfig)).toBe(false);
     });
+
+    test('should accept includeObjectData boolean in all destination schemas', () => {
+        const ajv = new Ajv({ allErrors: true });
+        addFormats(ajv);
+        addKeywords(ajv);
+
+        const schema = {
+            type: 'object',
+            properties: { auditEvents: auditEventsSchema.auditEvents },
+            required: ['auditEvents'],
+            additionalProperties: false,
+        };
+
+        const validate = ajv.compile(schema);
+
+        const validConfig = {
+            auditEvents: {
+                enable: true,
+                host: '0.0.0.0',
+                port: 8181,
+                apiToken: 'test-token',
+                destination: {
+                    enable: true,
+                    type: 'influxdb,parquet,qvd',
+                    influxdb: {
+                        host: 'localhost',
+                        port: 8086,
+                        version: 2,
+                        maxBatchSize: 1000,
+                        writeFrequency: 20000,
+                        measurementName: 'audit_event',
+                        auditEventSchemaVersion: '1',
+                        staticTags: [],
+                        includeObjectData: true,
+                        v2Config: {
+                            org: 'test-org',
+                            bucket: 'test-bucket',
+                            description: 'Audit events bucket',
+                            token: 'test-token',
+                            retentionDuration: '0s',
+                        },
+                    },
+                    parquet: {
+                        exportDirectory: './audit-events/parquet',
+                        maxBatchSize: 1000,
+                        writeFrequency: 20000,
+                        includeObjectData: false,
+                    },
+                    qvd: {
+                        exportDirectory: './audit-events/qvd',
+                        maxBatchSize: 1000,
+                        writeFrequency: 20000,
+                        includeObjectData: true,
+                    },
+                },
+                queue: {
+                    messageQueue: {
+                        maxConcurrent: 10,
+                        maxSize: 200,
+                        backpressureThreshold: 80,
+                    },
+                    rateLimit: {
+                        enable: false,
+                        maxMessagesPerMinute: 600,
+                    },
+                    queueMetrics: {
+                        influxdb: {
+                            enable: false,
+                            writeFrequency: 20000,
+                            measurementName: 'audit_events_queue',
+                            tags: [],
+                        },
+                    },
+                },
+                screenshots: {
+                    enable: false,
+                    downloadTimeoutMs: 15000,
+                    auth: {
+                        mode: 'none',
+                    },
+                    storageTargets: null,
+                },
+                cors: {
+                    allowedOrigins: ['https://qliksense.company.com'],
+                },
+            },
+        };
+
+        const ok = validate(validConfig);
+        if (!ok) {
+            // eslint-disable-next-line no-console
+            console.error(validate.errors);
+        }
+        expect(ok).toBe(true);
+    });
+
+    test('should reject non-boolean includeObjectData', () => {
+        const ajv = new Ajv({ allErrors: true });
+        addFormats(ajv);
+        addKeywords(ajv);
+
+        const schema = {
+            type: 'object',
+            properties: { auditEvents: auditEventsSchema.auditEvents },
+            required: ['auditEvents'],
+            additionalProperties: false,
+        };
+
+        const validate = ajv.compile(schema);
+
+        const invalidConfig = {
+            auditEvents: {
+                enable: true,
+                host: '0.0.0.0',
+                port: 8181,
+                apiToken: 'test-token',
+                destination: {
+                    enable: true,
+                    type: 'qvd',
+                    qvd: {
+                        exportDirectory: './audit-events/qvd',
+                        maxBatchSize: 1000,
+                        writeFrequency: 20000,
+                        includeObjectData: 'yes',
+                    },
+                },
+                queue: {
+                    messageQueue: {
+                        maxConcurrent: 10,
+                        maxSize: 200,
+                        backpressureThreshold: 80,
+                    },
+                    rateLimit: {
+                        enable: false,
+                        maxMessagesPerMinute: 600,
+                    },
+                    queueMetrics: {
+                        influxdb: {
+                            enable: false,
+                            writeFrequency: 20000,
+                            measurementName: 'audit_events_queue',
+                            tags: [],
+                        },
+                    },
+                },
+                screenshots: {
+                    enable: false,
+                    downloadTimeoutMs: 15000,
+                    auth: {
+                        mode: 'none',
+                    },
+                    storageTargets: null,
+                },
+                cors: {
+                    allowedOrigins: ['https://qliksense.company.com'],
+                },
+            },
+        };
+
+        expect(validate(invalidConfig)).toBe(false);
+    });
 });

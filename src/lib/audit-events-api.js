@@ -287,10 +287,23 @@ function createTypeHandlers(logger) {
         const objectId = envelope?.payload?.event?.objectId;
         const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
         const dataStateId = envelope?.payload?.event?.dataStateId;
+        const objectData = envelope?.payload?.event?.objectData ?? null;
 
         logger.info(
             `AUDIT API: screenshot.url.received eventId=${envelope.eventId} objectId=${objectId} selectionTxnId=${selectionTxnId} dataStateId=${dataStateId} url=${screenshotUrl} ip=${requestContext.ip}`
         );
+
+        // Log object data at debug level for troubleshooting
+        if (objectData) {
+            logger.debug(
+                `AUDIT API: objectData for eventId=${envelope.eventId}: objectType=${objectData.objectType ?? 'unknown'} dimensions=${objectData.dimensions?.length ?? 0} measures=${objectData.measures?.length ?? 0}`
+            );
+            logger.debug(
+                `AUDIT API: objectData detail for eventId=${envelope.eventId}: ${JSON.stringify(objectData)}`
+            );
+        } else {
+            logger.debug(`AUDIT API: No objectData present for eventId=${envelope.eventId}`);
+        }
 
         const screenshotsEnabled =
             globals.config.has('Butler-SOS.auditEvents.screenshots.enable') &&
@@ -661,6 +674,14 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
         const handler = handlers[envelope.type];
         /** @type {object} */
         let extras = {};
+
+        // Debug log the full incoming payload for all event types
+        globals.logger.debug(
+            `AUDIT API: Processing envelope type=${envelope.type} eventId=${envelope.eventId} ip=${requestContext.ip}`
+        );
+        globals.logger.debug(
+            `AUDIT API: Full envelope payload: ${JSON.stringify(envelope.payload)}`
+        );
 
         if (handler) {
             const handlerResult = await handler(envelope, requestContext);

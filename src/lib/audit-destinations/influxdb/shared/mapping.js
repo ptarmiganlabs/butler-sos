@@ -152,6 +152,19 @@ export function buildAuditInfluxPointModel(envelope, extras = {}) {
         fields.screenshotSavedPaths = JSON.stringify(savedPaths);
     }
 
+    // Object data and object type
+    const includeObjectData =
+        !globals.config.has('Butler-SOS.auditEvents.destination.influxdb.includeObjectData') ||
+        globals.config.get('Butler-SOS.auditEvents.destination.influxdb.includeObjectData') !==
+            false;
+
+    const dimData = asObject(event.objectData);
+    if (includeObjectData && dimData) {
+        const objectType = readString(dimData.objectType);
+        if (objectType) tags.objectType = objectType;
+        fields.objectData = JSON.stringify(dimData);
+    }
+
     let timestampMs;
     const ts = readString(env.timestamp);
     if (ts) {

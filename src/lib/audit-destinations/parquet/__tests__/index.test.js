@@ -31,6 +31,12 @@ jest.unstable_mockModule(globalsPath, () => ({
     default: {
         logger: mockLogger,
         config: mockConfig,
+        /**
+         * Extracts a human-readable error message from an error object, handling various error shapes.
+         *
+         * @param {unknown} err - The error object to extract the message from.
+         * @returns {string} A human-readable error message.
+         */
         getErrorMessage: (err) => err.message,
     },
 }));
@@ -108,7 +114,7 @@ describe('Parquet Audit Destination', () => {
         expect(mockHyparquet.parquetWriteBuffer).toHaveBeenCalled();
 
         const callArgs = mockHyparquet.parquetWriteBuffer.mock.calls[0][0];
-        expect(callArgs.columnData).toHaveLength(21);
+        expect(callArgs.columnData).toHaveLength(23);
         expect(callArgs.columnData.find((c) => c.name === 'userId').data).toEqual([
             'user1',
             'user1',
@@ -275,5 +281,141 @@ describe('Parquet Audit Destination', () => {
         expect(durationCol.data[0]).toBe(1234n);
         expect(dataStateCol.data[0]).toBe(5678n);
         expect(timestampCol.data[0]).toBe(BigInt(Date.parse('2023-10-27T10:00:00Z')));
+    });
+
+    test('Stores objectData and objectType when present', async () => {
+        const event = {
+            eventId: 'dim-1',
+            timestamp: '2023-10-27T10:00:00Z',
+            payload: {
+                context: { user: 'user1' },
+                event: {
+                    objectId: 'obj1',
+                    objectData: {
+                        schemaVersion: 1,
+                        objectType: 'barchart',
+                        extractedAt: '2023-10-27T10:00:00.000Z',
+                        dimensions: [
+                            { fieldName: 'Dim1', label: 'Dimension 1', values: ['A', 'B'] },
+                        ],
+                        measures: [{ label: 'Sales', values: ['100', '200'] }],
+                    },
+                },
+            },
+        };
+
+        mockConfig.get.mockImplementation((key) => {
+            if (key === 'Butler-SOS.auditEvents.destination.parquet') {
+                return {
+                    exportDirectory: './audit-events/parquet',
+                    maxBatchSize: 1,
+                    writeFrequency: 5000,
+                };
+            }
+            return true;
+        });
+
+        parquet.bufferAuditParquetEvent(event);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        const callArgs = mockHyparquet.parquetWriteBuffer.mock.calls[0][0];
+        const objectTypeCol = callArgs.columnData.find((c) => c.name === 'objectType');
+        const objectDataCol = callArgs.columnData.find((c) => c.name === 'objectData');
+
+        expect(objectTypeCol).toBeDefined();
+        expect(objectDataCol).toBeDefined();
+        expect(objectTypeCol.data[0]).toBe('barchart');
+        expect(JSON.parse(objectDataCol.data[0])).toMatchObject({
+            objectType: 'barchart',
+            dimensions: expect.any(Array),
+        });
+    });
+
+    test('Stores null for objectData when not present', async () => {
+        const event = {
+            eventId: 'no-dim-1',
+            timestamp: '2023-10-27T10:00:00Z',
+            payload: {
+                context: { user: 'user1' },
+                event: { objectId: 'obj1' },
+            },
+        };
+
+        mockConfig.get.mockImplementation((key) => {
+            if (key === 'Butler-SOS.auditEvents.destination.parquet') {
+                return {
+                    exportDirectory: './audit-events/parquet',
+                    maxBatchSize: 1,
+                    writeFrequency: 5000,
+                };
+            }
+            return true;
+        });
+
+        parquet.bufferAuditParquetEvent(event);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        const callArgs = mockHyparquet.parquetWriteBuffer.mock.calls[0][0];
+        const objectTypeCol = callArgs.columnData.find((c) => c.name === 'objectType');
+        const objectDataCol = callArgs.columnData.find((c) => c.name === 'objectData');
+
+        expect(objectTypeCol.data[0]).toBeNull();
+        expect(objectDataCol.data[0]).toBeNull();
+    });
+
+    test('Excludes objectData when includeObjectData config is false', async () => {
+        mockConfig.has.mockImplementation((key) => {
+            if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.parquet') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.staticTags') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.includeObjectData') return true;
+            return false;
+        });
+
+        mockConfig.get.mockImplementation((key) => {
+            if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.parquet') {
+                return {
+                    exportDirectory: './audit-events/parquet',
+                    maxBatchSize: 1,
+                    writeFrequency: 5000,
+                };
+            }
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.staticTags') {
+                return [{ name: 'env', value: 'prod' }];
+            }
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.includeObjectData')
+                return false;
+            return null;
+        });
+
+        const event = {
+            eventId: 'dim-off-1',
+            timestamp: '2023-10-27T10:00:00Z',
+            payload: {
+                context: { user: 'user1' },
+                event: {
+                    objectId: 'obj1',
+                    objectData: {
+                        objectType: 'barchart',
+                        dimensions: [{ fieldName: 'Dim1', label: 'D1', values: ['A'] }],
+                        measures: [],
+                    },
+                },
+            },
+        };
+
+        parquet.bufferAuditParquetEvent(event);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        const callArgs = mockHyparquet.parquetWriteBuffer.mock.calls[0][0];
+        const objectTypeCol = callArgs.columnData.find((c) => c.name === 'objectType');
+        const objectDataCol = callArgs.columnData.find((c) => c.name === 'objectData');
+
+        expect(objectTypeCol.data[0]).toBeNull();
+        expect(objectDataCol.data[0]).toBeNull();
     });
 });

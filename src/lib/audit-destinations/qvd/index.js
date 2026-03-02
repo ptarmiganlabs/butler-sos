@@ -172,6 +172,7 @@ async function flushAuditQvdBuffer(reason) {
             'sheetId',
             'sheetName',
             'objectId',
+            'objectType',
             'selectionTxnId',
             'durationMs',
             'visible',
@@ -181,6 +182,7 @@ async function flushAuditQvdBuffer(reason) {
             'selectionDetails',
             'screenshotUrl',
             'screenshotSavedPaths',
+            'objectData',
             'tags',
         ];
 
@@ -196,6 +198,7 @@ async function flushAuditQvdBuffer(reason) {
             r.sheetId,
             r.sheetName,
             r.objectId,
+            r.objectType,
             r.selectionTxnId,
             r.durationMs !== null ? Number(r.durationMs) : null,
             r.visible === null ? null : r.visible ? -1 : 0,
@@ -205,6 +208,7 @@ async function flushAuditQvdBuffer(reason) {
             r.selectionDetails,
             r.screenshotUrl,
             r.screenshotSavedPaths,
+            r.objectData,
             r.tags,
         ]);
 
@@ -278,6 +282,20 @@ export function bufferAuditQvdEvent(envelope, extras = {}) {
         row.screenshotSavedPaths = JSON.stringify(savedPaths);
     } else {
         row.screenshotSavedPaths = null;
+    }
+
+    // Object data and object type
+    const includeObjectData =
+        !globals.config.has('Butler-SOS.auditEvents.destination.qvd.includeObjectData') ||
+        globals.config.get('Butler-SOS.auditEvents.destination.qvd.includeObjectData') !== false;
+
+    const dimData = asObject(event.objectData);
+    if (includeObjectData && dimData) {
+        row.objectType = readString(dimData.objectType) ?? null;
+        row.objectData = JSON.stringify(dimData);
+    } else {
+        row.objectType = null;
+        row.objectData = null;
     }
 
     // Timestamp and Date
