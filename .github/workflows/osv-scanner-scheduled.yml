@@ -1,6 +1,7 @@
 name: OSV-Scanner Scheduled Scan
 
 on:
+    workflow_dispatch:
     schedule:
         # Run daily at 02:00 UTC (03:00 CET)
         - cron: '0 2 * * *'
@@ -18,4 +19,53 @@ permissions:
 
 jobs:
     scan-scheduled:
-        uses: 'google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@90b209d0ea55cea1da9fc0c4e65782cc6acb6e2e' # v2.2.2
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+            - name: Run scanner
+              uses: google/osv-scanner-action/osv-scanner-action@23f8850c0f6fc96b3324529b3f30665d63391634 # v2.2.2
+              with:
+                  scan-args: |-
+                      --output=results.json
+                      --format=json
+                      -r
+                      ./
+              continue-on-error: true
+
+            - name: Run osv-scanner-reporter
+              uses: google/osv-scanner-action/osv-reporter-action@23f8850c0f6fc96b3324529b3f30665d63391634 # v2.2.2
+              with:
+                  scan-args: |-
+                      --output=results.sarif
+                      --new=results.json
+                      --gh-annotations=false
+                      --fail-on-vuln=true
+
+            - name: Upload artifact
+              id: upload_artifact
+              if: ${{ !cancelled() }}
+              uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+              with:
+                  name: SARIF file
+                  path: results.sarif
+                  retention-days: 5
+
+            - name: Upload to code-scanning
+              if: ${{ !cancelled() }}
+              uses: github/codeql-action/upload-sarif@cf1bb45a277cb3c205638b2cd5c984db1c46a412 # v4.31.7
+              with:
+                  sarif_file: results.sarif
+
+            - name: Print Code Scanning URL
+              if: ${{ !cancelled() }}
+              run: |
+                  echo "View the OSV-Scanner results in the 'Security' tab, using the following link:"
+                  echo "${{ github.server_url }}/${{ github.repository }}/security/code-scanning?query=is%3Aopen+branch%3A${{ github.ref_name }}+tool%3Aosv-scanner"
+
+            - name: Error troubleshooter
+              if: ${{ always() && steps.upload_artifact.outcome == 'failure' }}
+              run: |
+                  echo "::error::Artifact upload failed. This is most likely caused by a error during scanning earlier in the workflow."
+                  exit 1
