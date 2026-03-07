@@ -60,10 +60,10 @@
         "axios": "^1.13.6",
         "commander": "^14.0.3",
         "config": "^4.4.1",
-        "fastify": "^5.7.4",
+        "fastify": "^5.8.2",
         "fastify-healthcheck": "^5.1.0",
         "fastify-metrics": "^12.1.0",
-        "fs-extra": "^11.3.3",
+        "fs-extra": "^11.3.4",
         "handlebars": "^4.7.8",
         "influx": "^5.12.0",
         "js-yaml": "^4.1.1",
@@ -71,10 +71,10 @@
         "luxon": "^3.7.2",
         "mqtt": "^5.15.0",
         "p-queue": "^9.1.0",
-        "posthog-node": "^5.26.0",
+        "posthog-node": "^5.28.0",
         "prom-client": "^15.1.3",
         "qrs-interact": "^6.3.1",
-        "systeminformation": "^5.31.1",
+        "systeminformation": "^5.31.3",
         "ua-parser-js": "^2.0.9",
         "uuid": "^13.0.0",
         "winston": "^3.19.0",
@@ -97,6 +97,6 @@
         "lockfile-lint": "^5.0.0",
         "npm-check-updates": "^19.6.3",
         "prettier": "^3.8.1",
-        "snyk": "^1.1303.0"
+        "snyk": "^1.1303.1"
     }
 }
