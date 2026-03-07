@@ -1,5 +1,70 @@
 # Changelog
 
+## [15.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v14.0.0...butler-sos-v15.0.0) (2026-03-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **influxdb:** Change name of InfluxDB v3 setting "timeout" to "writeTimeout"
+* **influxdb:** Move InfluxDB `maxBatchSize` config setting to sit right under `influxdbConfig` section in YAML config file
+* Add support for InfluxDB v3
+
+### Features
+
+* Add retries when writing UDP queue metrics to InfluxDB v3 ([1b468b8](https://github.com/ptarmiganlabs/butler-sos/commit/1b468b87a3927aa0d3f17cd4ba291735344796b7))
+* Add support for InfluxDB v3 ([fdff29f](https://github.com/ptarmiganlabs/butler-sos/commit/fdff29f5d260527ac2c9154ffeca8cd4938548dd))
+* Better and more consistent logging across the entire codebase ([735e394](https://github.com/ptarmiganlabs/butler-sos/commit/735e3941ac41ebb8bb55838ef3bdbf4363a74681))
+* **docker:** New full-stack compose files for InfluxDB v1/v2/v3 + Grafana ([99ab457](https://github.com/ptarmiganlabs/butler-sos/commit/99ab4579dcf3e233e042ae2621091e08556abded))
+* **InfluxDB:** Add retries with configurable backoff when writing to InfluxDB v3 ([21f6dba](https://github.com/ptarmiganlabs/butler-sos/commit/21f6dba2dd13667cc790e1a6336c3f9c2a8b23c2))
+* **InfluxDB:** Configurable timeouts when writing to and querying InfluxDB v3 ([1e08ec1](https://github.com/ptarmiganlabs/butler-sos/commit/1e08ec1bf815943942838947a8a823c774e909a9))
+* Track and log how many time errors occur when accessing Sense APIs ([2c4ad6e](https://github.com/ptarmiganlabs/butler-sos/commit/2c4ad6ec46a3b260b29b0b4503c838834ff340fd))
+
+
+### Bug Fixes
+
+* Add error tracking for app name extraction from QRS API ([963bac6](https://github.com/ptarmiganlabs/butler-sos/commit/963bac678781431890c9ac233d2a24ca4458e2e9))
+* Add missing log event counters in InfluxDB v3 ([5ff9e7c](https://github.com/ptarmiganlabs/butler-sos/commit/5ff9e7c566849ad86dc95e30b3abbcc73b57cc58))
+* **docker:** Stabilize the Docker image build process ([b9dc4d8](https://github.com/ptarmiganlabs/butler-sos/commit/b9dc4d888e0912910d49317cdbca8fa7de3ebf31))
+* **gitattributes:** Update workflow lock files to be treated as generated ([dd2b5dd](https://github.com/ptarmiganlabs/butler-sos/commit/dd2b5ddc1567aad07091f5ecde3957bab42daf6b))
+* **influxdb:** Move InfluxDB `maxBatchSize` config setting to sit right under `influxdbConfig` section in YAML config file ([2bdb216](https://github.com/ptarmiganlabs/butler-sos/commit/2bdb21629b6146dd7f978c2ee8521e18e029b4e3))
+* **security:** Enhance OSV-Scanner workflow with manual trigger and improved scanning steps ([56e44b8](https://github.com/ptarmiganlabs/butler-sos/commit/56e44b8d185fea550a29cb69ab1b293b55953e6a))
+
+
+### Miscellaneous
+
+* Add simplifier Actions workflow ([930d0fa](https://github.com/ptarmiganlabs/butler-sos/commit/930d0fab034d83fbf3d53d3d639b47a5bbcea786))
+* Add test cases for InfuxDB v3 ([2328eca](https://github.com/ptarmiganlabs/butler-sos/commit/2328eca1e5afc8f99bbe8c3c37477b6a80ec33d2))
+* **deps:** update actions/checkout action to v6 ([3fc25bf](https://github.com/ptarmiganlabs/butler-sos/commit/3fc25bf42180208eb79dd06a780472f40024b29a))
+* **deps:** update actions/checkout action to v6 ([2397444](https://github.com/ptarmiganlabs/butler-sos/commit/23974444bf5eb2109564ddcf1127ce5a8870a8b0))
+* **deps:** update dependencies for fastify, fs-extra, posthog-node, systeminformation, and snyk ([ca5e108](https://github.com/ptarmiganlabs/butler-sos/commit/ca5e1081cdc369455913519b400bf9a6c93be90f))
+* **deps:** update docker/build-push-action action to v6.19.2 ([618852c](https://github.com/ptarmiganlabs/butler-sos/commit/618852c06c18e1b99f92218e33432d6a5047e33c))
+* **deps:** update docker/build-push-action action to v6.19.2 ([ab00ad8](https://github.com/ptarmiganlabs/butler-sos/commit/ab00ad8f53ccc6b2df24f1c7c9e59fd764aa70b2))
+* **deps:** update github/codeql-action action to v4.32.6 ([fb8ff4f](https://github.com/ptarmiganlabs/butler-sos/commit/fb8ff4f60a63e2c73b825ebc835139edd76ddbd1))
+* **deps:** update github/codeql-action action to v4.32.6 ([4c339d7](https://github.com/ptarmiganlabs/butler-sos/commit/4c339d71c40c2a8d8fcdea816e13f8f988f21900))
+* **deps:** update google/osv-scanner-action action to v2.3.3 ([b5305ff](https://github.com/ptarmiganlabs/butler-sos/commit/b5305ff756c8f3def989af50ea8393e2751102fd))
+* **deps:** update google/osv-scanner-action action to v2.3.3 ([1bb8767](https://github.com/ptarmiganlabs/butler-sos/commit/1bb8767dca09dfbe0b7bfa698fc0a8fe5c35354e))
+* **deps:** update google/osv-scanner-action digest to 90b209d ([34af1dd](https://github.com/ptarmiganlabs/butler-sos/commit/34af1ddcb3bbd953abe51f0ccaae2fab6917c801))
+* **deps:** update google/osv-scanner-action digest to 90b209d ([478a91a](https://github.com/ptarmiganlabs/butler-sos/commit/478a91a3d242b8bbe2b55c365911f65847bc2c5a))
+* **deps:** update snyk/actions digest to 9adf32b ([15a06a0](https://github.com/ptarmiganlabs/butler-sos/commit/15a06a0cd6f90f21dff689177a3597e9dba8f8af))
+* **deps:** update snyk/actions digest to 9adf32b ([9d838e8](https://github.com/ptarmiganlabs/butler-sos/commit/9d838e8c52af736ae76335b015d2cfeb2b666dc2))
+* update dependencies to stay safe and secure ([9749c61](https://github.com/ptarmiganlabs/butler-sos/commit/9749c61026f5e8ad6379492c32be35827211a5d0))
+
+
+### Refactoring
+
+* Better support for InfluxDB v2 databases ([b84d99c](https://github.com/ptarmiganlabs/butler-sos/commit/b84d99cd4a08b9831ffe290436ec9d6d05d6e7ed))
+* Improve error handling and avoid parallel API calls to QS proxy and health APIs ([81135c9](https://github.com/ptarmiganlabs/butler-sos/commit/81135c9c1158b52a3f44bef0d411a1cfcc288594))
+* **influxdb:** All-new codebase for InfluxDB v1, v2 and v3 makes future maintenance a lot easier ([1c3f3a3](https://github.com/ptarmiganlabs/butler-sos/commit/1c3f3a336a07da35132520acd30c7ef71bb8b554))
+* **influxdb:** Change name of InfluxDB v3 setting "timeout" to "writeTimeout" ([f4b22d5](https://github.com/ptarmiganlabs/butler-sos/commit/f4b22d54a235d11cfbf241d71766186dac4ed99e))
+* **influxdb:** Modernized InfluxDB v1 code. Easier to understand, esier to maintain ([87b98d5](https://github.com/ptarmiganlabs/butler-sos/commit/87b98d5e3c0a92f5cd6936cb713faf0f5aeb845d))
+* **influxdb:** Modernized shared InfluxDB code, better sharing of code across InfluxDB versions ([d05c0bb](https://github.com/ptarmiganlabs/butler-sos/commit/d05c0bb6532eef7acf2695918e3da1a9e14ef924))
+* Split InfluxDB v1/v2/v3 code into smaller, more manageable pieces ([b4f8bae](https://github.com/ptarmiganlabs/butler-sos/commit/b4f8baeb26e90a7fb7465a203e6343a54cf1b565))
+
+
+### Documentation
+
+* Update of sample Grafana dashboards ([4c778ec](https://github.com/ptarmiganlabs/butler-sos/commit/4c778ecd9467be99ba82b85b6488b21855a3c751))
+
 ## [14.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v13.0.0...butler-sos-v14.0.0) (2025-12-09)
 
 
