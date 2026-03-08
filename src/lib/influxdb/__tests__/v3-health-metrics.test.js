@@ -42,6 +42,12 @@ const mockUtils = {
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
 
+const mockBuilder = {
+    buildHealthMetricDatapoints: jest.fn(),
+};
+
+jest.unstable_mockModule('../shared/health-metrics-builder.js', () => mockBuilder);
+
 // Mock Point3
 /**
  * Create a mock Point instance
@@ -65,30 +71,40 @@ describe('v3/health-metrics', () => {
     let postHealthMetricsToInfluxdbV3;
     let globals;
     let utils;
+    let builder;
 
     beforeEach(async () => {
         jest.clearAllMocks();
 
         globals = (await import('../../../globals.js')).default;
         utils = await import('../shared/utils.js');
+        builder = await import('../shared/health-metrics-builder.js');
         const healthMetrics = await import('../v3/health-metrics.js');
         postHealthMetricsToInfluxdbV3 = healthMetrics.postHealthMetricsToInfluxdbV3;
 
         // Setup default mocks
         globals.config.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.influxdbConfig.v3Config.database') return 'test-db';
-            if (key === 'Butler-SOS.influxdbConfig.includeFields.activeDocs') return true;
-            if (key === 'Butler-SOS.influxdbConfig.includeFields.loadedDocs') return true;
-            if (key === 'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs') return true;
-            if (key === 'Butler-SOS.appNames.enableAppNameExtract') return true;
             if (key === 'Butler-SOS.influxdbConfig.maxBatchSize') return 100;
             return false;
         });
 
-        utils.getFormattedTime.mockReturnValue('1d 2h 30m');
-        utils.processAppDocuments.mockResolvedValue({
-            appNames: ['App1', 'App2'],
-            sessionAppNames: ['SessionApp1'],
+        builder.buildHealthMetricDatapoints.mockResolvedValue({
+            formattedTime: '1d 2h 30m',
+            appNames: {
+                active: ['App1', 'App2'],
+                activeSession: ['SessionApp1'],
+                loaded: ['App1', 'App2'],
+                loadedSession: ['SessionApp1'],
+                inMemory: ['App1', 'App2'],
+                inMemorySession: ['SessionApp1'],
+            },
+            config: {
+                includeActiveDocs: true,
+                includeLoadedDocs: true,
+                includeInMemoryDocs: true,
+                enableAppNameExtract: true,
+            },
         });
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeBatchToInfluxV3.mockResolvedValue();
@@ -182,22 +198,11 @@ describe('v3/health-metrics', () => {
 
         await postHealthMetricsToInfluxdbV3('test-server', 'test-host', body, serverTags);
 
-        // Should process all three app doc types
-        expect(utils.processAppDocuments).toHaveBeenCalledTimes(3);
-        expect(utils.processAppDocuments).toHaveBeenCalledWith(
-            body.apps.active_docs,
-            'HEALTH METRICS TO INFLUXDB V3',
-            'active'
-        );
-        expect(utils.processAppDocuments).toHaveBeenCalledWith(
-            body.apps.loaded_docs,
-            'HEALTH METRICS TO INFLUXDB V3',
-            'loaded'
-        );
-        expect(utils.processAppDocuments).toHaveBeenCalledWith(
-            body.apps.in_memory_docs,
-            'HEALTH METRICS TO INFLUXDB V3',
-            'in memory'
+        // Should call buildHealthMetricDatapoints
+        expect(builder.buildHealthMetricDatapoints).toHaveBeenCalledTimes(1);
+        expect(builder.buildHealthMetricDatapoints).toHaveBeenCalledWith(
+            body,
+            'HEALTH METRICS TO INFLUXDB V3'
         );
 
         // Should apply tags to all 8 points
@@ -214,27 +219,46 @@ describe('v3/health-metrics', () => {
         );
     });
 
-    test('should call getFormattedTime with started timestamp', async () => {
+    test('should call buildHealthMetricDatapoints with body', async () => {
         const body = createMockBody();
 
         await postHealthMetricsToInfluxdbV3('test-server', 'test-host', body, {});
 
-        expect(utils.getFormattedTime).toHaveBeenCalledWith(body.started);
+        expect(builder.buildHealthMetricDatapoints).toHaveBeenCalledWith(
+            body,
+            'HEALTH METRICS TO INFLUXDB V3'
+        );
     });
 
     test('should handle app name extraction being disabled', async () => {
         globals.config.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.influxdbConfig.v3Config.database') return 'test-db';
-            if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
             return false;
+        });
+        builder.buildHealthMetricDatapoints.mockResolvedValue({
+            formattedTime: '1d 2h 30m',
+            appNames: {
+                active: ['App1', 'App2'],
+                activeSession: ['SessionApp1'],
+                loaded: ['App1', 'App2'],
+                loadedSession: ['SessionApp1'],
+                inMemory: ['App1', 'App2'],
+                inMemorySession: ['SessionApp1'],
+            },
+            config: {
+                includeActiveDocs: false,
+                includeLoadedDocs: false,
+                includeInMemoryDocs: false,
+                enableAppNameExtract: false,
+            },
         });
 
         const body = createMockBody();
 
         await postHealthMetricsToInfluxdbV3('test-server', 'test-host', body, {});
 
-        // Should still process but set empty strings for app names
-        expect(utils.processAppDocuments).toHaveBeenCalledTimes(3);
+        // Should still call builder
+        expect(builder.buildHealthMetricDatapoints).toHaveBeenCalledTimes(1);
     });
 
     test('should handle write errors with error tracking', async () => {

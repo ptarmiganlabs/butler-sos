@@ -68,3 +68,6 @@ jspm_packages
 
 # Optional REPL history
 .node_repl_history
+butler-sos.exe
+butler-sos--local--*
+sea-prep.blob

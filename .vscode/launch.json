@@ -6,7 +6,7 @@
             "request": "launch",
             "name": "Launch Program",
             "program": "${workspaceFolder}/src/butler-sos.js",
-            "runtimeVersion": "22",
+            "runtimeVersion": "24",
             "cwd": "${workspaceFolder}/src",
             "env": {
                 "NODE_CONFIG_DIR": "${workspaceFolder}/src/config",
