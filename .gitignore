@@ -63,3 +63,4 @@ butler-sos--local--*
 sea-prep.blob
 src/config/production_vac.yaml
 tmp/
+.playwright-mcp
