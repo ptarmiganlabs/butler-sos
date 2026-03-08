@@ -59,6 +59,7 @@ jspm_packages
 build.cjs
 butler-sos
 butler-sos.exe
+butler-sos--local--*
 sea-prep.blob
 src/config/production_vac.yaml
 tmp/
