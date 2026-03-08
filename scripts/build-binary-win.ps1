@@ -29,6 +29,13 @@ Write-Output "Step 2: Generate SEA blob..."
 node --experimental-sea-config src/sea-config.json
 
 Write-Output "Step 3: Copy Node.js executable..."
+# In CI, we remove the existing Authenticode signature from the copied node.exe
+# using `signtool remove` before injecting the SEA blob (see .github/workflows/ci.yaml).
+# This local script intentionally skips that step because `signtool.exe` from the
+# Windows SDK is unlikely to be available on most developer machines. Running
+# `postject` on a signed binary can cause Windows to treat the signature as invalid
+# and may trigger SmartScreen/antivirus warnings; this is acceptable for local
+# testing, but for distribution use the CI/CD pipeline which handles signing.
 node -e "require('fs').copyFileSync(process.execPath, '${DIST_FILE_NAME}.exe')"
 
 Write-Output "Step 4: Inject blob into binary..."
