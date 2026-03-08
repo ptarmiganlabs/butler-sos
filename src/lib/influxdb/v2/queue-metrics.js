@@ -187,7 +187,10 @@ export async function storeLogEventQueueMetricsV2() {
  */
 export async function storeAuditEventQueueMetricsV2() {
     // Check if queue metrics are enabled
-    if (!globals.config.get('Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable')) {
+    if (
+        !globals.config.has('Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable') ||
+        !globals.config.get('Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable')
+    ) {
         return;
     }
 
