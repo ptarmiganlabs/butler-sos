@@ -60,3 +60,4 @@ build.cjs
 butler-sos
 src/config/production_vac.yaml
 tmp/
+.playwright-mcp
