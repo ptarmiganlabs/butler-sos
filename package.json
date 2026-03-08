@@ -6,6 +6,9 @@
     "scripts": {
         "build": "npx jsdoc-to-markdown 'src/**/*.js' > docs/src-code-overview.md",
         "build:docker": "docker build -t butler-sos:latest .",
+        "build:binary:linux": "bash scripts/build-binary-linux.sh",
+        "build:binary:macos": "bash scripts/build-binary-macos.sh",
+        "build:binary:win": "powershell -ExecutionPolicy Bypass -File scripts/build-binary-win.ps1",
         "butler-sos": "node src/butler-sos.js",
         "jest": "node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js",
         "test": "node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js && snyk test && npm run format",
