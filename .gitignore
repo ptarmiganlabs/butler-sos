@@ -58,5 +58,7 @@ jspm_packages
 .node_repl_history
 build.cjs
 butler-sos
+butler-sos.exe
+sea-prep.blob
 src/config/production_vac.yaml
 tmp/
