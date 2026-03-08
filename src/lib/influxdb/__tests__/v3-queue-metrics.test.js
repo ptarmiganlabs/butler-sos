@@ -345,6 +345,7 @@ describe('InfluxDB v3 Queue Metrics', () => {
         });
 
         test('should warn when queue manager is not initialized', async () => {
+            globals.config.has.mockReturnValue(true);
             globals.config.get.mockReturnValue(true);
             globals.auditEventsQueueManager = null;
 
@@ -377,6 +378,7 @@ describe('InfluxDB v3 Queue Metrics', () => {
                 backpressureActive: 0,
             };
 
+            globals.config.has.mockReturnValue(true);
             globals.config.get.mockImplementation((key) => {
                 if (key === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable') {
                     return true;

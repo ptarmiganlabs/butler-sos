@@ -335,6 +335,8 @@ async function mainScript() {
     ) {
         await initAuditInfluxDestination();
         await setupAuditEventsApiServer();
+    } else {
+        globals.logger.info('AUDIT API: Audit events section not found or disabled in config, skipping.');
     }
 
     // Set up rejected user/log events storage, if enabled
