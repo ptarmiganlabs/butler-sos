@@ -5,7 +5,7 @@ import client from 'prom-client';
 import globals from '../globals.js';
 import { getServerTags } from './servertags.js';
 
-let promLabels = null;
+let promLabels = [];
 
 let promMetricAppsCalls = null;
 let promMetricAppsSelections = null;
