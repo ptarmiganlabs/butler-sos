@@ -34,7 +34,7 @@
 name: "Duplicate Code Detector"
 "on":
   schedule:
-  - cron: "16 10 * * *"
+  - cron: "24 8 * * *"
     # Friendly format: daily (scattered)
   workflow_dispatch:
 
@@ -57,7 +57,7 @@ jobs:
       secret_verification_result: ${{ steps.validate-secret.outputs.verification_result }}
     steps:
       - name: Setup Scripts
-        uses: github/gh-aw/actions/setup@fd283fd367a439f6145df221278aa5ffad7e9f44 # v0.56.1
+        uses: github/gh-aw/actions/setup@cccf96100f50705c4291b91a6071c556f72cb3ef # v0.51.2
         with:
           destination: /opt/gh-aw/actions
       - name: Generate agentic run info
@@ -269,7 +269,7 @@ jobs:
       output_types: ${{ steps.collect_output.outputs.output_types }}
     steps:
       - name: Setup Scripts
-        uses: github/gh-aw/actions/setup@fd283fd367a439f6145df221278aa5ffad7e9f44 # v0.56.1
+        uses: github/gh-aw/actions/setup@cccf96100f50705c4291b91a6071c556f72cb3ef # v0.51.2
         with:
           destination: /opt/gh-aw/actions
       - name: Checkout repository
@@ -940,7 +940,7 @@ jobs:
       total_count: ${{ steps.missing_tool.outputs.total_count }}
     steps:
       - name: Setup Scripts
-        uses: github/gh-aw/actions/setup@fd283fd367a439f6145df221278aa5ffad7e9f44 # v0.56.1
+        uses: github/gh-aw/actions/setup@cccf96100f50705c4291b91a6071c556f72cb3ef # v0.51.2
         with:
           destination: /opt/gh-aw/actions
       - name: Download agent output artifact
@@ -1051,7 +1051,7 @@ jobs:
       process_safe_outputs_temporary_id_map: ${{ steps.process_safe_outputs.outputs.temporary_id_map }}
     steps:
       - name: Setup Scripts
-        uses: github/gh-aw/actions/setup@fd283fd367a439f6145df221278aa5ffad7e9f44 # v0.56.1
+        uses: github/gh-aw/actions/setup@cccf96100f50705c4291b91a6071c556f72cb3ef # v0.51.2
         with:
           destination: /opt/gh-aw/actions
       - name: Download agent output artifact
