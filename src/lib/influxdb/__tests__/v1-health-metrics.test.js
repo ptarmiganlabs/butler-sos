@@ -30,15 +30,23 @@ const mockUtils = {
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
 
+const mockBuilder = {
+    buildHealthMetricDatapoints: jest.fn(),
+};
+
+jest.unstable_mockModule('../shared/health-metrics-builder.js', () => mockBuilder);
+
 describe('v1/health-metrics', () => {
-    let storeHealthMetricsV1, globals, utils;
+    let storeHealthMetricsV1, postHealthMetricsToInfluxdbV1, globals, utils, builder;
 
     beforeEach(async () => {
         jest.clearAllMocks();
         globals = (await import('../../../globals.js')).default;
         utils = await import('../shared/utils.js');
+        builder = await import('../shared/health-metrics-builder.js');
         const healthMetrics = await import('../v1/health-metrics.js');
         storeHealthMetricsV1 = healthMetrics.storeHealthMetricsV1;
+        postHealthMetricsToInfluxdbV1 = healthMetrics.postHealthMetricsToInfluxdbV1;
 
         globals.config.has.mockReturnValue(true);
         globals.config.get.mockImplementation((path) => {
@@ -51,7 +59,23 @@ describe('v1/health-metrics', () => {
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeToInfluxWithRetry.mockResolvedValue();
         utils.writeBatchToInfluxV1.mockResolvedValue();
-        utils.processAppDocuments.mockResolvedValue({ appNames: [], sessionAppNames: [] });
+        builder.buildHealthMetricDatapoints.mockResolvedValue({
+            formattedTime: '2024-01-01T00:00:00Z',
+            appNames: {
+                active: [],
+                activeSession: [],
+                loaded: [],
+                loadedSession: [],
+                inMemory: [],
+                inMemorySession: [],
+            },
+            config: {
+                includeActiveDocs: false,
+                includeLoadedDocs: false,
+                includeInMemoryDocs: false,
+                enableAppNameExtract: false,
+            },
+        });
     });
 
     test('should return early when InfluxDB disabled', async () => {
@@ -89,7 +113,7 @@ describe('v1/health-metrics', () => {
             'server1',
             100
         );
-        expect(utils.processAppDocuments).toHaveBeenCalledTimes(3);
+        expect(builder.buildHealthMetricDatapoints).toHaveBeenCalledTimes(1);
     });
 
     test('should handle write errors', async () => {
@@ -106,7 +130,7 @@ describe('v1/health-metrics', () => {
         expect(globals.logger.error).toHaveBeenCalled();
     });
 
-    test('should process app documents', async () => {
+    test('should call buildHealthMetricDatapoints for app documents', async () => {
         const body = {
             mem: {},
             apps: {
@@ -122,21 +146,35 @@ describe('v1/health-metrics', () => {
             started: '2024-01-01T00:00:00Z',
         };
         await storeHealthMetricsV1({ server_name: 'server1' }, body);
-        expect(utils.processAppDocuments).toHaveBeenCalledTimes(3);
+        expect(builder.buildHealthMetricDatapoints).toHaveBeenCalledWith(
+            body,
+            'HEALTH METRICS V1'
+        );
     });
 
     test('should handle config with activeDocs enabled', async () => {
         globals.config.get.mockImplementation((path) => {
             if (path.includes('measurementName')) return 'health_metrics';
             if (path.includes('tags')) return [{ name: 'env', value: 'prod' }];
-            if (path.includes('includeFields.activeDocs')) return true;
-            if (path.includes('enableAppNameExtract')) return true;
             if (path.includes('maxBatchSize')) return 100;
             return undefined;
         });
-        utils.processAppDocuments.mockResolvedValue({
-            appNames: ['App1', 'App2'],
-            sessionAppNames: ['Session1'],
+        builder.buildHealthMetricDatapoints.mockResolvedValue({
+            formattedTime: '2024-01-01T00:00:00Z',
+            appNames: {
+                active: ['App1', 'App2'],
+                activeSession: ['Session1'],
+                loaded: [],
+                loadedSession: [],
+                inMemory: [],
+                inMemorySession: [],
+            },
+            config: {
+                includeActiveDocs: true,
+                includeLoadedDocs: false,
+                includeInMemoryDocs: false,
+                enableAppNameExtract: true,
+            },
         });
         const body = {
             mem: { committed: 1000 },
@@ -156,14 +194,25 @@ describe('v1/health-metrics', () => {
         globals.config.get.mockImplementation((path) => {
             if (path.includes('measurementName')) return 'health_metrics';
             if (path.includes('tags')) return [{ name: 'env', value: 'prod' }];
-            if (path.includes('includeFields.loadedDocs')) return true;
-            if (path.includes('enableAppNameExtract')) return true;
             if (path.includes('maxBatchSize')) return 100;
             return undefined;
         });
-        utils.processAppDocuments.mockResolvedValue({
-            appNames: ['LoadedApp'],
-            sessionAppNames: ['LoadedSession'],
+        builder.buildHealthMetricDatapoints.mockResolvedValue({
+            formattedTime: '2024-01-01T00:00:00Z',
+            appNames: {
+                active: [],
+                activeSession: [],
+                loaded: ['LoadedApp'],
+                loadedSession: ['LoadedSession'],
+                inMemory: [],
+                inMemorySession: [],
+            },
+            config: {
+                includeActiveDocs: false,
+                includeLoadedDocs: true,
+                includeInMemoryDocs: false,
+                enableAppNameExtract: true,
+            },
         });
         const body = {
             mem: { committed: 1000 },
@@ -183,14 +232,25 @@ describe('v1/health-metrics', () => {
         globals.config.get.mockImplementation((path) => {
             if (path.includes('measurementName')) return 'health_metrics';
             if (path.includes('tags')) return [{ name: 'env', value: 'prod' }];
-            if (path.includes('includeFields.inMemoryDocs')) return true;
-            if (path.includes('enableAppNameExtract')) return true;
             if (path.includes('maxBatchSize')) return 100;
             return undefined;
         });
-        utils.processAppDocuments.mockResolvedValue({
-            appNames: ['MemoryApp'],
-            sessionAppNames: ['MemorySession'],
+        builder.buildHealthMetricDatapoints.mockResolvedValue({
+            formattedTime: '2024-01-01T00:00:00Z',
+            appNames: {
+                active: [],
+                activeSession: [],
+                loaded: [],
+                loadedSession: [],
+                inMemory: ['MemoryApp'],
+                inMemorySession: ['MemorySession'],
+            },
+            config: {
+                includeActiveDocs: false,
+                includeLoadedDocs: false,
+                includeInMemoryDocs: true,
+                enableAppNameExtract: true,
+            },
         });
         const body = {
             mem: { committed: 1000 },

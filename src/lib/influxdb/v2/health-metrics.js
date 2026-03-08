@@ -1,11 +1,7 @@
 import { Point } from '@influxdata/influxdb-client';
 import globals from '../../../globals.js';
-import {
-    getFormattedTime,
-    processAppDocuments,
-    isInfluxDbEnabled,
-    writeToInfluxWithRetry,
-} from '../shared/utils.js';
+import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
+import { buildHealthMetricDatapoints } from '../shared/health-metrics-builder.js';
 
 /**
  * Posts health metrics data from Qlik Sense to InfluxDB v2.
@@ -26,7 +22,7 @@ import {
  * @param {object} serverTags - Server-specific tags to add to datapoints
  * @returns {Promise<void>}
  */
-export async function storeHealthMetricsV2(serverName, host, body, serverTags) {
+export async function postHealthMetricsToInfluxdbV2(serverName, host, body, serverTags) {
     globals.logger.debug(`HEALTH METRICS V2: Health data: ${JSON.stringify(body, null, 2)}`);
 
     // Check if InfluxDB v2 is enabled
@@ -43,15 +39,11 @@ export async function storeHealthMetricsV2(serverName, host, body, serverTags) {
     const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
     const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
 
-    // Process app names for different document types
-    const { appNames: appNamesActive, sessionAppNames: sessionAppNamesActive } =
-        await processAppDocuments(body.apps.active_docs, 'HEALTH METRICS', 'active');
-    const { appNames: appNamesLoaded, sessionAppNames: sessionAppNamesLoaded } =
-        await processAppDocuments(body.apps.loaded_docs, 'HEALTH METRICS', 'loaded');
-    const { appNames: appNamesInMemory, sessionAppNames: sessionAppNamesInMemory } =
-        await processAppDocuments(body.apps.in_memory_docs, 'HEALTH METRICS', 'in memory');
-
-    const formattedTime = getFormattedTime(body.started);
+    // Build shared metric datapoints
+    const { formattedTime, appNames, config } = await buildHealthMetricDatapoints(
+        body,
+        'HEALTH METRICS'
+    );
 
     // Create points using v2 Point class
     const points = [
@@ -69,64 +61,46 @@ export async function storeHealthMetricsV2(serverName, host, body, serverTags) {
             .intField('active_docs_count', body.apps.active_docs.length)
             .intField('loaded_docs_count', body.apps.loaded_docs.length)
             .intField('in_memory_docs_count', body.apps.in_memory_docs.length)
-            .stringField(
-                'active_docs',
-                globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
-                    ? body.apps.active_docs
-                    : ''
-            )
+            .stringField('active_docs', config.includeActiveDocs ? body.apps.active_docs : '')
             .stringField(
                 'active_docs_names',
-                globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
-                    globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
-                    ? appNamesActive.toString()
+                config.enableAppNameExtract && config.includeActiveDocs
+                    ? appNames.active.toString()
                     : ''
             )
             .stringField(
                 'active_session_docs_names',
-                globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
-                    globals.config.get('Butler-SOS.influxdbConfig.includeFields.activeDocs')
-                    ? sessionAppNamesActive.toString()
+                config.enableAppNameExtract && config.includeActiveDocs
+                    ? appNames.activeSession.toString()
                     : ''
             )
-            .stringField(
-                'loaded_docs',
-                globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
-                    ? body.apps.loaded_docs
-                    : ''
-            )
+            .stringField('loaded_docs', config.includeLoadedDocs ? body.apps.loaded_docs : '')
             .stringField(
                 'loaded_docs_names',
-                globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
-                    globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
-                    ? appNamesLoaded.toString()
+                config.enableAppNameExtract && config.includeLoadedDocs
+                    ? appNames.loaded.toString()
                     : ''
             )
             .stringField(
                 'loaded_session_docs_names',
-                globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
-                    globals.config.get('Butler-SOS.influxdbConfig.includeFields.loadedDocs')
-                    ? sessionAppNamesLoaded.toString()
+                config.enableAppNameExtract && config.includeLoadedDocs
+                    ? appNames.loadedSession.toString()
                     : ''
             )
             .stringField(
                 'in_memory_docs',
-                globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs')
-                    ? body.apps.in_memory_docs
-                    : ''
+                config.includeInMemoryDocs ? body.apps.in_memory_docs : ''
             )
             .stringField(
                 'in_memory_docs_names',
-                globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
-                    globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs')
-                    ? appNamesInMemory.toString()
+                config.enableAppNameExtract && config.includeInMemoryDocs
+                    ? appNames.inMemory.toString()
                     : ''
             )
             .stringField(
                 'in_memory_session_docs_names',
-                globals.config.get('Butler-SOS.appNames.enableAppNameExtract') &&
-                    globals.config.get('Butler-SOS.influxdbConfig.includeFields.inMemoryDocs')
-                    ? sessionAppNamesInMemory.toString()
+                config.enableAppNameExtract && config.includeInMemoryDocs
+                    ? appNames.inMemorySession.toString()
                     : ''
             )
             .uintField('calls', body.apps.calls)
@@ -189,3 +163,6 @@ export async function storeHealthMetricsV2(serverName, host, body, serverTags) {
 
     globals.logger.verbose(`HEALTH METRICS V2: Stored health data from server: ${serverName}`);
 }
+
+// Re-export with old name for backward compatibility
+export { postHealthMetricsToInfluxdbV2 as storeHealthMetricsV2 };

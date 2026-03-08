@@ -45,17 +45,25 @@ const mockUtils = {
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
 
+const mockBuilder = {
+    buildHealthMetricDatapoints: jest.fn(),
+};
+
+jest.unstable_mockModule('../shared/health-metrics-builder.js', () => mockBuilder);
+
 describe('v2/health-metrics', () => {
-    let storeHealthMetricsV2, globals, utils, Point;
+    let storeHealthMetricsV2, postHealthMetricsToInfluxdbV2, globals, utils, Point, builder;
 
     beforeEach(async () => {
         jest.clearAllMocks();
         globals = (await import('../../../globals.js')).default;
         utils = await import('../shared/utils.js');
+        builder = await import('../shared/health-metrics-builder.js');
         const InfluxClient = await import('@influxdata/influxdb-client');
         Point = InfluxClient.Point;
         const healthMetrics = await import('../v2/health-metrics.js');
         storeHealthMetricsV2 = healthMetrics.storeHealthMetricsV2;
+        postHealthMetricsToInfluxdbV2 = healthMetrics.postHealthMetricsToInfluxdbV2;
 
         mockPoint.tag.mockReturnThis();
         mockPoint.stringField.mockReturnThis();
@@ -74,9 +82,22 @@ describe('v2/health-metrics', () => {
 
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeToInfluxWithRetry.mockImplementation(async (fn) => await fn());
-        utils.processAppDocuments.mockResolvedValue({
-            appNames: ['App1', 'App2'],
-            sessionAppNames: ['Session1', 'Session2'],
+        builder.buildHealthMetricDatapoints.mockResolvedValue({
+            formattedTime: '2 days, 3 hours',
+            appNames: {
+                active: ['App1', 'App2'],
+                activeSession: ['Session1', 'Session2'],
+                loaded: ['App1', 'App2'],
+                loadedSession: ['Session1', 'Session2'],
+                inMemory: ['App1', 'App2'],
+                inMemorySession: ['Session1', 'Session2'],
+            },
+            config: {
+                includeActiveDocs: true,
+                includeLoadedDocs: true,
+                includeInMemoryDocs: true,
+                enableAppNameExtract: true,
+            },
         });
     });
 
@@ -127,7 +148,7 @@ describe('v2/health-metrics', () => {
 
         expect(Point).toHaveBeenCalledTimes(8); // One for each measurement: sense_server, mem, apps, cpu, session, users, cache, saturated
         expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
-        expect(utils.processAppDocuments).toHaveBeenCalledTimes(3);
+        expect(builder.buildHealthMetricDatapoints).toHaveBeenCalledTimes(1);
         expect(mockWriteApi.writePoints).toHaveBeenCalled();
         expect(mockWriteApi.close).toHaveBeenCalled();
     });
@@ -169,7 +190,7 @@ describe('v2/health-metrics', () => {
         await storeHealthMetricsV2('server1', 'host1', body, {});
 
         expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
-        expect(utils.processAppDocuments).toHaveBeenCalledWith([], 'HEALTH METRICS', 'active');
+        expect(builder.buildHealthMetricDatapoints).toHaveBeenCalledWith(body, 'HEALTH METRICS');
     });
 
     test('should handle serverTags with null values', async () => {
@@ -195,11 +216,24 @@ describe('v2/health-metrics', () => {
         globals.config.get.mockImplementation((path) => {
             if (path.includes('org')) return 'test-org';
             if (path.includes('bucket')) return 'test-bucket';
-            if (path.includes('includeFields.activeDocs')) return false;
-            if (path.includes('includeFields.loadedDocs')) return false;
-            if (path.includes('includeFields.inMemoryDocs')) return false;
-            if (path.includes('enableAppNameExtract')) return false;
             return undefined;
+        });
+        builder.buildHealthMetricDatapoints.mockResolvedValue({
+            formattedTime: '2 days, 3 hours',
+            appNames: {
+                active: ['App1', 'App2'],
+                activeSession: ['Session1', 'Session2'],
+                loaded: ['App1', 'App2'],
+                loadedSession: ['Session1', 'Session2'],
+                inMemory: ['App1', 'App2'],
+                inMemorySession: ['Session1', 'Session2'],
+            },
+            config: {
+                includeActiveDocs: false,
+                includeLoadedDocs: false,
+                includeInMemoryDocs: false,
+                enableAppNameExtract: false,
+            },
         });
 
         const body = {
