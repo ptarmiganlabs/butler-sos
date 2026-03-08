@@ -16,19 +16,7 @@ ssl/*
 *.tmp
 snyk.sarif
 build
-build.cjs
 test_data
-screenshots/audit/
-butler-sos
-src/config/production_vac.yaml
-tmp/
-audit-events/parquet/
-audit-events/qvd/
-.playwright-mcp/
-src/audit-events/parquet/
-src/audit-events/qvd/
-src/screenshots/audit/
-
 
 # Logs
 log/
@@ -68,6 +56,11 @@ jspm_packages
 
 # Optional REPL history
 .node_repl_history
+build.cjs
+butler-sos
 butler-sos.exe
 butler-sos--local--*
 sea-prep.blob
+src/config/production_vac.yaml
+tmp/
+.playwright-mcp
