@@ -122,3 +122,5 @@ The audit extension enforces the following limits before sending:
 - Max 10,000 values per dimension/measure
 - Max 1,000 characters per value (truncated with `...`)
 - `objectData` is `null` when data is unavailable, extraction fails, or the visualization type is unsupported
+
+
