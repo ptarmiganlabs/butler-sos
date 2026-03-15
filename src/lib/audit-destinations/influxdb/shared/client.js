@@ -52,6 +52,17 @@ function getAuditInfluxConfig() {
  */
 export function getAuditInfluxClient() {
     const cfg = getAuditInfluxConfig();
+
+    if (!cfg || typeof cfg !== 'object') {
+        globals.logger.warn(
+            'AUDIT INFLUX CLIENT: InfluxDB config missing or invalid; audit logging to InfluxDB is disabled'
+        );
+        cachedClient = { version: null, client: null };
+        cachedKey = null;
+        cachedVersion = null;
+        return cachedClient;
+    }
+
     const key = getConfigKey(cfg);
 
     if (cachedClient && cachedKey === key && cachedVersion === cfg.version) {
