@@ -126,7 +126,8 @@ export async function setupConfigVisServer(logger, config) {
             // Set up routes for the static files listed in sea-config.json
             configVisServer.get('/:filename', async (request, reply) => {
                 try {
-                    const filename = request.params.filename;
+                    // Sanitize: strip any directory traversal — only serve flat filenames
+                    const filename = path.basename(request.params.filename);
                     const assetPath = `/configvis/${filename}`;
                     const fileExtension = path.extname(filename);
 
