@@ -49,7 +49,11 @@ const mockUtils = {
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
 
 describe('v1/queue-metrics', () => {
-    let storeUserEventQueueMetricsV1, storeLogEventQueueMetricsV1, globals, utils;
+    let storeUserEventQueueMetricsV1,
+        storeLogEventQueueMetricsV1,
+        storeAuditEventQueueMetricsV1,
+        globals,
+        utils;
 
     beforeEach(async () => {
         jest.clearAllMocks();
@@ -58,6 +62,7 @@ describe('v1/queue-metrics', () => {
         const queueMetrics = await import('../v1/queue-metrics.js');
         storeUserEventQueueMetricsV1 = queueMetrics.storeUserEventQueueMetricsV1;
         storeLogEventQueueMetricsV1 = queueMetrics.storeLogEventQueueMetricsV1;
+        storeAuditEventQueueMetricsV1 = queueMetrics.storeAuditEventQueueMetricsV1;
 
         // Mock queue managers
         globals.udpQueueManagerUserActivity = {
@@ -100,6 +105,29 @@ describe('v1/queue-metrics', () => {
                 processingTimeP95Ms: 120,
                 processingTimeMaxMs: 250,
                 rateLimitCurrent: 100,
+                backpressureActive: false,
+            }),
+            clearMetrics: jest.fn(),
+        };
+
+        globals.auditEventsQueueManager = {
+            getMetrics: jest.fn().mockResolvedValue({
+                queueSize: 5,
+                queueMaxSize: 500,
+                queueUtilizationPct: 1.0,
+                queuePending: 2,
+                messagesReceived: 50,
+                messagesQueued: 45,
+                messagesProcessed: 40,
+                messagesFailed: 1,
+                messagesDroppedTotal: 4,
+                messagesDroppedRateLimit: 2,
+                messagesDroppedQueueFull: 1,
+                messagesDroppedSize: 1,
+                processingTimeAvgMs: 10,
+                processingTimeP95Ms: 20,
+                processingTimeMaxMs: 30,
+                rateLimitCurrent: 5,
                 backpressureActive: false,
             }),
             clearMetrics: jest.fn(),
@@ -197,6 +225,48 @@ describe('v1/queue-metrics', () => {
     test('should handle log event write errors', async () => {
         utils.writeBatchToInfluxV1.mockRejectedValue(new Error('Write failed'));
         await expect(storeLogEventQueueMetricsV1()).rejects.toThrow();
+        expect(globals.logger.error).toHaveBeenCalled();
+    });
+
+    test('should return early when InfluxDB disabled for audit events', async () => {
+        utils.isInfluxDbEnabled.mockReturnValue(false);
+        await storeAuditEventQueueMetricsV1();
+        expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
+    });
+
+    test('should return early when config disabled for audit events', async () => {
+        globals.config.get.mockImplementation((path) => {
+            if (path === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable') return false;
+            if (path.includes('queueMetrics.influxdb.enable')) return true;
+            return undefined;
+        });
+        await storeAuditEventQueueMetricsV1();
+        expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
+    });
+
+    test('should return early when audit queue manager not initialized', async () => {
+        globals.auditEventsQueueManager = undefined;
+        await storeAuditEventQueueMetricsV1();
+        expect(globals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('not initialized')
+        );
+        expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
+    });
+
+    test('should write audit event queue metrics', async () => {
+        await storeAuditEventQueueMetricsV1();
+        expect(utils.writeBatchToInfluxV1).toHaveBeenCalledWith(
+            expect.any(Array),
+            expect.stringContaining('Audit event queue metrics'),
+            '',
+            100
+        );
+        expect(globals.auditEventsQueueManager.clearMetrics).toHaveBeenCalled();
+    });
+
+    test('should handle audit event write errors', async () => {
+        utils.writeBatchToInfluxV1.mockRejectedValue(new Error('Write failed'));
+        await expect(storeAuditEventQueueMetricsV1()).rejects.toThrow();
         expect(globals.logger.error).toHaveBeenCalled();
     });
 });

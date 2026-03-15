@@ -1,0 +1,22 @@
+{
+  "name": "Butler SOS Audit Extension",
+  "description": "Captures user interactions and sends audit data to Butler SOS for monitoring and compliance",
+  "type": "visualization",
+  "version": "1.0.0",
+  "author": "Ptarmigan Labs",
+  "icon": "extension",
+  "preview": "preview.png",
+  "keywords": [
+    "audit",
+    "monitoring",
+    "butler-sos",
+    "compliance",
+    "analytics"
+  ],
+  "homepage": "https://github.com/ptarmiganlabs/butler-sos",
+  "license": "MIT",
+  "repository": "https://github.com/ptarmiganlabs/butler-sos",
+  "dependencies": {
+    "qlik-sense": ">=3.0.0"
+  }
+}
