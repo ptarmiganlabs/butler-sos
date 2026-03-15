@@ -317,7 +317,7 @@ export const destinationsSchema = {
             port: { type: 'number' },
             version: { type: 'number' },
             maxBatchSize: {
-                type: 'number',
+                type: 'integer',
                 description:
                     'Maximum number of data points to write in a single batch. Progressive retry with smaller sizes attempted on failure.',
                 default: 1000,
@@ -400,7 +400,36 @@ export const destinationsSchema = {
                 additionalProperties: false,
             },
         },
-        required: ['enable', 'host', 'port', 'version', 'v2Config', 'v1Config', 'includeFields'],
+        required: ['enable', 'host', 'port', 'version', 'maxBatchSize', 'includeFields'],
         additionalProperties: false,
+        allOf: [
+            {
+                if: {
+                    properties: { version: { const: 1 } },
+                },
+                then: {
+                    properties: { v1Config: { type: 'object' } },
+                    required: ['v1Config'],
+                },
+            },
+            {
+                if: {
+                    properties: { version: { const: 2 } },
+                },
+                then: {
+                    properties: { v2Config: { type: 'object' } },
+                    required: ['v2Config'],
+                },
+            },
+            {
+                if: {
+                    properties: { version: { const: 3 } },
+                },
+                then: {
+                    properties: { v3Config: { type: 'object' } },
+                    required: ['v3Config'],
+                },
+            },
+        ],
     },
 };

@@ -120,16 +120,16 @@ describe('v1/butler-memory', () => {
                 // So we should NOT mock implementation if we want to test the datapoint structure via globals.influx.writePoints?
                 // Or we should inspect the batch passed to writeBatchToInfluxV1.
             });
-            
+
             // The original test was:
             // utils.writeToInfluxWithRetry.mockImplementation(async (writeFn) => {
             //     await writeFn();
             // });
             // Because writeToInfluxWithRetry took a function that generated points and wrote them.
-            
+
             // Now writeBatchToInfluxV1 takes the points directly.
             // So we can just inspect the arguments of writeBatchToInfluxV1.
-            
+
             await storeButlerMemoryV1(memory);
 
             expect(utils.writeBatchToInfluxV1).toHaveBeenCalledWith(
@@ -146,7 +146,7 @@ describe('v1/butler-memory', () => {
                             external: 75.25,
                             process_memory: 350.5,
                         },
-                    })
+                    }),
                 ]),
                 expect.any(String),
                 expect.any(String),

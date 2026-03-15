@@ -7,7 +7,11 @@ import { storeSessionsV1 } from './v1/sessions.js';
 import { storeButlerMemoryV1 } from './v1/butler-memory.js';
 import { storeUserEventV1 } from './v1/user-events.js';
 import { storeEventCountV1, storeRejectedEventCountV1 } from './v1/event-counts.js';
-import { storeUserEventQueueMetricsV1, storeLogEventQueueMetricsV1 } from './v1/queue-metrics.js';
+import {
+    storeUserEventQueueMetricsV1,
+    storeLogEventQueueMetricsV1,
+    storeAuditEventQueueMetricsV1,
+} from './v1/queue-metrics.js';
 import { storeLogEventV1 } from './v1/log-events.js';
 
 import { storeHealthMetricsV2 } from './v2/health-metrics.js';
@@ -15,7 +19,11 @@ import { storeSessionsV2 } from './v2/sessions.js';
 import { storeButlerMemoryV2 } from './v2/butler-memory.js';
 import { storeUserEventV2 } from './v2/user-events.js';
 import { storeEventCountV2, storeRejectedEventCountV2 } from './v2/event-counts.js';
-import { storeUserEventQueueMetricsV2, storeLogEventQueueMetricsV2 } from './v2/queue-metrics.js';
+import {
+    storeUserEventQueueMetricsV2,
+    storeLogEventQueueMetricsV2,
+    storeAuditEventQueueMetricsV2,
+} from './v2/queue-metrics.js';
 import { storeLogEventV2 } from './v2/log-events.js';
 
 import { postHealthMetricsToInfluxdbV3 } from './v3/health-metrics.js';
@@ -26,6 +34,7 @@ import { storeEventCountInfluxDBV3, storeRejectedEventCountInfluxDBV3 } from './
 import {
     postUserEventQueueMetricsToInfluxdbV3,
     postLogEventQueueMetricsToInfluxdbV3,
+    postAuditEventQueueMetricsToInfluxdbV3,
 } from './v3/queue-metrics.js';
 import { postLogEventToInfluxdbV3 } from './v3/log-events.js';
 
@@ -222,6 +231,36 @@ export async function postLogEventQueueMetricsToInfluxdb() {
     } catch (err) {
         globals.logger.error(
             `INFLUXDB FACTORY: Error in postLogEventQueueMetricsToInfluxdb: ${err.message}`
+        );
+        globals.logger.debug(`INFLUXDB FACTORY: Error stack: ${err.stack}`);
+        throw err;
+    }
+}
+
+/**
+ * Factory function that routes audit event queue metrics to the appropriate InfluxDB version implementation.
+ *
+ * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
+ */
+export async function postAuditEventQueueMetricsToInfluxdb() {
+    try {
+        const version = getInfluxDbVersion();
+
+        if (version === 1) {
+            return storeAuditEventQueueMetricsV1();
+        }
+        if (version === 2) {
+            return storeAuditEventQueueMetricsV2();
+        }
+        if (version === 3) {
+            return postAuditEventQueueMetricsToInfluxdbV3();
+        }
+
+        globals.logger.debug(`INFLUXDB FACTORY: Unknown InfluxDB version: v${version}`);
+        throw new Error(`InfluxDB v${version} not supported`);
+    } catch (err) {
+        globals.logger.error(
+            `INFLUXDB FACTORY: Error in postAuditEventQueueMetricsToInfluxdb: ${err.message}`
         );
         globals.logger.debug(`INFLUXDB FACTORY: Error stack: ${err.stack}`);
         throw err;
