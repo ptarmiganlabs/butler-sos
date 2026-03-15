@@ -21,8 +21,16 @@ export async function writeAuditEventToDestinations(envelope, extras = {}) {
 
         if (!destinationEnabled) return;
 
-        const destinationType = globals.config.get('Butler-SOS.auditEvents.destination.type');
-        const destinations = destinationType.split(',').map((d) => d.trim().toLowerCase());
+        const rawDestinationType = globals.config.get('Butler-SOS.auditEvents.destination.type');
+
+        if (typeof rawDestinationType !== 'string' || rawDestinationType.trim() === '') {
+            globals.logger.warn(
+                "AUDIT DESTINATION: No valid 'Butler-SOS.auditEvents.destination.type' configured; no audit events will be stored."
+            );
+            return;
+        }
+
+        const destinations = rawDestinationType.split(',').map((d) => d.trim().toLowerCase());
 
         for (const destination of destinations) {
             if (destination === 'influxdb') {
