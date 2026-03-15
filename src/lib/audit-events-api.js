@@ -649,7 +649,9 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
      * @returns {boolean} True if payload is valid (or validation skipped), false otherwise
      */
     function validatePayload(envelope) {
-        const validator = validatePayloadByType[envelope?.type];
+        const validator = Object.hasOwn(validatePayloadByType, envelope?.type)
+            ? validatePayloadByType[envelope?.type]
+            : undefined;
         if (!validator) return true;
 
         const ok = validator(envelope?.payload);
@@ -671,7 +673,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
      * @returns {Promise<void>}
      */
     async function processAuditEventEnvelope(envelope, requestContext) {
-        const handler = handlers[envelope.type];
+        const handler = Object.hasOwn(handlers, envelope.type) ? handlers[envelope.type] : undefined;
         /** @type {object} */
         let extras = {};
 
