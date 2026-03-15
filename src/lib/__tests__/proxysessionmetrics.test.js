@@ -237,13 +237,6 @@ describe('proxysessionmetrics', () => {
             // Execute
             await getProxySessionStatsFromSense(serverName, host, virtualProxy, tags);
 
-            if (mockPostProxySessionsToInfluxdb.mock.calls.length === 0) {
-                console.log(
-                    'Logger errors:',
-                    JSON.stringify(globals.logger.error.mock.calls, null, 2)
-                );
-            }
-
             // Verify
             expect(mockRequest).toHaveBeenCalled();
             expect(mockPostProxySessionsToInfluxdb).toHaveBeenCalled();
