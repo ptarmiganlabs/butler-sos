@@ -28,6 +28,7 @@ tmp/
 src/audit-events/parquet
 src/audit-events/qvd
 src/screenshots/audit
+audit-events/
 
 # Logs
 log/
