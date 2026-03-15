@@ -121,8 +121,10 @@ function buildCorsOptions(corsOriginList) {
  */
 function getBearerToken(authorizationHeader) {
     if (!authorizationHeader || typeof authorizationHeader !== 'string') return null;
-    const m = authorizationHeader.match(/^Bearer\s+(.+)$/i);
-    return m ? m[1] : null;
+    const prefix = 'bearer ';
+    if (!authorizationHeader.toLowerCase().startsWith(prefix)) return null;
+    const token = authorizationHeader.slice(prefix.length).trim();
+    return token || null;
 }
 
 /**
