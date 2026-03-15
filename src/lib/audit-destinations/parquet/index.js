@@ -233,6 +233,12 @@ async function flushAuditParquetBuffer(reason) {
  */
 export function bufferAuditParquetEvent(envelope, extras = {}) {
     const cfg = getAuditParquetConfig();
+
+    if (!cfg || typeof cfg !== 'object') {
+        globals.logger.warn('AUDIT PARQUET: Parquet destination config subtree is missing or invalid');
+        return;
+    }
+
     ensureFlushTimer(cfg);
 
     const env = asObject(envelope) || {};

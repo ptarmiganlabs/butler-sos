@@ -235,6 +235,12 @@ async function flushAuditQvdBuffer(reason) {
  */
 export function bufferAuditQvdEvent(envelope, extras = {}) {
     const cfg = getAuditQvdConfig();
+
+    if (!cfg || typeof cfg !== 'object') {
+        globals.logger.warn('AUDIT QVD: QVD destination config subtree is missing or invalid');
+        return;
+    }
+
     ensureFlushTimer(cfg);
 
     const env = asObject(envelope) || {};
