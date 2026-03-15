@@ -43,7 +43,7 @@ Butler-SOS:
                 v3Config:
                     database: butler-sos
                     description: Butler SOS metrics
-                    token: apiv3_99RtQcbFuBYP_wO1fK5aHvIBQqOqOVRAV4cAqAJxm_gpQRUFIpQkONXWfG0cBt_1wOI21Dc2l5K2izMa3gW7mA
+                    token: <INFLUXDB_V3_TOKEN>
                     retentionDuration: 10d
                     writeTimeout: 10000
 
