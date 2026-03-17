@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import https from 'node:https';
@@ -6,10 +7,14 @@ import axios from 'axios';
 import { DateTime } from 'luxon';
 import setCookieParser from 'set-cookie-parser';
 
+import pngjs from 'pngjs';
+
 import globals from '../globals.js';
 import { createCertificateOptions, getCertificates } from './cert-utils.js';
 import { addTextHeaderToPng } from './audit-screenshot-metadata-image.js';
 import { extractVirtualProxyFromSessionCookieName } from './util/qlik-session-utils.js';
+
+const { PNG } = pngjs;
 
 /**
  * Minimal logger interface used by this module.
@@ -603,6 +608,283 @@ export function buildScreenshotFilename(envelope, url, contentType) {
 }
 
 /**
+ * Crops a PNG image buffer to the specified rectangle.
+ *
+ * The Printing Service may render more rows than are visible on screen
+ * (e.g. pivot tables with a virtualScroll buffer larger than the viewport).
+ * The extension sends a `crop` object with the exact visible dimensions so
+ * we can trim the PNG to match what the user actually sees.
+ *
+ * @param {Buffer} buffer - The original PNG image buffer.
+ * @param {{ top: number, left: number, width: number, height: number, scrollTop?: number, scrollAreaOffsetY?: number }} crop - Crop rectangle with optional scroll metadata.
+ * @returns {Buffer} Cropped PNG buffer, or the original buffer if cropping is unnecessary.
+ */
+function cropPngBuffer(buffer, crop, logger) {
+    let src = PNG.sync.read(buffer);
+
+    if (logger) {
+        // Scan from the bottom to find the last row that contains non-white pixels.
+        // This tells us where the actual table content ends in the rendered image.
+        let contentBottomY = 0;
+        for (let y = src.height - 1; y >= 0; y--) {
+            let hasContent = false;
+            for (let x = 0; x < src.width; x++) {
+                const idx = (y * src.width + x) * 4;
+                const r = src.data[idx];
+                const g = src.data[idx + 1];
+                const b = src.data[idx + 2];
+                // Non-white pixel (with some tolerance for anti-aliasing)
+                if (r < 250 || g < 250 || b < 250) {
+                    hasContent = true;
+                    break;
+                }
+            }
+            if (hasContent) {
+                contentBottomY = y + 1;
+                break;
+            }
+        }
+
+        logger.info(
+            `AUDIT API: cropPngBuffer source=${src.width}x${src.height} crop={top:${crop.top},left:${crop.left},w:${crop.width},h:${crop.height},scrollTop:${crop.scrollTop || 0},scrollAreaOffsetY:${crop.scrollAreaOffsetY || 0},renderingOverflow:${crop.renderingOverflow || 0}} needsCrop=${src.width > crop.width || src.height > crop.height} contentBottomY=${contentBottomY}`
+        );
+
+        // Save debug copy of the pre-crop image
+        try {
+            const debugDir = path.join(process.cwd(), 'audit-events', 'debug');
+            if (!fsSync.existsSync(debugDir)) {
+                fsSync.mkdirSync(debugDir, { recursive: true });
+            }
+            const debugFile = path.join(debugDir, `pre-crop-${src.width}x${src.height}.png`);
+            fsSync.writeFileSync(debugFile, buffer);
+            logger.info(`AUDIT API: Saved pre-crop debug image to ${debugFile}`);
+        } catch (dbgErr) {
+            logger.debug(`AUDIT API: Failed to save debug image: ${dbgErr.message}`);
+        }
+    }
+
+    // SCROLL-AWARE COMPOSITE CROP:
+    // When the extension reports scrollTop > 0, the Printing API rendered from
+    // scrollTop=0 (no scroll applied). The rendered image contains:
+    //   y=0 .. scrollAreaOffsetY           → title area (outside scroll container)
+    //   y=scrollAreaOffsetY .. +scrollTop   → scroll content that was scrolled past
+    //   y=scrollAreaOffsetY+scrollTop .. end → visible scroll content (headers + data)
+    //
+    // We composite: keep the title region, skip scrolled-past content, keep the
+    // rest. Then the standard overflow crop trims the bottom edge.
+    const scrollTop = crop.scrollTop || 0;
+    const scrollAreaOffsetY = crop.scrollAreaOffsetY || 0;
+    if (scrollTop > 0 && scrollAreaOffsetY >= 0 && scrollAreaOffsetY + scrollTop < src.height) {
+        const skipEnd = scrollAreaOffsetY + scrollTop;
+        const regionAHeight = scrollAreaOffsetY; // title
+        const regionBHeight = src.height - skipEnd; // visible scroll content
+        const compositeHeight = regionAHeight + regionBHeight;
+
+        if (logger) {
+            logger.info(
+                `AUDIT API: Scroll composite: titleRegion=0..${regionAHeight} skip=${scrollAreaOffsetY}..${skipEnd} visibleRegion=${skipEnd}..${src.height} compositeHeight=${compositeHeight}`
+            );
+        }
+
+        const composite = new PNG({ width: src.width, height: compositeHeight });
+
+        // Copy Region A: title area (y=0 to y=scrollAreaOffsetY)
+        for (let y = 0; y < regionAHeight; y++) {
+            const srcOff = y * src.width * 4;
+            const dstOff = y * src.width * 4;
+            src.data.copy(composite.data, dstOff, srcOff, srcOff + src.width * 4);
+        }
+
+        // Copy Region B: visible scroll content (y=skipEnd to y=src.height)
+        for (let y = 0; y < regionBHeight; y++) {
+            const srcOff = (skipEnd + y) * src.width * 4;
+            const dstOff = (regionAHeight + y) * src.width * 4;
+            src.data.copy(composite.data, dstOff, srcOff, srcOff + src.width * 4);
+        }
+
+        // Use composite as the new source for the standard crop step
+        src = composite;
+        buffer = PNG.sync.write(composite);
+
+        if (logger) {
+            // Save debug composite image
+            try {
+                const debugDir = path.join(process.cwd(), 'audit-events', 'debug');
+                const debugFile = path.join(debugDir, `composite-${src.width}x${compositeHeight}.png`);
+                fsSync.writeFileSync(debugFile, buffer);
+                logger.info(`AUDIT API: Saved composite debug image to ${debugFile}`);
+            } catch (dbgErr) {
+                logger.debug(`AUDIT API: Failed to save composite debug image: ${dbgErr.message}`);
+            }
+        }
+    }
+
+    // OVERFLOW-AWARE COMPOSITE CROP:
+    // The Printing API renders ALL data rows fully — it never clips rows. When a
+    // partial row is visible on screen (e.g. 18px of a 21px row), the inflate+crop
+    // approach inflates the rendering height so rows render at their correct pixel
+    // height, then expects cropping to clip the last row. However, the Printing API
+    // places table content with a margin at the bottom, so a simple bottom crop
+    // removes margin pixels, not data row pixels. The last row stays fully visible.
+    //
+    // Fix: detect the table's bottom grid line (a uniform horizontal line marking
+    // the end of data rows), then composite the image by removing `overflow` pixels
+    // from just above that line. This clips into the last data row, producing the
+    // correct partial-row effect. The margin below is preserved.
+    const renderingOverflow = crop.renderingOverflow || 0;
+    if (renderingOverflow > 0) {
+        // Find the table grid bottom line: scan upward from near the bottom,
+        // looking for a uniform horizontal line in the grid-line brightness
+        // range (160-245). We skip the outer border columns (first/last ~50px)
+        // because the table frame border has a different color than interior
+        // grid lines, which would break a uniformity check starting at x=0.
+        let gridLineY = -1;
+        const margin = Math.min(50, Math.floor(src.width * 0.05));
+        const startY = Math.max(0, src.height - 5);
+        for (let y = startY; y >= Math.floor(src.height / 2); y--) {
+            // Use a reference pixel from the interior, not the border frame
+            const refX = Math.floor(src.width / 4);
+            const firstIdx = (y * src.width + refX) * 4;
+            const refR = src.data[firstIdx];
+            const refG = src.data[firstIdx + 1];
+            const refB = src.data[firstIdx + 2];
+            const brightness = (refR + refG + refB) / 3;
+            // Grid-line brightness range includes darker separators (e.g. native
+            // table header separator at ~166) through light row separators (~242).
+            if (brightness < 160 || brightness > 245) continue;
+
+            let isUniform = true;
+            let checked = 0;
+            for (let x = margin; x < src.width - margin; x += 10) {
+                const idx = (y * src.width + x) * 4;
+                const r = src.data[idx];
+                const g = src.data[idx + 1];
+                const b = src.data[idx + 2];
+                if (Math.abs(r - refR) > 5 || Math.abs(g - refG) > 5 || Math.abs(b - refB) > 5) {
+                    isUniform = false;
+                    break;
+                }
+                checked++;
+            }
+            if (isUniform && checked > 10) {
+                // Verify this is a real data grid line, not part of a margin band
+                // or the outer border frame. Two checks:
+                // 1. The row above must be brighter (data cell background ≈ 255)
+                //    than the gridline (≈ 204-242). A margin/border row has similar
+                //    brightness to the candidate, so brightness difference is small.
+                // 2. Fall back: if the row above is also uniform but has clearly
+                //    different brightness (>10 apart), accept the candidate —
+                //    it's a gridline adjacent to a white data row.
+                if (y > 0) {
+                    const aboveRefX = Math.floor(src.width / 4);
+                    const aboveRefIdx = ((y - 1) * src.width + aboveRefX) * 4;
+                    const aboveRefR = src.data[aboveRefIdx];
+                    const aboveRefG = src.data[aboveRefIdx + 1];
+                    const aboveRefB = src.data[aboveRefIdx + 2];
+                    const aboveBrightness = (aboveRefR + aboveRefG + aboveRefB) / 3;
+
+                    // Check if row above is non-uniform (has varied cell content)
+                    let aboveUniform = true;
+                    for (let x = margin; x < src.width - margin; x += 10) {
+                        const idx = ((y - 1) * src.width + x) * 4;
+                        if (Math.abs(src.data[idx] - aboveRefR) > 5) {
+                            aboveUniform = false;
+                            break;
+                        }
+                    }
+
+                    if (!aboveUniform) {
+                        // Row above has varied content → real gridline
+                        gridLineY = y;
+                        break;
+                    }
+                    // Row above is uniform — accept if it's significantly brighter
+                    // (white data cell ≈255 vs gridline ≈242 → diff ≈13).
+                    // Reject if brightness difference is small (adjacent border band).
+                    if (aboveBrightness - brightness > 8) {
+                        gridLineY = y;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (gridLineY >= 0 && gridLineY - renderingOverflow >= 0) {
+            // Composite: keep content up to (gridLine - overflow), skip overflow,
+            // keep grid line and everything below (margin area).
+            const keepAbove = gridLineY - renderingOverflow; // rows 0..keepAbove-1
+            const keepBelow = src.height - gridLineY; // gridLine row + margin below
+            const overflowCompositeHeight = keepAbove + keepBelow;
+
+            if (logger) {
+                logger.info(
+                    `AUDIT API: Overflow composite: gridLineY=${gridLineY} overflow=${renderingOverflow} keepAbove=${keepAbove} keepBelow=${keepBelow} compositeHeight=${overflowCompositeHeight}`
+                );
+            }
+
+            const ovComp = new PNG({ width: src.width, height: overflowCompositeHeight });
+
+            // Copy region above the overflow strip (data with partial last row)
+            for (let y = 0; y < keepAbove; y++) {
+                const srcOff = y * src.width * 4;
+                const dstOff = y * src.width * 4;
+                src.data.copy(ovComp.data, dstOff, srcOff, srcOff + src.width * 4);
+            }
+
+            // Copy grid line + margin (from gridLineY to end)
+            for (let y = 0; y < keepBelow; y++) {
+                const srcOff = (gridLineY + y) * src.width * 4;
+                const dstOff = (keepAbove + y) * src.width * 4;
+                src.data.copy(ovComp.data, dstOff, srcOff, srcOff + src.width * 4);
+            }
+
+            src = ovComp;
+            buffer = PNG.sync.write(ovComp);
+
+            if (logger) {
+                try {
+                    const debugDir = path.join(process.cwd(), 'audit-events', 'debug');
+                    if (!fsSync.existsSync(debugDir)) {
+                        fsSync.mkdirSync(debugDir, { recursive: true });
+                    }
+                    const debugFile = path.join(debugDir, `overflow-composite-${src.width}x${overflowCompositeHeight}.png`);
+                    fsSync.writeFileSync(debugFile, buffer);
+                    logger.info(`AUDIT API: Saved overflow composite debug image to ${debugFile}`);
+                } catch (dbgErr) {
+                    logger.debug(`AUDIT API: Failed to save overflow composite debug image: ${dbgErr.message}`);
+                }
+            }
+        } else if (logger) {
+            logger.info(
+                `AUDIT API: Overflow composite skipped — grid line not found (gridLineY=${gridLineY}, overflow=${renderingOverflow})`
+            );
+        }
+    }
+
+    // Standard crop: trim to the target dimensions (handles overflow at bottom edge)
+    if (src.width <= crop.width && src.height <= crop.height) {
+        return buffer;
+    }
+
+    const cropW = Math.min(crop.width, src.width - crop.left);
+    const cropH = Math.min(crop.height, src.height - crop.top);
+
+    if (cropW <= 0 || cropH <= 0) {
+        return buffer;
+    }
+
+    const dst = new PNG({ width: cropW, height: cropH });
+
+    for (let y = 0; y < cropH; y++) {
+        const srcOffset = ((crop.top + y) * src.width + crop.left) * 4;
+        const dstOffset = y * cropW * 4;
+        src.data.copy(dst.data, dstOffset, srcOffset, srcOffset + cropW * 4);
+    }
+
+    return PNG.sync.write(dst);
+}
+
+/**
  * Downloads a screenshot URL and stores it to all enabled storage targets.
  *
  * Notes:
@@ -689,7 +971,7 @@ export async function downloadScreenshot(url, envelope, config, logger) {
             }
 
             const contentType = response.headers?.['content-type'] || null;
-            const buffer = Buffer.from(response.data);
+            let buffer = Buffer.from(response.data);
 
             // Non-2xx
             if (response.status < 200 || response.status >= 300) {
@@ -741,12 +1023,45 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 return;
             }
 
+            // Crop PNG to visible area if the extension provided crop dimensions.
+            // The Printing Service may render more content than what's visible
+            // on screen (e.g. pivot tables with buffered rows beyond the viewport).
+            const ext = extensionFromContentType(contentType) || extensionFromUrl(url);
+            const crop = envelope?.payload?.event?.crop;
+            const evtWidth = envelope?.payload?.event?.width;
+            const evtHeight = envelope?.payload?.event?.height;
+            logger.info(
+                `AUDIT API: Pre-crop check: ext=${ext} eventDims=${evtWidth}x${evtHeight} crop=${JSON.stringify(crop)} selectionTxnId=${selectionTxnId}`
+            );
+            if (
+                ext === 'png' &&
+                crop &&
+                typeof crop.width === 'number' &&
+                typeof crop.height === 'number' &&
+                crop.width > 0 &&
+                crop.height > 0
+            ) {
+                try {
+                    const beforeLen = buffer.length;
+                    buffer = cropPngBuffer(buffer, crop, logger);
+                    logger.info(
+                        `AUDIT API: Cropped screenshot PNG to ${crop.width}x${crop.height} (top=${crop.top ?? 0}, left=${crop.left ?? 0}). selectionTxnId=${selectionTxnId} beforeBytes=${beforeLen} afterBytes=${buffer.length}`
+                    );
+                } catch (cropErr) {
+                    logger.warn(
+                        `AUDIT API: Failed to crop screenshot PNG. selectionTxnId=${selectionTxnId} error=${formatAxiosError(cropErr)} ${auditCtxStr}`
+                    );
+                    // Continue with the uncropped buffer
+                }
+            }
+
             const filename = buildScreenshotFilename(envelope, url, contentType);
 
-            const ext = extensionFromContentType(contentType) || extensionFromUrl(url);
             const metadataFlags = config?.addInImageMetadata;
             const shouldAddMetadata =
-                ext === 'png' && metadataFlags?.enable === true && hasAnyEnabledMetadataFlag(metadataFlags);
+                ext === 'png' &&
+                metadataFlags?.enable === true &&
+                hasAnyEnabledMetadataFlag(metadataFlags);
             const metadataLines = shouldAddMetadata
                 ? buildScreenshotMetadataLines(envelope, auditCtx, metadataFlags)
                 : [];

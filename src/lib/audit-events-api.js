@@ -675,7 +675,9 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
      * @returns {Promise<void>}
      */
     async function processAuditEventEnvelope(envelope, requestContext) {
-        const handler = Object.hasOwn(handlers, envelope.type) ? handlers[envelope.type] : undefined;
+        const handler = Object.hasOwn(handlers, envelope.type)
+            ? handlers[envelope.type]
+            : undefined;
         /** @type {object} */
         let extras = {};
 
