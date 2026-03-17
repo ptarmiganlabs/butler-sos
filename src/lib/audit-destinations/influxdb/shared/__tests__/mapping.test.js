@@ -16,14 +16,14 @@ describe('audit-destinations/influxdb/shared/mapping', () => {
         jest.clearAllMocks();
 
         mockGlobals.config.has.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb.staticTags') return false;
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata.staticTags') return false;
             return false;
         });
 
         mockGlobals.config.get.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb.measurementName')
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata.measurementName')
                 return 'audit_event';
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb.auditEventSchemaVersion')
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata.auditEventSchemaVersion')
                 return '1';
             throw new Error(`Unexpected config.get key: ${key}`);
         });
@@ -31,16 +31,16 @@ describe('audit-destinations/influxdb/shared/mapping', () => {
 
     test('maps staticTags from config into tags (ignores invalid entries)', async () => {
         mockGlobals.config.has.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb.staticTags') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata.staticTags') return true;
             return false;
         });
 
         mockGlobals.config.get.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb.measurementName')
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata.measurementName')
                 return 'audit_event';
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb.auditEventSchemaVersion')
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata.auditEventSchemaVersion')
                 return '1';
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb.staticTags')
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata.staticTags')
                 return [
                     { name: 'env', value: 'prod' },
                     { name: 'region', value: 'eu-north-1' },
@@ -309,21 +309,17 @@ describe('audit-destinations/influxdb/shared/mapping', () => {
         expect(model.fields.objectData).toBeUndefined();
     });
 
-    test('excludes objectData when includeObjectData config is false', async () => {
+    test('always includes objectData when present (includeObjectData toggle removed)', async () => {
         mockGlobals.config.has.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb.includeObjectData')
-                return true;
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb.staticTags') return false;
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata.staticTags') return false;
             return false;
         });
 
         mockGlobals.config.get.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb.measurementName')
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata.measurementName')
                 return 'audit_event';
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb.auditEventSchemaVersion')
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata.auditEventSchemaVersion')
                 return '1';
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb.includeObjectData')
-                return false;
             throw new Error(`Unexpected config.get key: ${key}`);
         });
 
@@ -331,7 +327,7 @@ describe('audit-destinations/influxdb/shared/mapping', () => {
 
         const envelope = {
             type: 'screenshot.url.received',
-            eventId: 'evt-dim-off-1',
+            eventId: 'evt-dim-always-1',
             timestamp: '2025-01-01T00:00:00.000Z',
             payload: {
                 context: { appId: 'app-1' },
@@ -348,7 +344,7 @@ describe('audit-destinations/influxdb/shared/mapping', () => {
 
         const model = buildAuditInfluxPointModel(envelope, {});
 
-        expect(model.tags.objectType).toBeUndefined();
-        expect(model.fields.objectData).toBeUndefined();
+        expect(model.tags.objectType).toBe('barchart');
+        expect(model.fields.objectData).toBeDefined();
     });
 });

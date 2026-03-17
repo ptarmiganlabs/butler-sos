@@ -65,7 +65,7 @@ function getAuditDestinationEnabled() {
  * @returns {object} Config subtree.
  */
 function getAuditParquetConfig() {
-    return globals.config.get('Butler-SOS.auditEvents.destination.parquet');
+    return globals.config.get('Butler-SOS.auditEvents.destination.parquet.metadata');
 }
 
 /**
@@ -288,14 +288,9 @@ export function bufferAuditParquetEvent(envelope, extras = {}) {
         row.screenshotSavedPaths = null;
     }
 
-    // Object data and object type
-    const includeObjectData =
-        !globals.config.has('Butler-SOS.auditEvents.destination.parquet.includeObjectData') ||
-        globals.config.get('Butler-SOS.auditEvents.destination.parquet.includeObjectData') !==
-            false;
-
+    // Object data and object type (always included in metadata rows)
     const dimData = asObject(event.objectData);
-    if (includeObjectData && dimData) {
+    if (dimData) {
         row.objectType = readString(dimData.objectType) ?? null;
         row.objectData = JSON.stringify(dimData);
     } else {
@@ -319,11 +314,11 @@ export function bufferAuditParquetEvent(envelope, extras = {}) {
     // Tags (static + dynamic)
     const tags = {};
     if (
-        globals.config.has('Butler-SOS.auditEvents.destination.parquet.staticTags') &&
-        Array.isArray(globals.config.get('Butler-SOS.auditEvents.destination.parquet.staticTags'))
+        globals.config.has('Butler-SOS.auditEvents.destination.parquet.metadata.staticTags') &&
+        Array.isArray(globals.config.get('Butler-SOS.auditEvents.destination.parquet.metadata.staticTags'))
     ) {
         const staticTags = globals.config.get(
-            'Butler-SOS.auditEvents.destination.parquet.staticTags'
+            'Butler-SOS.auditEvents.destination.parquet.metadata.staticTags'
         );
         for (const item of staticTags) {
             if (item?.name && item?.value) {
@@ -349,8 +344,8 @@ export function bufferAuditParquetEvent(envelope, extras = {}) {
  */
 export async function writeAuditEventToParquet(envelope, extras = {}) {
     if (
-        !globals.config.has('Butler-SOS.auditEvents.destination.parquet') ||
-        globals.config.get('Butler-SOS.auditEvents.destination.parquet') === null
+        !globals.config.has('Butler-SOS.auditEvents.destination.parquet.metadata') ||
+        globals.config.get('Butler-SOS.auditEvents.destination.parquet.metadata') === null
     ) {
         return;
     }

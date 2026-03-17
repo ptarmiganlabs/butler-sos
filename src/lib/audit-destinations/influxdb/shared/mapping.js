@@ -54,11 +54,11 @@ export function buildAuditInfluxPointModel(envelope, extras = {}) {
     const event = asObject(payload.event) || {};
 
     const measurementName = globals.config.get(
-        'Butler-SOS.auditEvents.destination.influxdb.measurementName'
+        'Butler-SOS.auditEvents.destination.influxdb.metadata.measurementName'
     );
 
     const auditEventSchemaVersion = globals.config.get(
-        'Butler-SOS.auditEvents.destination.influxdb.auditEventSchemaVersion'
+        'Butler-SOS.auditEvents.destination.influxdb.metadata.auditEventSchemaVersion'
     );
 
     /** @type {Record<string, string>} */
@@ -87,11 +87,11 @@ export function buildAuditInfluxPointModel(envelope, extras = {}) {
 
     // Optional static tags from config
     if (
-        globals.config.has('Butler-SOS.auditEvents.destination.influxdb.staticTags') &&
-        Array.isArray(globals.config.get('Butler-SOS.auditEvents.destination.influxdb.staticTags'))
+        globals.config.has('Butler-SOS.auditEvents.destination.influxdb.metadata.staticTags') &&
+        Array.isArray(globals.config.get('Butler-SOS.auditEvents.destination.influxdb.metadata.staticTags'))
     ) {
         const staticTags = globals.config.get(
-            'Butler-SOS.auditEvents.destination.influxdb.staticTags'
+            'Butler-SOS.auditEvents.destination.influxdb.metadata.staticTags'
         );
         for (const item of staticTags) {
             if (item?.name && item?.value) {
@@ -152,14 +152,9 @@ export function buildAuditInfluxPointModel(envelope, extras = {}) {
         fields.screenshotSavedPaths = JSON.stringify(savedPaths);
     }
 
-    // Object data and object type
-    const includeObjectData =
-        !globals.config.has('Butler-SOS.auditEvents.destination.influxdb.includeObjectData') ||
-        globals.config.get('Butler-SOS.auditEvents.destination.influxdb.includeObjectData') !==
-            false;
-
+    // Object data and object type (always included in metadata rows)
     const dimData = asObject(event.objectData);
-    if (includeObjectData && dimData) {
+    if (dimData) {
         const objectType = readString(dimData.objectType);
         if (objectType) tags.objectType = objectType;
         fields.objectData = JSON.stringify(dimData);

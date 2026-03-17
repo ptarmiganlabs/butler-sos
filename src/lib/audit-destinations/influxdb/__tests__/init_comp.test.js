@@ -86,7 +86,7 @@ describe('Audit InfluxDB Init', () => {
                 if (key === 'Butler-SOS.auditEvents.enable') return true;
                 if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
                 if (key === 'Butler-SOS.auditEvents.destination.type') return 'influxdb';
-                if (key === 'Butler-SOS.auditEvents.destination.influxdb') return v1Cfg;
+                if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata') return v1Cfg;
                 return null;
             });
         });
@@ -204,7 +204,7 @@ describe('Audit InfluxDB Init', () => {
                 if (key === 'Butler-SOS.auditEvents.enable') return true;
                 if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
                 if (key === 'Butler-SOS.auditEvents.destination.type') return 'influxdb';
-                if (key === 'Butler-SOS.auditEvents.destination.influxdb') return v2Cfg;
+                if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata') return v2Cfg;
                 return null;
             });
         });
@@ -309,7 +309,7 @@ describe('Audit InfluxDB Init', () => {
                 if (key === 'Butler-SOS.auditEvents.enable') return true;
                 if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
                 if (key === 'Butler-SOS.auditEvents.destination.type') return 'influxdb';
-                if (key === 'Butler-SOS.auditEvents.destination.influxdb') return { version: 3 };
+                if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata') return { version: 3 };
                 return null;
             });
 
@@ -326,7 +326,7 @@ describe('Audit InfluxDB Init', () => {
             if (key === 'Butler-SOS.auditEvents.enable') return true;
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
             if (key === 'Butler-SOS.auditEvents.destination.type') return 'influxdb';
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb') return { version: 4 };
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata') return { version: 4 };
             return null;
         });
 

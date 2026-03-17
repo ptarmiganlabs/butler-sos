@@ -90,7 +90,7 @@ describe('audit influx buffer', () => {
             },
         };
 
-        store.set('Butler-SOS.auditEvents.destination.influxdb', influxCfg);
+        store.set('Butler-SOS.auditEvents.destination.influxdb.metadata', influxCfg);
 
         /**
          * Format an error as string.
@@ -227,7 +227,7 @@ describe('audit influx buffer', () => {
             },
         };
 
-        store.set('Butler-SOS.auditEvents.destination.influxdb', influxCfg);
+        store.set('Butler-SOS.auditEvents.destination.influxdb.metadata', influxCfg);
 
         /**
          * Format an error as string.

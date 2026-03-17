@@ -5,7 +5,7 @@ import { bufferAuditInfluxEvent } from './buffer.js';
  * Writes an audit event to InfluxDB using the audit-specific destination config.
  *
  * Config root:
- * - Butler-SOS.auditEvents.destination.influxdb
+ * - Butler-SOS.auditEvents.destination.influxdb.metadata
  *
  * @param {unknown} envelope Audit event envelope
  * @param {object} extras Optional handler-produced metadata
@@ -13,8 +13,8 @@ import { bufferAuditInfluxEvent } from './buffer.js';
  */
 export async function writeAuditEventToInfluxdb(envelope, extras = {}) {
     if (
-        !globals.config.has('Butler-SOS.auditEvents.destination.influxdb') ||
-        globals.config.get('Butler-SOS.auditEvents.destination.influxdb') === null
+        !globals.config.has('Butler-SOS.auditEvents.destination.influxdb.metadata') ||
+        globals.config.get('Butler-SOS.auditEvents.destination.influxdb.metadata') === null
     ) {
         return;
     }

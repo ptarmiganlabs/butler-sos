@@ -62,21 +62,21 @@ describe('QVD Audit Destination', () => {
 
         mockConfig.has.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.qvd') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.qvd.staticTags') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.qvd.metadata') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.qvd.metadata.staticTags') return true;
             return false;
         });
 
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.qvd') {
+            if (key === 'Butler-SOS.auditEvents.destination.qvd.metadata') {
                 return {
                     exportDirectory: './audit-events/qvd',
                     maxBatchSize: 2,
                     writeFrequency: 5000,
                 };
             }
-            if (key === 'Butler-SOS.auditEvents.destination.qvd.staticTags') {
+            if (key === 'Butler-SOS.auditEvents.destination.qvd.metadata.staticTags') {
                 return [{ name: 'env', value: 'prod' }];
             }
             return null;
@@ -211,7 +211,7 @@ describe('QVD Audit Destination', () => {
 
         // Mock config missing
         mockConfig.get.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.destination.qvd') return null;
+            if (key === 'Butler-SOS.auditEvents.destination.qvd.metadata') return null;
             return true;
         });
 
@@ -220,7 +220,7 @@ describe('QVD Audit Destination', () => {
 
         // Mock config present
         mockConfig.get.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.destination.qvd') {
+            if (key === 'Butler-SOS.auditEvents.destination.qvd.metadata') {
                 return {
                     exportDirectory: './audit-events/qvd',
                     maxBatchSize: 1,
@@ -341,40 +341,37 @@ describe('QVD Audit Destination', () => {
         expect(row[objectDataIdx]).toBeNull();
     });
 
-    test('Excludes objectData when includeObjectData config is false', async () => {
+    test('Always includes objectData (includeObjectData toggle removed)', async () => {
         mockConfig.has.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.qvd') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.qvd.staticTags') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.qvd.includeObjectData') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.qvd.metadata') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.qvd.metadata.staticTags') return true;
             return false;
         });
 
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.qvd') {
+            if (key === 'Butler-SOS.auditEvents.destination.qvd.metadata') {
                 return {
                     exportDirectory: './audit-events/qvd',
                     maxBatchSize: 2,
                     writeFrequency: 5000,
                 };
             }
-            if (key === 'Butler-SOS.auditEvents.destination.qvd.staticTags') {
+            if (key === 'Butler-SOS.auditEvents.destination.qvd.metadata.staticTags') {
                 return [{ name: 'env', value: 'prod' }];
             }
-            if (key === 'Butler-SOS.auditEvents.destination.qvd.includeObjectData') return false;
             return null;
         });
 
         const event = {
-            eventId: 'dim-off-1',
+            eventId: 'dim-always-1',
             timestamp: '2023-10-27T10:00:00Z',
             payload: {
                 context: { user: 'user1' },
                 event: {
                     objectId: 'obj1',
                     objectData: {
-                        schemaVersion: 1,
                         objectType: 'barchart',
                         dimensions: [{ fieldName: 'Dim1', label: 'D1', values: ['A'] }],
                         measures: [],
@@ -394,7 +391,10 @@ describe('QVD Audit Destination', () => {
         const objectTypeIdx = callArgs.columns.indexOf('objectType');
         const objectDataIdx = callArgs.columns.indexOf('objectData');
 
-        expect(row[objectTypeIdx]).toBeNull();
-        expect(row[objectDataIdx]).toBeNull();
+        expect(row[objectTypeIdx]).toBe('barchart');
+        expect(JSON.parse(row[objectDataIdx])).toMatchObject({
+            objectType: 'barchart',
+            dimensions: expect.any(Array),
+        });
     });
 });

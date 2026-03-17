@@ -90,7 +90,7 @@ describe('InfluxDB Audit Buffer', () => {
         });
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb') {
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata') {
                 return {
                     version: 1,
                     maxBatchSize: 3,
@@ -179,7 +179,7 @@ describe('InfluxDB Audit Buffer', () => {
     test('should handle InfluxDB v2 with bucket creation and close error', async () => {
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb') {
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata') {
                 return {
                     version: 2,
                     maxBatchSize: 1,
@@ -225,7 +225,7 @@ describe('InfluxDB Audit Buffer', () => {
     test('should handle InfluxDB v3 progressive sizes', async () => {
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb') {
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata') {
                 return {
                     version: 3,
                     maxBatchSize: 10,
@@ -260,7 +260,7 @@ describe('InfluxDB Audit Buffer', () => {
     test('should handle unsupported InfluxDB version', async () => {
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb') {
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata') {
                 return { version: 99, maxBatchSize: 1, writeFrequency: 0 };
             }
             return null;
@@ -297,7 +297,7 @@ describe('InfluxDB Audit Buffer', () => {
         // Change config
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb') {
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata') {
                 return { version: 1, maxBatchSize: 10, writeFrequency: 1000, host: 'other-host' };
             }
             return null;
@@ -320,7 +320,7 @@ describe('InfluxDB Audit Buffer', () => {
         // Test v2
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb') {
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata') {
                 return {
                     version: 2,
                     maxBatchSize: 1,
@@ -337,7 +337,7 @@ describe('InfluxDB Audit Buffer', () => {
         // Test v3
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb') {
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata') {
                 return {
                     version: 3,
                     maxBatchSize: 1,
@@ -357,7 +357,7 @@ describe('InfluxDB Audit Buffer', () => {
     test('should handle v2 bucket already exists', async () => {
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb') {
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata') {
                 return {
                     version: 2,
                     maxBatchSize: 1,
@@ -384,7 +384,7 @@ describe('InfluxDB Audit Buffer', () => {
     test('should handle v2 missing config', async () => {
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb') {
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata') {
                 return { version: 2, maxBatchSize: 1, writeFrequency: 0, v2Config: {} };
             }
             return null;
@@ -402,7 +402,7 @@ describe('InfluxDB Audit Buffer', () => {
     test('should handle v2 org not found', async () => {
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.influxdb') {
+            if (key === 'Butler-SOS.auditEvents.destination.influxdb.metadata') {
                 return {
                     version: 2,
                     maxBatchSize: 1,

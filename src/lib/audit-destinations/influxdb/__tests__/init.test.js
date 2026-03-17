@@ -127,7 +127,7 @@ describe('audit influx init', () => {
             'Butler-SOS.auditEvents.enable': false,
             'Butler-SOS.auditEvents.destination.enable': true,
             'Butler-SOS.auditEvents.destination.type': 'influxdb',
-            'Butler-SOS.auditEvents.destination.influxdb': {
+            'Butler-SOS.auditEvents.destination.influxdb.metadata': {
                 version: 1,
                 v1Config: { dbName: 'db' },
             },
@@ -177,7 +177,7 @@ describe('audit influx init', () => {
             'Butler-SOS.auditEvents.enable': true,
             'Butler-SOS.auditEvents.destination.enable': true,
             'Butler-SOS.auditEvents.destination.type': 'mqtt',
-            'Butler-SOS.auditEvents.destination.influxdb': {
+            'Butler-SOS.auditEvents.destination.influxdb.metadata': {
                 version: 1,
                 v1Config: { dbName: 'db' },
             },
@@ -235,7 +235,7 @@ describe('audit influx init', () => {
             'Butler-SOS.auditEvents.enable': true,
             'Butler-SOS.auditEvents.destination.enable': true,
             'Butler-SOS.auditEvents.destination.type': 'influxdb',
-            'Butler-SOS.auditEvents.destination.influxdb': influxCfg,
+            'Butler-SOS.auditEvents.destination.influxdb.metadata': influxCfg,
         });
 
         const v1Client = {
@@ -303,7 +303,7 @@ describe('audit influx init', () => {
             'Butler-SOS.auditEvents.enable': true,
             'Butler-SOS.auditEvents.destination.enable': true,
             'Butler-SOS.auditEvents.destination.type': 'influxdb',
-            'Butler-SOS.auditEvents.destination.influxdb': influxCfg,
+            'Butler-SOS.auditEvents.destination.influxdb.metadata': influxCfg,
         });
 
         const v1Client = {
@@ -365,7 +365,7 @@ describe('audit influx init', () => {
             'Butler-SOS.auditEvents.enable': true,
             'Butler-SOS.auditEvents.destination.enable': true,
             'Butler-SOS.auditEvents.destination.type': 'influxdb',
-            'Butler-SOS.auditEvents.destination.influxdb': influxCfg,
+            'Butler-SOS.auditEvents.destination.influxdb.metadata': influxCfg,
         });
 
         const getOrgs = jest.fn().mockResolvedValue({ orgs: [{ id: 'org-1' }] });
@@ -430,7 +430,7 @@ describe('audit influx init', () => {
             'Butler-SOS.auditEvents.enable': true,
             'Butler-SOS.auditEvents.destination.enable': true,
             'Butler-SOS.auditEvents.destination.type': 'influxdb',
-            'Butler-SOS.auditEvents.destination.influxdb': influxCfg,
+            'Butler-SOS.auditEvents.destination.influxdb.metadata': influxCfg,
         });
 
         const getOrgs = jest.fn().mockResolvedValue({ orgs: [{ id: 'org-1' }] });
@@ -487,7 +487,7 @@ describe('audit influx init', () => {
             'Butler-SOS.auditEvents.enable': true,
             'Butler-SOS.auditEvents.destination.enable': true,
             'Butler-SOS.auditEvents.destination.type': 'influxdb',
-            'Butler-SOS.auditEvents.destination.influxdb': influxCfg,
+            'Butler-SOS.auditEvents.destination.influxdb.metadata': influxCfg,
         });
 
         const getAuditInfluxClient = jest.fn();
