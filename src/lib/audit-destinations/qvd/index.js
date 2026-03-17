@@ -214,7 +214,7 @@ async function flushAuditQvdBuffer(reason) {
 
         // Write file
         const df = await QvdDataFrame.fromDict({ columns, data });
-        await df.toQvd(filePath);
+        await df.toQvd(filePath, { allowedDir: exportDir });
 
         globals.logger.info(`AUDIT QVD: Wrote ${rowsToWrite.length} events to ${filePath}`);
     } catch (err) {
