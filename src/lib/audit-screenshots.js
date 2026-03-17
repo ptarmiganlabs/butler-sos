@@ -471,7 +471,10 @@ function formatTimestampUtcAndLocal(timestamp) {
  */
 function hasAnyEnabledMetadataFlag(flags) {
     if (!flags || typeof flags !== 'object') return false;
-    return Object.values(flags).some((v) => v === true);
+    // The flags object might contain the 'enable' property (which is handled by the caller)
+    // or the 'fields' object.
+    const fields = flags.fields || flags;
+    return Object.values(fields).some((v) => v === true);
 }
 
 /**
@@ -486,35 +489,36 @@ function buildScreenshotMetadataLines(envelope, auditCtx, flags) {
     if (!hasAnyEnabledMetadataFlag(flags)) return [];
 
     const lines = [];
+    const fields = flags.fields || flags;
 
-    if (flags.date === true) {
+    if (fields.date === true) {
         const { utc, local } = formatTimestampUtcAndLocal(envelope?.timestamp);
         lines.push({ key: 'DATE (UTC)', value: utc });
         lines.push({ key: 'DATE (LOCAL)', value: local });
     }
 
-    if (flags.eventId === true)
+    if (fields.eventId === true)
         lines.push({ key: 'EVENT ID', value: safeMetadataValue(envelope?.eventId) });
-    if (flags.correlationId === true)
+    if (fields.correlationId === true)
         lines.push({ key: 'CORRELATION ID', value: safeMetadataValue(envelope?.correlationId) });
-    if (flags.selectionTxnId === true)
+    if (fields.selectionTxnId === true)
         lines.push({
             key: 'SELECTION TXN ID',
             value: safeMetadataValue(envelope?.payload?.event?.selectionTxnId),
         });
 
-    if (flags.userId === true) {
+    if (fields.userId === true) {
         lines.push({ key: 'USER ID', value: safeMetadataValue(auditCtx?.user) });
     }
 
-    if (flags.appId === true)
+    if (fields.appId === true)
         lines.push({ key: 'APP ID', value: safeMetadataValue(auditCtx?.appId) });
-    if (flags.appName === true)
+    if (fields.appName === true)
         lines.push({ key: 'APP NAME', value: safeMetadataValue(auditCtx?.appName) });
-    if (flags.sheetName === true)
+    if (fields.sheetName === true)
         lines.push({ key: 'SHEET NAME', value: safeMetadataValue(auditCtx?.sheetName) });
 
-    if (flags.viewingDuration === true) {
+    if (fields.viewingDuration === true) {
         const durationMs = auditCtx?.viewingDuration;
         const durationSec = typeof durationMs === 'number' ? (durationMs / 1000).toFixed(2) : 'n/a';
         lines.push({ key: 'VIEWING DURATION (s)', value: durationSec });
@@ -741,7 +745,8 @@ export async function downloadScreenshot(url, envelope, config, logger) {
 
             const ext = extensionFromContentType(contentType) || extensionFromUrl(url);
             const metadataFlags = config?.addInImageMetadata;
-            const shouldAddMetadata = ext === 'png' && hasAnyEnabledMetadataFlag(metadataFlags);
+            const shouldAddMetadata =
+                ext === 'png' && metadataFlags?.enable === true && hasAnyEnabledMetadataFlag(metadataFlags);
             const metadataLines = shouldAddMetadata
                 ? buildScreenshotMetadataLines(envelope, auditCtx, metadataFlags)
                 : [];
