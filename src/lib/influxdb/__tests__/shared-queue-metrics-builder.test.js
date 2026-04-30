@@ -91,7 +91,7 @@ describe('shared/queue-metrics-builder', () => {
                     'queue_size',
                     'queue_max_size',
                     'queue_utilization_pct',
-                    'queue_pending',
+                    'queue_running',
                     'messages_received',
                     'messages_queued',
                     'messages_processed',

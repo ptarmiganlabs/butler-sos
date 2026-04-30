@@ -153,7 +153,7 @@ describe('v2/queue-metrics', () => {
             expect(mockPoint.intField).toHaveBeenCalledWith('queue_size', 100);
             expect(mockPoint.intField).toHaveBeenCalledWith('queue_max_size', 1000);
             expect(mockPoint.floatField).toHaveBeenCalledWith('queue_utilization_pct', 10.0);
-            expect(mockPoint.intField).toHaveBeenCalledWith('queue_pending', 5);
+            expect(mockPoint.intField).toHaveBeenCalledWith('queue_running', 5);
             expect(mockPoint.intField).toHaveBeenCalledWith('messages_received', 500);
             expect(mockPoint.intField).toHaveBeenCalledWith('messages_queued', 450);
             expect(mockPoint.intField).toHaveBeenCalledWith('messages_processed', 400);

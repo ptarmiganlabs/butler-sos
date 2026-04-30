@@ -222,7 +222,7 @@ Two separate measurements for the two UDP servers:
 | `queue_size`            | integer | Current number of messages in queue  |
 | `queue_max_size`        | integer | Maximum queue capacity               |
 | `queue_utilization_pct` | float   | Queue utilization percentage (0-100) |
-| `queue_pending`         | integer | Messages currently being processed   |
+| `queue_running`         | integer | Messages currently being processed   |
 
 #### Message Counter Fields
 
