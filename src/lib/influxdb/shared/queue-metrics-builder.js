@@ -20,7 +20,7 @@ export const QUEUE_METRIC_FIELDS = [
     { name: 'queue_size', source: 'queueSize', type: 'int' },
     { name: 'queue_max_size', source: 'queueMaxSize', type: 'int' },
     { name: 'queue_utilization_pct', source: 'queueUtilizationPct', type: 'float' },
-    { name: 'queue_pending', source: 'queuePending', type: 'int' },
+    { name: 'queue_running', source: 'queuePending', type: 'int' },
     { name: 'messages_received', source: 'messagesReceived', type: 'int' },
     { name: 'messages_queued', source: 'messagesQueued', type: 'int' },
     { name: 'messages_processed', source: 'messagesProcessed', type: 'int' },
