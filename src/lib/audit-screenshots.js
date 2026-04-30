@@ -20,6 +20,7 @@ const { PNG } = pngjs;
  * Minimal logger interface used by this module.
  *
  * @typedef {object} Logger
+ * @property {(msg: string) => void} [debug] Logs debug messages.
  * @property {(msg: string) => void} info Logs informational messages.
  * @property {(msg: string) => void} warn Logs warning messages.
  * @property {(msg: string) => void} error Logs error messages.
@@ -141,6 +142,11 @@ async function requestQpsTicket(qps, logger) {
 
     const url = `https://${qps.host}:${qps.port}/qps/ticket?Xrfkey=${xrfkey}`;
 
+    debugLog(
+        logger,
+        `AUDIT API: Requesting QPS ticket qpsHost=${qps.host} qpsPort=${qps.port} qpsPath=/qps/ticket userDirectory=${qps.userDirectory} userId=${qps.userId} timeoutMs=${timeoutMs}`
+    );
+
     const requestSettings = {
         url,
         method: 'post',
@@ -159,6 +165,13 @@ async function requestQpsTicket(qps, logger) {
 
     const response = await axios.request(requestSettings);
     const ticket = response?.data?.Ticket;
+
+    debugLog(
+        logger,
+        `AUDIT API: QPS ticket response status=${response?.status ?? 'n/a'} ticketPresent=${
+            typeof ticket === 'string' && ticket.length > 0
+        } ticketLength=${typeof ticket === 'string' ? ticket.length : 0}`
+    );
 
     if (typeof ticket !== 'string' || ticket.length === 0) {
         logger.warn(
@@ -189,6 +202,16 @@ async function deleteQpsSession(qps, cookieName, sessionId, logger) {
         // Endpoint to delete a specific session: /qps/{vp}/session/{id}
         const vpPath = vp ? `${vp}/` : '';
         const url = `https://${qps.host}:${qps.port}/qps/${vpPath}session/${sessionId}?Xrfkey=${xrfkey}`;
+
+        debugLog(
+            logger,
+            `AUDIT API: Deleting QPS session qpsHost=${qps.host} qpsPort=${qps.port} virtualProxy=${
+                vp || '(default)'
+            } cookieName=${cookieName} sessionIdLength=${sessionId.length} url=${url.replace(
+                sessionId,
+                '[session-id-redacted]'
+            )}`
+        );
 
         await axios.request({
             url,
@@ -365,6 +388,66 @@ function formatAxiosError(err) {
     }
 
     return String(err);
+}
+
+/**
+ * Writes a debug message when the provided logger supports debug logging.
+ *
+ * @param {Logger} logger Logger.
+ * @param {string} message Message to log.
+ */
+function debugLog(logger, message) {
+    if (logger && typeof logger.debug === 'function') {
+        logger.debug(message);
+    }
+}
+
+/**
+ * Returns a URL string with any qlikTicket query value redacted.
+ *
+ * @param {string} rawUrl URL to redact.
+ * @returns {string} Redacted URL, or the original string if parsing fails.
+ */
+function redactQlikTicketInUrl(rawUrl) {
+    try {
+        const u = new URL(rawUrl);
+        if (u.searchParams.has('qlikTicket')) {
+            u.searchParams.set('qlikTicket', '[redacted]');
+        }
+        return u.toString();
+    } catch {
+        return rawUrl;
+    }
+}
+
+/**
+ * Builds a compact URL summary for debug logging.
+ *
+ * @param {string} rawUrl URL to summarize.
+ * @returns {string} URL summary without sensitive query values.
+ */
+function summarizeUrlForDebug(rawUrl) {
+    try {
+        const u = new URL(rawUrl);
+        const queryKeys = Array.from(u.searchParams.keys()).join(',') || 'none';
+        return `origin=${u.origin} path=${u.pathname} queryKeys=${queryKeys} serverNodeId=${
+            u.searchParams.get('serverNodeId') || 'n/a'
+        } hasQlikTicket=${u.searchParams.has('qlikTicket')}`;
+    } catch {
+        return 'invalidUrl=true';
+    }
+}
+
+/**
+ * Counts Set-Cookie headers in an axios response.
+ *
+ * @param {unknown} setCookieHeader Set-Cookie header value.
+ * @returns {number} Number of Set-Cookie header entries.
+ */
+function countSetCookieHeaders(setCookieHeader) {
+    if (Array.isArray(setCookieHeader)) return setCookieHeader.length;
+    if (typeof setCookieHeader === 'string' && setCookieHeader.length > 0) return 1;
+    return 0;
 }
 
 /**
@@ -617,6 +700,7 @@ export function buildScreenshotFilename(envelope, url, contentType) {
  *
  * @param {Buffer} buffer - The original PNG image buffer.
  * @param {{ top: number, left: number, width: number, height: number, scrollTop?: number, scrollAreaOffsetY?: number }} crop - Crop rectangle with optional scroll metadata.
+ * @param {Logger} [logger] Logger.
  * @returns {Buffer} Cropped PNG buffer, or the original buffer if cropping is unnecessary.
  */
 function cropPngBuffer(buffer, crop, logger) {
@@ -710,7 +794,10 @@ function cropPngBuffer(buffer, crop, logger) {
             // Save debug composite image
             try {
                 const debugDir = path.join(process.cwd(), 'audit-events', 'debug');
-                const debugFile = path.join(debugDir, `composite-${src.width}x${compositeHeight}.png`);
+                const debugFile = path.join(
+                    debugDir,
+                    `composite-${src.width}x${compositeHeight}.png`
+                );
                 fsSync.writeFileSync(debugFile, buffer);
                 logger.info(`AUDIT API: Saved composite debug image to ${debugFile}`);
             } catch (dbgErr) {
@@ -847,11 +934,16 @@ function cropPngBuffer(buffer, crop, logger) {
                     if (!fsSync.existsSync(debugDir)) {
                         fsSync.mkdirSync(debugDir, { recursive: true });
                     }
-                    const debugFile = path.join(debugDir, `overflow-composite-${src.width}x${overflowCompositeHeight}.png`);
+                    const debugFile = path.join(
+                        debugDir,
+                        `overflow-composite-${src.width}x${overflowCompositeHeight}.png`
+                    );
                     fsSync.writeFileSync(debugFile, buffer);
                     logger.info(`AUDIT API: Saved overflow composite debug image to ${debugFile}`);
                 } catch (dbgErr) {
-                    logger.debug(`AUDIT API: Failed to save overflow composite debug image: ${dbgErr.message}`);
+                    logger.debug(
+                        `AUDIT API: Failed to save overflow composite debug image: ${dbgErr.message}`
+                    );
                 }
             }
         } else if (logger) {
@@ -926,12 +1018,26 @@ export async function downloadScreenshot(url, envelope, config, logger) {
     const maxAttempts = 3;
     const baseDelayMs = 500;
 
+    debugLog(
+        logger,
+        `AUDIT API: Screenshot download configured selectionTxnId=${selectionTxnId} authMode=${authMode} timeoutMs=${timeoutMs} maxAttempts=${maxAttempts} enabledTargets=${targets
+            .map((target) => `${target.type}:${target.directory}`)
+            .join(',')} urlSummary="${summarizeUrlForDebug(url)}" ${auditCtxStr}`
+    );
+
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         let downloadUrl = url;
         let httpsAgent;
         let sessionCookieHeader = null;
 
         try {
+            debugLog(
+                logger,
+                `AUDIT API: Screenshot download attempt start attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} authMode=${authMode} urlSummary="${summarizeUrlForDebug(
+                    url
+                )}"`
+            );
+
             if (authMode === 'qpsTicket') {
                 const qps = config?.auth?.qps;
                 if (!qps?.host || !qps?.port || !qps?.userDirectory || !qps?.userId) {
@@ -941,10 +1047,29 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     return;
                 }
 
+                debugLog(
+                    logger,
+                    `AUDIT API: Screenshot download requesting QPS ticket attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} qpsHost=${qps.host} qpsPort=${qps.port}`
+                );
+
                 const ticket = await requestQpsTicket(qps, logger);
                 downloadUrl = withQlikTicket(url, ticket);
                 httpsAgent = createQlikMutualTlsAgent();
+
+                debugLog(
+                    logger,
+                    `AUDIT API: Screenshot download received QPS ticket attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} ticketLength=${ticket.length} downloadUrlSummary="${summarizeUrlForDebug(
+                        downloadUrl
+                    )}"`
+                );
             }
+
+            debugLog(
+                logger,
+                `AUDIT API: Screenshot download HTTP GET attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} url=${redactQlikTicketInUrl(
+                    downloadUrl
+                )} httpsAgent=${httpsAgent ? 'mutualTls' : 'default'} timeoutMs=${timeoutMs}`
+            );
 
             const response = await axios.request({
                 url: downloadUrl,
@@ -956,11 +1081,35 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 validateStatus: acceptAllHttpStatuses,
             });
 
+            const contentType = response.headers?.['content-type'] || null;
+            let buffer = Buffer.from(response.data);
+
+            debugLog(
+                logger,
+                `AUDIT API: Screenshot download HTTP response attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} status=${response.status} contentType=${
+                    contentType || 'n/a'
+                } bytes=${buffer.length} setCookieCount=${countSetCookieHeaders(
+                    response.headers?.['set-cookie']
+                )} url=${redactQlikTicketInUrl(downloadUrl)}`
+            );
+
             // Extract session cookie immediately using set-cookie-parser for reliability.
             // set-cookie-parser handles joined header strings and complex attributes.
             const cookies = setCookieParser.parse(response, { decodeValues: false });
             const sessionCookie = cookies.find((c) =>
                 c.name.toLowerCase().startsWith('x-qlik-session-')
+            );
+
+            debugLog(
+                logger,
+                `AUDIT API: Screenshot download parsed cookies attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} cookieCount=${cookies.length} sessionCookieName=${
+                    sessionCookie?.name || 'none'
+                } sessionCookieVirtualProxy=${
+                    sessionCookie
+                        ? extractVirtualProxyFromSessionCookieName(sessionCookie.name) ||
+                          '(default)'
+                        : 'n/a'
+                } sessionCookieValueLength=${sessionCookie?.value?.length || 0}`
             );
 
             if (sessionCookie) {
@@ -969,9 +1118,6 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     value: sessionCookie.value,
                 };
             }
-
-            const contentType = response.headers?.['content-type'] || null;
-            let buffer = Buffer.from(response.data);
 
             // Non-2xx
             if (response.status < 200 || response.status >= 300) {
@@ -982,7 +1128,9 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     logger.info(
                         `AUDIT API: Screenshot download retrying attempt=${attempt + 1}/${maxAttempts} in ${delayMs}ms httpStatus=${
                             response.status
-                        } selectionTxnId=${selectionTxnId} url=${downloadUrl} (original=${url}) ${auditCtxStr}`
+                        } selectionTxnId=${selectionTxnId} url=${redactQlikTicketInUrl(
+                            downloadUrl
+                        )} (original=${url}) ${auditCtxStr}`
                     );
                     await sleep(delayMs);
                     continue;
@@ -990,7 +1138,9 @@ export async function downloadScreenshot(url, envelope, config, logger) {
 
                 const level = retryable ? 'error' : 'warn';
                 logger[level](
-                    `AUDIT API: Screenshot download failed httpStatus=${response.status} url=${downloadUrl} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} ${auditCtxStr}`
+                    `AUDIT API: Screenshot download failed httpStatus=${response.status} url=${redactQlikTicketInUrl(
+                        downloadUrl
+                    )} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} ${auditCtxStr}`
                 );
                 return;
             }
@@ -1011,14 +1161,16 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     logger.info(
                         `AUDIT API: Screenshot download retrying attempt=${attempt + 1}/${maxAttempts} in ${delayMs}ms selectionTxnId=${selectionTxnId} nonImageContentType='${
                             contentType
-                        }' url=${downloadUrl} (original=${url}) ${auditCtxStr}`
+                        }' url=${redactQlikTicketInUrl(downloadUrl)} (original=${url}) ${auditCtxStr}`
                     );
                     await sleep(delayMs);
                     continue;
                 }
 
                 logger.error(
-                    `AUDIT API: Screenshot download returned non-image content-type='${contentType}'. url=${downloadUrl} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} preview='${preview}' ${auditCtxStr}`
+                    `AUDIT API: Screenshot download returned non-image content-type='${contentType}'. url=${redactQlikTicketInUrl(
+                        downloadUrl
+                    )} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} preview='${preview}' ${auditCtxStr}`
                 );
                 return;
             }
@@ -1118,25 +1270,37 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 logger.info(
                     `AUDIT API: Screenshot download retrying attempt=${attempt + 1}/${maxAttempts} in ${delayMs}ms selectionTxnId=${selectionTxnId} error=${formatAxiosError(
                         err
-                    )} url=${downloadUrl} (original=${url}) ${auditCtxStr}`
+                    )} url=${redactQlikTicketInUrl(downloadUrl)} (original=${url}) ${auditCtxStr}`
                 );
                 await sleep(delayMs);
                 continue;
             }
 
             logger.error(
-                `AUDIT API: Screenshot download failed after ${maxAttempts} attempts. selectionTxnId=${selectionTxnId} selectionTxnId=${selectionTxnId} error=${formatAxiosError(
+                `AUDIT API: Screenshot download failed after ${maxAttempts} attempts. selectionTxnId=${selectionTxnId} error=${formatAxiosError(
                     err
-                )} url=${downloadUrl} (original=${url}) ${auditCtxStr}`
+                )} url=${redactQlikTicketInUrl(downloadUrl)} (original=${url}) ${auditCtxStr}`
             );
             return null;
         } finally {
             if (sessionCookieHeader && authMode === 'qpsTicket') {
+                debugLog(
+                    logger,
+                    `AUDIT API: Screenshot download cleanup deleting QPS session selectionTxnId=${selectionTxnId} cookieName=${sessionCookieHeader.name} virtualProxy=${
+                        extractVirtualProxyFromSessionCookieName(sessionCookieHeader.name) ||
+                        '(default)'
+                    } sessionIdLength=${sessionCookieHeader.value.length}`
+                );
                 await deleteQpsSession(
                     config.auth.qps,
                     sessionCookieHeader.name,
                     sessionCookieHeader.value,
                     logger
+                );
+            } else if (authMode === 'qpsTicket') {
+                debugLog(
+                    logger,
+                    `AUDIT API: Screenshot download cleanup skipped QPS session delete selectionTxnId=${selectionTxnId} reason=no-session-cookie attempt=${attempt}/${maxAttempts}`
                 );
             }
         }
