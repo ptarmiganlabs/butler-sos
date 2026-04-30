@@ -6,12 +6,28 @@ import globals from '../../../../globals.js';
 import { sanitizeField } from '../../../udp-queue-manager.js';
 
 /**
- * Regular expression that matches ISO8601 date format strings.
+ * Regular expression that matches the hyphenated ISO8601 date format used by most QSEoW services.
  * Matches patterns like "2021-11-09T15:37:26.028+0200".
  *
  * @type {RegExp}
  */
 const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}\+\d{4}$/;
+
+/**
+ * Regular expression that matches the compact ISO8601 date format used by some QSEoW services.
+ * Matches patterns like "20211109T153726.028+0200" (no dashes or colons in the date/time part).
+ *
+ * @type {RegExp}
+ */
+const isoDateCompactRegex = /^\d{8}T\d{6}\.\d{3}\+\d{4}$/;
+
+/**
+ * Regular expression that matches the local timestamp format used in QSEoW log fields.
+ * Matches patterns like "2021-11-09 15:37:26,028" (space separator, comma before milliseconds).
+ *
+ * @type {RegExp}
+ */
+const localTimestampRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}$/;
 
 /**
  * Regular expression that matches UUID format strings.
@@ -91,8 +107,13 @@ export function processGenericLogEvent(msg) {
     const msgObj = {
         source: sanitizeField(msg[0], 100),
         log_row: Number.isInteger(parseInt(msg[1], 10)) ? parseInt(msg[1], 10) : -1,
-        ts_iso: isoDateRegex.test(msg[2]) ? sanitizeField(msg[2], 50) : '',
-        ts_local: isoDateRegex.test(msg[3]) ? sanitizeField(msg[3], 50) : '',
+        ts_iso:
+            isoDateRegex.test(msg[2]) || isoDateCompactRegex.test(msg[2])
+                ? sanitizeField(msg[2], 50)
+                : '',
+        ts_local: isoDateRegex.test(msg[3]) || localTimestampRegex.test(msg[3])
+            ? sanitizeField(msg[3], 50)
+            : '',
         level: sanitizeField(msg[4], 20),
         host: sanitizeField(msg[5], 100),
         subsystem: sanitizeField(msg[6], 200),
@@ -112,4 +133,4 @@ export function processGenericLogEvent(msg) {
     return msgObj;
 }
 
-export { isoDateRegex, uuidRegex };
+export { isoDateRegex, isoDateCompactRegex, localTimestampRegex, uuidRegex };

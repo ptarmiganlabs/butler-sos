@@ -92,7 +92,7 @@ export function extractAuditEventFields(envelope, extras = {}, staticTagsKey) {
         }
     }
 
-    // Tags (static + dynamic)
+    // Static tags from config
     const tags = {};
     if (
         globals.config.has(staticTagsKey) &&

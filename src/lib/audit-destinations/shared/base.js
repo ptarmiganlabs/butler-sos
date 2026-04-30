@@ -171,6 +171,13 @@ export function createAuditDestination({
             return;
         }
 
+        if (typeof cfg.exportDirectory !== 'string' || cfg.exportDirectory.length === 0) {
+            globals.logger.warn(
+                `AUDIT ${label}: ${name} destination config is missing a valid exportDirectory`
+            );
+            return;
+        }
+
         ensureFlushTimer(cfg);
 
         const row = extractAuditEventFields(envelope, extras, staticTagsKey);
