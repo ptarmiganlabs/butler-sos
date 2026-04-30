@@ -47,7 +47,7 @@ The QVD destination is configured in the `Butler-SOS.auditEvents.destination.qvd
 ```yaml
 Butler-SOS:
     auditEvents:
-    destination:
+        destination:
             enable: true
             type: influxdb, qvd # Comma-delimited list of destinations.
             qvd:
