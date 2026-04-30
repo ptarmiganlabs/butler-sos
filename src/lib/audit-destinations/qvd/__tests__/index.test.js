@@ -162,7 +162,10 @@ describe('QVD Audit Destination', () => {
         await Promise.resolve();
 
         const df = await mockQvdDataFrame.fromDict.mock.results[0].value;
-        expect(df.toQvd).toHaveBeenCalledWith(expect.stringContaining('part2.qvd'));
+        expect(df.toQvd).toHaveBeenCalledWith(
+            expect.stringContaining('part2.qvd'),
+            expect.objectContaining({ allowedDir: expect.stringContaining('audit-events/qvd') })
+        );
     });
 
     test('Handles errors during flush and retries', async () => {

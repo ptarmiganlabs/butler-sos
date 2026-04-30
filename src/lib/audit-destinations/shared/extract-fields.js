@@ -7,7 +7,29 @@
  */
 
 import globals from '../../../globals.js';
-import { readString, readNumber, readBoolean, asObject } from './helpers.js';
+import { readString, readBoolean, asObject } from './helpers.js';
+
+/**
+ * Convert unknown input into an integer BigInt value.
+ *
+ * Accepts integer numbers and strings containing base-10 integer values.
+ * Fractional numbers are rejected to avoid throwing in BigInt conversion.
+ *
+ * @param {unknown} value Input value.
+ *
+ * @returns {bigint | null} Integer BigInt value or null.
+ */
+function readIntegerBigInt(value) {
+    if (typeof value === 'number' && Number.isInteger(value)) {
+        return BigInt(value);
+    }
+
+    if (typeof value === 'string' && /^-?\d+$/.test(value)) {
+        return BigInt(value);
+    }
+
+    return null;
+}
 
 /**
  * Extract a flat row representation of an audit event from a raw envelope.
@@ -39,17 +61,11 @@ export function extractAuditEventFields(envelope, extras = {}, staticTagsKey) {
         sheetName: readString(context.sheetName) ?? null,
         objectId: readString(event.objectId) ?? null,
         selectionTxnId: readString(event.selectionTxnId) ?? null,
-        durationMs:
-            readNumber(event.duration) !== undefined ? BigInt(readNumber(event.duration)) : null,
+        durationMs: readIntegerBigInt(event.duration),
         visible: readBoolean(event.visible) ?? null,
         enteredAt: readString(event.enteredAt) ?? null,
         leftAt: readString(event.leftAt) ?? null,
-        dataStateId:
-            readNumber(event.dataStateId) !== undefined
-                ? BigInt(readNumber(event.dataStateId))
-                : readNumber(extras.dataStateId) !== undefined
-                  ? BigInt(readNumber(extras.dataStateId))
-                  : null,
+        dataStateId: readIntegerBigInt(event.dataStateId) ?? readIntegerBigInt(extras.dataStateId),
         screenshotUrl: readString(event.screenshotUrl) ?? null,
     };
 

@@ -45,6 +45,7 @@ describe('Log Events Common Utils', () => {
     describe('Regex', () => {
         test('isoDateRegex should match valid ISO dates', () => {
             expect(commonUtils.isoDateRegex.test('2021-11-09T15:37:26.028+0200')).toBe(true);
+            expect(commonUtils.isoDateRegex.test('2021-11-09T15:37:26x028+0200')).toBe(false);
             expect(commonUtils.isoDateRegex.test('invalid')).toBe(false);
         });
 

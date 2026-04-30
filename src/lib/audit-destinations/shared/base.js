@@ -47,6 +47,7 @@ export function createAuditDestination({
     let buffer = [];
     let flushTimer = null;
     let flushQueued = false;
+    let flushPending = false;
 
     /**
      * Stop the interval-based flush timer.
@@ -88,11 +89,21 @@ export function createAuditDestination({
      * @returns {Promise<void>}
      */
     async function requestFlush(reason) {
-        if (flushQueued || buffer.length === 0) return;
+        if (buffer.length === 0) return;
+
+        if (flushQueued) {
+            flushPending = true;
+            return;
+        }
 
         flushQueued = true;
         try {
-            await flushBuffer(reason);
+            let flushReason = reason;
+            do {
+                flushPending = false;
+                await flushBuffer(flushReason);
+                flushReason = 'pending';
+            } while (flushPending && buffer.length > 0);
         } finally {
             flushQueued = false;
         }
@@ -198,6 +209,7 @@ export function createAuditDestination({
         buffer = [];
         stopFlushTimer();
         flushQueued = false;
+        flushPending = false;
     }
 
     return { bufferEvent, _resetState };

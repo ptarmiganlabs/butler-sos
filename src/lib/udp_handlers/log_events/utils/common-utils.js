@@ -11,7 +11,7 @@ import { sanitizeField } from '../../../udp-queue-manager.js';
  *
  * @type {RegExp}
  */
-const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}\+\d{4}$/;
+const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}\+\d{4}$/;
 
 /**
  * Regular expression that matches the compact ISO8601 date format used by some QSEoW services.

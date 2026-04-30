@@ -208,6 +208,46 @@ describe('Parquet Audit Destination', () => {
         expect(mockFs.writeFileSync).toHaveBeenCalled();
     });
 
+    test('Flushes pending batch after in-flight flush completes', async () => {
+        let resolveFirstFlush;
+        const firstFlush = new Promise((resolve) => {
+            resolveFirstFlush = resolve;
+        });
+        mockHyparquet.parquetWriteBuffer.mockImplementationOnce(() => firstFlush);
+
+        const makeEvent = (eventId) => ({
+            eventId,
+            timestamp: '2023-10-27T10:00:00Z',
+            payload: {
+                context: { user: 'user1' },
+                event: { objectId: 'obj1' },
+            },
+        });
+
+        parquet.bufferAuditParquetEvent(makeEvent('1'));
+        parquet.bufferAuditParquetEvent(makeEvent('2'));
+        await Promise.resolve();
+
+        expect(mockHyparquet.parquetWriteBuffer).toHaveBeenCalledTimes(1);
+
+        parquet.bufferAuditParquetEvent(makeEvent('3'));
+        parquet.bufferAuditParquetEvent(makeEvent('4'));
+        await Promise.resolve();
+
+        expect(mockHyparquet.parquetWriteBuffer).toHaveBeenCalledTimes(1);
+
+        resolveFirstFlush(new ArrayBuffer(10));
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(mockHyparquet.parquetWriteBuffer).toHaveBeenCalledTimes(2);
+
+        const secondCallArgs = mockHyparquet.parquetWriteBuffer.mock.calls[1][0];
+        const eventIdCol = secondCallArgs.columnData.find((c) => c.name === 'eventId');
+        expect(eventIdCol.data).toEqual(['3', '4']);
+    });
+
     test('writeAuditEventToParquet respects configuration', async () => {
         const event = {
             eventId: '123',
@@ -245,7 +285,7 @@ describe('Parquet Audit Destination', () => {
         expect(mockFs.writeFileSync).toHaveBeenCalled();
     });
 
-    test('Correctly handles BigInt for INT64 fields', async () => {
+    test('Correctly handles INT64 fields', async () => {
         const event = {
             eventId: '123',
             timestamp: '2023-10-27T10:00:00Z',
@@ -253,8 +293,8 @@ describe('Parquet Audit Destination', () => {
                 context: { user: 'user1' },
                 event: {
                     objectId: 'obj1',
-                    duration: 1234,
-                    dataStateId: 5678,
+                    duration: 1.23,
+                    dataStateId: '5678',
                 },
             },
         };
@@ -279,8 +319,7 @@ describe('Parquet Audit Destination', () => {
         const dataStateCol = callArgs.columnData.find((c) => c.name === 'dataStateId');
         const timestampCol = callArgs.columnData.find((c) => c.name === 'timestamp');
 
-        expect(typeof durationCol.data[0]).toBe('bigint');
-        expect(durationCol.data[0]).toBe(1234n);
+        expect(durationCol.data[0]).toBeNull();
         expect(dataStateCol.data[0]).toBe(5678n);
         expect(timestampCol.data[0]).toBe(BigInt(Date.parse('2023-10-27T10:00:00Z')));
     });
