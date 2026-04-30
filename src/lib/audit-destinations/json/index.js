@@ -135,6 +135,16 @@ export async function writeAuditEventToJson(envelope, extras = {}) {
         const fileName = `${ts}_${eventId}_${correlationId}.json`;
         const filePath = path.join(exportDir, fileName);
 
+        // Prevent path traversal: the resolved path must remain inside exportDir.
+        // path.resolve(exportDir) is already absolute (set above), so this check
+        // handles both absolute and relative exportDirectory config values.
+        const resolvedFilePath = path.resolve(filePath);
+        if (!resolvedFilePath.startsWith(exportDir + path.sep)) {
+            throw new Error(
+                `AUDIT JSON: Resolved output path "${resolvedFilePath}" is outside the allowed directory "${exportDir}". Aborting write.`
+            );
+        }
+
         // Build the JSON document
         const doc = {
             eventId: readString(env.eventId) ?? null,
