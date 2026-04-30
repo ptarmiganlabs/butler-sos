@@ -378,7 +378,7 @@ export const callRemoteURL = function reportTelemetry() {
             '     This information makes it possible to focus development efforts where they will make most impact and be most valuable.'
         );
         globals.logger?.error(
-            '     More info at https://butler.ptarmiganlabs.com/docs/about/telemetry/'
+            '     More info at https://butler-sos.ptarmiganlabs.com/docs/about/telemetry'
         );
         globals.logger?.error('❤️  Thank you for supporting Butler SOS by allowing telemetry! ❤️');
         globals.logger?.error('');
