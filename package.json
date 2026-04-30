@@ -85,7 +85,7 @@
         "set-cookie-parser": "^3.0.1",
         "systeminformation": "^5.31.4",
         "ua-parser-js": "^2.0.9",
-        "uuid": "^13.0.0",
+        "uuid": "^14.0.0",
         "winston": "^3.19.0",
         "winston-daily-rotate-file": "^5.0.0"
     },
