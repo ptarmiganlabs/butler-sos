@@ -70,17 +70,17 @@ export function formatUserFields(msgObj) {
  * 2:  ISO8601 formatted timestamp. Example: 20211109T153726.028+0200
  * 3:  Local timezone timestamp. Example: 2021-11-09 15:37:26,028
  * 4:  Log level. Possible values are: WARN, ERROR, FATAL
- * 5:  Hostname where the log event occured
- * 6:  QSEoW subsystem where log event occured
+ * 5:  Hostname where the log event occurred
+ * 6:  QSEoW subsystem where log event occurred
  * 7:  Windows username running the originating QSEoW service
  * 8:  Message
- * 9:  Exception message (empty unless an exception/fault occured)
+ * 9:  Exception message (empty unless an exception/fault occurred)
  * 10: QSEoW user directory associated with the event
  * 11: QSEoW user id associated with the event
- * 12: Command carried out when log event occured
+ * 12: Command carried out when log event occurred
  * 13: Result code for command
  * 14: Origin of log event
- * 15: Context where the log event occured
+ * 15: Context where the log event occurred
  *
  * @param {Array} msg - The message parts
  * @returns {object} Processed message object
