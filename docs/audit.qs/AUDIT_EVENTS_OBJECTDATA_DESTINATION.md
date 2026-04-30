@@ -10,6 +10,19 @@ audit event is recorded.
 Each audit event that contains `objectData` produces one JSON file. Events without
 `objectData` are silently skipped.
 
+## API Input
+
+Audit events are received by the Butler SOS audit API:
+
+- `POST /api/v1/audit-event` - Accepts audit event envelopes and returns `202 Accepted`.
+- `GET /api/v1/test-connection` - Returns a simple health response for connection tests.
+
+When `Butler-SOS.auditEvents.apiToken` is configured, both endpoints require an `Authorization: Bearer <token>` header. Browser calls also require an allowed origin in `Butler-SOS.auditEvents.cors.allowedOrigins`.
+
+The POST endpoint requires these top-level envelope fields: `schemaVersion`, `eventId`, `timestamp`, `type`, and `payload`. `correlationId` and `source` are optional. The JSON destination looks specifically for `payload.event.objectData`.
+
+Known event types with payload validation are `selection.transaction.finalized`, `selection.state.changed`, `app.model.validated`, `screenshot.url.received`, `event.unsupported.visualization`, and `object.view.duration`. Unknown event types are accepted and stored using the open envelope/payload model.
+
 ## Data Flow
 
 ```mermaid
@@ -30,13 +43,13 @@ flowchart LR
 JSON files use the **same naming convention as screenshots**, making it trivial to
 correlate a screenshot image with its object data:
 
-```
+```text
 {timestamp}_{eventId}_{correlationId}.json
 ```
 
 Example:
 
-```
+```text
 20260308T164626.181Z_165c9558-abcd-1234-a1b2-cc12e5aa9f01_cc12e5aa-beef-4321-9876-abcdef012345.json
 ```
 
@@ -132,7 +145,7 @@ object data payload:
     "/data/audit-events/screenshots/20260308T164626.181Z_165c9558-..._cc12e5aa-....png"
   ],
   "selectionDetails": [
-    { "fieldName": "Region", "selectedValues": ["Europe", "Asia"] }
+    { "qField": "Region", "qSelectedCount": 2, "qSelected": "Europe, Asia" }
   ],
   "objectData": {
     "schemaVersion": 1,
@@ -175,6 +188,10 @@ Butler-SOS:
         objectdata:
           enable: true
           exportDirectory: ./audit-events/json
+          # maxBatchSize/writeFrequency are accepted by the shared objectdata schema,
+          # but JSON files are written immediately by the current implementation.
+          maxBatchSize: 1000
+          writeFrequency: 20000
           staticTags:
             - name: env
               value: production
@@ -185,10 +202,12 @@ Butler-SOS:
 ### Configuration Properties
 
 | Property | Type | Required | Default | Description |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | `enable` | boolean | Yes | — | Enable/disable the JSON objectdata destination |
-| `exportDirectory` | string | Yes | — | Directory where JSON files are written |
-| `staticTags` | array | No | `[]` | Key-value pairs included as `tags` in every JSON file |
+| `exportDirectory` | string | No | `audit-events/json` | Directory where JSON files are written |
+| `maxBatchSize` | integer | No | `1000` | Accepted by the shared objectdata schema; not used by the JSON writer today |
+| `writeFrequency` | number | No | `20000` | Accepted by the shared objectdata schema; not used by the JSON writer today |
+| `staticTags` | array/null | No | `null` | Key-value pairs included as `tags` in every JSON file |
 
 ## Destination Architecture
 
@@ -222,10 +241,7 @@ graph TD
 
 - **`metadata`** — Event metadata (timestamps, IDs, tags). This is where existing
   settings for InfluxDB, Parquet, and QVD live.
-- **`objectdata`** — The raw dimension/measure payload from the Qlik Sense object.
-  Currently only the `json` destination supports this sub-section.
+- **`objectdata`** — Dedicated storage settings for the raw dimension/measure payload from the Qlik Sense object. The current implementation writes this dedicated objectdata output only for the `json` destination.
 
-> **Note:** The `objectdata` sub-section may be added to Parquet, QVD, and InfluxDB
-> destinations in the future. The `metadata` sub-sections for those destinations
-> always include `objectData` as a JSON-stringified field in every row.
+> **Note:** The configuration schema accepts optional `objectdata` sub-sections for Parquet, QVD, and InfluxDB, but those dedicated objectdata writers are not implemented today. The `metadata` sub-sections for those destinations always include `objectData` as a JSON-stringified field whenever it is present in the incoming event.
 
