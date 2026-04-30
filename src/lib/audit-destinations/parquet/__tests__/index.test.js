@@ -189,6 +189,7 @@ describe('Parquet Audit Destination', () => {
 
         await Promise.resolve();
         await Promise.resolve();
+        await Promise.resolve();
 
         expect(mockLogger.error).toHaveBeenCalledWith(
             expect.stringContaining('Error flushing audit Parquet buffer: Write failed')
@@ -200,6 +201,7 @@ describe('Parquet Audit Destination', () => {
 
         // Trigger flush via timer
         jest.advanceTimersByTime(5001);
+        await Promise.resolve();
         await Promise.resolve();
         await Promise.resolve();
 

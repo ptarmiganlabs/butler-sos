@@ -183,6 +183,7 @@ describe('QVD Audit Destination', () => {
 
         await Promise.resolve();
         await Promise.resolve();
+        await Promise.resolve();
 
         expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Write failed'));
 
@@ -191,6 +192,7 @@ describe('QVD Audit Destination', () => {
         // The call above will trigger a flush because buffer length becomes 3 (2 from before + 1 new)
         // and maxBatchSize is 2.
 
+        await Promise.resolve();
         await Promise.resolve();
         await Promise.resolve();
 

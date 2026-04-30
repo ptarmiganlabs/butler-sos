@@ -2,6 +2,9 @@
  * Common utility functions for log event handlers
  */
 
+import globals from '../../../../globals.js';
+import { sanitizeField } from '../../../udp-queue-manager.js';
+
 /**
  * Regular expression that matches ISO8601 date format strings.
  * Matches patterns like "2021-11-09T15:37:26.028+0200".
@@ -52,6 +55,61 @@ export function formatUserFields(msgObj) {
     } else {
         msgObj.user_full = '';
     }
+}
+
+/**
+ * Process a generic 16-field QSEoW log event message produced by the proxy
+ * and repository services.
+ *
+ * Both services emit log lines with an identical 16-position field layout, so
+ * the per-handler processors can delegate to this shared parser.
+ *
+ * Message parts:
+ * 0:  Message type. Example: /qseow-proxy/ or /qseow-repository/
+ * 1:  Row number
+ * 2:  ISO8601 formatted timestamp. Example: 20211109T153726.028+0200
+ * 3:  Local timezone timestamp. Example: 2021-11-09 15:37:26,028
+ * 4:  Log level. Possible values are: WARN, ERROR, FATAL
+ * 5:  Hostname where the log event occured
+ * 6:  QSEoW subsystem where log event occured
+ * 7:  Windows username running the originating QSEoW service
+ * 8:  Message
+ * 9:  Exception message (empty unless an exception/fault occured)
+ * 10: QSEoW user directory associated with the event
+ * 11: QSEoW user id associated with the event
+ * 12: Command carried out when log event occured
+ * 13: Result code for command
+ * 14: Origin of log event
+ * 15: Context where the log event occured
+ *
+ * @param {Array} msg - The message parts
+ * @returns {object} Processed message object
+ */
+export function processGenericLogEvent(msg) {
+    globals.logger.verbose(`LOG EVENT: ${msg[0]}:${msg[5]}:${msg[4]}, ${msg[6]}, Msg: ${msg[8]}`);
+
+    const msgObj = {
+        source: sanitizeField(msg[0], 100),
+        log_row: Number.isInteger(parseInt(msg[1], 10)) ? parseInt(msg[1], 10) : -1,
+        ts_iso: isoDateRegex.test(msg[2]) ? sanitizeField(msg[2], 50) : '',
+        ts_local: isoDateRegex.test(msg[3]) ? sanitizeField(msg[3], 50) : '',
+        level: sanitizeField(msg[4], 20),
+        host: sanitizeField(msg[5], 100),
+        subsystem: sanitizeField(msg[6], 200),
+        windows_user: sanitizeField(msg[7], 100),
+        message: sanitizeField(msg[8], 1000),
+        exception_message: sanitizeField(msg[9], 1000),
+        user_directory: sanitizeField(msg[10], 100),
+        user_id: sanitizeField(msg[11], 100),
+        command: sanitizeField(msg[12], 200),
+        result_code: sanitizeField(msg[13], 50),
+        origin: sanitizeField(msg[14], 200),
+        context: sanitizeField(msg[15], 200),
+    };
+
+    formatUserFields(msgObj);
+
+    return msgObj;
 }
 
 export { isoDateRegex, uuidRegex };
