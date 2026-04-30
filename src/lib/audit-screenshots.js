@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import https from 'node:https';
@@ -6,15 +7,20 @@ import axios from 'axios';
 import { DateTime } from 'luxon';
 import setCookieParser from 'set-cookie-parser';
 
+import pngjs from 'pngjs';
+
 import globals from '../globals.js';
 import { createCertificateOptions, getCertificates } from './cert-utils.js';
 import { addTextHeaderToPng } from './audit-screenshot-metadata-image.js';
 import { extractVirtualProxyFromSessionCookieName } from './util/qlik-session-utils.js';
 
+const { PNG } = pngjs;
+
 /**
  * Minimal logger interface used by this module.
  *
  * @typedef {object} Logger
+ * @property {(msg: string) => void} [debug] Logs debug messages.
  * @property {(msg: string) => void} info Logs informational messages.
  * @property {(msg: string) => void} warn Logs warning messages.
  * @property {(msg: string) => void} error Logs error messages.
@@ -136,6 +142,11 @@ async function requestQpsTicket(qps, logger) {
 
     const url = `https://${qps.host}:${qps.port}/qps/ticket?Xrfkey=${xrfkey}`;
 
+    debugLog(
+        logger,
+        `AUDIT API: Requesting QPS ticket qpsHost=${qps.host} qpsPort=${qps.port} qpsPath=/qps/ticket userDirectory=${qps.userDirectory} userId=${qps.userId} timeoutMs=${timeoutMs}`
+    );
+
     const requestSettings = {
         url,
         method: 'post',
@@ -154,6 +165,13 @@ async function requestQpsTicket(qps, logger) {
 
     const response = await axios.request(requestSettings);
     const ticket = response?.data?.Ticket;
+
+    debugLog(
+        logger,
+        `AUDIT API: QPS ticket response status=${response?.status ?? 'n/a'} ticketPresent=${
+            typeof ticket === 'string' && ticket.length > 0
+        } ticketLength=${typeof ticket === 'string' ? ticket.length : 0}`
+    );
 
     if (typeof ticket !== 'string' || ticket.length === 0) {
         logger.warn(
@@ -184,6 +202,16 @@ async function deleteQpsSession(qps, cookieName, sessionId, logger) {
         // Endpoint to delete a specific session: /qps/{vp}/session/{id}
         const vpPath = vp ? `${vp}/` : '';
         const url = `https://${qps.host}:${qps.port}/qps/${vpPath}session/${sessionId}?Xrfkey=${xrfkey}`;
+
+        debugLog(
+            logger,
+            `AUDIT API: Deleting QPS session qpsHost=${qps.host} qpsPort=${qps.port} virtualProxy=${
+                vp || '(default)'
+            } cookieName=${cookieName} sessionIdLength=${sessionId.length} url=${url.replace(
+                sessionId,
+                '[session-id-redacted]'
+            )}`
+        );
 
         await axios.request({
             url,
@@ -363,6 +391,66 @@ function formatAxiosError(err) {
 }
 
 /**
+ * Writes a debug message when the provided logger supports debug logging.
+ *
+ * @param {Logger} logger Logger.
+ * @param {string} message Message to log.
+ */
+function debugLog(logger, message) {
+    if (logger && typeof logger.debug === 'function') {
+        logger.debug(message);
+    }
+}
+
+/**
+ * Returns a URL string with any qlikTicket query value redacted.
+ *
+ * @param {string} rawUrl URL to redact.
+ * @returns {string} Redacted URL, or the original string if parsing fails.
+ */
+function redactQlikTicketInUrl(rawUrl) {
+    try {
+        const u = new URL(rawUrl);
+        if (u.searchParams.has('qlikTicket')) {
+            u.searchParams.set('qlikTicket', '[redacted]');
+        }
+        return u.toString();
+    } catch {
+        return rawUrl;
+    }
+}
+
+/**
+ * Builds a compact URL summary for debug logging.
+ *
+ * @param {string} rawUrl URL to summarize.
+ * @returns {string} URL summary without sensitive query values.
+ */
+function summarizeUrlForDebug(rawUrl) {
+    try {
+        const u = new URL(rawUrl);
+        const queryKeys = Array.from(u.searchParams.keys()).join(',') || 'none';
+        return `origin=${u.origin} path=${u.pathname} queryKeys=${queryKeys} serverNodeId=${
+            u.searchParams.get('serverNodeId') || 'n/a'
+        } hasQlikTicket=${u.searchParams.has('qlikTicket')}`;
+    } catch {
+        return 'invalidUrl=true';
+    }
+}
+
+/**
+ * Counts Set-Cookie headers in an axios response.
+ *
+ * @param {unknown} setCookieHeader Set-Cookie header value.
+ * @returns {number} Number of Set-Cookie header entries.
+ */
+function countSetCookieHeaders(setCookieHeader) {
+    if (Array.isArray(setCookieHeader)) return setCookieHeader.length;
+    if (typeof setCookieHeader === 'string' && setCookieHeader.length > 0) return 1;
+    return 0;
+}
+
+/**
  * Sanitizes a string so it is safe to use as part of a filename.
  *
  * - Non-string or empty values are mapped to the literal string `none`.
@@ -471,7 +559,10 @@ function formatTimestampUtcAndLocal(timestamp) {
  */
 function hasAnyEnabledMetadataFlag(flags) {
     if (!flags || typeof flags !== 'object') return false;
-    return Object.values(flags).some((v) => v === true);
+    // The flags object might contain the 'enable' property (which is handled by the caller)
+    // or the 'fields' object.
+    const fields = flags.fields || flags;
+    return Object.values(fields).some((v) => v === true);
 }
 
 /**
@@ -486,35 +577,36 @@ function buildScreenshotMetadataLines(envelope, auditCtx, flags) {
     if (!hasAnyEnabledMetadataFlag(flags)) return [];
 
     const lines = [];
+    const fields = flags.fields || flags;
 
-    if (flags.date === true) {
+    if (fields.date === true) {
         const { utc, local } = formatTimestampUtcAndLocal(envelope?.timestamp);
         lines.push({ key: 'DATE (UTC)', value: utc });
         lines.push({ key: 'DATE (LOCAL)', value: local });
     }
 
-    if (flags.eventId === true)
+    if (fields.eventId === true)
         lines.push({ key: 'EVENT ID', value: safeMetadataValue(envelope?.eventId) });
-    if (flags.correlationId === true)
+    if (fields.correlationId === true)
         lines.push({ key: 'CORRELATION ID', value: safeMetadataValue(envelope?.correlationId) });
-    if (flags.selectionTxnId === true)
+    if (fields.selectionTxnId === true)
         lines.push({
             key: 'SELECTION TXN ID',
             value: safeMetadataValue(envelope?.payload?.event?.selectionTxnId),
         });
 
-    if (flags.userId === true) {
+    if (fields.userId === true) {
         lines.push({ key: 'USER ID', value: safeMetadataValue(auditCtx?.user) });
     }
 
-    if (flags.appId === true)
+    if (fields.appId === true)
         lines.push({ key: 'APP ID', value: safeMetadataValue(auditCtx?.appId) });
-    if (flags.appName === true)
+    if (fields.appName === true)
         lines.push({ key: 'APP NAME', value: safeMetadataValue(auditCtx?.appName) });
-    if (flags.sheetName === true)
+    if (fields.sheetName === true)
         lines.push({ key: 'SHEET NAME', value: safeMetadataValue(auditCtx?.sheetName) });
 
-    if (flags.viewingDuration === true) {
+    if (fields.viewingDuration === true) {
         const durationMs = auditCtx?.viewingDuration;
         const durationSec = typeof durationMs === 'number' ? (durationMs / 1000).toFixed(2) : 'n/a';
         lines.push({ key: 'VIEWING DURATION (s)', value: durationSec });
@@ -599,6 +691,292 @@ export function buildScreenshotFilename(envelope, url, contentType) {
 }
 
 /**
+ * Crops a PNG image buffer to the specified rectangle.
+ *
+ * The Printing Service may render more rows than are visible on screen
+ * (e.g. pivot tables with a virtualScroll buffer larger than the viewport).
+ * The extension sends a `crop` object with the exact visible dimensions so
+ * we can trim the PNG to match what the user actually sees.
+ *
+ * @param {Buffer} buffer - The original PNG image buffer.
+ * @param {{ top: number, left: number, width: number, height: number, scrollTop?: number, scrollAreaOffsetY?: number }} crop - Crop rectangle with optional scroll metadata.
+ * @param {Logger} [logger] Logger.
+ * @returns {Buffer} Cropped PNG buffer, or the original buffer if cropping is unnecessary.
+ */
+function cropPngBuffer(buffer, crop, logger) {
+    let src = PNG.sync.read(buffer);
+
+    if (logger) {
+        // Scan from the bottom to find the last row that contains non-white pixels.
+        // This tells us where the actual table content ends in the rendered image.
+        let contentBottomY = 0;
+        for (let y = src.height - 1; y >= 0; y--) {
+            let hasContent = false;
+            for (let x = 0; x < src.width; x++) {
+                const idx = (y * src.width + x) * 4;
+                const r = src.data[idx];
+                const g = src.data[idx + 1];
+                const b = src.data[idx + 2];
+                // Non-white pixel (with some tolerance for anti-aliasing)
+                if (r < 250 || g < 250 || b < 250) {
+                    hasContent = true;
+                    break;
+                }
+            }
+            if (hasContent) {
+                contentBottomY = y + 1;
+                break;
+            }
+        }
+
+        logger.info(
+            `AUDIT API: cropPngBuffer source=${src.width}x${src.height} crop={top:${crop.top},left:${crop.left},w:${crop.width},h:${crop.height},scrollTop:${crop.scrollTop || 0},scrollAreaOffsetY:${crop.scrollAreaOffsetY || 0},renderingOverflow:${crop.renderingOverflow || 0}} needsCrop=${src.width > crop.width || src.height > crop.height} contentBottomY=${contentBottomY}`
+        );
+
+        // Save debug copy of the pre-crop image
+        try {
+            const debugDir = path.join(process.cwd(), 'audit-events', 'debug');
+            if (!fsSync.existsSync(debugDir)) {
+                fsSync.mkdirSync(debugDir, { recursive: true });
+            }
+            const debugFile = path.join(debugDir, `pre-crop-${src.width}x${src.height}.png`);
+            fsSync.writeFileSync(debugFile, buffer);
+            logger.info(`AUDIT API: Saved pre-crop debug image to ${debugFile}`);
+        } catch (dbgErr) {
+            logger.debug(`AUDIT API: Failed to save debug image: ${dbgErr.message}`);
+        }
+    }
+
+    // SCROLL-AWARE COMPOSITE CROP:
+    // When the extension reports scrollTop > 0, the Printing API rendered from
+    // scrollTop=0 (no scroll applied). The rendered image contains:
+    //   y=0 .. scrollAreaOffsetY           → title area (outside scroll container)
+    //   y=scrollAreaOffsetY .. +scrollTop   → scroll content that was scrolled past
+    //   y=scrollAreaOffsetY+scrollTop .. end → visible scroll content (headers + data)
+    //
+    // We composite: keep the title region, skip scrolled-past content, keep the
+    // rest. Then the standard overflow crop trims the bottom edge.
+    const scrollTop = crop.scrollTop || 0;
+    const scrollAreaOffsetY = crop.scrollAreaOffsetY || 0;
+    if (scrollTop > 0 && scrollAreaOffsetY >= 0 && scrollAreaOffsetY + scrollTop < src.height) {
+        const skipEnd = scrollAreaOffsetY + scrollTop;
+        const regionAHeight = scrollAreaOffsetY; // title
+        const regionBHeight = src.height - skipEnd; // visible scroll content
+        const compositeHeight = regionAHeight + regionBHeight;
+
+        if (logger) {
+            logger.info(
+                `AUDIT API: Scroll composite: titleRegion=0..${regionAHeight} skip=${scrollAreaOffsetY}..${skipEnd} visibleRegion=${skipEnd}..${src.height} compositeHeight=${compositeHeight}`
+            );
+        }
+
+        const composite = new PNG({ width: src.width, height: compositeHeight });
+
+        // Copy Region A: title area (y=0 to y=scrollAreaOffsetY)
+        for (let y = 0; y < regionAHeight; y++) {
+            const srcOff = y * src.width * 4;
+            const dstOff = y * src.width * 4;
+            src.data.copy(composite.data, dstOff, srcOff, srcOff + src.width * 4);
+        }
+
+        // Copy Region B: visible scroll content (y=skipEnd to y=src.height)
+        for (let y = 0; y < regionBHeight; y++) {
+            const srcOff = (skipEnd + y) * src.width * 4;
+            const dstOff = (regionAHeight + y) * src.width * 4;
+            src.data.copy(composite.data, dstOff, srcOff, srcOff + src.width * 4);
+        }
+
+        // Use composite as the new source for the standard crop step
+        src = composite;
+        buffer = PNG.sync.write(composite);
+
+        if (logger) {
+            // Save debug composite image
+            try {
+                const debugDir = path.join(process.cwd(), 'audit-events', 'debug');
+                const debugFile = path.join(
+                    debugDir,
+                    `composite-${src.width}x${compositeHeight}.png`
+                );
+                fsSync.writeFileSync(debugFile, buffer);
+                logger.info(`AUDIT API: Saved composite debug image to ${debugFile}`);
+            } catch (dbgErr) {
+                logger.debug(`AUDIT API: Failed to save composite debug image: ${dbgErr.message}`);
+            }
+        }
+    }
+
+    // OVERFLOW-AWARE COMPOSITE CROP:
+    // The Printing API renders ALL data rows fully — it never clips rows. When a
+    // partial row is visible on screen (e.g. 18px of a 21px row), the inflate+crop
+    // approach inflates the rendering height so rows render at their correct pixel
+    // height, then expects cropping to clip the last row. However, the Printing API
+    // places table content with a margin at the bottom, so a simple bottom crop
+    // removes margin pixels, not data row pixels. The last row stays fully visible.
+    //
+    // Fix: detect the table's bottom grid line (a uniform horizontal line marking
+    // the end of data rows), then composite the image by removing `overflow` pixels
+    // from just above that line. This clips into the last data row, producing the
+    // correct partial-row effect. The margin below is preserved.
+    const renderingOverflow = crop.renderingOverflow || 0;
+    if (renderingOverflow > 0) {
+        // Find the table grid bottom line: scan upward from near the bottom,
+        // looking for a uniform horizontal line in the grid-line brightness
+        // range (160-245). We skip the outer border columns (first/last ~50px)
+        // because the table frame border has a different color than interior
+        // grid lines, which would break a uniformity check starting at x=0.
+        let gridLineY = -1;
+        const margin = Math.min(50, Math.floor(src.width * 0.05));
+        const startY = Math.max(0, src.height - 5);
+        for (let y = startY; y >= Math.floor(src.height / 2); y--) {
+            // Use a reference pixel from the interior, not the border frame
+            const refX = Math.floor(src.width / 4);
+            const firstIdx = (y * src.width + refX) * 4;
+            const refR = src.data[firstIdx];
+            const refG = src.data[firstIdx + 1];
+            const refB = src.data[firstIdx + 2];
+            const brightness = (refR + refG + refB) / 3;
+            // Grid-line brightness range includes darker separators (e.g. native
+            // table header separator at ~166) through light row separators (~242).
+            if (brightness < 160 || brightness > 245) continue;
+
+            let isUniform = true;
+            let checked = 0;
+            for (let x = margin; x < src.width - margin; x += 10) {
+                const idx = (y * src.width + x) * 4;
+                const r = src.data[idx];
+                const g = src.data[idx + 1];
+                const b = src.data[idx + 2];
+                if (Math.abs(r - refR) > 5 || Math.abs(g - refG) > 5 || Math.abs(b - refB) > 5) {
+                    isUniform = false;
+                    break;
+                }
+                checked++;
+            }
+            if (isUniform && checked > 10) {
+                // Verify this is a real data grid line, not part of a margin band
+                // or the outer border frame. Two checks:
+                // 1. The row above must be brighter (data cell background ≈ 255)
+                //    than the gridline (≈ 204-242). A margin/border row has similar
+                //    brightness to the candidate, so brightness difference is small.
+                // 2. Fall back: if the row above is also uniform but has clearly
+                //    different brightness (>10 apart), accept the candidate —
+                //    it's a gridline adjacent to a white data row.
+                if (y > 0) {
+                    const aboveRefX = Math.floor(src.width / 4);
+                    const aboveRefIdx = ((y - 1) * src.width + aboveRefX) * 4;
+                    const aboveRefR = src.data[aboveRefIdx];
+                    const aboveRefG = src.data[aboveRefIdx + 1];
+                    const aboveRefB = src.data[aboveRefIdx + 2];
+                    const aboveBrightness = (aboveRefR + aboveRefG + aboveRefB) / 3;
+
+                    // Check if row above is non-uniform (has varied cell content)
+                    let aboveUniform = true;
+                    for (let x = margin; x < src.width - margin; x += 10) {
+                        const idx = ((y - 1) * src.width + x) * 4;
+                        if (Math.abs(src.data[idx] - aboveRefR) > 5) {
+                            aboveUniform = false;
+                            break;
+                        }
+                    }
+
+                    if (!aboveUniform) {
+                        // Row above has varied content → real gridline
+                        gridLineY = y;
+                        break;
+                    }
+                    // Row above is uniform — accept if it's significantly brighter
+                    // (white data cell ≈255 vs gridline ≈242 → diff ≈13).
+                    // Reject if brightness difference is small (adjacent border band).
+                    if (aboveBrightness - brightness > 8) {
+                        gridLineY = y;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (gridLineY >= 0 && gridLineY - renderingOverflow >= 0) {
+            // Composite: keep content up to (gridLine - overflow), skip overflow,
+            // keep grid line and everything below (margin area).
+            const keepAbove = gridLineY - renderingOverflow; // rows 0..keepAbove-1
+            const keepBelow = src.height - gridLineY; // gridLine row + margin below
+            const overflowCompositeHeight = keepAbove + keepBelow;
+
+            if (logger) {
+                logger.info(
+                    `AUDIT API: Overflow composite: gridLineY=${gridLineY} overflow=${renderingOverflow} keepAbove=${keepAbove} keepBelow=${keepBelow} compositeHeight=${overflowCompositeHeight}`
+                );
+            }
+
+            const ovComp = new PNG({ width: src.width, height: overflowCompositeHeight });
+
+            // Copy region above the overflow strip (data with partial last row)
+            for (let y = 0; y < keepAbove; y++) {
+                const srcOff = y * src.width * 4;
+                const dstOff = y * src.width * 4;
+                src.data.copy(ovComp.data, dstOff, srcOff, srcOff + src.width * 4);
+            }
+
+            // Copy grid line + margin (from gridLineY to end)
+            for (let y = 0; y < keepBelow; y++) {
+                const srcOff = (gridLineY + y) * src.width * 4;
+                const dstOff = (keepAbove + y) * src.width * 4;
+                src.data.copy(ovComp.data, dstOff, srcOff, srcOff + src.width * 4);
+            }
+
+            src = ovComp;
+            buffer = PNG.sync.write(ovComp);
+
+            if (logger) {
+                try {
+                    const debugDir = path.join(process.cwd(), 'audit-events', 'debug');
+                    if (!fsSync.existsSync(debugDir)) {
+                        fsSync.mkdirSync(debugDir, { recursive: true });
+                    }
+                    const debugFile = path.join(
+                        debugDir,
+                        `overflow-composite-${src.width}x${overflowCompositeHeight}.png`
+                    );
+                    fsSync.writeFileSync(debugFile, buffer);
+                    logger.info(`AUDIT API: Saved overflow composite debug image to ${debugFile}`);
+                } catch (dbgErr) {
+                    logger.debug(
+                        `AUDIT API: Failed to save overflow composite debug image: ${dbgErr.message}`
+                    );
+                }
+            }
+        } else if (logger) {
+            logger.info(
+                `AUDIT API: Overflow composite skipped — grid line not found (gridLineY=${gridLineY}, overflow=${renderingOverflow})`
+            );
+        }
+    }
+
+    // Standard crop: trim to the target dimensions (handles overflow at bottom edge)
+    if (src.width <= crop.width && src.height <= crop.height) {
+        return buffer;
+    }
+
+    const cropW = Math.min(crop.width, src.width - crop.left);
+    const cropH = Math.min(crop.height, src.height - crop.top);
+
+    if (cropW <= 0 || cropH <= 0) {
+        return buffer;
+    }
+
+    const dst = new PNG({ width: cropW, height: cropH });
+
+    for (let y = 0; y < cropH; y++) {
+        const srcOffset = ((crop.top + y) * src.width + crop.left) * 4;
+        const dstOffset = y * cropW * 4;
+        src.data.copy(dst.data, dstOffset, srcOffset, srcOffset + cropW * 4);
+    }
+
+    return PNG.sync.write(dst);
+}
+
+/**
  * Downloads a screenshot URL and stores it to all enabled storage targets.
  *
  * Notes:
@@ -640,12 +1018,26 @@ export async function downloadScreenshot(url, envelope, config, logger) {
     const maxAttempts = 3;
     const baseDelayMs = 500;
 
+    debugLog(
+        logger,
+        `AUDIT API: Screenshot download configured selectionTxnId=${selectionTxnId} authMode=${authMode} timeoutMs=${timeoutMs} maxAttempts=${maxAttempts} enabledTargets=${targets
+            .map((target) => `${target.type}:${target.directory}`)
+            .join(',')} urlSummary="${summarizeUrlForDebug(url)}" ${auditCtxStr}`
+    );
+
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         let downloadUrl = url;
         let httpsAgent;
         let sessionCookieHeader = null;
 
         try {
+            debugLog(
+                logger,
+                `AUDIT API: Screenshot download attempt start attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} authMode=${authMode} urlSummary="${summarizeUrlForDebug(
+                    url
+                )}"`
+            );
+
             if (authMode === 'qpsTicket') {
                 const qps = config?.auth?.qps;
                 if (!qps?.host || !qps?.port || !qps?.userDirectory || !qps?.userId) {
@@ -655,10 +1047,29 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     return;
                 }
 
+                debugLog(
+                    logger,
+                    `AUDIT API: Screenshot download requesting QPS ticket attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} qpsHost=${qps.host} qpsPort=${qps.port}`
+                );
+
                 const ticket = await requestQpsTicket(qps, logger);
                 downloadUrl = withQlikTicket(url, ticket);
                 httpsAgent = createQlikMutualTlsAgent();
+
+                debugLog(
+                    logger,
+                    `AUDIT API: Screenshot download received QPS ticket attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} ticketLength=${ticket.length} downloadUrlSummary="${summarizeUrlForDebug(
+                        downloadUrl
+                    )}"`
+                );
             }
+
+            debugLog(
+                logger,
+                `AUDIT API: Screenshot download HTTP GET attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} url=${redactQlikTicketInUrl(
+                    downloadUrl
+                )} httpsAgent=${httpsAgent ? 'mutualTls' : 'default'} timeoutMs=${timeoutMs}`
+            );
 
             const response = await axios.request({
                 url: downloadUrl,
@@ -670,11 +1081,35 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 validateStatus: acceptAllHttpStatuses,
             });
 
+            const contentType = response.headers?.['content-type'] || null;
+            let buffer = Buffer.from(response.data);
+
+            debugLog(
+                logger,
+                `AUDIT API: Screenshot download HTTP response attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} status=${response.status} contentType=${
+                    contentType || 'n/a'
+                } bytes=${buffer.length} setCookieCount=${countSetCookieHeaders(
+                    response.headers?.['set-cookie']
+                )} url=${redactQlikTicketInUrl(downloadUrl)}`
+            );
+
             // Extract session cookie immediately using set-cookie-parser for reliability.
             // set-cookie-parser handles joined header strings and complex attributes.
             const cookies = setCookieParser.parse(response, { decodeValues: false });
             const sessionCookie = cookies.find((c) =>
                 c.name.toLowerCase().startsWith('x-qlik-session-')
+            );
+
+            debugLog(
+                logger,
+                `AUDIT API: Screenshot download parsed cookies attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} cookieCount=${cookies.length} sessionCookieName=${
+                    sessionCookie?.name || 'none'
+                } sessionCookieVirtualProxy=${
+                    sessionCookie
+                        ? extractVirtualProxyFromSessionCookieName(sessionCookie.name) ||
+                          '(default)'
+                        : 'n/a'
+                } sessionCookieValueLength=${sessionCookie?.value?.length || 0}`
             );
 
             if (sessionCookie) {
@@ -683,9 +1118,6 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     value: sessionCookie.value,
                 };
             }
-
-            const contentType = response.headers?.['content-type'] || null;
-            const buffer = Buffer.from(response.data);
 
             // Non-2xx
             if (response.status < 200 || response.status >= 300) {
@@ -696,7 +1128,9 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     logger.info(
                         `AUDIT API: Screenshot download retrying attempt=${attempt + 1}/${maxAttempts} in ${delayMs}ms httpStatus=${
                             response.status
-                        } selectionTxnId=${selectionTxnId} url=${downloadUrl} (original=${url}) ${auditCtxStr}`
+                        } selectionTxnId=${selectionTxnId} url=${redactQlikTicketInUrl(
+                            downloadUrl
+                        )} (original=${url}) ${auditCtxStr}`
                     );
                     await sleep(delayMs);
                     continue;
@@ -704,7 +1138,9 @@ export async function downloadScreenshot(url, envelope, config, logger) {
 
                 const level = retryable ? 'error' : 'warn';
                 logger[level](
-                    `AUDIT API: Screenshot download failed httpStatus=${response.status} url=${downloadUrl} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} ${auditCtxStr}`
+                    `AUDIT API: Screenshot download failed httpStatus=${response.status} url=${redactQlikTicketInUrl(
+                        downloadUrl
+                    )} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} ${auditCtxStr}`
                 );
                 return;
             }
@@ -725,23 +1161,59 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     logger.info(
                         `AUDIT API: Screenshot download retrying attempt=${attempt + 1}/${maxAttempts} in ${delayMs}ms selectionTxnId=${selectionTxnId} nonImageContentType='${
                             contentType
-                        }' url=${downloadUrl} (original=${url}) ${auditCtxStr}`
+                        }' url=${redactQlikTicketInUrl(downloadUrl)} (original=${url}) ${auditCtxStr}`
                     );
                     await sleep(delayMs);
                     continue;
                 }
 
                 logger.error(
-                    `AUDIT API: Screenshot download returned non-image content-type='${contentType}'. url=${downloadUrl} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} preview='${preview}' ${auditCtxStr}`
+                    `AUDIT API: Screenshot download returned non-image content-type='${contentType}'. url=${redactQlikTicketInUrl(
+                        downloadUrl
+                    )} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} preview='${preview}' ${auditCtxStr}`
                 );
                 return;
             }
 
+            // Crop PNG to visible area if the extension provided crop dimensions.
+            // The Printing Service may render more content than what's visible
+            // on screen (e.g. pivot tables with buffered rows beyond the viewport).
+            const ext = extensionFromContentType(contentType) || extensionFromUrl(url);
+            const crop = envelope?.payload?.event?.crop;
+            const evtWidth = envelope?.payload?.event?.width;
+            const evtHeight = envelope?.payload?.event?.height;
+            logger.info(
+                `AUDIT API: Pre-crop check: ext=${ext} eventDims=${evtWidth}x${evtHeight} crop=${JSON.stringify(crop)} selectionTxnId=${selectionTxnId}`
+            );
+            if (
+                ext === 'png' &&
+                crop &&
+                typeof crop.width === 'number' &&
+                typeof crop.height === 'number' &&
+                crop.width > 0 &&
+                crop.height > 0
+            ) {
+                try {
+                    const beforeLen = buffer.length;
+                    buffer = cropPngBuffer(buffer, crop, logger);
+                    logger.info(
+                        `AUDIT API: Cropped screenshot PNG to ${crop.width}x${crop.height} (top=${crop.top ?? 0}, left=${crop.left ?? 0}). selectionTxnId=${selectionTxnId} beforeBytes=${beforeLen} afterBytes=${buffer.length}`
+                    );
+                } catch (cropErr) {
+                    logger.warn(
+                        `AUDIT API: Failed to crop screenshot PNG. selectionTxnId=${selectionTxnId} error=${formatAxiosError(cropErr)} ${auditCtxStr}`
+                    );
+                    // Continue with the uncropped buffer
+                }
+            }
+
             const filename = buildScreenshotFilename(envelope, url, contentType);
 
-            const ext = extensionFromContentType(contentType) || extensionFromUrl(url);
             const metadataFlags = config?.addInImageMetadata;
-            const shouldAddMetadata = ext === 'png' && hasAnyEnabledMetadataFlag(metadataFlags);
+            const shouldAddMetadata =
+                ext === 'png' &&
+                metadataFlags?.enable === true &&
+                hasAnyEnabledMetadataFlag(metadataFlags);
             const metadataLines = shouldAddMetadata
                 ? buildScreenshotMetadataLines(envelope, auditCtx, metadataFlags)
                 : [];
@@ -798,25 +1270,37 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 logger.info(
                     `AUDIT API: Screenshot download retrying attempt=${attempt + 1}/${maxAttempts} in ${delayMs}ms selectionTxnId=${selectionTxnId} error=${formatAxiosError(
                         err
-                    )} url=${downloadUrl} (original=${url}) ${auditCtxStr}`
+                    )} url=${redactQlikTicketInUrl(downloadUrl)} (original=${url}) ${auditCtxStr}`
                 );
                 await sleep(delayMs);
                 continue;
             }
 
             logger.error(
-                `AUDIT API: Screenshot download failed after ${maxAttempts} attempts. selectionTxnId=${selectionTxnId} selectionTxnId=${selectionTxnId} error=${formatAxiosError(
+                `AUDIT API: Screenshot download failed after ${maxAttempts} attempts. selectionTxnId=${selectionTxnId} error=${formatAxiosError(
                     err
-                )} url=${downloadUrl} (original=${url}) ${auditCtxStr}`
+                )} url=${redactQlikTicketInUrl(downloadUrl)} (original=${url}) ${auditCtxStr}`
             );
             return null;
         } finally {
             if (sessionCookieHeader && authMode === 'qpsTicket') {
+                debugLog(
+                    logger,
+                    `AUDIT API: Screenshot download cleanup deleting QPS session selectionTxnId=${selectionTxnId} cookieName=${sessionCookieHeader.name} virtualProxy=${
+                        extractVirtualProxyFromSessionCookieName(sessionCookieHeader.name) ||
+                        '(default)'
+                    } sessionIdLength=${sessionCookieHeader.value.length}`
+                );
                 await deleteQpsSession(
                     config.auth.qps,
                     sessionCookieHeader.name,
                     sessionCookieHeader.value,
                     logger
+                );
+            } else if (authMode === 'qpsTicket') {
+                debugLog(
+                    logger,
+                    `AUDIT API: Screenshot download cleanup skipped QPS session delete selectionTxnId=${selectionTxnId} reason=no-session-cookie attempt=${attempt}/${maxAttempts}`
                 );
             }
         }

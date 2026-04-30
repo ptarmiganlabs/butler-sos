@@ -167,6 +167,76 @@ function loadAuditEventsTlsOptions(tlsConfig) {
 }
 
 /**
+ * Writes a debug message when the provided logger supports debug logging.
+ *
+ * @param {object} logger Logger instance.
+ * @param {string} message Message to log.
+ */
+function debugLog(logger, message) {
+    if (logger && typeof logger.debug === 'function') {
+        logger.debug(message);
+    }
+}
+
+/**
+ * Returns a URL summary suitable for debug logs without sensitive query values.
+ *
+ * @param {unknown} rawUrl URL to summarize.
+ * @returns {string} Compact URL summary.
+ */
+function summarizeUrlForDebug(rawUrl) {
+    if (typeof rawUrl !== 'string' || rawUrl.length === 0) return 'url=missing';
+
+    try {
+        const url = new URL(rawUrl);
+        const queryKeys = Array.from(url.searchParams.keys()).join(',') || 'none';
+        return `origin=${url.origin} path=${url.pathname} queryKeys=${queryKeys} serverNodeId=${
+            url.searchParams.get('serverNodeId') || 'n/a'
+        } hasQlikTicket=${url.searchParams.has('qlikTicket')}`;
+    } catch {
+        return 'url=invalid';
+    }
+}
+
+/**
+ * Returns sorted own-property names for debug logging.
+ *
+ * @param {unknown} value Candidate object.
+ * @returns {string} Comma-delimited keys, or `none`.
+ */
+function summarizeKeysForDebug(value) {
+    if (!value || typeof value !== 'object') return 'none';
+    const keys = Object.keys(value).sort();
+    return keys.length > 0 ? keys.join(',') : 'none';
+}
+
+/**
+ * Builds a compact summary of screenshot download config.
+ *
+ * @param {unknown} config Screenshot download config.
+ * @returns {string} Config summary for debug logs.
+ */
+function summarizeScreenshotConfigForDebug(config) {
+    const cfg = config && typeof config === 'object' ? config : {};
+    const storageTargets = Array.isArray(cfg.storageTargets) ? cfg.storageTargets : [];
+    const enabledStorageTargets = storageTargets.filter((target) => target?.enable === true);
+    const metadataConfig = cfg.addInImageMetadata;
+    const metadataFields =
+        metadataConfig && typeof metadataConfig === 'object' && metadataConfig.fields
+            ? Object.entries(metadataConfig.fields)
+                  .filter(([, enabled]) => enabled === true)
+                  .map(([name]) => name)
+                  .join(',') || 'none'
+            : 'none';
+
+    return `timeoutMs=${cfg.downloadTimeoutMs ?? 'n/a'} authMode=${
+        cfg.auth?.mode || 'none'
+    } storageTargets=${storageTargets.length} enabledStorageTargets=${
+        enabledStorageTargets.length
+    } metadataEnabled=${metadataConfig?.enable === true} metadataFields=${metadataFields}`;
+}
+
+/**
  * Creates per-message-type handlers for audit event envelopes.
  *
  * The API is designed to be extensible: add more keys to the returned object
@@ -295,6 +365,17 @@ function createTypeHandlers(logger) {
             `AUDIT API: screenshot.url.received eventId=${envelope.eventId} objectId=${objectId} selectionTxnId=${selectionTxnId} dataStateId=${dataStateId} url=${screenshotUrl} ip=${requestContext.ip}`
         );
 
+        debugLog(
+            logger,
+            `AUDIT API: screenshot.url.received debug eventId=${envelope.eventId} correlationId=${
+                envelope?.correlationId || 'n/a'
+            } objectId=${objectId} objectType=${
+                envelope?.payload?.event?.objectType || objectData?.objectType || 'n/a'
+            } urlSummary="${summarizeUrlForDebug(screenshotUrl)}" payloadKeys=${summarizeKeysForDebug(
+                envelope?.payload
+            )} eventKeys=${summarizeKeysForDebug(envelope?.payload?.event)}`
+        );
+
         // Log object data at debug level for troubleshooting
         if (objectData) {
             logger.debug(
@@ -307,11 +388,25 @@ function createTypeHandlers(logger) {
             logger.debug(`AUDIT API: No objectData present for eventId=${envelope.eventId}`);
         }
 
+        const screenshotsEnableConfigExists = globals.config.has(
+            'Butler-SOS.auditEvents.screenshots.enable'
+        );
         const screenshotsEnabled =
-            globals.config.has('Butler-SOS.auditEvents.screenshots.enable') &&
+            screenshotsEnableConfigExists &&
             globals.config.get('Butler-SOS.auditEvents.screenshots.enable') === true;
 
-        if (!screenshotsEnabled) return;
+        debugLog(
+            logger,
+            `AUDIT API: Screenshot download enable check eventId=${envelope.eventId} selectionTxnId=${selectionTxnId} configExists=${screenshotsEnableConfigExists} enabled=${screenshotsEnabled}`
+        );
+
+        if (!screenshotsEnabled) {
+            debugLog(
+                logger,
+                `AUDIT API: Screenshot download skipped eventId=${envelope.eventId} selectionTxnId=${selectionTxnId} reason=disabled`
+            );
+            return;
+        }
         if (typeof screenshotUrl !== 'string' || screenshotUrl.length === 0) {
             logger.warn(
                 `AUDIT API: Screenshot download enabled, but screenshotUrl is missing eventId=${envelope.eventId}`
@@ -335,11 +430,32 @@ function createTypeHandlers(logger) {
             storageTargets: globals.config.get('Butler-SOS.auditEvents.screenshots.storageTargets'),
         };
 
+        debugLog(
+            logger,
+            `AUDIT API: Screenshot download config eventId=${envelope.eventId} selectionTxnId=${selectionTxnId} ${summarizeScreenshotConfigForDebug(
+                screenshotDownloadConfig
+            )}`
+        );
+
+        debugLog(
+            logger,
+            `AUDIT API: Calling screenshot downloader eventId=${envelope.eventId} selectionTxnId=${selectionTxnId} urlSummary="${summarizeUrlForDebug(
+                screenshotUrl
+            )}"`
+        );
+
         const result = await downloadScreenshot(
             screenshotUrl,
             envelope,
             screenshotDownloadConfig,
             logger
+        );
+
+        debugLog(
+            logger,
+            `AUDIT API: Screenshot downloader result eventId=${envelope.eventId} selectionTxnId=${selectionTxnId} savedPathCount=${
+                Array.isArray(result?.savedPaths) ? result.savedPaths.length : 0
+            } resultPresent=${result ? 'true' : 'false'}`
         );
 
         if (
@@ -353,6 +469,11 @@ function createTypeHandlers(logger) {
                 },
             };
         }
+
+        debugLog(
+            logger,
+            `AUDIT API: Screenshot handler produced no destination extras eventId=${envelope.eventId} selectionTxnId=${selectionTxnId}`
+        );
 
         return undefined;
     }
@@ -654,7 +775,13 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
         const validator = Object.hasOwn(validatePayloadByType, envelope?.type)
             ? validatePayloadByType[envelope?.type]
             : undefined;
-        if (!validator) return true;
+        if (!validator) {
+            debugLog(
+                globals.logger,
+                `AUDIT API: Payload validation skipped type=${envelope?.type} eventId=${envelope?.eventId} reason=no-validator`
+            );
+            return true;
+        }
 
         const ok = validator(envelope?.payload);
         if (!ok) {
@@ -662,6 +789,11 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
                 `AUDIT API: Payload validation failed type=${envelope?.type} eventId=${envelope?.eventId} errors=${JSON.stringify(
                     validator.errors
                 )}`
+            );
+        } else {
+            debugLog(
+                globals.logger,
+                `AUDIT API: Payload validation passed type=${envelope?.type} eventId=${envelope?.eventId}`
             );
         }
         return ok;
@@ -675,7 +807,9 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
      * @returns {Promise<void>}
      */
     async function processAuditEventEnvelope(envelope, requestContext) {
-        const handler = Object.hasOwn(handlers, envelope.type) ? handlers[envelope.type] : undefined;
+        const handler = Object.hasOwn(handlers, envelope.type)
+            ? handlers[envelope.type]
+            : undefined;
         /** @type {object} */
         let extras = {};
 
@@ -686,12 +820,26 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
         globals.logger.debug(
             `AUDIT API: Full envelope payload: ${JSON.stringify(envelope.payload)}`
         );
+        debugLog(
+            globals.logger,
+            `AUDIT API: Handler dispatch type=${envelope.type} eventId=${envelope.eventId} handlerFound=${
+                handler ? 'true' : 'false'
+            } payloadKeys=${summarizeKeysForDebug(envelope.payload)} eventKeys=${summarizeKeysForDebug(
+                envelope.payload?.event
+            )}`
+        );
 
         if (handler) {
             const handlerResult = await handler(envelope, requestContext);
             if (handlerResult && typeof handlerResult === 'object') {
                 extras = handlerResult;
             }
+            debugLog(
+                globals.logger,
+                `AUDIT API: Handler completed type=${envelope.type} eventId=${envelope.eventId} extrasKeys=${summarizeKeysForDebug(
+                    extras
+                )}`
+            );
         } else {
             globals.logger.info(
                 `AUDIT API: Received audit event type=${envelope.type} eventId=${envelope.eventId} ip=${requestContext.ip}`
@@ -699,7 +847,17 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
             globals.logger.info(`AUDIT API: Full envelope: ${JSON.stringify(envelope)}`);
         }
 
+        debugLog(
+            globals.logger,
+            `AUDIT API: Writing audit event to destinations type=${envelope.type} eventId=${envelope.eventId} extrasKeys=${summarizeKeysForDebug(
+                extras
+            )}`
+        );
         await writeAuditEventToDestinations(envelope, extras);
+        debugLog(
+            globals.logger,
+            `AUDIT API: Finished writing audit event to destinations type=${envelope.type} eventId=${envelope.eventId}`
+        );
     }
 
     /**
@@ -721,9 +879,22 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
             ip: request.ip,
         };
 
+        debugLog(
+            globals.logger,
+            `AUDIT API: Received POST /api/v1/audit-event type=${envelope?.type} eventId=${envelope?.eventId} correlationId=${
+                envelope?.correlationId || 'n/a'
+            } ip=${request.ip} origin=${request.headers.origin || 'n/a'} queueManager=${
+                globals.auditEventsQueueManager ? 'present' : 'absent'
+            } payloadKeys=${summarizeKeysForDebug(envelope?.payload)}`
+        );
+
         // Validate payload structure using per-type AJV schema (envelope is validated by Fastify schema).
         // If payload validation fails, accept-and-drop.
         if (!validatePayload(envelope)) {
+            debugLog(
+                globals.logger,
+                `AUDIT API: Accepted and dropped audit event after payload validation failure type=${envelope?.type} eventId=${envelope?.eventId}`
+            );
             return reply
                 .code(202)
                 .send({ status: 'accepted', receivedAt: new Date().toISOString() });
@@ -734,7 +905,12 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
         if (queueManager) {
             try {
                 // Drop on rate limit
-                if (!queueManager.checkRateLimit()) {
+                const rateLimitOk = queueManager.checkRateLimit();
+                debugLog(
+                    globals.logger,
+                    `AUDIT API: Queue rate-limit check type=${envelope.type} eventId=${envelope.eventId} allowed=${rateLimitOk}`
+                );
+                if (!rateLimitOk) {
                     await queueManager.handleRateLimitDrop();
                     globals.logger.warn(
                         `AUDIT API: Dropped audit event due to queue rate limit type=${envelope.type} eventId=${envelope.eventId} ip=${request.ip}`
@@ -747,6 +923,11 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
                 const queued = await queueManager.addToQueue(async () => {
                     await processAuditEventEnvelope(envelope, requestContext);
                 });
+
+                debugLog(
+                    globals.logger,
+                    `AUDIT API: Queue add result type=${envelope.type} eventId=${envelope.eventId} queued=${queued}`
+                );
 
                 if (!queued) {
                     globals.logger.warn(
@@ -765,6 +946,10 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
         }
 
         try {
+            debugLog(
+                globals.logger,
+                `AUDIT API: Processing audit event inline type=${envelope.type} eventId=${envelope.eventId}`
+            );
             await processAuditEventEnvelope(envelope, requestContext);
         } catch (err) {
             globals.logger.error(
@@ -787,6 +972,10 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
      * @returns {Promise<void>} Resolves when the response is sent.
      */
     async function handleTestConnectionGet(request, reply) {
+        debugLog(
+            globals.logger,
+            `AUDIT API: test-connection request ip=${request.ip} origin=${request.headers.origin || 'n/a'}`
+        );
         reply.code(200).send({
             status: 'ok',
             message: 'Butler SOS Audit API is reachable',
@@ -820,6 +1009,8 @@ export async function setupAuditEventsApiServer() {
             globals.config.has('Butler-SOS.auditEvents.enable') &&
             globals.config.get('Butler-SOS.auditEvents.enable') === true;
 
+        debugLog(globals.logger, `AUDIT API: setup enabled=${enabled}`);
+
         if (!enabled) {
             globals.logger.info('AUDIT API: Audit events API is disabled.');
             return;
@@ -829,6 +1020,13 @@ export async function setupAuditEventsApiServer() {
             ? globals.config.get('Butler-SOS.auditEvents.tls')
             : null;
         const httpsOptions = loadAuditEventsTlsOptions(tlsConfig);
+
+        debugLog(
+            globals.logger,
+            `AUDIT API: setup TLS enabled=${Boolean(httpsOptions)} tlsConfigPresent=${Boolean(
+                tlsConfig
+            )}`
+        );
 
         const auditServer = Fastify({
             logger: true,
@@ -845,6 +1043,13 @@ export async function setupAuditEventsApiServer() {
 
         const apiToken = globals.config.get('Butler-SOS.auditEvents.apiToken');
         const corsOrigins = globals.config.get('Butler-SOS.auditEvents.cors.allowedOrigins');
+
+        debugLog(
+            globals.logger,
+            `AUDIT API: setup route config apiTokenConfigured=${Boolean(apiToken)} corsOrigins=${
+                Array.isArray(corsOrigins) ? corsOrigins.length : 'n/a'
+            } fastifyLogLevel=${auditServer.log.level}`
+        );
 
         await registerAuditEventRoutes(auditServer, { apiToken, corsOrigins });
 

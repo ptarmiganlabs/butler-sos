@@ -203,7 +203,7 @@ async function mainScript() {
                 'MAIN:     This information makes it possible to focus development efforts where they will make most impact and be most valuable.'
             );
             globals.logger.info(
-                'MAIN:     ❤️ More info at https://butler.ptarmiganlabs.com/docs/about/telemetry/'
+                'MAIN:     ❤️ More info at https://butler-sos.ptarmiganlabs.com/docs/about/telemetry'
             );
         }
     } catch (err) {

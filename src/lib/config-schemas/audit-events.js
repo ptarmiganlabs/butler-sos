@@ -3,7 +3,58 @@
  *
  * This schema defines configuration for the HTTP endpoint that receives audit events
  * from the Qlik Sense audit extension.
+ *
+ * Each destination (influxdb, parquet, qvd, json) has two sub-sections:
+ *   metadata   – audit event metadata (row-per-event).
+ *   objectdata – (optional) dedicated storage for objectData payloads.
+ *
+ * The objectdata sub-sections are optional; if absent, no objectdata-specific
+ * storage is performed. objectData is always included in the metadata rows.
  */
+
+/**
+ * Reusable schema fragment for an objectdata sub-section.
+ *
+ * @param {object} [overrides] Additional properties merged into the schema.
+ * @returns {object} JSON Schema object.
+ */
+function objectdataSubSchema(overrides = {}) {
+    return {
+        type: 'object',
+        properties: {
+            enable: { type: 'boolean', default: false },
+            exportDirectory: { type: 'string' },
+            maxBatchSize: {
+                type: 'integer',
+                default: 1000,
+                minimum: 1,
+                maximum: 10000,
+            },
+            writeFrequency: {
+                type: 'number',
+                default: 20000,
+                minimum: 0,
+            },
+            staticTags: {
+                type: ['array', 'null'],
+                items: {
+                    type: 'object',
+                    properties: {
+                        name: { type: 'string' },
+                        value: { type: 'string' },
+                    },
+                    required: ['name', 'value'],
+                    additionalProperties: false,
+                },
+                default: null,
+            },
+            ...overrides,
+        },
+        required: ['enable'],
+        additionalProperties: false,
+    };
+}
+
 export const auditEventsSchema = {
     auditEvents: {
         type: 'object',
@@ -20,224 +71,252 @@ export const auditEventsSchema = {
                         type: 'string',
                         default: 'influxdb',
                     },
+
+                    // --- InfluxDB destination ---
                     influxdb: {
                         type: 'object',
                         properties: {
-                            host: {
-                                type: 'string',
-                                format: 'hostname',
-                            },
-                            port: { type: 'number' },
-                            version: {
-                                type: 'number',
-                                enum: [1, 2, 3],
-                            },
-                            maxBatchSize: {
-                                type: 'integer',
-                                default: 1000,
-                                minimum: 1,
-                                maximum: 10000,
-                            },
-                            writeFrequency: {
-                                type: 'number',
-                                default: 20000,
-                                minimum: 0,
-                            },
-                            measurementName: {
-                                type: 'string',
-                                default: 'audit_event',
-                            },
-                            auditEventSchemaVersion: {
-                                type: 'string',
-                                default: '1',
-                            },
-                            staticTags: {
-                                type: ['array', 'null'],
-                                items: {
-                                    type: 'object',
-                                    properties: {
-                                        name: { type: 'string' },
-                                        value: { type: 'string' },
-                                    },
-                                    required: ['name', 'value'],
-                                    additionalProperties: false,
-                                },
-                                default: null,
-                            },
-                            includeObjectData: {
-                                type: 'boolean',
-                                default: true,
-                            },
-                            v3Config: {
+                            metadata: {
                                 type: 'object',
                                 properties: {
-                                    database: { type: 'string' },
-                                    description: { type: 'string' },
-                                    token: { type: 'string' },
-                                    retentionDuration: { type: 'string' },
-                                    writeTimeout: {
+                                    host: {
+                                        type: 'string',
+                                        format: 'hostname',
+                                    },
+                                    port: { type: 'number' },
+                                    version: {
                                         type: 'number',
-                                        default: 10000,
-                                        minimum: 1000,
+                                        enum: [1, 2, 3],
                                     },
-                                },
-                                required: ['database', 'token', 'retentionDuration'],
-                                additionalProperties: false,
-                            },
-                            v2Config: {
-                                type: 'object',
-                                properties: {
-                                    org: { type: 'string' },
-                                    bucket: { type: 'string' },
-                                    description: { type: 'string' },
-                                    token: { type: 'string' },
-                                    retentionDuration: { type: 'string' },
-                                },
-                                required: ['org', 'bucket', 'token', 'retentionDuration'],
-                                additionalProperties: false,
-                            },
-                            v1Config: {
-                                type: 'object',
-                                properties: {
-                                    auth: {
+                                    maxBatchSize: {
+                                        type: 'integer',
+                                        default: 1000,
+                                        minimum: 1,
+                                        maximum: 10000,
+                                    },
+                                    writeFrequency: {
+                                        type: 'number',
+                                        default: 20000,
+                                        minimum: 0,
+                                    },
+                                    measurementName: {
+                                        type: 'string',
+                                        default: 'audit_event',
+                                    },
+                                    auditEventSchemaVersion: {
+                                        type: 'string',
+                                        default: '1',
+                                    },
+                                    staticTags: {
+                                        type: ['array', 'null'],
+                                        items: {
+                                            type: 'object',
+                                            properties: {
+                                                name: { type: 'string' },
+                                                value: { type: 'string' },
+                                            },
+                                            required: ['name', 'value'],
+                                            additionalProperties: false,
+                                        },
+                                        default: null,
+                                    },
+                                    v3Config: {
                                         type: 'object',
                                         properties: {
-                                            enable: { type: 'boolean' },
-                                            username: { type: 'string' },
-                                            password: {
-                                                type: 'string',
-                                                format: 'password',
+                                            database: { type: 'string' },
+                                            description: { type: 'string' },
+                                            token: { type: 'string' },
+                                            retentionDuration: { type: 'string' },
+                                            writeTimeout: {
+                                                type: 'number',
+                                                default: 10000,
+                                                minimum: 1000,
                                             },
                                         },
-                                        required: ['enable', 'username', 'password'],
+                                        required: ['database', 'token', 'retentionDuration'],
                                         additionalProperties: false,
                                     },
-                                    dbName: { type: 'string' },
-                                    retentionPolicy: {
+                                    v2Config: {
                                         type: 'object',
                                         properties: {
-                                            name: { type: 'string' },
-                                            duration: { type: 'string' },
+                                            org: { type: 'string' },
+                                            bucket: { type: 'string' },
+                                            description: { type: 'string' },
+                                            token: { type: 'string' },
+                                            retentionDuration: { type: 'string' },
                                         },
-                                        required: ['name', 'duration'],
+                                        required: ['org', 'bucket', 'token', 'retentionDuration'],
+                                        additionalProperties: false,
+                                    },
+                                    v1Config: {
+                                        type: 'object',
+                                        properties: {
+                                            auth: {
+                                                type: 'object',
+                                                properties: {
+                                                    enable: { type: 'boolean' },
+                                                    username: { type: 'string' },
+                                                    password: {
+                                                        type: 'string',
+                                                        format: 'password',
+                                                    },
+                                                },
+                                                required: ['enable', 'username', 'password'],
+                                                additionalProperties: false,
+                                            },
+                                            dbName: { type: 'string' },
+                                            retentionPolicy: {
+                                                type: 'object',
+                                                properties: {
+                                                    name: { type: 'string' },
+                                                    duration: { type: 'string' },
+                                                },
+                                                required: ['name', 'duration'],
+                                                additionalProperties: false,
+                                            },
+                                        },
+                                        required: ['auth', 'dbName', 'retentionPolicy'],
                                         additionalProperties: false,
                                     },
                                 },
-                                required: ['auth', 'dbName', 'retentionPolicy'],
+                                required: [
+                                    'host',
+                                    'port',
+                                    'version',
+                                    'maxBatchSize',
+                                    'writeFrequency',
+                                    'measurementName',
+                                    'auditEventSchemaVersion',
+                                    'staticTags',
+                                ],
                                 additionalProperties: false,
+                                allOf: [
+                                    {
+                                        if: {
+                                            properties: { version: { const: 1 } },
+                                        },
+                                        then: {
+                                            properties: { v1Config: { type: 'object' } },
+                                            required: ['v1Config'],
+                                        },
+                                    },
+                                    {
+                                        if: {
+                                            properties: { version: { const: 2 } },
+                                        },
+                                        then: {
+                                            properties: { v2Config: { type: 'object' } },
+                                            required: ['v2Config'],
+                                        },
+                                    },
+                                    {
+                                        if: {
+                                            properties: { version: { const: 3 } },
+                                        },
+                                        then: {
+                                            properties: { v3Config: { type: 'object' } },
+                                            required: ['v3Config'],
+                                        },
+                                    },
+                                ],
                             },
+                            objectdata: objectdataSubSchema(),
                         },
-                        required: [
-                            'host',
-                            'port',
-                            'version',
-                            'maxBatchSize',
-                            'writeFrequency',
-                            'measurementName',
-                            'auditEventSchemaVersion',
-                            'staticTags',
-                        ],
+                        required: ['metadata'],
                         additionalProperties: false,
-                        allOf: [
-                            {
-                                if: {
-                                    properties: { version: { const: 1 } },
-                                },
-                                then: {
-                                    properties: { v1Config: { type: 'object' } },
-                                    required: ['v1Config'],
-                                },
-                            },
-                            {
-                                if: {
-                                    properties: { version: { const: 2 } },
-                                },
-                                then: {
-                                    properties: { v2Config: { type: 'object' } },
-                                    required: ['v2Config'],
-                                },
-                            },
-                            {
-                                if: {
-                                    properties: { version: { const: 3 } },
-                                },
-                                then: {
-                                    properties: { v3Config: { type: 'object' } },
-                                    required: ['v3Config'],
-                                },
-                            },
-                        ],
                     },
+
+                    // --- Parquet destination ---
                     parquet: {
                         type: 'object',
                         properties: {
-                            exportDirectory: { type: 'string' },
-                            maxBatchSize: {
-                                type: 'integer',
-                                default: 1000,
-                                minimum: 1,
-                                maximum: 10000,
-                            },
-                            writeFrequency: {
-                                type: 'number',
-                                default: 20000,
-                                minimum: 0,
-                            },
-                            staticTags: {
-                                type: ['array', 'null'],
-                                items: {
-                                    type: 'object',
-                                    properties: {
-                                        name: { type: 'string' },
-                                        value: { type: 'string' },
+                            metadata: {
+                                type: 'object',
+                                properties: {
+                                    exportDirectory: { type: 'string' },
+                                    maxBatchSize: {
+                                        type: 'integer',
+                                        default: 1000,
+                                        minimum: 1,
+                                        maximum: 10000,
                                     },
-                                    required: ['name', 'value'],
-                                    additionalProperties: false,
+                                    writeFrequency: {
+                                        type: 'number',
+                                        default: 20000,
+                                        minimum: 0,
+                                    },
+                                    staticTags: {
+                                        type: ['array', 'null'],
+                                        items: {
+                                            type: 'object',
+                                            properties: {
+                                                name: { type: 'string' },
+                                                value: { type: 'string' },
+                                            },
+                                            required: ['name', 'value'],
+                                            additionalProperties: false,
+                                        },
+                                        default: null,
+                                    },
                                 },
-                                default: null,
+                                required: ['exportDirectory', 'maxBatchSize', 'writeFrequency'],
+                                additionalProperties: false,
                             },
-                            includeObjectData: {
-                                type: 'boolean',
-                                default: true,
-                            },
+                            objectdata: objectdataSubSchema(),
                         },
-                        required: ['exportDirectory', 'maxBatchSize', 'writeFrequency'],
+                        required: ['metadata'],
                         additionalProperties: false,
                     },
+
+                    // --- QVD destination ---
                     qvd: {
                         type: 'object',
                         properties: {
-                            exportDirectory: { type: 'string' },
-                            maxBatchSize: {
-                                type: 'integer',
-                                default: 1000,
-                                minimum: 1,
-                                maximum: 10000,
-                            },
-                            writeFrequency: {
-                                type: 'number',
-                                default: 20000,
-                                minimum: 0,
-                            },
-                            staticTags: {
-                                type: ['array', 'null'],
-                                items: {
-                                    type: 'object',
-                                    properties: {
-                                        name: { type: 'string' },
-                                        value: { type: 'string' },
+                            metadata: {
+                                type: 'object',
+                                properties: {
+                                    exportDirectory: { type: 'string' },
+                                    maxBatchSize: {
+                                        type: 'integer',
+                                        default: 1000,
+                                        minimum: 1,
+                                        maximum: 10000,
                                     },
-                                    required: ['name', 'value'],
-                                    additionalProperties: false,
+                                    writeFrequency: {
+                                        type: 'number',
+                                        default: 20000,
+                                        minimum: 0,
+                                    },
+                                    staticTags: {
+                                        type: ['array', 'null'],
+                                        items: {
+                                            type: 'object',
+                                            properties: {
+                                                name: { type: 'string' },
+                                                value: { type: 'string' },
+                                            },
+                                            required: ['name', 'value'],
+                                            additionalProperties: false,
+                                        },
+                                        default: null,
+                                    },
                                 },
-                                default: null,
+                                required: ['exportDirectory', 'maxBatchSize', 'writeFrequency'],
+                                additionalProperties: false,
                             },
-                            includeObjectData: {
-                                type: 'boolean',
-                                default: true,
-                            },
+                            objectdata: objectdataSubSchema(),
                         },
-                        required: ['exportDirectory', 'maxBatchSize', 'writeFrequency'],
+                        required: ['metadata'],
+                        additionalProperties: false,
+                    },
+
+                    // --- JSON destination (objectdata only) ---
+                    json: {
+                        type: 'object',
+                        properties: {
+                            objectdata: objectdataSubSchema(),
+                        },
+                        required: ['objectdata'],
                         additionalProperties: false,
                     },
                 },
@@ -252,9 +331,15 @@ export const auditEventsSchema = {
                                 influxdb: {
                                     type: 'object',
                                     properties: {
-                                        version: { const: 2 },
+                                        metadata: {
+                                            type: 'object',
+                                            properties: {
+                                                version: { const: 2 },
+                                            },
+                                            required: ['version'],
+                                        },
                                     },
-                                    required: ['version'],
+                                    required: ['metadata'],
                                 },
                             },
                             required: ['enable', 'influxdb'],
@@ -265,12 +350,20 @@ export const auditEventsSchema = {
                                 influxdb: {
                                     type: 'object',
                                     properties: {
-                                        v2Config: {
+                                        metadata: {
                                             type: 'object',
                                             properties: {
-                                                description: { type: 'string', minLength: 1 },
+                                                v2Config: {
+                                                    type: 'object',
+                                                    properties: {
+                                                        description: {
+                                                            type: 'string',
+                                                            minLength: 1,
+                                                        },
+                                                    },
+                                                    required: ['description'],
+                                                },
                                             },
-                                            required: ['description'],
                                         },
                                     },
                                 },
@@ -285,9 +378,15 @@ export const auditEventsSchema = {
                                 influxdb: {
                                     type: 'object',
                                     properties: {
-                                        version: { const: 3 },
+                                        metadata: {
+                                            type: 'object',
+                                            properties: {
+                                                version: { const: 3 },
+                                            },
+                                            required: ['version'],
+                                        },
                                     },
-                                    required: ['version'],
+                                    required: ['metadata'],
                                 },
                             },
                             required: ['enable', 'influxdb'],
@@ -298,12 +397,20 @@ export const auditEventsSchema = {
                                 influxdb: {
                                     type: 'object',
                                     properties: {
-                                        v3Config: {
+                                        metadata: {
                                             type: 'object',
                                             properties: {
-                                                description: { type: 'string', minLength: 1 },
+                                                v3Config: {
+                                                    type: 'object',
+                                                    properties: {
+                                                        description: {
+                                                            type: 'string',
+                                                            minLength: 1,
+                                                        },
+                                                    },
+                                                    required: ['description'],
+                                                },
                                             },
-                                            required: ['description'],
                                         },
                                     },
                                 },
@@ -409,15 +516,22 @@ export const auditEventsSchema = {
                     addInImageMetadata: {
                         type: 'object',
                         properties: {
-                            date: { type: 'boolean', default: false },
-                            eventId: { type: 'boolean', default: false },
-                            correlationId: { type: 'boolean', default: false },
-                            selectionTxnId: { type: 'boolean', default: false },
-                            userId: { type: 'boolean', default: false },
-                            appId: { type: 'boolean', default: false },
-                            appName: { type: 'boolean', default: false },
-                            sheetName: { type: 'boolean', default: false },
-                            viewingDuration: { type: 'boolean', default: false },
+                            enable: { type: 'boolean', default: false },
+                            fields: {
+                                type: 'object',
+                                properties: {
+                                    date: { type: 'boolean', default: false },
+                                    eventId: { type: 'boolean', default: false },
+                                    correlationId: { type: 'boolean', default: false },
+                                    selectionTxnId: { type: 'boolean', default: false },
+                                    userId: { type: 'boolean', default: false },
+                                    appId: { type: 'boolean', default: false },
+                                    appName: { type: 'boolean', default: false },
+                                    sheetName: { type: 'boolean', default: false },
+                                    viewingDuration: { type: 'boolean', default: false },
+                                },
+                                additionalProperties: false,
+                            },
                         },
                         additionalProperties: false,
                     },

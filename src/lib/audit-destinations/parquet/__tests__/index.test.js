@@ -58,21 +58,21 @@ describe('Parquet Audit Destination', () => {
 
         mockConfig.has.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.parquet') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.parquet.staticTags') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata.staticTags') return true;
             return false;
         });
 
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.parquet') {
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata') {
                 return {
                     exportDirectory: './audit-events/parquet',
                     maxBatchSize: 2,
                     writeFrequency: 5000,
                 };
             }
-            if (key === 'Butler-SOS.auditEvents.destination.parquet.staticTags') {
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata.staticTags') {
                 return [{ name: 'env', value: 'prod' }];
             }
             return null;
@@ -218,7 +218,7 @@ describe('Parquet Audit Destination', () => {
 
         // Mock config missing
         mockConfig.get.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.destination.parquet') return null;
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata') return null;
             return true;
         });
 
@@ -227,7 +227,7 @@ describe('Parquet Audit Destination', () => {
 
         // Mock config present
         mockConfig.get.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.destination.parquet') {
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata') {
                 return {
                     exportDirectory: './audit-events/parquet',
                     maxBatchSize: 1,
@@ -258,7 +258,7 @@ describe('Parquet Audit Destination', () => {
         };
 
         mockConfig.get.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.destination.parquet') {
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata') {
                 return {
                     exportDirectory: './audit-events/parquet',
                     maxBatchSize: 1,
@@ -305,7 +305,7 @@ describe('Parquet Audit Destination', () => {
         };
 
         mockConfig.get.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.destination.parquet') {
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata') {
                 return {
                     exportDirectory: './audit-events/parquet',
                     maxBatchSize: 1,
@@ -343,7 +343,7 @@ describe('Parquet Audit Destination', () => {
         };
 
         mockConfig.get.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.destination.parquet') {
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata') {
                 return {
                     exportDirectory: './audit-events/parquet',
                     maxBatchSize: 1,
@@ -365,34 +365,31 @@ describe('Parquet Audit Destination', () => {
         expect(objectDataCol.data[0]).toBeNull();
     });
 
-    test('Excludes objectData when includeObjectData config is false', async () => {
+    test('Always includes objectData (includeObjectData toggle removed)', async () => {
         mockConfig.has.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.parquet') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.parquet.staticTags') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.parquet.includeObjectData') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata.staticTags') return true;
             return false;
         });
 
         mockConfig.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.parquet') {
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata') {
                 return {
                     exportDirectory: './audit-events/parquet',
                     maxBatchSize: 1,
                     writeFrequency: 5000,
                 };
             }
-            if (key === 'Butler-SOS.auditEvents.destination.parquet.staticTags') {
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata.staticTags') {
                 return [{ name: 'env', value: 'prod' }];
             }
-            if (key === 'Butler-SOS.auditEvents.destination.parquet.includeObjectData')
-                return false;
             return null;
         });
 
         const event = {
-            eventId: 'dim-off-1',
+            eventId: 'dim-always-1',
             timestamp: '2023-10-27T10:00:00Z',
             payload: {
                 context: { user: 'user1' },
@@ -415,7 +412,10 @@ describe('Parquet Audit Destination', () => {
         const objectTypeCol = callArgs.columnData.find((c) => c.name === 'objectType');
         const objectDataCol = callArgs.columnData.find((c) => c.name === 'objectData');
 
-        expect(objectTypeCol.data[0]).toBeNull();
-        expect(objectDataCol.data[0]).toBeNull();
+        expect(objectTypeCol.data[0]).toBe('barchart');
+        expect(JSON.parse(objectDataCol.data[0])).toMatchObject({
+            objectType: 'barchart',
+            dimensions: expect.any(Array),
+        });
     });
 });

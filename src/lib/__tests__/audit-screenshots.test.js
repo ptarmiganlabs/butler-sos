@@ -324,13 +324,16 @@ describe('audit-screenshots', () => {
                 enable: true,
                 downloadTimeoutMs: 15000,
                 addInImageMetadata: {
-                    date: true,
-                    eventId: true,
-                    correlationId: true,
-                    userId: true,
-                    appId: true,
-                    appName: true,
-                    sheetName: true,
+                    enable: true,
+                    fields: {
+                        date: true,
+                        eventId: true,
+                        correlationId: true,
+                        userId: true,
+                        appId: true,
+                        appName: true,
+                        sheetName: true,
+                    },
                 },
                 storageTargets: [
                     {
@@ -427,7 +430,10 @@ describe('audit-screenshots', () => {
                 enable: true,
                 downloadTimeoutMs: 15000,
                 addInImageMetadata: {
-                    viewingDuration: true,
+                    enable: true,
+                    fields: {
+                        viewingDuration: true,
+                    },
                 },
                 storageTargets: [
                     {
@@ -500,7 +506,10 @@ describe('audit-screenshots', () => {
                 enable: true,
                 downloadTimeoutMs: 15000,
                 addInImageMetadata: {
-                    appName: true,
+                    enable: true,
+                    fields: {
+                        appName: true,
+                    },
                 },
                 storageTargets: [
                     {

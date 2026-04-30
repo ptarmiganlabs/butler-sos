@@ -30,36 +30,38 @@ describe('auditEvents schema', () => {
                     enable: false,
                     type: 'influxdb',
                     influxdb: {
-                        host: 'localhost',
-                        port: 8086,
-                        version: 2,
-                        maxBatchSize: 1000,
-                        writeFrequency: 20000,
-                        measurementName: 'audit_event',
-                        auditEventSchemaVersion: '1',
-                        staticTags: [],
-                        v3Config: {
-                            database: 'butler_audit',
-                            token: 'test-token',
-                            retentionDuration: '0s',
-                        },
-                        v2Config: {
-                            org: 'test-org',
-                            bucket: 'test-bucket',
-                            description: 'Audit events bucket',
-                            token: 'test-token',
-                            retentionDuration: '0s',
-                        },
-                        v1Config: {
-                            auth: {
-                                enable: false,
-                                username: '',
-                                password: '',
+                        metadata: {
+                            host: 'localhost',
+                            port: 8086,
+                            version: 2,
+                            maxBatchSize: 1000,
+                            writeFrequency: 20000,
+                            measurementName: 'audit_event',
+                            auditEventSchemaVersion: '1',
+                            staticTags: [],
+                            v3Config: {
+                                database: 'butler_audit',
+                                token: 'test-token',
+                                retentionDuration: '0s',
                             },
-                            dbName: 'butler_audit',
-                            retentionPolicy: {
-                                name: 'autogen',
-                                duration: '0s',
+                            v2Config: {
+                                org: 'test-org',
+                                bucket: 'test-bucket',
+                                description: 'Audit events bucket',
+                                token: 'test-token',
+                                retentionDuration: '0s',
+                            },
+                            v1Config: {
+                                auth: {
+                                    enable: false,
+                                    username: '',
+                                    password: '',
+                                },
+                                dbName: 'butler_audit',
+                                retentionPolicy: {
+                                    name: 'autogen',
+                                    duration: '0s',
+                                },
                             },
                         },
                     },
@@ -130,36 +132,38 @@ describe('auditEvents schema', () => {
                     enable: true,
                     type: 'influxdb',
                     influxdb: {
-                        host: 'localhost',
-                        port: 8086,
-                        version: 2,
-                        maxBatchSize: 1000,
-                        writeFrequency: 20000,
-                        measurementName: 'audit_event',
-                        auditEventSchemaVersion: '1',
-                        staticTags: [],
-                        v3Config: {
-                            database: 'butler_audit',
-                            token: 'test-token',
-                            retentionDuration: '0s',
-                        },
-                        v2Config: {
-                            org: 'test-org',
-                            bucket: 'test-bucket',
-                            description: 'Audit events bucket',
-                            token: 'test-token',
-                            retentionDuration: '0s',
-                        },
-                        v1Config: {
-                            auth: {
-                                enable: false,
-                                username: '',
-                                password: '',
+                        metadata: {
+                            host: 'localhost',
+                            port: 8086,
+                            version: 2,
+                            maxBatchSize: 1000,
+                            writeFrequency: 20000,
+                            measurementName: 'audit_event',
+                            auditEventSchemaVersion: '1',
+                            staticTags: [],
+                            v3Config: {
+                                database: 'butler_audit',
+                                token: 'test-token',
+                                retentionDuration: '0s',
                             },
-                            dbName: 'butler_audit',
-                            retentionPolicy: {
-                                name: 'autogen',
-                                duration: '0s',
+                            v2Config: {
+                                org: 'test-org',
+                                bucket: 'test-bucket',
+                                description: 'Audit events bucket',
+                                token: 'test-token',
+                                retentionDuration: '0s',
+                            },
+                            v1Config: {
+                                auth: {
+                                    enable: false,
+                                    username: '',
+                                    password: '',
+                                },
+                                dbName: 'butler_audit',
+                                retentionPolicy: {
+                                    name: 'autogen',
+                                    duration: '0s',
+                                },
                             },
                         },
                     },
@@ -236,38 +240,40 @@ describe('auditEvents schema', () => {
                     enable: true,
                     type: 'influxdb',
                     influxdb: {
-                        host: 'localhost',
-                        port: 8086,
-                        version: 3,
-                        maxBatchSize: 1000,
-                        writeFrequency: 20000,
-                        measurementName: 'audit_event',
-                        auditEventSchemaVersion: '1',
-                        staticTags: [],
-                        v3Config: {
-                            database: 'butler_audit',
-                            description: 'Audit events database',
-                            token: 'test-token',
-                            retentionDuration: '0s',
-                            queryTimeout: 60000,
-                        },
-                        v2Config: {
-                            org: 'test-org',
-                            bucket: 'test-bucket',
-                            description: 'Audit events bucket',
-                            token: 'test-token',
-                            retentionDuration: '0s',
-                        },
-                        v1Config: {
-                            auth: {
-                                enable: false,
-                                username: '',
-                                password: '',
+                        metadata: {
+                            host: 'localhost',
+                            port: 8086,
+                            version: 3,
+                            maxBatchSize: 1000,
+                            writeFrequency: 20000,
+                            measurementName: 'audit_event',
+                            auditEventSchemaVersion: '1',
+                            staticTags: [],
+                            v3Config: {
+                                database: 'butler_audit',
+                                description: 'Audit events database',
+                                token: 'test-token',
+                                retentionDuration: '0s',
+                                queryTimeout: 60000,
                             },
-                            dbName: 'butler_audit',
-                            retentionPolicy: {
-                                name: 'autogen',
-                                duration: '0s',
+                            v2Config: {
+                                org: 'test-org',
+                                bucket: 'test-bucket',
+                                description: 'Audit events bucket',
+                                token: 'test-token',
+                                retentionDuration: '0s',
+                            },
+                            v1Config: {
+                                auth: {
+                                    enable: false,
+                                    username: '',
+                                    password: '',
+                                },
+                                dbName: 'butler_audit',
+                                retentionPolicy: {
+                                    name: 'autogen',
+                                    duration: '0s',
+                                },
                             },
                         },
                     },
@@ -389,28 +395,30 @@ describe('auditEvents schema', () => {
                     enable: true,
                     type: 'influxdb',
                     influxdb: {
-                        host: 'localhost',
-                        port: 8086,
-                        version: 3,
-                        measurementName: 'audit_event',
-                        auditEventSchemaVersion: '1',
-                        staticTags: [],
-                        v2Config: {
-                            org: 'test-org',
-                            bucket: 'test-bucket',
-                            token: 'test-token',
-                            retentionDuration: '0s',
-                        },
-                        v1Config: {
-                            auth: {
-                                enable: false,
-                                username: '',
-                                password: '',
+                        metadata: {
+                            host: 'localhost',
+                            port: 8086,
+                            version: 3,
+                            measurementName: 'audit_event',
+                            auditEventSchemaVersion: '1',
+                            staticTags: [],
+                            v2Config: {
+                                org: 'test-org',
+                                bucket: 'test-bucket',
+                                token: 'test-token',
+                                retentionDuration: '0s',
                             },
-                            dbName: 'butler_audit',
-                            retentionPolicy: {
-                                name: 'autogen',
-                                duration: '0s',
+                            v1Config: {
+                                auth: {
+                                    enable: false,
+                                    username: '',
+                                    password: '',
+                                },
+                                dbName: 'butler_audit',
+                                retentionPolicy: {
+                                    name: 'autogen',
+                                    duration: '0s',
+                                },
                             },
                         },
                     },
@@ -498,36 +506,38 @@ describe('auditEvents schema', () => {
                     enable: true,
                     type: 'influxdb',
                     influxdb: {
-                        host: 'localhost',
-                        port: 8086,
-                        version: 3,
-                        maxBatchSize: 1000,
-                        writeFrequency: 20000,
-                        measurementName: 'audit_event',
-                        auditEventSchemaVersion: '1',
-                        staticTags: [],
-                        v3Config: {
-                            database: 'butler_audit',
-                            token: 'test-token',
-                            retentionDuration: '0s',
-                        },
-                        v2Config: {
-                            org: 'test-org',
-                            bucket: 'test-bucket',
-                            description: 'Audit events bucket',
-                            token: 'test-token',
-                            retentionDuration: '0s',
-                        },
-                        v1Config: {
-                            auth: {
-                                enable: false,
-                                username: '',
-                                password: '',
+                        metadata: {
+                            host: 'localhost',
+                            port: 8086,
+                            version: 3,
+                            maxBatchSize: 1000,
+                            writeFrequency: 20000,
+                            measurementName: 'audit_event',
+                            auditEventSchemaVersion: '1',
+                            staticTags: [],
+                            v3Config: {
+                                database: 'butler_audit',
+                                token: 'test-token',
+                                retentionDuration: '0s',
                             },
-                            dbName: 'butler_audit',
-                            retentionPolicy: {
-                                name: 'autogen',
-                                duration: '0s',
+                            v2Config: {
+                                org: 'test-org',
+                                bucket: 'test-bucket',
+                                description: 'Audit events bucket',
+                                token: 'test-token',
+                                retentionDuration: '0s',
+                            },
+                            v1Config: {
+                                auth: {
+                                    enable: false,
+                                    username: '',
+                                    password: '',
+                                },
+                                dbName: 'butler_audit',
+                                retentionPolicy: {
+                                    name: 'autogen',
+                                    duration: '0s',
+                                },
                             },
                         },
                     },
@@ -592,35 +602,37 @@ describe('auditEvents schema', () => {
                     enable: true,
                     type: 'influxdb',
                     influxdb: {
-                        host: 'localhost',
-                        port: 8086,
-                        version: 2,
-                        maxBatchSize: 1000,
-                        writeFrequency: 20000,
-                        measurementName: 'audit_event',
-                        auditEventSchemaVersion: '1',
-                        staticTags: [],
-                        v3Config: {
-                            database: 'butler_audit',
-                            token: 'test-token',
-                            retentionDuration: '0s',
-                        },
-                        v2Config: {
-                            org: 'test-org',
-                            bucket: 'test-bucket',
-                            token: 'test-token',
-                            retentionDuration: '0s',
-                        },
-                        v1Config: {
-                            auth: {
-                                enable: false,
-                                username: '',
-                                password: '',
+                        metadata: {
+                            host: 'localhost',
+                            port: 8086,
+                            version: 2,
+                            maxBatchSize: 1000,
+                            writeFrequency: 20000,
+                            measurementName: 'audit_event',
+                            auditEventSchemaVersion: '1',
+                            staticTags: [],
+                            v3Config: {
+                                database: 'butler_audit',
+                                token: 'test-token',
+                                retentionDuration: '0s',
                             },
-                            dbName: 'butler_audit',
-                            retentionPolicy: {
-                                name: 'autogen',
-                                duration: '0s',
+                            v2Config: {
+                                org: 'test-org',
+                                bucket: 'test-bucket',
+                                token: 'test-token',
+                                retentionDuration: '0s',
+                            },
+                            v1Config: {
+                                auth: {
+                                    enable: false,
+                                    username: '',
+                                    password: '',
+                                },
+                                dbName: 'butler_audit',
+                                retentionPolicy: {
+                                    name: 'autogen',
+                                    duration: '0s',
+                                },
                             },
                         },
                     },
@@ -661,7 +673,7 @@ describe('auditEvents schema', () => {
         expect(validate(invalidConfig)).toBe(false);
     });
 
-    test('should accept includeObjectData boolean in all destination schemas', () => {
+    test('should accept json objectdata destination config', () => {
         const ajv = new Ajv({ allErrors: true });
         addFormats(ajv);
         addKeywords(ajv);
@@ -683,36 +695,13 @@ describe('auditEvents schema', () => {
                 apiToken: 'test-token',
                 destination: {
                     enable: true,
-                    type: 'influxdb,parquet,qvd',
-                    influxdb: {
-                        host: 'localhost',
-                        port: 8086,
-                        version: 2,
-                        maxBatchSize: 1000,
-                        writeFrequency: 20000,
-                        measurementName: 'audit_event',
-                        auditEventSchemaVersion: '1',
-                        staticTags: [],
-                        includeObjectData: true,
-                        v2Config: {
-                            org: 'test-org',
-                            bucket: 'test-bucket',
-                            description: 'Audit events bucket',
-                            token: 'test-token',
-                            retentionDuration: '0s',
+                    type: 'json',
+                    json: {
+                        objectdata: {
+                            enable: true,
+                            exportDirectory: './audit-events/json',
+                            staticTags: [],
                         },
-                    },
-                    parquet: {
-                        exportDirectory: './audit-events/parquet',
-                        maxBatchSize: 1000,
-                        writeFrequency: 20000,
-                        includeObjectData: false,
-                    },
-                    qvd: {
-                        exportDirectory: './audit-events/qvd',
-                        maxBatchSize: 1000,
-                        writeFrequency: 20000,
-                        includeObjectData: true,
                     },
                 },
                 queue: {
@@ -756,7 +745,7 @@ describe('auditEvents schema', () => {
         expect(ok).toBe(true);
     });
 
-    test('should reject non-boolean includeObjectData', () => {
+    test('should reject json objectdata with missing enable', () => {
         const ajv = new Ajv({ allErrors: true });
         addFormats(ajv);
         addKeywords(ajv);
@@ -778,12 +767,12 @@ describe('auditEvents schema', () => {
                 apiToken: 'test-token',
                 destination: {
                     enable: true,
-                    type: 'qvd',
-                    qvd: {
-                        exportDirectory: './audit-events/qvd',
-                        maxBatchSize: 1000,
-                        writeFrequency: 20000,
-                        includeObjectData: 'yes',
+                    type: 'json',
+                    json: {
+                        objectdata: {
+                            exportDirectory: './audit-events/json',
+                            staticTags: [],
+                        },
                     },
                 },
                 queue: {

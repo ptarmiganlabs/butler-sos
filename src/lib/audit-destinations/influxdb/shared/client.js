@@ -41,7 +41,7 @@ function getConfigKey(cfg) {
  * @returns {object} Raw config subtree.
  */
 function getAuditInfluxConfig() {
-    return globals.config.get('Butler-SOS.auditEvents.destination.influxdb');
+    return globals.config.get('Butler-SOS.auditEvents.destination.influxdb.metadata');
 }
 
 /**

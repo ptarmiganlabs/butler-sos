@@ -34,7 +34,7 @@ function isAuditDestinationEnabled() {
  * @returns {object} Audit InfluxDB destination configuration.
  */
 function getAuditInfluxConfig() {
-    return globals.config.get('Butler-SOS.auditEvents.destination.influxdb');
+    return globals.config.get('Butler-SOS.auditEvents.destination.influxdb.metadata');
 }
 
 /**

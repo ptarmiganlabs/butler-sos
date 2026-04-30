@@ -65,7 +65,7 @@ function getAuditDestinationEnabled() {
  * @returns {object} Config subtree.
  */
 function getAuditQvdConfig() {
-    return globals.config.get('Butler-SOS.auditEvents.destination.qvd');
+    return globals.config.get('Butler-SOS.auditEvents.destination.qvd.metadata');
 }
 
 /**
@@ -214,7 +214,7 @@ async function flushAuditQvdBuffer(reason) {
 
         // Write file
         const df = await QvdDataFrame.fromDict({ columns, data });
-        await df.toQvd(filePath);
+        await df.toQvd(filePath, { allowedDir: exportDir });
 
         globals.logger.info(`AUDIT QVD: Wrote ${rowsToWrite.length} events to ${filePath}`);
     } catch (err) {
@@ -290,13 +290,9 @@ export function bufferAuditQvdEvent(envelope, extras = {}) {
         row.screenshotSavedPaths = null;
     }
 
-    // Object data and object type
-    const includeObjectData =
-        !globals.config.has('Butler-SOS.auditEvents.destination.qvd.includeObjectData') ||
-        globals.config.get('Butler-SOS.auditEvents.destination.qvd.includeObjectData') !== false;
-
+    // Object data and object type (always included in metadata rows)
     const dimData = asObject(event.objectData);
-    if (includeObjectData && dimData) {
+    if (dimData) {
         row.objectType = readString(dimData.objectType) ?? null;
         row.objectData = JSON.stringify(dimData);
     } else {
@@ -320,10 +316,10 @@ export function bufferAuditQvdEvent(envelope, extras = {}) {
     // Tags (static + dynamic)
     const tags = {};
     if (
-        globals.config.has('Butler-SOS.auditEvents.destination.qvd.staticTags') &&
-        Array.isArray(globals.config.get('Butler-SOS.auditEvents.destination.qvd.staticTags'))
+        globals.config.has('Butler-SOS.auditEvents.destination.qvd.metadata.staticTags') &&
+        Array.isArray(globals.config.get('Butler-SOS.auditEvents.destination.qvd.metadata.staticTags'))
     ) {
-        const staticTags = globals.config.get('Butler-SOS.auditEvents.destination.qvd.staticTags');
+        const staticTags = globals.config.get('Butler-SOS.auditEvents.destination.qvd.metadata.staticTags');
         for (const item of staticTags) {
             if (item?.name && item?.value) {
                 tags[String(item.name)] = String(item.value);
@@ -348,8 +344,8 @@ export function bufferAuditQvdEvent(envelope, extras = {}) {
  */
 export async function writeAuditEventToQvd(envelope, extras = {}) {
     if (
-        !globals.config.has('Butler-SOS.auditEvents.destination.qvd') ||
-        globals.config.get('Butler-SOS.auditEvents.destination.qvd') === null
+        !globals.config.has('Butler-SOS.auditEvents.destination.qvd.metadata') ||
+        globals.config.get('Butler-SOS.auditEvents.destination.qvd.metadata') === null
     ) {
         return;
     }
