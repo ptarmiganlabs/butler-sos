@@ -55,7 +55,7 @@ The Parquet destination is configured in the `Butler-SOS.auditEvents.destination
 ```yaml
 Butler-SOS:
     auditEvents:
-    destination:
+        destination:
             enable: true
             type: influxdb, parquet # Comma-delimited list of destinations.
             parquet:
