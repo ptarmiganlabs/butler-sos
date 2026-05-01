@@ -564,7 +564,7 @@ describe('Shared Utils - sanitizeInfluxTagValue', () => {
     test('should remove angle brackets and escape backslashes', () => {
         // Input: 'a<b>c\d' (with single backslash)
         // After escaping backslashes: 'a<b>c\\d'
-        // After removing <>: 'ac\\d'
+        // After removing <>: 'abc\\d'
         expect(utils.sanitizeInfluxTagValue('a<b>c\\d')).toBe('abc\\\\d');
     });
 
