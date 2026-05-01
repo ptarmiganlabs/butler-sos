@@ -71,8 +71,7 @@ export async function postLogEventToInfluxdbV3(msg) {
                 .setStringField('raw_event', JSON.stringify(msg));
 
             // Conditional tags
-            if (msg?.user_full?.length > 0)
-                point.setTag('user_full', sanitizeInfluxTagValue(msg.user_full));
+            if (msg?.user_full?.length > 0) point.setTag('user_full', user_full);
             if (msg?.user_directory?.length > 0)
                 point.setTag('user_directory', sanitizeInfluxTagValue(msg.user_directory));
             if (msg?.user_id?.length > 0)
@@ -108,8 +107,7 @@ export async function postLogEventToInfluxdbV3(msg) {
                 .setStringField('raw_event', JSON.stringify(msg));
 
             // Conditional tags
-            if (msg?.user_full?.length > 0)
-                point.setTag('user_full', sanitizeInfluxTagValue(msg.user_full));
+            if (msg?.user_full?.length > 0) point.setTag('user_full', msg.user_full);
             if (msg?.user_directory?.length > 0)
                 point.setTag('user_directory', sanitizeInfluxTagValue(msg.user_directory));
             if (msg?.user_id?.length > 0)
@@ -133,8 +131,7 @@ export async function postLogEventToInfluxdbV3(msg) {
                 .setStringField('raw_event', JSON.stringify(msg));
 
             // Conditional tags
-            if (msg?.user_full?.length > 0)
-                point.setTag('user_full', sanitizeInfluxTagValue(msg.user_full));
+            if (msg?.user_full?.length > 0) point.setTag('user_full', msg.user_full);
             if (msg?.user_directory?.length > 0)
                 point.setTag('user_directory', sanitizeInfluxTagValue(msg.user_directory));
             if (msg?.user_id?.length > 0)
@@ -161,8 +158,7 @@ export async function postLogEventToInfluxdbV3(msg) {
                 .setStringField('raw_event', JSON.stringify(msg));
 
             // Conditional tags
-            if (msg?.user_full?.length > 0)
-                point.setTag('user_full', sanitizeInfluxTagValue(msg.user_full));
+            if (msg?.user_full?.length > 0) point.setTag('user_full', msg.user_full);
             if (msg?.user_directory?.length > 0)
                 point.setTag('user_directory', sanitizeInfluxTagValue(msg.user_directory));
             if (msg?.user_id?.length > 0)
@@ -263,8 +259,7 @@ export async function postLogEventToInfluxdbV3(msg) {
             point.setStringField('raw_event', cleanedRawEvent);
 
             // Conditional tags
-            if (msg?.user_full?.length > 0)
-                point.setTag('user_full', sanitizeInfluxTagValue(msg.user_full));
+            if (msg?.user_full?.length > 0) point.setTag('user_full', msg.user_full);
             if (msg?.user_directory?.length > 0)
                 point.setTag('user_directory', sanitizeInfluxTagValue(msg.user_directory));
             if (msg?.user_id?.length > 0)

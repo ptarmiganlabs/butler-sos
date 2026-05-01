@@ -44,7 +44,7 @@ export async function postUserEventToInfluxdbV3(msg) {
     const point = new Point3('user_events')
         .setTag('host', sanitizeInfluxTagValue(msg.host))
         .setTag('event_action', sanitizeInfluxTagValue(msg.command))
-        .setTag('userFull', sanitizeInfluxTagValue(`${msg.user_directory}\\${msg.user_id}`))
+        .setTag('userFull', `${msg.user_directory}\\${msg.user_id}`)
         .setTag('userDirectory', sanitizeInfluxTagValue(msg.user_directory))
         .setTag('userId', sanitizeInfluxTagValue(msg.user_id))
         .setTag('origin', sanitizeInfluxTagValue(msg.origin))
