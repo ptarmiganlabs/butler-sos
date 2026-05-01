@@ -1,20 +1,10 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeBatchToInfluxV3 } from '../shared/utils.js';
-
-/**
- * Sanitize tag values for InfluxDB line protocol.
- * Remove or replace characters that cause parsing issues.
- *
- * @param {string} value - The value to sanitize
- * @returns {string} - The sanitized value
- */
-function sanitizeTagValue(value) {
-    if (!value) return value;
-    return String(value)
-        .replace(/[<>\\]/g, '')
-        .replace(/\s+/g, '-');
-}
+import {
+    isInfluxDbEnabled,
+    sanitizeInfluxTagValue,
+    writeBatchToInfluxV3,
+} from '../shared/utils.js';
 
 /**
  * Posts a user event to InfluxDB v3.
@@ -52,30 +42,30 @@ export async function postUserEventToInfluxdbV3(msg) {
     // NOTE: InfluxDB v3 does not allow the same name for both tags and fields,
     // unlike v1/v2. Fields use different names with _field suffix where needed.
     const point = new Point3('user_events')
-        .setTag('host', msg.host)
-        .setTag('event_action', msg.command)
+        .setTag('host', sanitizeInfluxTagValue(msg.host))
+        .setTag('event_action', sanitizeInfluxTagValue(msg.command))
         .setTag('userFull', `${msg.user_directory}\\${msg.user_id}`)
-        .setTag('userDirectory', msg.user_directory)
-        .setTag('userId', msg.user_id)
-        .setTag('origin', msg.origin)
+        .setTag('userDirectory', sanitizeInfluxTagValue(msg.user_directory))
+        .setTag('userId', sanitizeInfluxTagValue(msg.user_id))
+        .setTag('origin', sanitizeInfluxTagValue(msg.origin))
         .setStringField('userFull_field', `${msg.user_directory}\\${msg.user_id}`)
         .setStringField('userId_field', msg.user_id);
 
     // Add app id and name to tags and fields if available
     if (msg?.appId) {
-        point.setTag('appId', msg.appId);
+        point.setTag('appId', sanitizeInfluxTagValue(msg.appId));
         point.setStringField('appId_field', msg.appId);
     }
     if (msg?.appName) {
-        point.setTag('appName', msg.appName);
+        point.setTag('appName', sanitizeInfluxTagValue(msg.appName));
         point.setStringField('appName_field', msg.appName);
     }
 
     // Add user agent info to tags if available
-    if (msg?.ua?.browser?.name) point.setTag('uaBrowserName', msg?.ua?.browser?.name);
-    if (msg?.ua?.browser?.major) point.setTag('uaBrowserMajorVersion', msg?.ua?.browser?.major);
-    if (msg?.ua?.os?.name) point.setTag('uaOsName', msg?.ua?.os?.name);
-    if (msg?.ua?.os?.version) point.setTag('uaOsVersion', msg?.ua?.os?.version);
+    if (msg?.ua?.browser?.name) point.setTag('uaBrowserName', sanitizeInfluxTagValue(msg?.ua?.browser?.name));
+    if (msg?.ua?.browser?.major) point.setTag('uaBrowserMajorVersion', sanitizeInfluxTagValue(msg?.ua?.browser?.major));
+    if (msg?.ua?.os?.name) point.setTag('uaOsName', sanitizeInfluxTagValue(msg?.ua?.os?.name));
+    if (msg?.ua?.os?.version) point.setTag('uaOsVersion', sanitizeInfluxTagValue(msg?.ua?.os?.version));
 
     // Add custom tags from config file to payload
     if (
@@ -85,7 +75,7 @@ export async function postUserEventToInfluxdbV3(msg) {
     ) {
         const configTags = globals.config.get('Butler-SOS.userEvents.tags');
         for (const item of configTags) {
-            point.setTag(item.name, item.value);
+            point.setTag(sanitizeInfluxTagValue(item.name), sanitizeInfluxTagValue(item.value));
         }
     }
 

@@ -31,6 +31,7 @@ const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
     writeBatchToInfluxV3: jest.fn(),
+    sanitizeInfluxTagValue: jest.fn((v) => v),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
