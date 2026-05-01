@@ -3,20 +3,6 @@ import globals from '../../../globals.js';
 import { isInfluxDbEnabled, writeBatchToInfluxV3 } from '../shared/utils.js';
 
 /**
- * Sanitize tag values for InfluxDB line protocol.
- * Remove or replace characters that cause parsing issues.
- *
- * @param {string} value - The value to sanitize
- * @returns {string} - The sanitized value
- */
-function sanitizeTagValue(value) {
-    if (!value) return value;
-    return String(value)
-        .replace(/[<>\\]/g, '')
-        .replace(/\s+/g, '-');
-}
-
-/**
  * Posts a user event to InfluxDB v3.
  *
  * @param {object} msg - The event to be posted to InfluxDB. The object should contain the following properties:

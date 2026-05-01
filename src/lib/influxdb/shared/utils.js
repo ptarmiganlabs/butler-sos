@@ -157,6 +157,29 @@ export function getInfluxDbVersion() {
 }
 
 /**
+ * Sanitizes a tag value for use with the InfluxDB line protocol.
+ *
+ * Removes characters that are not supported or cause parsing issues:
+ * - Angle brackets and backslashes (`<`, `>`, `\`) are stripped.
+ * - Newlines (`\n`) and carriage returns (`\r`) break the line protocol format and are removed.
+ *
+ * Commas, equals signs, and spaces in tag values are handled automatically by the
+ * InfluxDB v3 Point client and do not need to be removed here.
+ *
+ * @param {string} value - The tag value to sanitize
+ *
+ * @returns {string|null|undefined} The sanitized string value, or the original value unchanged if it is null or undefined
+ */
+export function sanitizeInfluxTagValue(value) {
+    if (value === null || value === undefined) {
+        return value;
+    }
+    return String(value)
+        .replace(/[<>\\]/g, '')
+        .replace(/[\n\r]/g, '');
+}
+
+/**
  * Applies tags from a tags object to an InfluxDB Point3 object.
  * This is needed for v3 as it doesn't have automatic default tags like v2.
  *

@@ -1,24 +1,11 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeBatchToInfluxV3 } from '../shared/utils.js';
+import {
+    isInfluxDbEnabled,
+    sanitizeInfluxTagValue,
+    writeBatchToInfluxV3,
+} from '../shared/utils.js';
 
-/**
- * Clean tag values for InfluxDB v3 line protocol
- * Remove characters not supported by line protocol.
- *
- * According to the line protocol spec:
- * - Newlines (\n) and carriage returns (\r) are NOT supported → remove them
- * - Comma, equals, space are escaped automatically by Point3
- *
- * @param {string} value - The tag value to clean
- * @returns {string} The cleaned tag value
- */
-function cleanTagValue(value) {
-    if (!value || typeof value !== 'string') {
-        return value;
-    }
-    return value.replace(/[\n\r]/g, ''); // Remove newlines and carriage returns (not supported)
-}
 
 /**
  * Post log event to InfluxDB v3
@@ -85,20 +72,20 @@ export async function postLogEventToInfluxdbV3(msg) {
                 .setStringField('raw_event', JSON.stringify(msg));
 
             // Conditional tags
-            if (msg?.user_full?.length > 0) point.setTag('user_full', cleanTagValue(msg.user_full));
+            if (msg?.user_full?.length > 0) point.setTag('user_full', sanitizeInfluxTagValue(msg.user_full));
             if (msg?.user_directory?.length > 0)
-                point.setTag('user_directory', cleanTagValue(msg.user_directory));
-            if (msg?.user_id?.length > 0) point.setTag('user_id', cleanTagValue(msg.user_id));
+                point.setTag('user_directory', sanitizeInfluxTagValue(msg.user_directory));
+            if (msg?.user_id?.length > 0) point.setTag('user_id', sanitizeInfluxTagValue(msg.user_id));
             if (msg?.result_code?.length > 0)
-                point.setTag('result_code', cleanTagValue(msg.result_code));
+                point.setTag('result_code', sanitizeInfluxTagValue(msg.result_code));
             if (msg?.windows_user?.length > 0)
-                point.setTag('windows_user', cleanTagValue(msg.windows_user));
-            if (msg?.task_id?.length > 0) point.setTag('task_id', cleanTagValue(msg.task_id));
-            if (msg?.task_name?.length > 0) point.setTag('task_name', cleanTagValue(msg.task_name));
-            if (msg?.app_id?.length > 0) point.setTag('app_id', cleanTagValue(msg.app_id));
-            if (msg?.app_name?.length > 0) point.setTag('app_name', cleanTagValue(msg.app_name));
+                point.setTag('windows_user', sanitizeInfluxTagValue(msg.windows_user));
+            if (msg?.task_id?.length > 0) point.setTag('task_id', sanitizeInfluxTagValue(msg.task_id));
+            if (msg?.task_name?.length > 0) point.setTag('task_name', sanitizeInfluxTagValue(msg.task_name));
+            if (msg?.app_id?.length > 0) point.setTag('app_id', sanitizeInfluxTagValue(msg.app_id));
+            if (msg?.app_name?.length > 0) point.setTag('app_name', sanitizeInfluxTagValue(msg.app_name));
             if (msg?.engine_exe_version?.length > 0)
-                point.setTag('engine_exe_version', cleanTagValue(msg.engine_exe_version));
+                point.setTag('engine_exe_version', sanitizeInfluxTagValue(msg.engine_exe_version));
         } else if (msg.source === 'qseow-proxy') {
             // Proxy fields: message, exception_message, command, result_code_field, origin, context, raw_event
             // NOTE: result_code uses _field suffix to avoid conflict with result_code tag
@@ -117,12 +104,12 @@ export async function postLogEventToInfluxdbV3(msg) {
                 .setStringField('raw_event', JSON.stringify(msg));
 
             // Conditional tags
-            if (msg?.user_full?.length > 0) point.setTag('user_full', cleanTagValue(msg.user_full));
+            if (msg?.user_full?.length > 0) point.setTag('user_full', sanitizeInfluxTagValue(msg.user_full));
             if (msg?.user_directory?.length > 0)
-                point.setTag('user_directory', cleanTagValue(msg.user_directory));
-            if (msg?.user_id?.length > 0) point.setTag('user_id', cleanTagValue(msg.user_id));
+                point.setTag('user_directory', sanitizeInfluxTagValue(msg.user_directory));
+            if (msg?.user_id?.length > 0) point.setTag('user_id', sanitizeInfluxTagValue(msg.user_id));
             if (msg?.result_code?.length > 0)
-                point.setTag('result_code', cleanTagValue(msg.result_code));
+                point.setTag('result_code', sanitizeInfluxTagValue(msg.result_code));
         } else if (msg.source === 'qseow-scheduler') {
             // Scheduler fields: message, exception_message, app_name_field, app_id_field, execution_id, raw_event
             // NOTE: app_name and app_id use _field suffix to avoid conflict with conditional tags
@@ -140,12 +127,12 @@ export async function postLogEventToInfluxdbV3(msg) {
                 .setStringField('raw_event', JSON.stringify(msg));
 
             // Conditional tags
-            if (msg?.user_full?.length > 0) point.setTag('user_full', cleanTagValue(msg.user_full));
+            if (msg?.user_full?.length > 0) point.setTag('user_full', sanitizeInfluxTagValue(msg.user_full));
             if (msg?.user_directory?.length > 0)
-                point.setTag('user_directory', cleanTagValue(msg.user_directory));
-            if (msg?.user_id?.length > 0) point.setTag('user_id', cleanTagValue(msg.user_id));
-            if (msg?.task_id?.length > 0) point.setTag('task_id', cleanTagValue(msg.task_id));
-            if (msg?.task_name?.length > 0) point.setTag('task_name', cleanTagValue(msg.task_name));
+                point.setTag('user_directory', sanitizeInfluxTagValue(msg.user_directory));
+            if (msg?.user_id?.length > 0) point.setTag('user_id', sanitizeInfluxTagValue(msg.user_id));
+            if (msg?.task_id?.length > 0) point.setTag('task_id', sanitizeInfluxTagValue(msg.task_id));
+            if (msg?.task_name?.length > 0) point.setTag('task_name', sanitizeInfluxTagValue(msg.task_name));
         } else if (msg.source === 'qseow-repository') {
             // Repository fields: message, exception_message, command, result_code_field, origin, context, raw_event
             // NOTE: result_code uses _field suffix to avoid conflict with result_code tag
@@ -164,27 +151,27 @@ export async function postLogEventToInfluxdbV3(msg) {
                 .setStringField('raw_event', JSON.stringify(msg));
 
             // Conditional tags
-            if (msg?.user_full?.length > 0) point.setTag('user_full', cleanTagValue(msg.user_full));
+            if (msg?.user_full?.length > 0) point.setTag('user_full', sanitizeInfluxTagValue(msg.user_full));
             if (msg?.user_directory?.length > 0)
-                point.setTag('user_directory', cleanTagValue(msg.user_directory));
-            if (msg?.user_id?.length > 0) point.setTag('user_id', cleanTagValue(msg.user_id));
+                point.setTag('user_directory', sanitizeInfluxTagValue(msg.user_directory));
+            if (msg?.user_id?.length > 0) point.setTag('user_id', sanitizeInfluxTagValue(msg.user_id));
             if (msg?.result_code?.length > 0)
-                point.setTag('result_code', cleanTagValue(msg.result_code));
+                point.setTag('result_code', sanitizeInfluxTagValue(msg.result_code));
         } else if (msg.source === 'qseow-qix-perf') {
             // QIX Performance fields: app_id, process_time, work_time, lock_time, validate_time, traverse_time, handle, net_ram, peak_ram, raw_event
             point = new Point3('log_event')
-                .setTag('host', cleanTagValue(msg.host || '<Unknown>'))
-                .setTag('level', cleanTagValue(msg.level || '<Unknown>'))
-                .setTag('source', cleanTagValue(msg.source || '<Unknown>'))
+                .setTag('host', sanitizeInfluxTagValue(msg.host || '<Unknown>'))
+                .setTag('level', sanitizeInfluxTagValue(msg.level || '<Unknown>'))
+                .setTag('source', sanitizeInfluxTagValue(msg.source || '<Unknown>'))
                 .setTag('log_row', msg.log_row || '-1')
-                .setTag('subsystem', cleanTagValue(msg.subsystem || '<Unknown>'))
-                .setTag('method', cleanTagValue(msg.method || '<Unknown>'))
-                .setTag('object_type', cleanTagValue(msg.object_type || '<Unknown>'))
+                .setTag('subsystem', sanitizeInfluxTagValue(msg.subsystem || '<Unknown>'))
+                .setTag('method', sanitizeInfluxTagValue(msg.method || '<Unknown>'))
+                .setTag('object_type', sanitizeInfluxTagValue(msg.object_type || '<Unknown>'))
                 .setTag('proxy_session_id', msg.proxy_session_id || '-1')
                 .setTag('session_id', msg.session_id || '-1')
                 .setTag(
                     'event_activity_source',
-                    cleanTagValue(msg.event_activity_source || '<Unknown>')
+                    sanitizeInfluxTagValue(msg.event_activity_source || '<Unknown>')
                 )
                 .setStringField('app_id_field', msg.app_id || '');
 
@@ -264,22 +251,22 @@ export async function postLogEventToInfluxdbV3(msg) {
             point.setStringField('raw_event', cleanedRawEvent);
 
             // Conditional tags
-            if (msg?.user_full?.length > 0) point.setTag('user_full', cleanTagValue(msg.user_full));
+            if (msg?.user_full?.length > 0) point.setTag('user_full', sanitizeInfluxTagValue(msg.user_full));
             if (msg?.user_directory?.length > 0)
-                point.setTag('user_directory', cleanTagValue(msg.user_directory));
-            if (msg?.user_id?.length > 0) point.setTag('user_id', cleanTagValue(msg.user_id));
+                point.setTag('user_directory', sanitizeInfluxTagValue(msg.user_directory));
+            if (msg?.user_id?.length > 0) point.setTag('user_id', sanitizeInfluxTagValue(msg.user_id));
 
-            if (msg?.app_id?.length > 0) point.setTag('app_id', cleanTagValue(msg.app_id));
-            if (msg?.app_name?.length > 0) point.setTag('app_name', cleanTagValue(msg.app_name));
+            if (msg?.app_id?.length > 0) point.setTag('app_id', sanitizeInfluxTagValue(msg.app_id));
+            if (msg?.app_name?.length > 0) point.setTag('app_name', sanitizeInfluxTagValue(msg.app_name));
 
-            if (msg?.object_id?.length > 0) point.setTag('object_id', cleanTagValue(msg.object_id));
+            if (msg?.object_id?.length > 0) point.setTag('object_id', sanitizeInfluxTagValue(msg.object_id));
         }
 
         // Add log event categories to tags if available
         // The msg.category array contains objects with properties 'name' and 'value'
         if (msg?.category?.length > 0) {
             msg.category.forEach((category) => {
-                point.setTag(category.name, cleanTagValue(category.value));
+                point.setTag(category.name, sanitizeInfluxTagValue(category.value));
             });
         }
 
@@ -291,7 +278,7 @@ export async function postLogEventToInfluxdbV3(msg) {
         ) {
             const configTags = globals.config.get('Butler-SOS.logEvents.tags');
             for (const item of configTags) {
-                point.setTag(item.name, cleanTagValue(item.value));
+                point.setTag(item.name, sanitizeInfluxTagValue(item.value));
             }
         }
 

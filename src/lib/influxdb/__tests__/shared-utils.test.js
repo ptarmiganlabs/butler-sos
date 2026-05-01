@@ -540,3 +540,57 @@ describe('Shared Utils - writeBatchToInfluxV1', () => {
         );
     });
 });
+
+describe('Shared Utils - sanitizeInfluxTagValue', () => {
+    let utils;
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        utils = await import('../shared/utils.js');
+    });
+
+    test('should return null unchanged', () => {
+        expect(utils.sanitizeInfluxTagValue(null)).toBeNull();
+    });
+
+    test('should return undefined unchanged', () => {
+        expect(utils.sanitizeInfluxTagValue(undefined)).toBeUndefined();
+    });
+
+    test('should return empty string unchanged', () => {
+        expect(utils.sanitizeInfluxTagValue('')).toBe('');
+    });
+
+    test('should remove angle brackets and backslash from string', () => {
+        expect(utils.sanitizeInfluxTagValue('a<b>c\\d')).toBe('abcd');
+    });
+
+    test('should remove newlines', () => {
+        expect(utils.sanitizeInfluxTagValue('foo\nbar')).toBe('foobar');
+    });
+
+    test('should remove carriage returns', () => {
+        expect(utils.sanitizeInfluxTagValue('foo\rbar')).toBe('foobar');
+    });
+
+    test('should remove both newlines and carriage returns', () => {
+        expect(utils.sanitizeInfluxTagValue('foo\r\nbar')).toBe('foobar');
+    });
+
+    test('should leave spaces intact (Point3 client handles escaping)', () => {
+        expect(utils.sanitizeInfluxTagValue('hello world')).toBe('hello world');
+    });
+
+    test('should convert non-string values to string before sanitizing', () => {
+        expect(utils.sanitizeInfluxTagValue(42)).toBe('42');
+        expect(utils.sanitizeInfluxTagValue(true)).toBe('true');
+    });
+
+    test('should apply all sanitization rules together', () => {
+        expect(utils.sanitizeInfluxTagValue('<tag>\nvalue\\end')).toBe('tagvalueend');
+    });
+
+    test('should leave normal tag values unchanged', () => {
+        expect(utils.sanitizeInfluxTagValue('my-tag_value.123')).toBe('my-tag_value.123');
+    });
+});
