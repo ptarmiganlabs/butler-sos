@@ -7,6 +7,31 @@ import {
 } from '@influxdata/influxdb3-client';
 import { getServerTags } from '../servertags.js';
 
+// Suppress DEP0169 (url.parse() deprecation) emitted by @influxdata/influxdb3-client.
+// That package uses the legacy url.parse() API internally in its HTTP transport class.
+// v2.2.0 is the latest release and the issue is not fixed upstream.
+// NOTE: This suppression is process-wide and filters ALL DEP0169 warnings regardless
+// of their source. DEP0169 is only relevant to url.parse() calls which belong
+// entirely to third-party dependencies in this project; Butler-SOS itself does not
+// call url.parse() directly.
+const _origEmitWarning = process.emitWarning.bind(process);
+/**
+ * Replacement for process.emitWarning that suppresses the DEP0169 deprecation warning
+ * produced by the legacy url.parse() call inside the influxdb3-client HTTP transport.
+ * All other warnings are forwarded to the original implementation unchanged.
+ *
+ * @param {string|Error} warning - The warning message or Error object.
+ * @param {string|object} options - Warning type string or options object (may include a `code` field).
+ * @param {...string} rest - Any remaining arguments forwarded to the original emitWarning.
+ *
+ * @returns {void}
+ */
+process.emitWarning = function suppressDep0169(warning, options, ...rest) {
+    const code = typeof options === 'object' && options !== null ? options.code : options;
+    if (code === 'DEP0169') return;
+    return _origEmitWarning(warning, options, ...rest);
+};
+
 /**
  * Initializes the InfluxDB client based on configuration settings.
  *
