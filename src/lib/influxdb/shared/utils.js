@@ -166,7 +166,7 @@ export function getInfluxDbVersion() {
  * Commas, equals signs, and spaces in tag values are handled automatically by the
  * InfluxDB v3 Point client and do not need to be removed here.
  *
- * @param {string} value - The tag value to sanitize
+ * @param {*} value - The tag value to sanitize. Non-string values are coerced to strings via `String()`.
  *
  * @returns {string|null|undefined} The sanitized string value, or the original value unchanged if it is null or undefined
  */

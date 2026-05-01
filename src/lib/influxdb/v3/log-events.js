@@ -160,18 +160,18 @@ export async function postLogEventToInfluxdbV3(msg) {
         } else if (msg.source === 'qseow-qix-perf') {
             // QIX Performance fields: app_id, process_time, work_time, lock_time, validate_time, traverse_time, handle, net_ram, peak_ram, raw_event
             point = new Point3('log_event')
-                .setTag('host', sanitizeInfluxTagValue(msg.host || '<Unknown>'))
-                .setTag('level', sanitizeInfluxTagValue(msg.level || '<Unknown>'))
-                .setTag('source', sanitizeInfluxTagValue(msg.source || '<Unknown>'))
+                .setTag('host', sanitizeInfluxTagValue(msg.host || 'Unknown'))
+                .setTag('level', sanitizeInfluxTagValue(msg.level || 'Unknown'))
+                .setTag('source', sanitizeInfluxTagValue(msg.source || 'Unknown'))
                 .setTag('log_row', msg.log_row || '-1')
-                .setTag('subsystem', sanitizeInfluxTagValue(msg.subsystem || '<Unknown>'))
-                .setTag('method', sanitizeInfluxTagValue(msg.method || '<Unknown>'))
-                .setTag('object_type', sanitizeInfluxTagValue(msg.object_type || '<Unknown>'))
+                .setTag('subsystem', sanitizeInfluxTagValue(msg.subsystem || 'Unknown'))
+                .setTag('method', sanitizeInfluxTagValue(msg.method || 'Unknown'))
+                .setTag('object_type', sanitizeInfluxTagValue(msg.object_type || 'Unknown'))
                 .setTag('proxy_session_id', msg.proxy_session_id || '-1')
                 .setTag('session_id', msg.session_id || '-1')
                 .setTag(
                     'event_activity_source',
-                    sanitizeInfluxTagValue(msg.event_activity_source || '<Unknown>')
+                    sanitizeInfluxTagValue(msg.event_activity_source || 'Unknown')
                 )
                 .setStringField('app_id_field', msg.app_id || '');
 
