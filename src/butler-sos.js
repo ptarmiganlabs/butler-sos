@@ -36,10 +36,16 @@ const originalEmit = process.emit;
 /**
  * Custom implementation of the `process.emit` function to suppress specific Node.js warnings.
  *
- * This function intercepts emitted events and checks if the event name is `warning` and the
- * warning is of type `ExperimentalWarning` related to the Fetch API. If so, it suppresses
- * the warning by returning `false`. Otherwise, it delegates the event emission to the original
- * `process.emit` function.
+ * This function intercepts emitted events and filters out two warning categories:
+ * - ExperimentalWarning about the Fetch API
+ * - DEP0169 (url.parse() deprecation) emitted by @influxdata/influxdb3-client.
+ *   That package uses the legacy url.parse() API in its HTTP transport constructor.
+ *   v2.2.0 is the latest release and the issue has not been fixed upstream.
+ *   Note: This suppression is process-wide for DEP0169. Butler-SOS itself does not
+ *   call url.parse() directly — all DEP0169 emissions come from third-party dependencies.
+ *   Using process.emit (rather than process.emitWarning) ensures the filter works in
+ *   SEA binaries where the built-in url module may hold a reference to the original
+ *   process.emitWarning captured before any JavaScript-level override can take effect.
  *
  * @param {string} name - The name of the event being emitted.
  * @param {object} data - The data associated with the event. Expected to be an object containing
@@ -49,22 +55,15 @@ const originalEmit = process.emit;
  *                    `process.emit` function.
  */
 process.emit = function (name, data, ...args) {
-    // console.log(`Got a Node.js event: ${name}`);
-    // console.log(`Type of data: ${typeof data}`);
-    // if (typeof data === `object`) {
-    //     console.log(`Data: ${JSON.stringify(data)}`);
-    //     console.log(`Data name: ${data.name}`);
-    //     console.log(`Data message: ${data.message}`);
-    // }
-    // console.log(`Args: ${args}`);
-
-    if (
-        name === `warning` &&
-        typeof data === `object` &&
-        data.name === `ExperimentalWarning` &&
-        data.message.includes(`Fetch API`)
-    ) {
-        return false;
+    if (name === `warning` && typeof data === `object`) {
+        // Suppress ExperimentalWarning: Fetch API
+        if (data.name === `ExperimentalWarning` && data.message.includes(`Fetch API`)) {
+            return false;
+        }
+        // Suppress DEP0169: url.parse() deprecation (from @influxdata/influxdb3-client)
+        if (data.code === `DEP0169`) {
+            return false;
+        }
     }
     return originalEmit.apply(process, arguments);
 };
