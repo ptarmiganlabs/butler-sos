@@ -40,9 +40,12 @@ npx postject "${DIST_FILE_NAME}" NODE_SEA_BLOB sea-prep.blob \
     --sentinel-fuse "${SENTINEL_FUSE}" \
     --macho-segment-name NODE_SEA
 
-echo "Step 6: Make binary executable..."
+echo "Step 6: Re-sign binary with ad-hoc signature (required on arm64 macOS)..."
+codesign --sign - "./${DIST_FILE_NAME}"
+
+echo "Step 7: Make binary executable..."
 chmod +x "./${DIST_FILE_NAME}"
 
 echo "=== Build complete: ./${DIST_FILE_NAME} ==="
-echo "Note: This binary is not code-signed or notarized."
-echo "      For distribution, use the CI/CD pipeline which handles signing."
+echo "Note: This binary has an ad-hoc signature for local use only."
+echo "      For distribution, use the CI/CD pipeline which handles full signing and notarization."
