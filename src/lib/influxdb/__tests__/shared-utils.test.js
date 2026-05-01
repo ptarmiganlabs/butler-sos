@@ -561,30 +561,24 @@ describe('Shared Utils - sanitizeInfluxTagValue', () => {
         expect(utils.sanitizeInfluxTagValue('')).toBe('');
     });
 
-    test('should remove angle brackets and escape backslashes', () => {
-        // Input: 'a<b>c\d' (with single backslash)
-        // After escaping backslashes: 'a<b>c\\d'
-        // After removing <>: 'abc\\d'
-        expect(utils.sanitizeInfluxTagValue('a<b>c\\d')).toBe('abc\\\\d');
+    test('should remove angle brackets and backslashes', () => {
+        // Input: 'a<b>c\d' → 'abcd' (angle brackets and backslash stripped)
+        expect(utils.sanitizeInfluxTagValue('a<b>c\\d')).toBe('abcd');
     });
 
-    test('should escape single backslash', () => {
-        // Input: 'hello\world' (hello, backslash, world)
-        // After escaping backslashes: 'hello\\world' (hello, two backslashes, world)
-        expect(utils.sanitizeInfluxTagValue('hello\\world')).toBe('hello\\\\world');
+    test('should strip single backslash', () => {
+        // Input: 'hello\world' → 'helloworld'
+        expect(utils.sanitizeInfluxTagValue('hello\\world')).toBe('helloworld');
     });
 
-    test('should escape multiple backslashes', () => {
-        // Input: 'a\b\c'
-        // After escaping: 'a\\b\\c'
-        expect(utils.sanitizeInfluxTagValue('a\\b\\c')).toBe('a\\\\b\\\\c');
+    test('should strip multiple backslashes', () => {
+        // Input: 'a\b\c' → 'abc'
+        expect(utils.sanitizeInfluxTagValue('a\\b\\c')).toBe('abc');
     });
 
-    test('should handle backslash in user directory format', () => {
-        // Simulates: DOMAIN\user1
-        // Input: 'DOMAIN\user1'
-        // After escaping: 'DOMAIN\\user1'
-        expect(utils.sanitizeInfluxTagValue('DOMAIN\\user1')).toBe('DOMAIN\\\\user1');
+    test('should strip backslash in user directory format', () => {
+        // Simulates: DOMAIN\user1 → DОMAINuser1
+        expect(utils.sanitizeInfluxTagValue('DOMAIN\\user1')).toBe('DOMAINuser1');
     });
 
     test('should remove newlines', () => {
@@ -610,10 +604,8 @@ describe('Shared Utils - sanitizeInfluxTagValue', () => {
 
     test('should apply all sanitization rules together', () => {
         // Input: '<tag>\nvalue\end' (with newline and single backslash)
-        // 1. Escape backslashes: '<tag>\nvalue\\end'
-        // 2. Remove angle brackets: 'tag\nvalue\\end'
-        // 3. Remove newlines: 'tagvalue\\end'
-        expect(utils.sanitizeInfluxTagValue('<tag>\nvalue\\end')).toBe('tagvalue\\\\end');
+        // Strip <>, \, and \n → 'tagvalueend'
+        expect(utils.sanitizeInfluxTagValue('<tag>\nvalue\\end')).toBe('tagvalueend');
     });
 
     test('should leave normal tag values unchanged', () => {
