@@ -540,3 +540,75 @@ describe('Shared Utils - writeBatchToInfluxV1', () => {
         );
     });
 });
+
+describe('Shared Utils - sanitizeInfluxTagValue', () => {
+    let utils;
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        utils = await import('../shared/utils.js');
+    });
+
+    test('should return null unchanged', () => {
+        expect(utils.sanitizeInfluxTagValue(null)).toBeNull();
+    });
+
+    test('should return undefined unchanged', () => {
+        expect(utils.sanitizeInfluxTagValue(undefined)).toBeUndefined();
+    });
+
+    test('should return empty string unchanged', () => {
+        expect(utils.sanitizeInfluxTagValue('')).toBe('');
+    });
+
+    test('should remove angle brackets and backslashes', () => {
+        // Input: 'a<b>c\d' → 'abcd' (angle brackets and backslash stripped)
+        expect(utils.sanitizeInfluxTagValue('a<b>c\\d')).toBe('abcd');
+    });
+
+    test('should strip single backslash', () => {
+        // Input: 'hello\world' → 'helloworld'
+        expect(utils.sanitizeInfluxTagValue('hello\\world')).toBe('helloworld');
+    });
+
+    test('should strip multiple backslashes', () => {
+        // Input: 'a\b\c' → 'abc'
+        expect(utils.sanitizeInfluxTagValue('a\\b\\c')).toBe('abc');
+    });
+
+    test('should strip backslash in user directory format', () => {
+        // Simulates: DOMAIN\user1 → DОMAINuser1
+        expect(utils.sanitizeInfluxTagValue('DOMAIN\\user1')).toBe('DOMAINuser1');
+    });
+
+    test('should remove newlines', () => {
+        expect(utils.sanitizeInfluxTagValue('foo\nbar')).toBe('foobar');
+    });
+
+    test('should remove carriage returns', () => {
+        expect(utils.sanitizeInfluxTagValue('foo\rbar')).toBe('foobar');
+    });
+
+    test('should remove both newlines and carriage returns', () => {
+        expect(utils.sanitizeInfluxTagValue('foo\r\nbar')).toBe('foobar');
+    });
+
+    test('should leave spaces intact (Point3 client handles escaping)', () => {
+        expect(utils.sanitizeInfluxTagValue('hello world')).toBe('hello world');
+    });
+
+    test('should convert non-string values to string before sanitizing', () => {
+        expect(utils.sanitizeInfluxTagValue(42)).toBe('42');
+        expect(utils.sanitizeInfluxTagValue(true)).toBe('true');
+    });
+
+    test('should apply all sanitization rules together', () => {
+        // Input: '<tag>\nvalue\end' (with newline and single backslash)
+        // Strip <>, \, and \n → 'tagvalueend'
+        expect(utils.sanitizeInfluxTagValue('<tag>\nvalue\\end')).toBe('tagvalueend');
+    });
+
+    test('should leave normal tag values unchanged', () => {
+        expect(utils.sanitizeInfluxTagValue('my-tag_value.123')).toBe('my-tag_value.123');
+    });
+});

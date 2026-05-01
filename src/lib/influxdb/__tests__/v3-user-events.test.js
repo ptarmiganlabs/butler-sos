@@ -30,6 +30,7 @@ jest.unstable_mockModule('../../../globals.js', () => ({
 // Mock shared utils
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
+    sanitizeInfluxTagValue: jest.fn((v) => v),
     writeToInfluxWithRetry: jest.fn(),
     writeBatchToInfluxV3: jest.fn(),
 };
@@ -154,7 +155,32 @@ describe('v3/user-events', () => {
 
             await postUserEventToInfluxdbV3(msg);
 
+            expect(utils.sanitizeInfluxTagValue).toHaveBeenCalledWith('server<1>');
+            expect(utils.sanitizeInfluxTagValue).toHaveBeenCalledWith('OpenApp');
+            expect(utils.sanitizeInfluxTagValue).toHaveBeenCalledWith('DOMAIN\\SUB');
+            expect(utils.sanitizeInfluxTagValue).toHaveBeenCalledWith('user 1');
+            expect(utils.sanitizeInfluxTagValue).toHaveBeenCalledWith('Qlik Sense');
             expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
+        });
+
+        test('should sanitize custom config tag names and values', async () => {
+            const msg = {
+                host: 'server1',
+                command: 'OpenApp',
+                user_directory: 'DOMAIN',
+                user_id: 'user1',
+                origin: 'QlikSense',
+            };
+
+            globals.config.has.mockReturnValue(true);
+            globals.config.get.mockReturnValue([
+                { name: 'tag<1>', value: 'val\\ue' },
+            ]);
+
+            await postUserEventToInfluxdbV3(msg);
+
+            expect(utils.sanitizeInfluxTagValue).toHaveBeenCalledWith('tag<1>');
+            expect(utils.sanitizeInfluxTagValue).toHaveBeenCalledWith('val\\ue');
         });
 
         test('should handle write errors', async () => {
