@@ -561,8 +561,30 @@ describe('Shared Utils - sanitizeInfluxTagValue', () => {
         expect(utils.sanitizeInfluxTagValue('')).toBe('');
     });
 
-    test('should remove angle brackets and backslash from string', () => {
-        expect(utils.sanitizeInfluxTagValue('a<b>c\\d')).toBe('abcd');
+    test('should remove angle brackets and escape backslashes', () => {
+        // Input: 'a<b>c\d' (with single backslash)
+        // After escaping backslashes: 'a<b>c\\d'
+        // After removing <>: 'ac\\d'
+        expect(utils.sanitizeInfluxTagValue('a<b>c\\d')).toBe('abc\\\\d');
+    });
+
+    test('should escape single backslash', () => {
+        // Input: 'hello\world' (hello, backslash, world)
+        // After escaping backslashes: 'hello\\world' (hello, two backslashes, world)
+        expect(utils.sanitizeInfluxTagValue('hello\\world')).toBe('hello\\\\world');
+    });
+
+    test('should escape multiple backslashes', () => {
+        // Input: 'a\b\c'
+        // After escaping: 'a\\b\\c'
+        expect(utils.sanitizeInfluxTagValue('a\\b\\c')).toBe('a\\\\b\\\\c');
+    });
+
+    test('should handle backslash in user directory format', () => {
+        // Simulates: DOMAIN\user1
+        // Input: 'DOMAIN\user1'
+        // After escaping: 'DOMAIN\\user1'
+        expect(utils.sanitizeInfluxTagValue('DOMAIN\\user1')).toBe('DOMAIN\\\\user1');
     });
 
     test('should remove newlines', () => {
@@ -587,7 +609,11 @@ describe('Shared Utils - sanitizeInfluxTagValue', () => {
     });
 
     test('should apply all sanitization rules together', () => {
-        expect(utils.sanitizeInfluxTagValue('<tag>\nvalue\\end')).toBe('tagvalueend');
+        // Input: '<tag>\nvalue\end' (with newline and single backslash)
+        // 1. Escape backslashes: '<tag>\nvalue\\end'
+        // 2. Remove angle brackets: 'tag\nvalue\\end'
+        // 3. Remove newlines: 'tagvalue\\end'
+        expect(utils.sanitizeInfluxTagValue('<tag>\nvalue\\end')).toBe('tagvalue\\\\end');
     });
 
     test('should leave normal tag values unchanged', () => {

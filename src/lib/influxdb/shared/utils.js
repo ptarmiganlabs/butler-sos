@@ -159,14 +159,16 @@ export function getInfluxDbVersion() {
 /**
  * Sanitizes a tag value for use with the InfluxDB line protocol.
  *
- * Removes characters that are not supported or cause parsing issues:
- * - Angle brackets and backslashes (`<`, `>`, `\`) are stripped.
+ * Handles characters that are not supported or cause parsing issues:
+ * - Backslashes (`\`) are escaped by doubling them (`\\`). This is required because
+ *   InfluxDB line protocol uses backslash as an escape character.
+ * - Angle brackets (`<`, `>`) are removed as they are not valid in tag values.
  * - Newlines (`\n`) and carriage returns (`\r`) break the line protocol format and are removed.
  *
  * Commas, equals signs, and spaces in tag values are handled automatically by the
- * InfluxDB v3 Point client and do not need to be removed here.
+ * InfluxDB v3 Point client and do not need to be modified here.
  *
- * @param {string|number|boolean} value - The tag value to sanitize. Numbers and booleans are coerced to strings via `String()`.
+ * @param {*} value - The tag value to sanitize. Non-string values are coerced to strings via `String()`.
  *
  * @returns {string|null|undefined} The sanitized string value, or the original value unchanged if it is null or undefined
  */
@@ -175,8 +177,9 @@ export function sanitizeInfluxTagValue(value) {
         return value;
     }
     return String(value)
-        .replace(/[<>\\]/g, '')
-        .replace(/[\n\r]/g, '');
+        .replace(/\\/g, '\\\\') // Escape backslashes first (double them)
+        .replace(/[<>]/g, '') // Remove angle brackets
+        .replace(/[\n\r]/g, ''); // Remove newlines and carriage returns
 }
 
 /**
