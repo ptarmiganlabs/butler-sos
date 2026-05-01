@@ -65,12 +65,12 @@ export function extractAuditEventFields(envelope, extras = {}, staticTagsKey) {
         visible: readBoolean(event.visible) ?? null,
         enteredAt: readString(event.enteredAt) ?? null,
         leftAt: readString(event.leftAt) ?? null,
-        dataStateId: readIntegerBigInt(event.dataStateId) ?? readIntegerBigInt(extras.dataStateId),
+        dataStateId: readIntegerBigInt(event.dataStateId) ?? readIntegerBigInt(extras?.dataStateId),
         screenshotUrl: readString(event.screenshotUrl) ?? null,
     };
 
     // Selection details
-    const selectionDetails = extras.selectionDetails;
+    const selectionDetails = extras?.selectionDetails;
     if (Array.isArray(selectionDetails) && selectionDetails.length > 0) {
         row.selectionDetails = JSON.stringify(selectionDetails);
     } else {
