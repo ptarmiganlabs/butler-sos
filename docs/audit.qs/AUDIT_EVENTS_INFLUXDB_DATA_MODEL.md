@@ -15,10 +15,10 @@ flowchart LR
     API --> QUEUE["auditEventsQueueManager"]
     QUEUE --> DISPATCH["Audit destination dispatcher"]
     DISPATCH --> AUDIT["Audit Influx destination"]
-    AUDIT --> M1[("audit_events / audit_event")]
+    AUDIT --> M1[("audit_event")]
 
     QUEUE --> METRICS["Queue metrics timer"]
-    METRICS --> M2[("audit_event_queue / audit_events_queue")]
+    METRICS --> M2[("audit_events_queue")]
 ```
 
 The two measurements use different InfluxDB configuration roots:
@@ -42,7 +42,7 @@ Butler-SOS:
         destination:
             influxdb:
                 metadata:
-                    measurementName: audit_events
+                    measurementName: audit_event  # Default
 ```
 
 If `measurementName` is missing or empty, Butler SOS falls back to `audit_event`.
@@ -290,36 +290,142 @@ If the goal is to show active work during short bursts, `queue_running` is usual
 
 ## Minimal Query Examples
 
-InfluxQL-style examples for v1:
+### InfluxQL Queries (v1 and v3)
+
+These queries use InfluxQL syntax and work with both InfluxDB v1 and InfluxDB v3 (when using InfluxQL mode). The default measurement names are `audit_event` for audit events and `audit_events_queue` for queue metrics.
+
+**Important**: In Grafana with InfluxQL data source, use `$__timeFrom` and `$__timeTo` macros for time filters. When using `GROUP BY`, `ORDER BY` must reference a tag in the `GROUP BY` clause (e.g., `ORDER BY "userId"`).
 
 ```sql
 -- Count audit events by type.
-SELECT COUNT("objectId") FROM "audit_events" GROUP BY "eventType"
+SELECT "eventType", COUNT("objectId") AS "event_count"
+FROM "audit_event"
+WHERE "time" >= $__timeFrom AND "time" <= $__timeTo
+GROUP BY "eventType"
+ORDER BY "eventType";
 
 -- Find screenshot events for one app.
 SELECT "objectId", "sheetName", "screenshotSavedPaths"
-FROM "audit_events"
-WHERE "eventType" = 'screenshot.url.received' AND "appId" = 'a1b2c3d4'
+FROM "audit_event"
+WHERE "eventType" = 'screenshot.url.received' AND "appId" = '9309edac-f38c-4cfc-8e31-3bd19377b370' AND "time" >= $__timeFrom AND "time" <= $__timeTo;
 
 -- Monitor dropped audit queue messages.
 SELECT "messages_dropped_total", "messages_dropped_queue_full", "messages_dropped_rate_limit"
-FROM "audit_event_queue"
-```
-
-SQL-style examples for InfluxDB v3:
-
-```sql
--- Latest audit queue state.
-SELECT time, host, queue_size, queue_running, backpressure_active
-FROM audit_event_queue
-ORDER BY time DESC
-LIMIT 20;
-
--- Object view durations by app and sheet.
-SELECT time, appName, sheetName, objectId, durationMs
-FROM audit_events
-WHERE eventType = 'object.view.duration'
+FROM "audit_events_queue"
+WHERE "time" >= $__timeFrom AND "time" <= $__timeTo
 ORDER BY time DESC;
 ```
 
-Adjust the measurement names in the queries if your config uses `audit_event` or `audit_events_queue`.
+### InfluxDB v3 SQL Queries
+
+These queries use native SQL syntax for InfluxDB 3 Core. **Important**: InfluxDB 3 Core caps file access to prevent performance degradation. Use `$__timeFrom` and `$__timeTo` in Grafana for time filters:
+
+**Note**: If your Grafana data source is configured to use InfluxQL mode, use the InfluxQL queries above instead. SQL queries below require the data source to be in SQL mode.
+
+```sql
+-- Latest audit queue state.
+SELECT "time", "queue_size", "queue_running", "backpressure_active"
+FROM audit_events_queue
+WHERE "time" >= $__timeFrom AND "time" <= $__timeTo
+ORDER BY "time" DESC
+LIMIT 20;
+
+-- Object view durations by app and sheet.
+SELECT "time", "appName", "sheetName", "objectId", "durationMs"
+FROM audit_event
+WHERE "eventType" = 'object.view.duration' AND "time" >= $__timeFrom AND "time" <= $__timeTo
+ORDER BY "time" DESC;
+```
+
+Adjust the measurement names in the queries if your config uses custom values instead of the defaults (`audit_event` and `audit_events_queue`).
+
+## Additional InfluxDB v3 SQL Query Examples
+
+These queries use native InfluxDB v3 SQL syntax. They require:
+
+- `$__timeFrom` and `$__timeTo` (Grafana variables) to limit the query scope and avoid file scan limits
+- The Grafana data source configured to use SQL mode (not InfluxQL mode)
+
+**Tip**: If you're getting "invalid ORDER BY, expected TIME column" errors, your data source is in InfluxQL mode. Use the InfluxQL queries in the "Minimal Query Examples" section instead.
+
+### Basic Queries (SQL mode)
+
+```sql
+-- Recent audit events (basic view).
+SELECT "time", "eventType", "userId", "appName", "objectId"
+FROM audit_event
+WHERE "time" >= $__timeFrom AND "time" <= $__timeTo
+ORDER BY "time" DESC
+LIMIT 100;
+
+-- All audit events for a specific app.
+SELECT "time", "eventType", "userId", "sheetName", "objectId", "durationMs"
+FROM audit_event
+WHERE "appId" = '9309edac-f38c-4cfc-8e31-3bd19377b370' AND "time" >= $__timeFrom AND "time" <= $__timeTo
+ORDER BY "time" DESC;
+```
+
+### Aggregation Queries (InfluxQL)
+
+**Note**: In InfluxQL, select the tag column explicitly and use `COUNT("tagName")` not `COUNT(*)`. Use `$__timeFrom` and `$__timeTo` for Grafana time filters.
+
+```sql
+-- Count events by user.
+SELECT "userId", COUNT("userId") AS "event_count"
+FROM "audit_event"
+WHERE "time" >= $__timeFrom AND "time" <= $__timeTo
+GROUP BY "userId"
+ORDER BY "userId";
+
+-- Count events by app.
+SELECT "appName", "appId", COUNT("appId") AS "event_count"
+FROM "audit_event"
+WHERE "time" >= $__timeFrom AND "time" <= $__timeTo
+GROUP BY "appName", "appId"
+ORDER BY "appName";
+
+-- Count events by type.
+SELECT "eventType", COUNT("eventType") AS "event_count"
+FROM "audit_event"
+WHERE "time" >= $__timeFrom AND "time" <= $__timeTo
+GROUP BY "eventType"
+ORDER BY "eventType";
+```
+
+### Object View Duration Queries (InfluxQL)
+
+```sql
+-- Average view duration by object type.
+SELECT "objectType", AVG("durationMs") AS "avg_duration_ms", COUNT("objectType") AS "view_count"
+FROM "audit_event"
+WHERE "eventType" = 'object.view.duration' AND "time" >= $__timeFrom AND "time" <= $__timeTo
+GROUP BY "objectType"
+ORDER BY "objectType";
+
+-- Longest viewed objects.
+SELECT "appName", "sheetName", "objectId", AVG("durationMs") AS "avg_duration_ms", MAX("durationMs") AS "max_duration_ms"
+FROM "audit_event"
+WHERE "eventType" = 'object.view.duration' AND "time" >= $__timeFrom AND "time" <= $__timeTo
+GROUP BY "appName", "sheetName", "objectId"
+ORDER BY "avg_duration_ms" DESC
+LIMIT 20;
+```
+
+### Selection and Screenshot Queries
+
+```sql
+-- Selection state changes with details.
+SELECT "time", "userId", "appName", "selectionDetails"
+FROM "audit_event"
+WHERE "eventType" = 'selection.state.changed' AND "time" >= $__timeFrom AND "time" <= $__timeTo
+ORDER BY "time" DESC
+LIMIT 50;
+
+-- Screenshot events with saved paths.
+SELECT "time", "appName", "objectId", "screenshotUrl", "screenshotSavedPaths"
+FROM "audit_event"
+WHERE "eventType" = 'screenshot.url.received' AND "time" >= $__timeFrom AND "time" <= $__timeTo
+ORDER BY "time" DESC
+LIMIT 50;
+```
+
