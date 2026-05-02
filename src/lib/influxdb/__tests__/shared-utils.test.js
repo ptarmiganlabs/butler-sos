@@ -615,7 +615,6 @@ describe('Shared Utils - sanitizeInfluxTagValue', () => {
 
 describe('Shared Utils - writePointsToInfluxV2', () => {
     let utils;
-    let globals;
 
     const mockWriteApi = {
         writePoints: jest.fn(),
@@ -628,7 +627,6 @@ describe('Shared Utils - writePointsToInfluxV2', () => {
 
     beforeEach(async () => {
         jest.clearAllMocks();
-        globals = (await import('../../../globals.js')).default;
         utils = await import('../shared/utils.js');
 
         mockWriteApi.writePoints.mockResolvedValue(undefined);
@@ -670,7 +668,7 @@ describe('Shared Utils - writePointsToInfluxV2', () => {
             utils.writePointsToInfluxV2(mockInfluxClient, 'org', 'bucket', [{}])
         ).rejects.toThrow('write failed');
 
-        // close called twice: once in error handler, once... no, close is called inside catch
+        // close is attempted once inside the catch block to release resources
         expect(mockWriteApi.close).toHaveBeenCalledTimes(1);
     });
 

@@ -466,9 +466,9 @@ export async function writeBatchToInfluxV1(datapoints, context, errorCategory, m
  * Writes one or more InfluxDB v2 Points using a short-lived write API.
  *
  * Creates a write API with standard options (`flushInterval: 5000`, `maxRetries: 0`),
- * writes the supplied points, and closes the API. If writing fails the API is
- * closed a second time inside the error handler to release resources before
- * re-throwing the original error.
+ * writes the supplied points, and closes the API on success. If writing fails,
+ * `close()` is also attempted in the error handler to release resources before
+ * re-throwing the original error; any error from that cleanup close is suppressed.
  *
  * @param {object} influxClient - InfluxDB v2 client instance (e.g. `globals.influx`)
  * @param {string} org - InfluxDB organisation name
