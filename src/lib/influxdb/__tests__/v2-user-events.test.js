@@ -34,6 +34,7 @@ const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
     writeBatchToInfluxV2: jest.fn(),
+    writePointsToInfluxV2: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -69,6 +70,7 @@ describe('v2/user-events', () => {
 
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeToInfluxWithRetry.mockImplementation(async (fn) => await fn());
+        utils.writePointsToInfluxV2.mockResolvedValue(undefined);
         mockWriteApi.writePoint.mockResolvedValue(undefined);
     });
 
@@ -136,8 +138,7 @@ describe('v2/user-events', () => {
             { name: 'env', value: 'prod' },
         ]);
         expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
-        expect(mockWriteApi.writePoint).toHaveBeenCalled();
-        expect(mockWriteApi.close).toHaveBeenCalled();
+        expect(utils.writePointsToInfluxV2).toHaveBeenCalled();
     });
 
     test('should handle event without app info', async () => {

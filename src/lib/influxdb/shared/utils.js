@@ -463,6 +463,40 @@ export async function writeBatchToInfluxV1(datapoints, context, errorCategory, m
 }
 
 /**
+ * Writes one or more InfluxDB v2 Points using a short-lived write API.
+ *
+ * Creates a write API with standard options (`flushInterval: 5000`, `maxRetries: 0`),
+ * writes the supplied points, and closes the API. If writing fails the API is
+ * closed a second time inside the error handler to release resources before
+ * re-throwing the original error.
+ *
+ * @param {object} influxClient - InfluxDB v2 client instance (e.g. `globals.influx`)
+ * @param {string} org - InfluxDB organisation name
+ * @param {string} bucket - InfluxDB bucket name
+ * @param {import('@influxdata/influxdb-client').Point|import('@influxdata/influxdb-client').Point[]} points - Point(s) to write
+ *
+ * @returns {Promise<void>}
+ */
+export async function writePointsToInfluxV2(influxClient, org, bucket, points) {
+    const writeApi = influxClient.getWriteApi(org, bucket, 'ns', {
+        flushInterval: 5000,
+        maxRetries: 0,
+    });
+    try {
+        const pointsArray = Array.isArray(points) ? points : [points];
+        await writeApi.writePoints(pointsArray);
+        await writeApi.close();
+    } catch (err) {
+        try {
+            await writeApi.close();
+        } catch {
+            // Ignore close errors
+        }
+        throw err;
+    }
+}
+
+/**
  * Writes data to InfluxDB v2 in batches with progressive retry strategy.
  * Handles writeApi lifecycle management.
  *

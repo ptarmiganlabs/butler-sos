@@ -1,6 +1,6 @@
 import { Point } from '@influxdata/influxdb-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeToInfluxWithRetry, writePointsToInfluxV2 } from '../shared/utils.js';
 import { applyInfluxTags } from './utils.js';
 
 /**
@@ -81,23 +81,7 @@ export async function storeUserEventV2(msg) {
 
     // Write to InfluxDB with retry logic
     await writeToInfluxWithRetry(
-        async () => {
-            const writeApi = globals.influx.getWriteApi(org, bucketName, 'ns', {
-                flushInterval: 5000,
-                maxRetries: 0,
-            });
-            try {
-                await writeApi.writePoint(point);
-                await writeApi.close();
-            } catch (err) {
-                try {
-                    await writeApi.close();
-                } catch (closeErr) {
-                    // Ignore close errors
-                }
-                throw err;
-            }
-        },
+        () => writePointsToInfluxV2(globals.influx, org, bucketName, point),
         `User event for ${msg.host}`,
         'v2',
         msg.host

@@ -41,6 +41,7 @@ const mockUtils = {
     writeBatchToInfluxV2: jest.fn(),
     processAppDocuments: jest.fn(),
     getFormattedTime: jest.fn(() => '2 days, 3 hours'),
+    writePointsToInfluxV2: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -82,6 +83,7 @@ describe('v2/health-metrics', () => {
 
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeToInfluxWithRetry.mockImplementation(async (fn) => await fn());
+        utils.writePointsToInfluxV2.mockResolvedValue(undefined);
         builder.buildHealthMetricDatapoints.mockResolvedValue({
             formattedTime: '2 days, 3 hours',
             appNames: {
@@ -149,8 +151,7 @@ describe('v2/health-metrics', () => {
         expect(Point).toHaveBeenCalledTimes(8); // One for each measurement: sense_server, mem, apps, cpu, session, users, cache, saturated
         expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
         expect(builder.buildHealthMetricDatapoints).toHaveBeenCalledTimes(1);
-        expect(mockWriteApi.writePoints).toHaveBeenCalled();
-        expect(mockWriteApi.close).toHaveBeenCalled();
+        expect(utils.writePointsToInfluxV2).toHaveBeenCalled();
     });
 
     test('should apply server tags to all points', async () => {

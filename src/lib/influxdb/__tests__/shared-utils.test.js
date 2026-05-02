@@ -612,3 +612,75 @@ describe('Shared Utils - sanitizeInfluxTagValue', () => {
         expect(utils.sanitizeInfluxTagValue('my-tag_value.123')).toBe('my-tag_value.123');
     });
 });
+
+describe('Shared Utils - writePointsToInfluxV2', () => {
+    let utils;
+    let globals;
+
+    const mockWriteApi = {
+        writePoints: jest.fn(),
+        close: jest.fn(),
+    };
+
+    const mockInfluxClient = {
+        getWriteApi: jest.fn(() => mockWriteApi),
+    };
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        globals = (await import('../../../globals.js')).default;
+        utils = await import('../shared/utils.js');
+
+        mockWriteApi.writePoints.mockResolvedValue(undefined);
+        mockWriteApi.close.mockResolvedValue(undefined);
+        mockInfluxClient.getWriteApi.mockReturnValue(mockWriteApi);
+    });
+
+    test('should create writeApi with correct options', async () => {
+        const point = { tag: jest.fn().mockReturnThis() };
+        await utils.writePointsToInfluxV2(mockInfluxClient, 'my-org', 'my-bucket', [point]);
+
+        expect(mockInfluxClient.getWriteApi).toHaveBeenCalledWith('my-org', 'my-bucket', 'ns', {
+            flushInterval: 5000,
+            maxRetries: 0,
+        });
+    });
+
+    test('should write an array of points and close the API', async () => {
+        const points = [{ id: 1 }, { id: 2 }];
+        await utils.writePointsToInfluxV2(mockInfluxClient, 'org', 'bucket', points);
+
+        expect(mockWriteApi.writePoints).toHaveBeenCalledWith(points);
+        expect(mockWriteApi.close).toHaveBeenCalledTimes(1);
+    });
+
+    test('should wrap a single non-array point in an array', async () => {
+        const point = { id: 'single' };
+        await utils.writePointsToInfluxV2(mockInfluxClient, 'org', 'bucket', point);
+
+        expect(mockWriteApi.writePoints).toHaveBeenCalledWith([point]);
+        expect(mockWriteApi.close).toHaveBeenCalledTimes(1);
+    });
+
+    test('should close the API on write error and re-throw', async () => {
+        const writeError = new Error('write failed');
+        mockWriteApi.writePoints.mockRejectedValue(writeError);
+
+        await expect(
+            utils.writePointsToInfluxV2(mockInfluxClient, 'org', 'bucket', [{}])
+        ).rejects.toThrow('write failed');
+
+        // close called twice: once in error handler, once... no, close is called inside catch
+        expect(mockWriteApi.close).toHaveBeenCalledTimes(1);
+    });
+
+    test('should suppress close errors and re-throw original write error', async () => {
+        const writeError = new Error('write failed');
+        mockWriteApi.writePoints.mockRejectedValue(writeError);
+        mockWriteApi.close.mockRejectedValue(new Error('close failed'));
+
+        await expect(
+            utils.writePointsToInfluxV2(mockInfluxClient, 'org', 'bucket', [{}])
+        ).rejects.toThrow('write failed');
+    });
+});
