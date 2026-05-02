@@ -68,7 +68,7 @@ echo "DEBUG: Importing certificate into keychain"
 security import certificate.p12 -k "${KEYCHAIN_NAME}" -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign -A
 
 echo "DEBUG: Importing Apple Developer ID G2 intermediate CA"
-curl -L -s -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+curl -f -L -sS -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
 security import DeveloperIDG2CA.cer -k "${KEYCHAIN_NAME}"
 rm DeveloperIDG2CA.cer
 
