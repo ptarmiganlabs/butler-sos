@@ -91,5 +91,6 @@ Compress-Archive -Path "./config" -Update -DestinationPath "./${env:DIST_FILE_NA
 # -------------------
 # Clean up
 Remove-Item -Force build.cjs -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force ./config -ErrorAction SilentlyContinue
 
 dir
