@@ -17,7 +17,7 @@ SHA=${SHA:0:7}
 node --experimental-sea-config src/sea-config.json
 
 # Get a copy of the Node executable
-cp $(command -v node) ${DIST_FILE_NAME}
+cp "$(node -p 'process.execPath')" "${DIST_FILE_NAME}"
 
 # Remove the signature from the Node executable
 codesign --remove-signature ${DIST_FILE_NAME}
