@@ -538,9 +538,16 @@ Butler-SOS:
             loadedDocs: false # Should data on what docs are loaded be stored in Influxdb (true/false)?
             inMemoryDocs: false # Should data on what docs are in memory be stored in Influxdb (true/false)?
 
+        # Track failed polls (i.e. failed API calls) from Butler SOS to Qlik Sense servers.
+        # Each failed API call (health check, proxy sessions, app names) generates a data point
+        # in InfluxDB with tags identifying the host, error type, etc.
+        failedPollsTracking:
+            enable: false # Should failed polls be tracked and stored in InfluxDB?
+            measurementName: sense_failed_polls # Name of InfluxDB measurement where failed polls are stored
+
     # Extract app names
     appNames:
-        enableAppNameExtract: true # Extract app names in addition to app IDs (tue/false)?
+        enableAppNameExtract: true # Extract app names in addition to app IDs (true/false)?
         extractInterval: 60000 # How often (milliseconds) should app names be extracted?
         hostIP: <IP or FQDN> # What Sense server should be queried for app names?
 

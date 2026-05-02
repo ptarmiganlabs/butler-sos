@@ -399,6 +399,15 @@ export const destinationsSchema = {
                 required: ['activeDocs', 'loadedDocs', 'inMemoryDocs'],
                 additionalProperties: false,
             },
+            failedPollsTracking: {
+                type: 'object',
+                properties: {
+                    enable: { type: 'boolean' },
+                    measurementName: { type: 'string' },
+                },
+                required: ['enable', 'measurementName'],
+                additionalProperties: false,
+            },
         },
         required: ['enable', 'host', 'port', 'version', 'maxBatchSize', 'includeFields'],
         additionalProperties: false,

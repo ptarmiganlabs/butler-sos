@@ -8,6 +8,7 @@ import axios from 'axios';
 
 import globals from '../globals.js';
 import { postHealthMetricsToInfluxdb } from './influxdb/index.js';
+import { postFailedPollToInfluxdb } from './influxdb/error-metrics.js';
 import { postHealthMetricsToNewRelic } from './post-to-new-relic.js';
 import { postHealthToMQTT } from './post-to-mqtt.js';
 import { getServerHeaders } from './serverheaders.js';
@@ -111,6 +112,17 @@ export async function getHealthStatsFromSense(serverName, host, tags, headers) {
     } catch (err) {
         // Track error count
         globals.errorTracker.incrementError('HEALTH_API', serverName);
+
+        // Store failed poll event to InfluxDB if tracking is enabled
+        postFailedPollToInfluxdb({
+            host,
+            serverName,
+            errorType: 'HEALTH_API',
+        }).catch((influxErr) => {
+            globals.logger.debug(
+                `HEALTH: Error storing failed poll to InfluxDB: ${globals.getErrorMessage(influxErr)}`
+            );
+        });
 
         logError(
             `HEALTH: Error when calling health check API for server '${serverName}' (${host})`,

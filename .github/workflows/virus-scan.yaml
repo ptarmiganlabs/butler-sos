@@ -4,8 +4,12 @@ on:
   release:
     types: [published]
 
+permissions: {}
+
 jobs:
   virustotal:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     if: |
       github.event_name != 'pull_request' &&

@@ -4,6 +4,27 @@ import clonedeep from 'lodash.clonedeep';
 
 import globals from '../globals.js';
 import { logError } from './log-error.js';
+import { postFailedPollToInfluxdb } from './influxdb/error-metrics.js';
+
+/**
+ * Records a failed app-names extraction attempt in the error tracker and InfluxDB.
+ *
+ * @param {string} hostname - The QRS host that was queried
+ * @returns {void}
+ */
+function trackAppNamesFailure(hostname) {
+    globals.errorTracker.incrementError('APP_NAMES_EXTRACT', hostname || '');
+
+    postFailedPollToInfluxdb({
+        host: hostname || '',
+        serverName: hostname || '',
+        errorType: 'APP_NAMES_EXTRACT',
+    }).catch((influxErr) => {
+        globals.logger.debug(
+            `APP NAMES: Error storing failed poll to InfluxDB: ${globals.getErrorMessage(influxErr)}`
+        );
+    });
+}
 
 /**
  * Retrieves application names from the Qlik Repository Service (QRS) API.
@@ -57,17 +78,15 @@ export function getAppNames() {
                 globals.logger.verbose('APP NAMES: Done getting app names from repository db');
             })
             .catch((err) => {
-                // Track error count
                 const hostname = globals.config.get('Butler-SOS.appNames.hostIP');
-                globals.errorTracker.incrementError('APP_NAMES_EXTRACT', hostname || '');
+                trackAppNamesFailure(hostname);
 
                 // Return error msg
                 logError('APP NAMES: Error getting app names', err);
             });
     } catch (err) {
-        // Track error count
         const hostname = globals.config.get('Butler-SOS.appNames.hostIP');
-        globals.errorTracker.incrementError('APP_NAMES_EXTRACT', hostname || '');
+        trackAppNamesFailure(hostname);
 
         logError('APP NAMES', err);
     }
