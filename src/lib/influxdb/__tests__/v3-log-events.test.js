@@ -171,6 +171,7 @@ describe('v3/log-events', () => {
             await postLogEventToInfluxdbV3(msg);
 
             expect(mockPoint.setStringField).toHaveBeenCalledWith('command', 'Login');
+            // result_code_field is the field version; result_code tag enables filtering in InfluxDB v2/v3
             expect(mockPoint.setStringField).toHaveBeenCalledWith('result_code_field', '403');
             expect(mockPoint.setStringField).toHaveBeenCalledWith('origin', 'Proxy');
             expect(mockPoint.setStringField).toHaveBeenCalledWith('context', 'AuthSession');

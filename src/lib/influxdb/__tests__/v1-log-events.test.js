@@ -271,6 +271,7 @@ describe('v1/log-events', () => {
         expect(point.tags.result_code).toBe('401');
         expect(point.fields.message).toBe('Auth warning');
         expect(point.fields.command).toBe('Authenticate');
+        // result_code is stored as both a tag (for filtering) and a field (for reading) in v1
         expect(point.fields.result_code).toBe('401');
         expect(point.fields.origin).toBe('Proxy');
         expect(point.fields.context).toBe('AuthSession');
@@ -340,6 +341,7 @@ describe('v1/log-events', () => {
         expect(point.tags.result_code).toBe('403');
         expect(point.fields.message).toBe('Access denied');
         expect(point.fields.command).toBe('GetObject');
+        // result_code is stored as both a tag (for filtering) and a field (for reading) in v1
         expect(point.fields.result_code).toBe('403');
         expect(point.fields.origin).toBe('Repository');
         expect(point.fields.context).toBe('API');
