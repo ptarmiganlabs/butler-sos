@@ -542,7 +542,7 @@ Butler-SOS:
         # Each failed API call (health check, proxy sessions, app names) generates a data point
         # in InfluxDB with tags identifying the host, error type, etc.
         failedPollsTracking:
-            enable: true # Should failed polls be tracked and stored in InfluxDB?
+            enable: false # Should failed polls be tracked and stored in InfluxDB?
             measurementName: sense_failed_polls # Name of InfluxDB measurement where failed polls are stored
 
     # Extract app names
