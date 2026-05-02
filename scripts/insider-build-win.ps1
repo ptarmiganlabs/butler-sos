@@ -41,33 +41,33 @@ npx postject "${env:DIST_FILE_NAME}.exe" NODE_SEA_BLOB sea-prep.blob --sentinel-
 # -------------------
 # Sign the executable
 # 1st signing
-$processOptions1 = @{
-  FilePath = "C:\Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/signtool.exe"
-  Wait = $true
-  PassThru = $true
-  ArgumentList = "sign", "/sha1", "$env:CODESIGN_WIN_THUMBPRINT", "/tr", "http://time.certum.pl", "/td", "sha256", "/fd", "sha1", "/v", "./${env:DIST_FILE_NAME}.exe"
-  WorkingDirectory = "."
-  NoNewWindow = $true
-}
-$process = Start-Process @processOptions1
-if ($process.ExitCode -ne 0) {
-  throw "signtool sign (1st pass) failed with exit code $($process.ExitCode)"
-}
+# $processOptions1 = @{
+#   FilePath = "C:\Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/signtool.exe"
+#   Wait = $true
+#   PassThru = $true
+#   ArgumentList = "sign", "/sha1", "$env:CODESIGN_WIN_THUMBPRINT", "/tr", "http://time.certum.pl", "/td", "sha256", "/fd", "sha1", "/v", "./${env:DIST_FILE_NAME}.exe"
+#   WorkingDirectory = "."
+#   NoNewWindow = $true
+# }
+# $process = Start-Process @processOptions1
+# if ($process.ExitCode -ne 0) {
+#   throw "signtool sign (1st pass) failed with exit code $($process.ExitCode)"
+# }
 
 # -------------------
 # 2nd signing
-$processOptions2 = @{
-  FilePath = "C:\Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/signtool.exe"
-  Wait = $true
-  PassThru = $true
-  ArgumentList = "sign", "/sha1", "$env:CODESIGN_WIN_THUMBPRINT", "/tr", "http://time.certum.pl", "/td", "sha256", "/fd", "sha256", "/v", "./${env:DIST_FILE_NAME}.exe"
-  WorkingDirectory = "."
-  NoNewWindow = $true
-}
-$process = Start-Process @processOptions2
-if ($process.ExitCode -ne 0) {
-  throw "signtool sign (2nd pass) failed with exit code $($process.ExitCode)"
-}
+# $processOptions2 = @{
+#   FilePath = "C:\Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/signtool.exe"
+#   Wait = $true
+#   PassThru = $true
+#   ArgumentList = "sign", "/sha1", "$env:CODESIGN_WIN_THUMBPRINT", "/tr", "http://time.certum.pl", "/td", "sha256", "/fd", "sha256", "/v", "./${env:DIST_FILE_NAME}.exe"
+#   WorkingDirectory = "."
+#   NoNewWindow = $true
+# }
+# $process = Start-Process @processOptions2
+# if ($process.ExitCode -ne 0) {
+#   throw "signtool sign (2nd pass) failed with exit code $($process.ExitCode)"
+# }
 
 # -------------------
 # Create insider's build zip
