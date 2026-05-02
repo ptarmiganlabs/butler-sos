@@ -1,0 +1,86 @@
+$ErrorActionPreference = 'Stop'
+
+# Create a single JS file using esbuild
+./node_modules/.bin/esbuild "src/bundle.js" --bundle --outfile=build.cjs --format=cjs --platform=node --target=node22 --inject:./src/lib/import-meta-url.js --define:import.meta.url=import_meta_url
+
+# Generate blob to be injected into the binary
+node --experimental-sea-config src/sea-config.json
+
+# Get a copy of the Node executable
+node -e "require('fs').copyFileSync(process.execPath, '${env:DIST_FILE_NAME}.exe')" 
+
+pwd
+dir
+
+
+# -------------------
+# Remove the signature from the executable
+$processOptions1 = @{
+  FilePath = "C:\Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/signtool.exe"
+  Wait = $true
+  PassThru = $true
+  ArgumentList = "remove", "/s", "./${env:DIST_FILE_NAME}.exe"
+  WorkingDirectory = "."
+  NoNewWindow = $true
+}
+$process = Start-Process @processOptions1
+if ($process.ExitCode -ne 0) {
+  throw "signtool remove failed with exit code $($process.ExitCode)"
+}
+
+npx postject "${env:DIST_FILE_NAME}.exe" NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
+
+# -------------------
+# Sign the executable
+# 1st signing
+$processOptions1 = @{
+  FilePath = "C:\Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/signtool.exe"
+  Wait = $true
+  PassThru = $true
+  ArgumentList = "sign", "/sha1", "$env:CODESIGN_WIN_THUMBPRINT", "/tr", "http://time.certum.pl", "/td", "sha1", "/v", "./${env:DIST_FILE_NAME}.exe"
+  WorkingDirectory = "."
+  NoNewWindow = $true
+}
+$process = Start-Process @processOptions1
+if ($process.ExitCode -ne 0) {
+  throw "signtool sign (1st pass) failed with exit code $($process.ExitCode)"
+}
+
+# -------------------
+# 2nd signing
+$processOptions2 = @{
+  FilePath = "C:\Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/signtool.exe"
+  Wait = $true
+  PassThru = $true
+  ArgumentList = "sign", "/sha1", "$env:CODESIGN_WIN_THUMBPRINT", "/tr", "http://time.certum.pl", "/td", "sha256", "/fd", "sha256", "/v", "./${env:DIST_FILE_NAME}.exe"
+  WorkingDirectory = "."
+  NoNewWindow = $true
+}
+$process = Start-Process @processOptions2
+if ($process.ExitCode -ne 0) {
+  throw "signtool sign (2nd pass) failed with exit code $($process.ExitCode)"
+}
+
+# -------------------
+# Create release's build zip
+$compress = @{
+  Path = "./${env:DIST_FILE_NAME}.exe"
+  CompressionLevel = "Fastest"
+  DestinationPath = "${env:DIST_FILE_NAME}-${env:RELEASE_VERSION}-win.zip"
+}
+Compress-Archive @compress
+
+# Add following directories & files to the created zip file, in the ./config directory.
+# - ./src/config/production_template.yaml
+# - ./src/config/log_appender_xml
+mkdir config 2>$null
+Copy-Item -Path ./src/config/log_appender_xml -Destination ./config/ -Recurse
+Copy-Item -Path ./src/config/production_template.yaml -Destination ./config/
+
+Compress-Archive -Path "./config" -Update -DestinationPath "./${env:DIST_FILE_NAME}-${env:RELEASE_VERSION}-win.zip"
+
+
+# -------------------
+# Clean up
+
+dir
