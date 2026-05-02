@@ -1,5 +1,14 @@
 import { jest, describe, test, expect, beforeEach } from '@jest/globals';
 
+// Create stable mock function references outside the factory so that all
+// imports of 'fs-extra' (including inside utils.js) share the same jest.fn()
+// instances. If these were defined inside the factory, Jest's unstable ESM
+// mock system can call the factory more than once (one per import site),
+// producing different jest.fn() objects for the test vs the implementation.
+const mockFsAccessSync = jest.fn();
+const mockFsReadFileSync = jest.fn();
+const mockFsPathExistsSync = jest.fn();
+
 // Mock dependencies
 jest.unstable_mockModule('fs', () => ({
     readFileSync: jest.fn(),
@@ -7,9 +16,9 @@ jest.unstable_mockModule('fs', () => ({
 
 jest.unstable_mockModule('fs-extra', () => ({
     default: {
-        pathExistsSync: jest.fn(),
-        readFileSync: jest.fn(),
-        accessSync: jest.fn(),
+        pathExistsSync: mockFsPathExistsSync,
+        readFileSync: mockFsReadFileSync,
+        accessSync: mockFsAccessSync,
         constants: {
             F_OK: 0,
         },
@@ -240,13 +249,16 @@ jest.unstable_mockModule('node:url', () => ({
 // Import globals
 const { Settings } = await import('../globals.js');
 const globals = (await import('../globals.js')).default;
-const fs = (await import('fs-extra')).default;
 const sea = (await import('../lib/sea-wrapper.js')).default;
 const config = (await import('config')).default;
 
 describe('globals', () => {
     beforeEach(async () => {
         jest.clearAllMocks();
+        // Fully reset the accessSync mock (implementation + call history) so
+        // that each test starts from a known state and the previous test's
+        // mockReturnValue / mockImplementation cannot bleed through.
+        mockFsAccessSync.mockReset();
         // Reset globals state if possible, but it's a singleton
         globals.initialised = false;
 
@@ -266,24 +278,27 @@ describe('globals', () => {
 
     test('sleep should resolve after timeout', async () => {
         const start = Date.now();
-        await Settings.sleep(10);
+        // Sleep for 50 ms. We allow a 5 ms tolerance below the requested
+        // duration because Node.js's timer resolution can fire slightly early.
+        await Settings.sleep(50);
         const end = Date.now();
-        expect(end - start).toBeGreaterThanOrEqual(10);
+        expect(end - start).toBeGreaterThanOrEqual(45);
     });
 
     test('checkFileExistsSync should return true if file exists', () => {
-        fs.accessSync.mockReturnValue(undefined); // success
+        mockFsAccessSync.mockReturnValue(undefined); // success – no exception thrown
         expect(Settings.checkFileExistsSync('test.txt')).toBe(true);
+    });
 
-        fs.accessSync.mockImplementation(() => {
+    test('checkFileExistsSync should return false if file does not exist', () => {
+        mockFsAccessSync.mockImplementation(() => {
             throw new Error('File not found');
         });
         expect(Settings.checkFileExistsSync('nonexistent.txt')).toBe(false);
     });
 
     test('init should initialize the application', async () => {
-        const fsExtra = (await import('fs-extra')).default;
-        fsExtra.accessSync.mockReturnValue(undefined);
+        mockFsAccessSync.mockReturnValue(undefined);
 
         jest.spyOn(process, 'exit').mockImplementation(() => {});
 
@@ -404,16 +419,14 @@ describe('globals', () => {
         expect(settings.logger.error).toHaveBeenCalled();
     });
 
-    test('isRunningInDocker should return true if .dockerenv exists', async () => {
-        const fsExtra = (await import('fs-extra')).default;
-        fsExtra.accessSync.mockReturnValue(undefined);
+    test('isRunningInDocker should return true if .dockerenv exists', () => {
+        mockFsAccessSync.mockReturnValue(undefined);
 
         expect(Settings.isRunningInDocker()).toBe(true);
     });
 
-    test('isRunningInDocker should return false if .dockerenv does not exist', async () => {
-        const fsExtra = (await import('fs-extra')).default;
-        fsExtra.accessSync.mockImplementation(() => {
+    test('isRunningInDocker should return false if .dockerenv does not exist', () => {
+        mockFsAccessSync.mockImplementation(() => {
             throw new Error('Not in docker');
         });
 
