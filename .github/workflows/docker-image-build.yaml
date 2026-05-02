@@ -41,14 +41,21 @@ jobs:
       #     connectTimeout: 30000
 
       - name: Show input values
+        if: |
+          github.event_name != 'pull_request' &&
+          github.repository_owner == 'ptarmiganlabs'
+        env:
+          GITHUB_INPUTS: ${{ toJSON(github.event.inputs) }}
         run: |
-          echo "Inputs: ${{ github.event.inputs }}"
+          echo "Inputs: $GITHUB_INPUTS"
 
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         if: |
           github.event_name != 'pull_request' &&
           github.repository_owner == 'ptarmiganlabs'
+        with:
+          persist-credentials: false
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
@@ -78,10 +85,10 @@ jobs:
       # We need to extract the tag semver from the full tag
       # Store the tag in GITHUB_ENV environment variable
       - name: Create clean tag for Docker
+        env:
+          GITHUB_REF: ${{ github.ref }}
         run: |
-          #export TAGTMP1=${{ github.ref }}
-          #export TAG=${TAGTMP1##*/}
-          export TAG=$(echo ${{ github.ref }} | grep -oE "[0-9]+.[0-9]+.[0-9]+")
+          export TAG=$(echo "$GITHUB_REF" | grep -oE "[0-9]+.[0-9]+.[0-9]+")
           echo "TAG=$TAG" >> $GITHUB_ENV
           #
           # Debug
@@ -92,28 +99,28 @@ jobs:
           # export TAG=${TAGTMP2##*-}
           # echo "TAG=$TAG" >> $GITHUB_ENV
 
-      - name: Dump GitHub context
-        if: always()
+      - name: Dump GitHub context (DEBUG - disabled)
+        if: false  # was: always()
         env:
           GITHUB_CONTEXT: ${{ toJSON(github) }}
         run: echo "$GITHUB_CONTEXT"
-      - name: Dump job context
-        if: always()
+      - name: Dump job context (DEBUG - disabled)
+        if: false  # was: always()
         env:
           JOB_CONTEXT: ${{ toJSON(job) }}
         run: echo "$JOB_CONTEXT"
-      - name: Dump steps context
-        if: always()
+      - name: Dump steps context (DEBUG - disabled)
+        if: false  # was: always()
         env:
           STEPS_CONTEXT: ${{ toJSON(steps) }}
         run: echo "$STEPS_CONTEXT"
-      - name: Dump runner context
-        if: always()
+      - name: Dump runner context (DEBUG - disabled)
+        if: false  # was: always()
         env:
           RUNNER_CONTEXT: ${{ toJSON(runner) }}
         run: echo "$RUNNER_CONTEXT"
-      - name: Dump strategy context
-        if: always()
+      - name: Dump strategy context (DEBUG - disabled)
+        if: false  # was: always()
         env:
           STRATEGY_CONTEXT: ${{ toJSON(strategy) }}
         run: echo "$STRATEGY_CONTEXT"
@@ -140,13 +147,17 @@ jobs:
         if: |
           github.event_name != 'pull_request' &&
           github.repository_owner == 'ptarmiganlabs'
-        run: echo '${{ steps.meta.outputs.tags }}'
+        env:
+          DOCKER_TAGS: ${{ steps.meta.outputs.tags }}
+        run: echo '$DOCKER_TAGS'
 
       - name: Show Docker labels that will be used
         if: |
           github.event_name != 'pull_request' &&
           github.repository_owner == 'ptarmiganlabs'
-        run: echo '${{ steps.meta.outputs.labels }}'
+        env:
+          DOCKER_LABELS: ${{ steps.meta.outputs.labels }}
+        run: echo '$DOCKER_LABELS'
 
       - name: Build and push
         id: docker_build
@@ -168,7 +179,9 @@ jobs:
         if: |
           github.event_name != 'pull_request' &&
           github.repository_owner == 'ptarmiganlabs'
-        run: echo ${{ steps.docker_build.outputs.digest }}
+        env:
+          DOCKER_DIGEST: ${{ steps.docker_build.outputs.digest }}
+        run: echo "$DOCKER_DIGEST"
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
