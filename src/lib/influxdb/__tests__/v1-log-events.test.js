@@ -227,7 +227,7 @@ describe('v1/log-events', () => {
         expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
     });
 
-    test('should handle proxy event with optional fields', async () => {
+    test('should write proxy event with optional fields', async () => {
         await storeLogEventV1({
             source: 'qseow-proxy',
             host: 'server2',
@@ -244,6 +244,36 @@ describe('v1/log-events', () => {
             context: 'AuthSession',
         });
         expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
+    });
+
+    test('should write proxy event with correct tags and fields', async () => {
+        await storeLogEventV1({
+            source: 'qseow-proxy',
+            host: 'server2',
+            level: 'WARN',
+            log_row: '2',
+            subsystem: 'Proxy',
+            message: 'Auth warning',
+            user_full: 'DOMAIN\\proxyuser',
+            user_directory: 'DOMAIN',
+            user_id: 'proxy123',
+            result_code: '401',
+            command: 'Authenticate',
+            origin: 'Proxy',
+            context: 'AuthSession',
+        });
+        const [[datapoint]] = utils.writeBatchToInfluxV1.mock.calls;
+        const point = datapoint[0];
+        expect(point.measurement).toBe('log_event');
+        expect(point.tags.host).toBe('server2');
+        expect(point.tags.source).toBe('qseow-proxy');
+        expect(point.tags.user_full).toBe('DOMAIN\\proxyuser');
+        expect(point.tags.result_code).toBe('401');
+        expect(point.fields.message).toBe('Auth warning');
+        expect(point.fields.command).toBe('Authenticate');
+        expect(point.fields.result_code).toBe('401');
+        expect(point.fields.origin).toBe('Proxy');
+        expect(point.fields.context).toBe('AuthSession');
     });
 
     test('should handle scheduler event with task fields', async () => {
@@ -283,6 +313,36 @@ describe('v1/log-events', () => {
             context: 'API',
         });
         expect(utils.writeBatchToInfluxV1).toHaveBeenCalled();
+    });
+
+    test('should write repository event with correct tags and fields', async () => {
+        await storeLogEventV1({
+            source: 'qseow-repository',
+            host: 'server4',
+            level: 'ERROR',
+            log_row: '4',
+            subsystem: 'Repository',
+            message: 'Access denied',
+            user_full: 'DOMAIN\\repouser',
+            user_directory: 'DOMAIN',
+            user_id: 'repo456',
+            result_code: '403',
+            command: 'GetObject',
+            origin: 'Repository',
+            context: 'API',
+        });
+        const [[datapoint]] = utils.writeBatchToInfluxV1.mock.calls;
+        const point = datapoint[0];
+        expect(point.measurement).toBe('log_event');
+        expect(point.tags.host).toBe('server4');
+        expect(point.tags.source).toBe('qseow-repository');
+        expect(point.tags.user_full).toBe('DOMAIN\\repouser');
+        expect(point.tags.result_code).toBe('403');
+        expect(point.fields.message).toBe('Access denied');
+        expect(point.fields.command).toBe('GetObject');
+        expect(point.fields.result_code).toBe('403');
+        expect(point.fields.origin).toBe('Repository');
+        expect(point.fields.context).toBe('API');
     });
 
     test('should handle qix-perf event with all fields', async () => {
