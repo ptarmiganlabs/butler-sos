@@ -1,10 +1,12 @@
+$ErrorActionPreference = 'Stop'
+
 # Inject git SHA and date into package.json
 $GIT_SHA = (git rev-parse --short HEAD)
 $DATE_STR = (Get-Date -Format "yyyy-MMM-dd")
 (Get-Content package.json) -replace '"version": "(.*?)"', ('"version": "$1_' + $DATE_STR + '_' + $GIT_SHA + '"') | Set-Content package.json
 
 # Get GitHub SHA for artifact naming
-$SHA = $env:GITHUB_SHA.Substring(0, 7)
+$SHA = $env:GITHUB_SHA
 
 # Create a single JS file using esbuild
 ./node_modules/.bin/esbuild "src/bundle.js" --bundle --outfile=build.cjs --format=cjs --platform=node --target=node22 --inject:./src/lib/import-meta-url.js --define:import.meta.url=import_meta_url
@@ -24,11 +26,15 @@ dir
 $processOptions1 = @{
   FilePath = "C:\Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/signtool.exe"
   Wait = $true
+  PassThru = $true
   ArgumentList = "remove", "/s", "./${env:DIST_FILE_NAME}.exe"
   WorkingDirectory = "."
   NoNewWindow = $true
 }
-Start-Process @processOptions1
+$process = Start-Process @processOptions1
+if ($process.ExitCode -ne 0) {
+  throw "signtool remove failed with exit code $($process.ExitCode)"
+}
 
 npx postject "${env:DIST_FILE_NAME}.exe" NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
 
@@ -38,22 +44,30 @@ npx postject "${env:DIST_FILE_NAME}.exe" NODE_SEA_BLOB sea-prep.blob --sentinel-
 $processOptions1 = @{
   FilePath = "C:\Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/signtool.exe"
   Wait = $true
+  PassThru = $true
   ArgumentList = "sign", "/sha1", "$env:CODESIGN_WIN_THUMBPRINT", "/tr", "http://time.certum.pl", "/td", "sha256", "/fd", "sha1", "/v", "./${env:DIST_FILE_NAME}.exe"
   WorkingDirectory = "."
   NoNewWindow = $true
 }
-Start-Process @processOptions1
+$process = Start-Process @processOptions1
+if ($process.ExitCode -ne 0) {
+  throw "signtool sign (1st pass) failed with exit code $($process.ExitCode)"
+}
 
 # -------------------
 # 2nd signing
 $processOptions2 = @{
   FilePath = "C:\Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/signtool.exe"
   Wait = $true
+  PassThru = $true
   ArgumentList = "sign", "/sha1", "$env:CODESIGN_WIN_THUMBPRINT", "/tr", "http://time.certum.pl", "/td", "sha256", "/fd", "sha256", "/v", "./${env:DIST_FILE_NAME}.exe"
   WorkingDirectory = "."
   NoNewWindow = $true
 }
-Start-Process @processOptions2
+$process = Start-Process @processOptions2
+if ($process.ExitCode -ne 0) {
+  throw "signtool sign (2nd pass) failed with exit code $($process.ExitCode)"
+}
 
 # -------------------
 # Create insider's build zip

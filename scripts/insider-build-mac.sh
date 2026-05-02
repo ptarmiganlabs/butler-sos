@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Inject git SHA and date into package.json
 GIT_SHA=$(git rev-parse --short HEAD)
@@ -8,7 +9,6 @@ sed -i '' "s/\"version\": \".*\"/\"version\": \"${VERSION}_${DATE_STR}_${GIT_SHA
 
 # Get GitHub SHA for artifact naming
 SHA=$GITHUB_SHA
-SHA=${SHA:0:7}
 
 # Create a single JS file using esbuild
 ./node_modules/.bin/esbuild src/bundle.js  --bundle --outfile=build.cjs --format=cjs --platform=node --target=node22 --inject:./src/lib/import-meta-url.js --define:import.meta.url=import_meta_url

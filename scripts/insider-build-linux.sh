@@ -9,7 +9,6 @@ sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION}_${DATE_STR}_${GIT_SHA}\"
 
 # Get GitHub SHA for artifact naming
 SHA=$GITHUB_SHA
-SHA=${SHA:0:7}
 
 ./node_modules/.bin/esbuild src/bundle.js  --bundle --outfile=build.cjs --format=cjs --platform=node --target=node22 --inject:./src/lib/import-meta-url.js --define:import.meta.url=import_meta_url
 node --experimental-sea-config src/sea-config.json
