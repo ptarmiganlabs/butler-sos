@@ -1,5 +1,5 @@
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeToInfluxWithRetry, writePointsToInfluxV2 } from '../shared/utils.js';
 
 /**
  * Store proxy session data to InfluxDB v2
@@ -64,23 +64,7 @@ export async function storeSessionsV2(userSessions) {
 
     // Write array of measurements using retry logic
     await writeToInfluxWithRetry(
-        async () => {
-            const writeApi = globals.influx.getWriteApi(org, bucketName, 'ns', {
-                flushInterval: 5000,
-                maxRetries: 0,
-            });
-            try {
-                await writeApi.writePoints(userSessions.datapointInfluxdb);
-                await writeApi.close();
-            } catch (err) {
-                try {
-                    await writeApi.close();
-                } catch (closeErr) {
-                    // Ignore close errors
-                }
-                throw err;
-            }
-        },
+        () => writePointsToInfluxV2(globals.influx, org, bucketName, userSessions.datapointInfluxdb),
         `Proxy sessions for ${userSessions.host}/${userSessions.virtualProxy}`,
         'v2',
         userSessions.serverName
