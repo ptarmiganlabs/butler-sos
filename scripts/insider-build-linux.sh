@@ -21,7 +21,7 @@ npx postject ${DIST_FILE_NAME} NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_
 # Compress insider's build
 # Include following directories & files in the created archive file.
 # - ./src/config/log_appender_xml
-# - ./src/config⁄production_template.yaml                          
+# - ./src/config/production_template.yaml
 ls -la
 zip -9 -r ./${DIST_FILE_NAME}--linux-x64--$SHA.zip ${DIST_FILE_NAME}
 
