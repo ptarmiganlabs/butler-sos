@@ -71,7 +71,7 @@ export async function postLogEventToInfluxdbV3(msg) {
                 .setStringField('raw_event', JSON.stringify(msg));
 
             // Conditional tags
-            if (msg?.user_full?.length > 0) point.setTag('user_full', user_full);
+            if (msg?.user_full?.length > 0) point.setTag('user_full', msg.user_full);
             if (msg?.user_directory?.length > 0)
                 point.setTag('user_directory', sanitizeInfluxTagValue(msg.user_directory));
             if (msg?.user_id?.length > 0)
@@ -89,8 +89,8 @@ export async function postLogEventToInfluxdbV3(msg) {
                 point.setTag('app_name', sanitizeInfluxTagValue(msg.app_name));
             if (msg?.engine_exe_version?.length > 0)
                 point.setTag('engine_exe_version', sanitizeInfluxTagValue(msg.engine_exe_version));
-        } else if (msg.source === 'qseow-proxy') {
-            // Proxy fields: message, exception_message, command, result_code_field, origin, context, raw_event
+        } else if (msg.source === 'qseow-proxy' || msg.source === 'qseow-repository') {
+            // Proxy/Repository fields: message, exception_message, command, result_code_field, origin, context, raw_event
             // NOTE: result_code uses _field suffix to avoid conflict with result_code tag
             point = new Point3('log_event')
                 .setTag('host', msg.host)
@@ -140,31 +140,6 @@ export async function postLogEventToInfluxdbV3(msg) {
                 point.setTag('task_id', sanitizeInfluxTagValue(msg.task_id));
             if (msg?.task_name?.length > 0)
                 point.setTag('task_name', sanitizeInfluxTagValue(msg.task_name));
-        } else if (msg.source === 'qseow-repository') {
-            // Repository fields: message, exception_message, command, result_code_field, origin, context, raw_event
-            // NOTE: result_code uses _field suffix to avoid conflict with result_code tag
-            point = new Point3('log_event')
-                .setTag('host', msg.host)
-                .setTag('level', msg.level)
-                .setTag('source', msg.source)
-                .setTag('log_row', msg.log_row)
-                .setTag('subsystem', msg.subsystem || 'n/a')
-                .setStringField('message', msg.message)
-                .setStringField('exception_message', msg.exception_message || '')
-                .setStringField('command', msg.command || '')
-                .setStringField('result_code_field', msg.result_code || '')
-                .setStringField('origin', msg.origin || '')
-                .setStringField('context', msg.context || '')
-                .setStringField('raw_event', JSON.stringify(msg));
-
-            // Conditional tags
-            if (msg?.user_full?.length > 0) point.setTag('user_full', msg.user_full);
-            if (msg?.user_directory?.length > 0)
-                point.setTag('user_directory', sanitizeInfluxTagValue(msg.user_directory));
-            if (msg?.user_id?.length > 0)
-                point.setTag('user_id', sanitizeInfluxTagValue(msg.user_id));
-            if (msg?.result_code?.length > 0)
-                point.setTag('result_code', sanitizeInfluxTagValue(msg.result_code));
         } else if (msg.source === 'qseow-qix-perf') {
             // QIX Performance fields: app_id, process_time, work_time, lock_time, validate_time, traverse_time, handle, net_ram, peak_ram, raw_event
             point = new Point3('log_event')

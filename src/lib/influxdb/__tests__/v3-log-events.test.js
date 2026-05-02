@@ -115,6 +115,27 @@ describe('v3/log-events', () => {
             expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
         });
 
+        test('should preserve directory\\id format of user_full tag for engine event', async () => {
+            const msg = {
+                source: 'qseow-engine',
+                host: 'server1',
+                level: 'INFO',
+                message: 'Test message',
+                log_row: '1',
+                user_full: 'DOMAIN\\alice',
+                user_directory: 'DOMAIN',
+                user_id: 'alice',
+            };
+
+            await postLogEventToInfluxdbV3(msg);
+
+            // user_full must keep the raw 'directory\id' value; sanitizeInfluxTagValue strips
+            // backslashes so it must NOT be applied to user_full
+            expect(mockPoint.setTag).toHaveBeenCalledWith('user_full', 'DOMAIN\\alice');
+            expect(utils.sanitizeInfluxTagValue).not.toHaveBeenCalledWith('DOMAIN\\alice');
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
+        });
+
         test('should successfully write qseow-proxy log event', async () => {
             const msg = {
                 source: 'qseow-proxy',
@@ -128,6 +149,62 @@ describe('v3/log-events', () => {
             expect(mockPoint.setTag).toHaveBeenCalledWith('host', 'server1');
             expect(mockPoint.setTag).toHaveBeenCalledWith('source', 'qseow-proxy');
             expect(mockPoint.setTag).toHaveBeenCalledWith('level', 'WARN');
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
+        });
+
+        test('should write command, result_code_field, and conditional tags for proxy event', async () => {
+            const msg = {
+                source: 'qseow-proxy',
+                host: 'proxy1',
+                level: 'WARN',
+                log_row: '42',
+                message: 'Auth warning',
+                command: 'Login',
+                result_code: '403',
+                origin: 'Proxy',
+                context: 'AuthSession',
+                user_full: 'DOMAIN\\proxyuser',
+                user_directory: 'DOMAIN',
+                user_id: 'proxyuser',
+            };
+
+            await postLogEventToInfluxdbV3(msg);
+
+            expect(mockPoint.setStringField).toHaveBeenCalledWith('command', 'Login');
+            // result_code_field is the field version; result_code tag enables filtering in InfluxDB v2/v3
+            expect(mockPoint.setStringField).toHaveBeenCalledWith('result_code_field', '403');
+            expect(mockPoint.setStringField).toHaveBeenCalledWith('origin', 'Proxy');
+            expect(mockPoint.setStringField).toHaveBeenCalledWith('context', 'AuthSession');
+            expect(mockPoint.setTag).toHaveBeenCalledWith('result_code', '403');
+            expect(mockPoint.setTag).toHaveBeenCalledWith('user_full', 'DOMAIN\\proxyuser');
+            expect(utils.sanitizeInfluxTagValue).not.toHaveBeenCalledWith('DOMAIN\\proxyuser');
+            expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
+        });
+
+        test('should write same fields for repository as for proxy', async () => {
+            const msg = {
+                source: 'qseow-repository',
+                host: 'repo1',
+                level: 'ERROR',
+                log_row: '99',
+                message: 'Access denied',
+                command: 'GetObject',
+                result_code: '500',
+                origin: 'Repository',
+                context: 'API',
+                user_full: 'DOMAIN\\repouser',
+                user_directory: 'DOMAIN',
+                user_id: 'repouser',
+            };
+
+            await postLogEventToInfluxdbV3(msg);
+
+            expect(mockPoint.setStringField).toHaveBeenCalledWith('command', 'GetObject');
+            expect(mockPoint.setStringField).toHaveBeenCalledWith('result_code_field', '500');
+            expect(mockPoint.setTag).toHaveBeenCalledWith('source', 'qseow-repository');
+            expect(mockPoint.setTag).toHaveBeenCalledWith('result_code', '500');
+            expect(mockPoint.setTag).toHaveBeenCalledWith('user_full', 'DOMAIN\\repouser');
+            expect(utils.sanitizeInfluxTagValue).not.toHaveBeenCalledWith('DOMAIN\\repouser');
             expect(utils.writeBatchToInfluxV3).toHaveBeenCalled();
         });
 

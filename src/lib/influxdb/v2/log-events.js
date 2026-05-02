@@ -110,7 +110,7 @@ export async function storeLogEventV2(msg) {
         if (msg?.app_name?.length > 0) point.tag('app_name', msg.app_name);
         if (msg?.engine_exe_version?.length > 0)
             point.tag('engine_exe_version', msg.engine_exe_version);
-    } else if (msg.source === 'qseow-proxy') {
+    } else if (msg.source === 'qseow-proxy' || msg.source === 'qseow-repository') {
         point = new Point('log_event')
             .tag('host', msg.host)
             .tag('level', msg.level)
@@ -150,26 +150,6 @@ export async function storeLogEventV2(msg) {
         if (msg?.user_id?.length > 0) point.tag('user_id', msg.user_id);
         if (msg?.task_id?.length > 0) point.tag('task_id', msg.task_id);
         if (msg?.task_name?.length > 0) point.tag('task_name', msg.task_name);
-    } else if (msg.source === 'qseow-repository') {
-        point = new Point('log_event')
-            .tag('host', msg.host)
-            .tag('level', msg.level)
-            .tag('source', msg.source)
-            .tag('log_row', msg.log_row)
-            .tag('subsystem', msg.subsystem)
-            .stringField('message', msg.message)
-            .stringField('exception_message', msg.exception_message || '')
-            .stringField('command', msg.command || '')
-            .stringField('result_code_field', msg.result_code || '')
-            .stringField('origin', msg.origin || '')
-            .stringField('context', msg.context || '')
-            .stringField('raw_event', JSON.stringify(msg));
-
-        // Conditional tags
-        if (msg?.user_full?.length > 0) point.tag('user_full', msg.user_full);
-        if (msg?.user_directory?.length > 0) point.tag('user_directory', msg.user_directory);
-        if (msg?.user_id?.length > 0) point.tag('user_id', msg.user_id);
-        if (msg?.result_code?.length > 0) point.tag('result_code', msg.result_code);
     } else if (msg.source === 'qseow-qix-perf') {
         point = new Point('log_event')
             .tag('host', msg.host)
