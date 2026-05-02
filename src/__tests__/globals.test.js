@@ -279,7 +279,8 @@ describe('globals', () => {
     test('sleep should resolve after timeout', async () => {
         const start = Date.now();
         // Sleep for 50 ms. We allow a 5 ms tolerance below the requested
-        // duration because Node.js's timer resolution can fire slightly early.
+        // duration (i.e. assert >= 45 ms) because Node.js timer resolution
+        // can cause setTimeout to fire up to ~1–2 ms early on a loaded host.
         await Settings.sleep(50);
         const end = Date.now();
         expect(end - start).toBeGreaterThanOrEqual(45);
