@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Inject git SHA and date into package.json
 GIT_SHA=$(git rev-parse --short HEAD)
