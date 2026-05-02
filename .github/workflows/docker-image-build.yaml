@@ -88,7 +88,7 @@ jobs:
         env:
           GITHUB_REF: ${{ github.ref }}
         run: |
-          export TAG=$(echo "$GITHUB_REF" | grep -oE "[0-9]+.[0-9]+.[0-9]+")
+          export TAG=$(echo "$GITHUB_REF" | grep -oE "[0-9]+\.[0-9]+\.[0-9]+")
           echo "TAG=$TAG" >> $GITHUB_ENV
           #
           # Debug
@@ -149,7 +149,7 @@ jobs:
           github.repository_owner == 'ptarmiganlabs'
         env:
           DOCKER_TAGS: ${{ steps.meta.outputs.tags }}
-        run: echo '$DOCKER_TAGS'
+        run: echo "$DOCKER_TAGS"
 
       - name: Show Docker labels that will be used
         if: |
@@ -157,7 +157,7 @@ jobs:
           github.repository_owner == 'ptarmiganlabs'
         env:
           DOCKER_LABELS: ${{ steps.meta.outputs.labels }}
-        run: echo '$DOCKER_LABELS'
+        run: echo "$DOCKER_LABELS"
 
       - name: Build and push
         id: docker_build
