@@ -5,6 +5,8 @@ on:
         - cron: '0 8,20 * * *'
     workflow_dispatch: # Allow manual triggering for testing
 
+permissions: {}
+
 jobs:
     monitor-logs:
         runs-on: ${{ vars.BUTLER_SOS_INSIDER_DEPLOY_RUNNER || 'host2-win' }}

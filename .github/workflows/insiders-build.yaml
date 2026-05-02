@@ -4,8 +4,11 @@ on:
     push:
         branches:
             - master
+permissions: {}
 jobs:
     insiders-build:
+        permissions:
+            security-events: write
         strategy:
             matrix:
                 os: [win-code-sign, mac-build2, ubuntu-latest]
@@ -261,6 +264,8 @@ jobs:
         steps:
             - name: Checkout repository
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                persist-credentials: false
 
             - name: Setup Node.js
               uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
@@ -327,6 +332,7 @@ jobs:
                   path: ${{ matrix.artifact_insider }}
 
     deploy-windows-insider:
+        permissions: {}
         needs: insiders-build
         runs-on: ${{ vars.BUTLER_SOS_INSIDER_DEPLOY_RUNNER || 'host2-win' }}
         if: success()
