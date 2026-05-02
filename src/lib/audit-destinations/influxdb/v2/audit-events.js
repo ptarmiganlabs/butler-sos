@@ -1,6 +1,6 @@
 import { Point } from '@influxdata/influxdb-client';
 import globals from '../../../../globals.js';
-import { writeToInfluxWithRetry } from '../../../influxdb/shared/utils.js';
+import { writeToInfluxWithRetry, writePointsToInfluxV2 } from '../../../influxdb/shared/utils.js';
 
 import { getAuditInfluxClient } from '../shared/client.js';
 import { buildAuditInfluxPointModel } from '../shared/mapping.js';
@@ -45,23 +45,7 @@ export async function writeAuditEventInfluxV2(envelope, extras = {}) {
     }
 
     await writeToInfluxWithRetry(
-        async () => {
-            const writeApi = client.getWriteApi(org, bucket, 'ns', {
-                flushInterval: 5000,
-                maxRetries: 0,
-            });
-            try {
-                await writeApi.writePoint(point);
-                await writeApi.close();
-            } catch (err) {
-                try {
-                    await writeApi.close();
-                } catch (closeErr) {
-                    // ignore
-                }
-                throw err;
-            }
-        },
+        () => writePointsToInfluxV2(client, org, bucket, point),
         `Audit event (${model.tags.eventType})`,
         'v2',
         'audit-events'

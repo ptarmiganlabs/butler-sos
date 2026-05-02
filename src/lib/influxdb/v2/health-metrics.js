@@ -1,6 +1,6 @@
 import { Point } from '@influxdata/influxdb-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxWithRetry } from '../shared/utils.js';
+import { isInfluxDbEnabled, writeToInfluxWithRetry, writePointsToInfluxV2 } from '../shared/utils.js';
 import { buildHealthMetricDatapoints } from '../shared/health-metrics-builder.js';
 
 /**
@@ -139,23 +139,7 @@ export async function postHealthMetricsToInfluxdbV2(serverName, host, body, serv
 
     // Write all points to InfluxDB with retry logic
     await writeToInfluxWithRetry(
-        async () => {
-            const writeApi = globals.influx.getWriteApi(org, bucketName, 'ns', {
-                flushInterval: 5000,
-                maxRetries: 0,
-            });
-            try {
-                await writeApi.writePoints(points);
-                await writeApi.close();
-            } catch (err) {
-                try {
-                    await writeApi.close();
-                } catch (closeErr) {
-                    // Ignore close errors
-                }
-                throw err;
-            }
-        },
+        () => writePointsToInfluxV2(globals.influx, org, bucketName, points),
         `Health metrics from ${serverName}`,
         'v2',
         serverName

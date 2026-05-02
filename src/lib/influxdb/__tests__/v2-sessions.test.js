@@ -31,6 +31,7 @@ const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
     writeBatchToInfluxV2: jest.fn(),
+    writePointsToInfluxV2: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -56,6 +57,7 @@ describe('v2/sessions', () => {
 
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeToInfluxWithRetry.mockImplementation(async (cb) => await cb());
+        utils.writePointsToInfluxV2.mockResolvedValue(undefined);
         mockWriteApi.writePoints.mockResolvedValue(undefined);
         mockWriteApi.close.mockResolvedValue(undefined);
     });
@@ -120,8 +122,12 @@ describe('v2/sessions', () => {
         await storeSessionsV2(userSessions);
 
         expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
-        expect(mockWriteApi.writePoints).toHaveBeenCalledWith(userSessions.datapointInfluxdb);
-        expect(mockWriteApi.close).toHaveBeenCalled();
+        expect(utils.writePointsToInfluxV2).toHaveBeenCalledWith(
+            globals.influx,
+            'test-org',
+            'test-bucket',
+            userSessions.datapointInfluxdb
+        );
         expect(globals.logger.verbose).toHaveBeenCalledWith(
             expect.stringContaining('Sent user session data to InfluxDB')
         );
@@ -140,7 +146,12 @@ describe('v2/sessions', () => {
         await storeSessionsV2(userSessions);
 
         expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
-        expect(mockWriteApi.writePoints).toHaveBeenCalledWith([]);
+        expect(utils.writePointsToInfluxV2).toHaveBeenCalledWith(
+            globals.influx,
+            'test-org',
+            'test-bucket',
+            []
+        );
     });
 
     test('should log silly debug information', async () => {
@@ -172,7 +183,12 @@ describe('v2/sessions', () => {
 
         await storeSessionsV2(userSessions);
 
-        expect(mockWriteApi.writePoints).toHaveBeenCalledWith(datapoints);
+        expect(utils.writePointsToInfluxV2).toHaveBeenCalledWith(
+            globals.influx,
+            'test-org',
+            'test-bucket',
+            datapoints
+        );
         expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
     });
 });
