@@ -39,7 +39,7 @@ ls -la
 
 # Turn our base64-encoded certificate back to a regular .p12 file              
 echo "DEBUG: Decoding certificate from base64"
-echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
+printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > certificate.p12
 
 echo "DEBUG: Setting KEYCHAIN_NAME environment variable"
 export KEYCHAIN_NAME="build.keychain"
