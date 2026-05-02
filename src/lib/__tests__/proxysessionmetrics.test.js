@@ -142,6 +142,10 @@ jest.unstable_mockModule('../log-error.js', () => ({
     logError: jest.fn(),
 }));
 
+jest.unstable_mockModule('../influxdb/error-metrics.js', () => ({
+    postFailedPollToInfluxdb: jest.fn().mockResolvedValue(),
+}));
+
 jest.unstable_mockModule('../influxdb/shared/utils.js', () => ({
     applyTagsToPoint3: jest.fn(),
     validateUnsignedField: jest.fn().mockImplementation((val) => val),
