@@ -75,7 +75,12 @@ async function storeQueueMetricsV1(queueType, logPrefix, errorTrackerCode) {
         await data.queueManager.clearMetrics();
     } catch (err) {
         if (errorTrackerCode) {
-            await globals.errorTracker.incrementError(errorTrackerCode, '');
+            await globals.errorTracker.incrementError(
+                errorTrackerCode,
+                '',
+                { module: 'QUEUE_METRICS' },
+                err
+            );
         }
         globals.logger.error(
             `${logPrefix}: Error saving data: ${globals.getErrorMessage(err)}`

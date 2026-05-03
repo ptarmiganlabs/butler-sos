@@ -72,7 +72,12 @@ async function postQueueMetricsToInfluxdbV3(queueType, logPrefix) {
         // Clear metrics after writing
         await data.queueManager.clearMetrics();
     } catch (err) {
-        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', '');
+        await globals.errorTracker.incrementError(
+            'INFLUXDB_V3_WRITE',
+            '',
+            { module: 'QUEUE_METRICS' },
+            err
+        );
         globals.logger.error(
             `${logPrefix}: Error posting queue metrics: ${globals.getErrorMessage(err)}`
         );

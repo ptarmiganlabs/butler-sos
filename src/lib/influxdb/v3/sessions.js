@@ -55,7 +55,12 @@ export async function postProxySessionsToInfluxdbV3(userSessions) {
         }
     } catch (err) {
         // Track error count
-        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', userSessions.serverName);
+        await globals.errorTracker.incrementError(
+            'INFLUXDB_V3_WRITE',
+            userSessions.serverName,
+            { module: 'PROXY_SESSIONS' },
+            err
+        );
 
         globals.logger.error(
             `PROXY SESSIONS V3: Error saving user session data to InfluxDB v3! ${globals.getErrorMessage(err)}`

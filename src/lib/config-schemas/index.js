@@ -8,6 +8,7 @@ import { qlikSenseEventsSchema } from './qlik-sense-events.js';
 import { userEventsSchema } from './user-events.js';
 import { logEventsSchema } from './log-events.js';
 import { destinationsSchema } from './destinations.js';
+import { errorTrackingSchema } from './error-tracking.js';
 import { appSessionsSchema } from './app-sessions.js';
 import { serversSchema } from './servers.js';
 import { auditEventsSchema } from './audit-events.js';
@@ -32,6 +33,9 @@ const configFileSchema = {
                 ...qlikSenseEventsSchema,
                 ...userEventsSchema,
                 ...logEventsSchema,
+
+                // Error tracking configuration
+                ...errorTrackingSchema,
 
                 // Destination systems
                 ...destinationsSchema,
@@ -64,6 +68,7 @@ const configFileSchema = {
                 'newRelic',
                 'prometheus',
                 'influxdbConfig',
+                'errorTracking',
                 'appNames',
                 'userSessions',
                 'serversToMonitor',

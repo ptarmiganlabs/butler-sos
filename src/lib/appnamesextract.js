@@ -4,26 +4,25 @@ import clonedeep from 'lodash.clonedeep';
 
 import globals from '../globals.js';
 import { logError } from './log-error.js';
-import { postFailedPollToInfluxdb } from './influxdb/error-metrics.js';
 
 /**
- * Records a failed app-names extraction attempt in the error tracker and InfluxDB.
+ * Records a failed app-names extraction attempt in the error tracker.
+ * The error tracker handles both in-memory counting and InfluxDB writes.
  *
  * @param {string} hostname - The QRS host that was queried
- * @returns {void}
+ * @param {Error|null} [err] - The original error object, used to derive error_category for InfluxDB
+ *
+ * @returns {Promise<void>}
  */
-function trackAppNamesFailure(hostname) {
-    globals.errorTracker.incrementError('APP_NAMES_EXTRACT', hostname || '');
-
-    postFailedPollToInfluxdb({
-        host: hostname || '',
-        serverName: hostname || '',
-        errorType: 'APP_NAMES_EXTRACT',
-    }).catch((influxErr) => {
-        globals.logger.debug(
-            `APP NAMES: Error storing failed poll to InfluxDB: ${globals.getErrorMessage(influxErr)}`
-        );
-    });
+async function trackAppNamesFailure(hostname, err = null) {
+    await globals.errorTracker.incrementError(
+        'APP_NAMES_EXTRACT',
+        hostname || '',
+        {
+            host: hostname || '',
+        },
+        err
+    );
 }
 
 /**
@@ -34,9 +33,9 @@ function trackAppNamesFailure(hostname) {
  * (id, name, description) in the global appNames variable for use throughout
  * the Butler SOS application.
  *
- * @returns {void}
+ * @returns {Promise<void>}
  */
-export function getAppNames() {
+export async function getAppNames() {
     globals.logger.verbose(`APP NAMES: Start getting app names from repository db`);
 
     // Set up Sense repository service configuration
@@ -58,37 +57,28 @@ export function getAppNames() {
     const appList = [];
 
     try {
-        qrsInteractInstance
-            .Get('app')
-            .then((result) => {
-                result.body.forEach((element) => {
-                    appList.push({
-                        id: element.id,
-                        name: element.name,
-                        description: element.description,
-                    });
-                }, this);
+        const result = await qrsInteractInstance.Get('app');
 
-                globals.logger.verbose(`APP NAMES: Number of apps: ${appList.length}`);
-                globals.logger.debug(`APP NAMES: App list JSON: ${JSON.stringify(appList)}`);
-
-                // Only set the global app names variable once all app names have been successfully retrieved
-                globals.appNames = clonedeep(appList);
-
-                globals.logger.verbose('APP NAMES: Done getting app names from repository db');
-            })
-            .catch((err) => {
-                const hostname = globals.config.get('Butler-SOS.appNames.hostIP');
-                trackAppNamesFailure(hostname);
-
-                // Return error msg
-                logError('APP NAMES: Error getting app names', err);
+        result.body.forEach((element) => {
+            appList.push({
+                id: element.id,
+                name: element.name,
+                description: element.description,
             });
+        }, this);
+
+        globals.logger.verbose(`APP NAMES: Number of apps: ${appList.length}`);
+        globals.logger.debug(`APP NAMES: App list JSON: ${JSON.stringify(appList)}`);
+
+        // Only set the global app names variable once all app names have been successfully retrieved
+        globals.appNames = clonedeep(appList);
+
+        globals.logger.verbose('APP NAMES: Done getting app names from repository db');
     } catch (err) {
         const hostname = globals.config.get('Butler-SOS.appNames.hostIP');
-        trackAppNamesFailure(hostname);
+        await trackAppNamesFailure(hostname, err);
 
-        logError('APP NAMES', err);
+        logError('APP NAMES: Error getting app names', err);
     }
 }
 

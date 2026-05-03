@@ -114,6 +114,26 @@ describe('appnamesextract', () => {
             return null;
         });
 
+        // Mock qrsInteract to throw error
+        qrsInteract.mockImplementation(() => ({
+            Get: jest.fn().mockRejectedValue(new Error('Connection refused')),
+        }));
+
+        // Call the function
+        await getAppNames();
+
+        // Expectations
+        expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+            'APP_NAMES_EXTRACT',
+            '192.168.1.123',
+            expect.objectContaining({
+                host: '192.168.1.123',
+            }),
+            expect.any(Error)
+        );
+    });
+
+    test('should handle rejected promise from QRS', async () => {
         // Create a mock of the Get method to reject with an error
         const mockGet = jest.fn().mockRejectedValue(new Error('QRS API Error'));
 
@@ -123,7 +143,7 @@ describe('appnamesextract', () => {
         }));
 
         // Call the function to test
-        getAppNames();
+        await getAppNames();
 
         // Allow the promise to reject
         await new Promise(process.nextTick);

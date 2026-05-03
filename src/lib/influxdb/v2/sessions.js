@@ -67,7 +67,8 @@ export async function storeSessionsV2(userSessions) {
         () => writePointsToInfluxV2(globals.influx, org, bucketName, userSessions.datapointInfluxdb),
         `Proxy sessions for ${userSessions.host}/${userSessions.virtualProxy}`,
         'v2',
-        userSessions.serverName
+        userSessions.serverName,
+        { module: 'PROXY_SESSIONS' }
     );
 
     globals.logger.verbose(

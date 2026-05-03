@@ -352,10 +352,18 @@ export async function postHealthMetricsToNewRelic(_host, body, tags) {
         }
     } catch (error) {
         // Track error count
-        await globals.errorTracker.incrementError('NEW_RELIC_POST', '');
+        await globals.errorTracker.incrementError(
+            'NEW_RELIC_POST',
+            '',
+            {
+                destinationHost: globals.config.get('Butler-SOS.newRelic.metric.url'),
+                module: 'HEALTH_METRICS_NEW_RELIC',
+            },
+            error
+        );
 
         // handle error
-        logError('HEALTH METRICS NEW RELIC: Error sending proxy sessions', error);
+        logError('HEALTH METRICS NEW RELIC: Error sending health metrics', error);
     }
 }
 
@@ -516,7 +524,15 @@ export async function postProxySessionsToNewRelic(userSessions) {
         }
     } catch (error) {
         // Track error count
-        await globals.errorTracker.incrementError('NEW_RELIC_POST', '');
+        await globals.errorTracker.incrementError(
+            'NEW_RELIC_POST',
+            '',
+            {
+                destinationHost: globals.config.get('Butler-SOS.newRelic.metric.url'),
+                module: 'PROXY_SESSIONS_NEW_RELIC',
+            },
+            error
+        );
 
         // handle error
         logError('PROXY SESSIONS NEW RELIC: Error sending proxy sessions', error);
@@ -693,6 +709,14 @@ export async function postButlerSOSUptimeToNewRelic(fields) {
             }
         }
     } catch (error) {
+        // Track error count
+        await globals.errorTracker.incrementError(
+            'NEW_RELIC_POST',
+            '',
+            { module: 'UPTIME_NEW_RELIC' },
+            error
+        );
+
         // handle error
         logError('UPTIME NEW RELIC: Error sending uptime', error);
     }
@@ -849,6 +873,14 @@ export async function postUserEventToNewRelic(msg) {
             }
         }
     } catch (err) {
+        // Track error count
+        await globals.errorTracker.incrementError(
+            'NEW_RELIC_POST',
+            '',
+            { module: 'USER_EVENTS_NEW_RELIC' },
+            err
+        );
+
         logError('USER EVENT NEW RELIC: Error saving user event to New Relic!', err);
     }
 }

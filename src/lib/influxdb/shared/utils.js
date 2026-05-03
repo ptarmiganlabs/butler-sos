@@ -228,6 +228,7 @@ export async function writeToInfluxWithRetry(
     context,
     version,
     errorCategory = '',
+    metadata = {},
     options = {}
 ) {
     const {
@@ -287,7 +288,9 @@ export async function writeToInfluxWithRetry(
                 // Track error immediately for non-retryable errors
                 await globals.errorTracker.incrementError(
                     `INFLUXDB_${versionTag}_WRITE`,
-                    errorCategory
+                    errorCategory,
+                    metadata,
+                    err
                 );
 
                 throw err;
@@ -316,7 +319,9 @@ export async function writeToInfluxWithRetry(
                 // Track error count (final failure after all retries)
                 await globals.errorTracker.incrementError(
                     `INFLUXDB_${versionTag}_WRITE`,
-                    errorCategory
+                    errorCategory,
+                    metadata,
+                    err
                 );
             }
         }

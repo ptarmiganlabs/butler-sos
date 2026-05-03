@@ -294,6 +294,11 @@ describe('config-file-schema', () => {
                     enable: false,
                     port: 9842,
                 },
+                errorTracking: {
+                    enable: true,
+                    logSummary: { enable: true },
+                    influxdb: { enable: false, measurementName: 'sense_errors' },
+                },
                 influxdbConfig: {
                     enable: false,
                     host: 'localhost',
@@ -872,6 +877,11 @@ describe('config-file-schema', () => {
                     },
                 },
                 prometheus: { enable: false, port: 9842 },
+                errorTracking: {
+                    enable: true,
+                    logSummary: { enable: true },
+                    influxdb: { enable: false, measurementName: 'sense_errors' },
+                },
                 influxdbConfig: {
                     enable: false,
                     host: 'localhost',
@@ -942,6 +952,7 @@ describe('config-file-schema', () => {
             'newRelic',
             'prometheus',
             'influxdbConfig',
+            'errorTracking',
             'appNames',
             'userSessions',
             'serversToMonitor',

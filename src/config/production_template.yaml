@@ -73,6 +73,16 @@ Butler-SOS:
                     butlerVersion:
                         enable: true # Should the Butler SOS version be included in the data sent to New Relic?
 
+    # Error tracking configuration
+    # Track errors that occur when communicating with Qlik Sense servers or writing to destinations
+    errorTracking:
+        enable: true # Master switch for error tracking
+        logSummary:
+            enable: true # Log daily error summary to console at midnight UTC
+        influxdb:
+            enable: true # Write individual error events to InfluxDB
+            measurementName: butler_sos_errors # Name of InfluxDB measurement for error events
+
     # Credentials for third party systems that Butler SOS integrate with.
     # These can also be specified via command line parameters when starting Butler SOS.
     # Command line options takes precedence over settings in this config file.
@@ -537,13 +547,6 @@ Butler-SOS:
             activeDocs: false # Should data on what docs are active be stored in Influxdb (true/false)?
             loadedDocs: false # Should data on what docs are loaded be stored in Influxdb (true/false)?
             inMemoryDocs: false # Should data on what docs are in memory be stored in Influxdb (true/false)?
-
-        # Track failed polls (i.e. failed API calls) from Butler SOS to Qlik Sense servers.
-        # Each failed API call (health check, proxy sessions, app names) generates a data point
-        # in InfluxDB with tags identifying the host, error type, etc.
-        failedPollsTracking:
-            enable: false # Should failed polls be tracked and stored in InfluxDB?
-            measurementName: sense_failed_polls # Name of InfluxDB measurement where failed polls are stored
 
     # Extract app names
     appNames:

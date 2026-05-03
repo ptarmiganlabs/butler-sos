@@ -280,7 +280,12 @@ export async function postLogEventToInfluxdbV3(msg) {
 
         globals.logger.verbose('LOG EVENT INFLUXDB V3: Sent Butler SOS log event data to InfluxDB');
     } catch (err) {
-        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', msg.host);
+        await globals.errorTracker.incrementError(
+            'INFLUXDB_V3_WRITE',
+            msg.host,
+            { module: 'LOG_EVENTS' },
+            err
+        );
         globals.logger.error(
             `LOG EVENT INFLUXDB V3: Error saving log event to InfluxDB! ${globals.getErrorMessage(err)}`
         );

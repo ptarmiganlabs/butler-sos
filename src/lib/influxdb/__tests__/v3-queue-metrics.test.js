@@ -47,17 +47,26 @@ jest.unstable_mockModule('@influxdata/influxdb3-client', () => ({
 }));
 
 // Mock shared utils
-jest.unstable_mockModule('../shared/utils.js', () => ({
+const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
     writeBatchToInfluxV3: jest.fn(),
-}));
+};
+jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
+
+// Mock the builder module
+const mockBuilder = {
+    prepareQueueMetricData: jest.fn(),
+    QUEUE_METRIC_FIELDS: [],
+};
+jest.unstable_mockModule('../shared/queue-metrics-builder.js', () => mockBuilder);
 
 describe('InfluxDB v3 Queue Metrics', () => {
     let queueMetrics;
     let globals;
     let Point3;
     let utils;
+    let builder;
 
     beforeEach(async () => {
         jest.clearAllMocks();
@@ -66,16 +75,29 @@ describe('InfluxDB v3 Queue Metrics', () => {
         const influxdbV3 = await import('@influxdata/influxdb3-client');
         Point3 = influxdbV3.Point;
         utils = await import('../shared/utils.js');
+        builder = await import('../shared/queue-metrics-builder.js');
 
         queueMetrics = await import('../v3/queue-metrics.js');
 
         // Setup default mocks
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeBatchToInfluxV3.mockResolvedValue();
+        builder.prepareQueueMetricData.mockResolvedValue({
+            config: {
+                queueTypeTag: 'user_events',
+                description: 'User event queue metrics',
+                bucketKey: 'user-events-queue',
+            },
+            queueManager: {
+                getMetrics: jest.fn().mockResolvedValue({}),
+                clearMetrics: jest.fn().mockResolvedValue(),
+            },
+        });
     });
 
     describe('postUserEventQueueMetricsToInfluxdbV3', () => {
         test('should return early when queue metrics are disabled', async () => {
+            builder.prepareQueueMetricData.mockResolvedValue(null);
             globals.config.get.mockReturnValue(false);
 
             await queueMetrics.postUserEventQueueMetricsToInfluxdbV3();
@@ -85,20 +107,18 @@ describe('InfluxDB v3 Queue Metrics', () => {
         });
 
         test('should warn when queue manager is not initialized', async () => {
+            builder.prepareQueueMetricData.mockResolvedValue(null);
             globals.config.get.mockReturnValue(true);
-            globals.udpQueueManagerUserActivity = null;
 
             await queueMetrics.postUserEventQueueMetricsToInfluxdbV3();
 
-            expect(globals.logger.warn).toHaveBeenCalledWith(
-                'USER EVENT QUEUE METRICS INFLUXDB V3: Queue manager not initialized'
-            );
             expect(Point3).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).not.toHaveBeenCalled();
         });
 
         test('should return early when InfluxDB is not enabled', async () => {
+            builder.prepareQueueMetricData.mockResolvedValue(null);
             globals.config.get.mockReturnValue(true);
-            globals.udpQueueManagerUserActivity = { getMetrics: jest.fn() };
             utils.isInfluxDbEnabled.mockReturnValue(false);
 
             await queueMetrics.postUserEventQueueMetricsToInfluxdbV3();
@@ -155,6 +175,14 @@ describe('InfluxDB v3 Queue Metrics', () => {
                 clearMetrics: jest.fn().mockResolvedValue(),
             };
 
+            builder.prepareQueueMetricData.mockResolvedValue({
+                config: { queueTypeTag: 'user_events', description: 'User event queue metrics', bucketKey: 'user-events-queue' },
+                queueManager: globals.udpQueueManagerUserActivity,
+                metrics: mockMetrics,
+                measurementName: 'user_events_queue',
+                configTags: [{ name: 'env', value: 'test' }],
+            });
+
             await queueMetrics.postUserEventQueueMetricsToInfluxdbV3();
 
             expect(Point3).toHaveBeenCalledWith('user_events_queue');
@@ -190,11 +218,18 @@ describe('InfluxDB v3 Queue Metrics', () => {
                     'USER EVENT QUEUE METRICS INFLUXDB V3: Error posting queue metrics'
                 )
             );
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'INFLUXDB_V3_WRITE',
+                '',
+                { module: 'QUEUE_METRICS' },
+                expect.any(Error)
+            );
         });
     });
 
     describe('postLogEventQueueMetricsToInfluxdbV3', () => {
         test('should return early when queue metrics are disabled', async () => {
+            builder.prepareQueueMetricData.mockResolvedValue(null);
             globals.config.get.mockReturnValue(false);
 
             await queueMetrics.postLogEventQueueMetricsToInfluxdbV3();
@@ -204,15 +239,13 @@ describe('InfluxDB v3 Queue Metrics', () => {
         });
 
         test('should warn when queue manager is not initialized', async () => {
+            builder.prepareQueueMetricData.mockResolvedValue(null);
             globals.config.get.mockReturnValue(true);
-            globals.udpQueueManagerLogEvents = null;
 
             await queueMetrics.postLogEventQueueMetricsToInfluxdbV3();
 
-            expect(globals.logger.warn).toHaveBeenCalledWith(
-                'LOG EVENT QUEUE METRICS INFLUXDB V3: Queue manager not initialized'
-            );
             expect(Point3).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).not.toHaveBeenCalled();
         });
 
         test('should successfully write queue metrics', async () => {
@@ -262,6 +295,14 @@ describe('InfluxDB v3 Queue Metrics', () => {
                 getMetrics: jest.fn().mockResolvedValue(mockMetrics),
                 clearMetrics: jest.fn().mockResolvedValue(),
             };
+
+            builder.prepareQueueMetricData.mockResolvedValue({
+                config: { queueTypeTag: 'log_events', description: 'Log event queue metrics', bucketKey: 'log-events-queue' },
+                queueManager: globals.udpQueueManagerLogEvents,
+                metrics: mockMetrics,
+                measurementName: 'log_events_queue',
+                configTags: [],
+            });
 
             await queueMetrics.postLogEventQueueMetricsToInfluxdbV3();
 
@@ -331,11 +372,18 @@ describe('InfluxDB v3 Queue Metrics', () => {
                     'LOG EVENT QUEUE METRICS INFLUXDB V3: Error posting queue metrics'
                 )
             );
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'INFLUXDB_V3_WRITE',
+                '',
+                { module: 'QUEUE_METRICS' },
+                expect.any(Error)
+            );
         });
     });
 
     describe('postAuditEventQueueMetricsToInfluxdbV3', () => {
         test('should return early when queue metrics are disabled', async () => {
+            builder.prepareQueueMetricData.mockResolvedValue(null);
             globals.config.get.mockReturnValue(false);
 
             await queueMetrics.postAuditEventQueueMetricsToInfluxdbV3();
@@ -345,16 +393,14 @@ describe('InfluxDB v3 Queue Metrics', () => {
         });
 
         test('should warn when queue manager is not initialized', async () => {
+            builder.prepareQueueMetricData.mockResolvedValue(null);
             globals.config.has.mockReturnValue(true);
             globals.config.get.mockReturnValue(true);
-            globals.auditEventsQueueManager = null;
 
             await queueMetrics.postAuditEventQueueMetricsToInfluxdbV3();
 
-            expect(globals.logger.warn).toHaveBeenCalledWith(
-                'AUDIT EVENT QUEUE METRICS INFLUXDB V3: Queue manager not initialized'
-            );
             expect(Point3).not.toHaveBeenCalled();
+            expect(utils.writeBatchToInfluxV3).not.toHaveBeenCalled();
         });
 
         test('should successfully write queue metrics', async () => {
@@ -403,6 +449,14 @@ describe('InfluxDB v3 Queue Metrics', () => {
                 clearMetrics: jest.fn().mockResolvedValue(),
             };
 
+            builder.prepareQueueMetricData.mockResolvedValue({
+                config: { queueTypeTag: 'audit_events', description: 'Audit event queue metrics', bucketKey: 'audit-events-queue' },
+                queueManager: globals.auditEventsQueueManager,
+                metrics: mockMetrics,
+                measurementName: 'audit_events_queue',
+                configTags: [],
+            });
+
             await queueMetrics.postAuditEventQueueMetricsToInfluxdbV3();
 
             expect(Point3).toHaveBeenCalledWith('audit_events_queue');
@@ -415,5 +469,61 @@ describe('InfluxDB v3 Queue Metrics', () => {
             );
             expect(globals.auditEventsQueueManager.clearMetrics).toHaveBeenCalled();
         });
+
+        test('should handle write errors with error tracking', async () => {
+            globals.config.has.mockReturnValue(true);
+            globals.config.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable') {
+                    return true;
+                }
+                if (key === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.measurementName') {
+                    return 'audit_events_queue';
+                }
+                if (key === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.tags') {
+                    return [];
+                }
+                if (key === 'Butler-SOS.influxdbConfig.v3Config.database') {
+                    return 'test-db';
+                }
+                return null;
+            });
+
+            globals.auditEventsQueueManager = {
+                getMetrics: jest.fn().mockResolvedValue({
+                    queueSize: 1,
+                    queueMaxSize: 10,
+                    queueUtilizationPct: 10.0,
+                    queuePending: 0,
+                    messagesReceived: 10,
+                    messagesQueued: 9,
+                    messagesProcessed: 9,
+                    messagesFailed: 0,
+                    messagesDroppedTotal: 1,
+                    messagesDroppedRateLimit: 1,
+                    messagesDroppedQueueFull: 0,
+                    messagesDroppedSize: 0,
+                    processingTimeAvgMs: 1.0,
+                    processingTimeP95Ms: 2.0,
+                    processingTimeMaxMs: 3.0,
+                    rateLimitCurrent: 10,
+                    backpressureActive: 0,
+                }),
+                clearMetrics: jest.fn(),
+            };
+
+            utils.writeBatchToInfluxV3.mockRejectedValue(new Error('Write failed'));
+
+            await queueMetrics.postAuditEventQueueMetricsToInfluxdbV3();
+
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('AUDIT EVENT QUEUE METRICS INFLUXDB V3: Error posting queue metrics')
+            );
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'INFLUXDB_V3_WRITE',
+                '',
+                { module: 'QUEUE_METRICS' },
+                expect.any(Error)
+            );
+        });
     });
-});
+});;

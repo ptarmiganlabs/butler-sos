@@ -39,14 +39,26 @@ const mockGlobals = {
 };
 
 jest.unstable_mockModule('../../../globals.js', () => ({ default: mockGlobals }));
-
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
     writeToInfluxWithRetry: jest.fn(),
     writeBatchToInfluxV1: jest.fn(),
 };
 
-jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
+jest.unstable_mockModule('../shared/utils.js', () => ({
+    ...mockUtils,
+    isInfluxDbEnabled: mockUtils.isInfluxDbEnabled,
+    writeBatchToInfluxV1: mockUtils.writeBatchToInfluxV1,
+    writeToInfluxWithRetry: mockUtils.writeToInfluxWithRetry,
+}));
+
+// Mock the builder module
+const mockBuilder = {
+    prepareQueueMetricData: jest.fn(),
+    QUEUE_METRIC_FIELDS: [],
+};
+
+jest.unstable_mockModule('../shared/queue-metrics-builder.js', () => mockBuilder);
 
 describe('v1/queue-metrics', () => {
     let storeUserEventQueueMetricsV1,
@@ -63,6 +75,34 @@ describe('v1/queue-metrics', () => {
         storeUserEventQueueMetricsV1 = queueMetrics.storeUserEventQueueMetricsV1;
         storeLogEventQueueMetricsV1 = queueMetrics.storeLogEventQueueMetricsV1;
         storeAuditEventQueueMetricsV1 = queueMetrics.storeAuditEventQueueMetricsV1;
+
+        // Setup default config mocks
+        globals.config.get.mockImplementation((key) => {
+            if (key === 'Butler-SOS.errorTracking.enable') return true;
+            return undefined;
+        });
+        globals.config.has.mockImplementation((key) => key === 'Butler-SOS.errorTracking.enable');
+
+        // Mock prepareQueueMetricData with lazy implementation (evaluated at call time)
+        mockBuilder.prepareQueueMetricData.mockImplementation(async (queueType) => {
+            if (queueType === 'user_events') {
+                return {
+                    config: { queueTypeTag: 'user_events', description: 'User event queue metrics', bucketKey: 'user-events-queue' },
+                    queueManager: globals.udpQueueManagerUserActivity,
+                };
+            } else if (queueType === 'log_events') {
+                return {
+                    config: { queueTypeTag: 'log_events', description: 'Log event queue metrics', bucketKey: 'log-events-queue' },
+                    queueManager: globals.udpQueueManagerLogEvents,
+                };
+            } else if (queueType === 'audit_events') {
+                return {
+                    config: { queueTypeTag: 'audit_events', description: 'Audit event queue metrics', bucketKey: 'audit-events-queue' },
+                    queueManager: globals.auditEventsQueueManager,
+                };
+            }
+            return null;
+        });
 
         // Mock queue managers
         globals.udpQueueManagerUserActivity = {
@@ -147,26 +187,20 @@ describe('v1/queue-metrics', () => {
     });
 
     test('should return early when InfluxDB disabled for user events', async () => {
-        utils.isInfluxDbEnabled.mockReturnValue(false);
+        mockBuilder.prepareQueueMetricData.mockResolvedValue(null);
         await storeUserEventQueueMetricsV1();
         expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should return early when config disabled', async () => {
-        globals.config.get.mockImplementation((path) => {
-            if (path.includes('queueMetrics.influxdb.enable')) return false;
-            return undefined;
-        });
+        mockBuilder.prepareQueueMetricData.mockResolvedValue(null);
         await storeUserEventQueueMetricsV1();
         expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should return early when queue manager not initialized', async () => {
-        globals.udpQueueManagerUserActivity = undefined;
+        mockBuilder.prepareQueueMetricData.mockResolvedValue(null);
         await storeUserEventQueueMetricsV1();
-        expect(globals.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('not initialized')
-        );
         expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
@@ -185,29 +219,24 @@ describe('v1/queue-metrics', () => {
         utils.writeBatchToInfluxV1.mockRejectedValue(new Error('Write failed'));
         await expect(storeUserEventQueueMetricsV1()).rejects.toThrow();
         expect(globals.logger.error).toHaveBeenCalled();
+        expect(globals.errorTracker.incrementError).not.toHaveBeenCalled();
     });
 
     test('should return early when InfluxDB disabled for log events', async () => {
-        utils.isInfluxDbEnabled.mockReturnValue(false);
+        mockBuilder.prepareQueueMetricData.mockResolvedValue(null);
         await storeLogEventQueueMetricsV1();
         expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should return early when config disabled for log events', async () => {
-        globals.config.get.mockImplementation((path) => {
-            if (path.includes('queueMetrics.influxdb.enable')) return false;
-            return undefined;
-        });
+        mockBuilder.prepareQueueMetricData.mockResolvedValue(null);
         await storeLogEventQueueMetricsV1();
         expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should return early when log queue manager not initialized', async () => {
-        globals.udpQueueManagerLogEvents = undefined;
+        mockBuilder.prepareQueueMetricData.mockResolvedValue(null);
         await storeLogEventQueueMetricsV1();
-        expect(globals.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('not initialized')
-        );
         expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
@@ -226,30 +255,29 @@ describe('v1/queue-metrics', () => {
         utils.writeBatchToInfluxV1.mockRejectedValue(new Error('Write failed'));
         await expect(storeLogEventQueueMetricsV1()).rejects.toThrow();
         expect(globals.logger.error).toHaveBeenCalled();
+        expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+            'INFLUXDB_V1_WRITE',
+            '',
+            { module: 'QUEUE_METRICS' },
+            expect.any(Error)
+        );
     });
 
     test('should return early when InfluxDB disabled for audit events', async () => {
-        utils.isInfluxDbEnabled.mockReturnValue(false);
+        mockBuilder.prepareQueueMetricData.mockResolvedValue(null);
         await storeAuditEventQueueMetricsV1();
         expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should return early when config disabled for audit events', async () => {
-        globals.config.get.mockImplementation((path) => {
-            if (path === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable') return false;
-            if (path.includes('queueMetrics.influxdb.enable')) return true;
-            return undefined;
-        });
+        mockBuilder.prepareQueueMetricData.mockResolvedValue(null);
         await storeAuditEventQueueMetricsV1();
         expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
     test('should return early when audit queue manager not initialized', async () => {
-        globals.auditEventsQueueManager = undefined;
+        mockBuilder.prepareQueueMetricData.mockResolvedValue(null);
         await storeAuditEventQueueMetricsV1();
-        expect(globals.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('not initialized')
-        );
         expect(utils.writeBatchToInfluxV1).not.toHaveBeenCalled();
     });
 
@@ -268,5 +296,11 @@ describe('v1/queue-metrics', () => {
         utils.writeBatchToInfluxV1.mockRejectedValue(new Error('Write failed'));
         await expect(storeAuditEventQueueMetricsV1()).rejects.toThrow();
         expect(globals.logger.error).toHaveBeenCalled();
+        expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+            'INFLUXDB_V1_WRITE',
+            '',
+            { module: 'QUEUE_METRICS' },
+            expect.any(Error)
+        );
     });
 });

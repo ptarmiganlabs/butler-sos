@@ -202,7 +202,9 @@ describe('v3/user-events', () => {
             );
             expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
                 'INFLUXDB_V3_WRITE',
-                ''
+                '',
+                { module: 'USER_EVENTS' },
+                expect.any(Error)
             );
         });
 
