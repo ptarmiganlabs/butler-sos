@@ -613,9 +613,9 @@ describe('post-to-mqtt', () => {
                 'MQTT_PUBLISH',
                 '',
                 expect.objectContaining({
-                    operation: expect.any(String),
-                    error_category: expect.any(String),
-                })
+                    module: 'LOG_EVENTS_MQTT',
+                }),
+                expect.any(Error)
             );
             expect(mockLogError).toHaveBeenCalled();
         });

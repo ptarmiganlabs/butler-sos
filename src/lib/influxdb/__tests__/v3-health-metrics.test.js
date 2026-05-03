@@ -274,11 +274,8 @@ describe('v3/health-metrics', () => {
             expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
                 'INFLUXDB_V3_WRITE',
                 'test-server',
-                expect.objectContaining({
-                    operation: 'health_metrics_write',
-                    destinationHost: expect.any(String),
-                    error_category: expect.any(String),
-                })
+                { module: 'HEALTH_METRICS' },
+                expect.any(Error)
             );
         expect(globals.logger.error).toHaveBeenCalledWith(
             expect.stringContaining('Error saving health data to InfluxDB v3')

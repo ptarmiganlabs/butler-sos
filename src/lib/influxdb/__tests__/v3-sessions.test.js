@@ -158,12 +158,8 @@ describe('v3/sessions', () => {
             expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
                 'INFLUXDB_V3_WRITE',
                 userSessions.serverName,
-                expect.objectContaining({
-                    operation: 'sessions_write',
-                    destinationHost: expect.any(String),
-                    virtualProxy: expect.any(String),
-                    error_category: expect.any(String)
-                })
+                { module: 'PROXY_SESSIONS' },
+                expect.any(Error)
             );
         });
 

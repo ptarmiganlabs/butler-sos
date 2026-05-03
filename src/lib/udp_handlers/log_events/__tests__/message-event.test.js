@@ -60,6 +60,9 @@ jest.unstable_mockModule(globalsPath, () => ({
         rejectedEvents: {
             addRejectedLogEvent: jest.fn(),
         },
+        errorTracker: {
+            incrementError: jest.fn().mockResolvedValue(undefined),
+        },
     },
 }));
 

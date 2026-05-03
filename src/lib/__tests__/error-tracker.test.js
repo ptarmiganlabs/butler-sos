@@ -40,7 +40,8 @@ jest.unstable_mockModule('../influxdb/shared/utils.js', () => ({
 // Hoist InfluxDB v2 mock Point methods outside factory for stable references
 const mockPointV2Tag = jest.fn();
 const mockPointV2IntField = jest.fn();
-const mockPointV2 = { tag: mockPointV2Tag, intField: mockPointV2IntField };
+const mockPointV2StringField = jest.fn();
+const mockPointV2 = { tag: mockPointV2Tag, intField: mockPointV2IntField, stringField: mockPointV2StringField };
 const MockPointV2 = jest.fn(() => mockPointV2);
 
 jest.unstable_mockModule('@influxdata/influxdb-client', () => ({
@@ -50,7 +51,8 @@ jest.unstable_mockModule('@influxdata/influxdb-client', () => ({
 // Hoist InfluxDB v3 mock Point methods outside factory for stable references
 const mockPointV3SetTag = jest.fn();
 const mockPointV3SetIntegerField = jest.fn();
-const mockPointV3 = { setTag: mockPointV3SetTag, setIntegerField: mockPointV3SetIntegerField };
+const mockPointV3SetStringField = jest.fn();
+const mockPointV3 = { setTag: mockPointV3SetTag, setIntegerField: mockPointV3SetIntegerField, setStringField: mockPointV3SetStringField };
 const MockPointV3 = jest.fn(() => mockPointV3);
 
 jest.unstable_mockModule('@influxdata/influxdb3-client', () => ({
@@ -269,6 +271,7 @@ describe('ErrorTracker._writeErrorToInfluxDB', () => {
         expect(mockPointV2Tag).toHaveBeenCalledWith('host', 'host2');
         expect(mockPointV2Tag).toHaveBeenCalledWith('virtual_proxy', '/vp');
         expect(mockPointV2IntField).toHaveBeenCalledWith('error_count', 1);
+        expect(mockPointV2StringField).toHaveBeenCalledWith('error_category', 'unknown');
         expect(mockWriteBatchToInfluxV2).toHaveBeenCalledTimes(1);
         const [points, org, bucket, context, serverName] = mockWriteBatchToInfluxV2.mock.calls[0];
         expect(points).toContain(mockPointV2);
@@ -285,6 +288,7 @@ describe('ErrorTracker._writeErrorToInfluxDB', () => {
         expect(mockPointV3SetTag).toHaveBeenCalledWith('error_type', 'APP_NAMES_EXTRACT');
         expect(mockPointV3SetTag).toHaveBeenCalledWith('server_name', 'Server_3');
         expect(mockPointV3SetIntegerField).toHaveBeenCalledWith('error_count', 1);
+        expect(mockPointV3SetStringField).toHaveBeenCalledWith('error_category', 'unknown');
         expect(mockWriteBatchToInfluxV3).toHaveBeenCalledTimes(1);
         const [points, database, context, serverName] = mockWriteBatchToInfluxV3.mock.calls[0];
         expect(points).toContain(mockPointV3);

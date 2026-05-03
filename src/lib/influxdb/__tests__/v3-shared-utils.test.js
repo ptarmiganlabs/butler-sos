@@ -106,7 +106,7 @@ describe('InfluxDB v3 Shared Utils', () => {
 
             const writeFn = jest.fn().mockRejectedValueOnce(timeoutError).mockResolvedValueOnce();
 
-            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {
+            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {}, {
                 maxRetries: 3,
                 initialDelayMs: 10,
             });
@@ -127,7 +127,7 @@ describe('InfluxDB v3 Shared Utils', () => {
                 .mockRejectedValueOnce(timeoutError)
                 .mockResolvedValueOnce();
 
-            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {
+            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {}, {
                 maxRetries: 3,
                 initialDelayMs: 10,
             });
@@ -144,7 +144,7 @@ describe('InfluxDB v3 Shared Utils', () => {
             globals.errorTracker = { incrementError: jest.fn().mockResolvedValue() };
 
             await expect(
-                utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {
+                utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {}, {
                     maxRetries: 2,
                     initialDelayMs: 10,
                 })
@@ -157,12 +157,8 @@ describe('InfluxDB v3 Shared Utils', () => {
             expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
                 'INFLUXDB_V3_WRITE',
                 '',
-                expect.objectContaining({
-                    operation: 'Test context',
-                    destinationHost: expect.any(String),
-                    error_category: expect.any(String),
-                    maxRetries: expect.any(Number),
-                })
+                {},
+                expect.any(Error)
             );
         });
 
@@ -172,7 +168,7 @@ describe('InfluxDB v3 Shared Utils', () => {
             globals.errorTracker = { incrementError: jest.fn().mockResolvedValue() };
 
             await expect(
-                utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {
+                utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {}, {
                     maxRetries: 3,
                     initialDelayMs: 10,
                 })
@@ -189,7 +185,7 @@ describe('InfluxDB v3 Shared Utils', () => {
 
             const writeFn = jest.fn().mockRejectedValueOnce(timeoutError).mockResolvedValueOnce();
 
-            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {
+            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {}, {
                 maxRetries: 3,
                 initialDelayMs: 10,
             });
@@ -205,7 +201,7 @@ describe('InfluxDB v3 Shared Utils', () => {
 
             const writeFn = jest.fn().mockRejectedValueOnce(timeoutError).mockResolvedValueOnce();
 
-            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {
+            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {}, {
                 maxRetries: 3,
                 initialDelayMs: 10,
             });

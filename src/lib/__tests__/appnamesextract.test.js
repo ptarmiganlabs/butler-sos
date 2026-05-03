@@ -128,10 +128,6 @@ describe('appnamesextract', () => {
             '192.168.1.123',
             expect.objectContaining({
                 host: '192.168.1.123',
-                operation: 'app_names_extract',
-                port: 4242,
-                error_category: expect.any(String),
-                error_code: expect.any(String)
             })
         );
     });

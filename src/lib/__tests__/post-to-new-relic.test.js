@@ -568,6 +568,13 @@ describe('post-to-new-relic', () => {
                 return undefined;
             });
 
+            globals.config.has.mockImplementation((path) => {
+                if (path === 'Butler-SOS.newRelic.metric.header') return false;
+                if (path === 'Butler-SOS.newRelic.metric.attribute.static') return false;
+                if (path === 'Butler-SOS.newRelic.metric.attribute.dynamic') return false;
+                return false;
+            });
+
             // Mock axios to throw error
             const networkError = new Error('Network error');
             axios.post.mockRejectedValue(networkError);
@@ -583,17 +590,17 @@ describe('post-to-new-relic', () => {
                 'NEW_RELIC_POST',
                 '',
                 expect.objectContaining({
-                    operation: 'health_metrics_post',
-                    error_category: expect.any(String),
-                })
+                    module: 'HEALTH_METRICS_NEW_RELIC',
+                }),
+                expect.any(Error)
             );
             expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
                 'NEW_RELIC_POST',
                 '',
                 expect.objectContaining({
-                    operation: 'health_metrics_post',
-                    error_category: expect.any(String),
-                })
+                    module: 'HEALTH_METRICS_NEW_RELIC',
+                }),
+                expect.any(Error)
             );
         });
     });
@@ -705,9 +712,9 @@ describe('post-to-new-relic', () => {
                 'NEW_RELIC_POST',
                 '',
                 expect.objectContaining({
-                    operation: 'uptime_post',
-                    error_category: expect.any(String),
-                })
+                    module: 'UPTIME_NEW_RELIC',
+                }),
+                expect.any(Error)
             );
         });
     });
@@ -808,24 +815,24 @@ describe('post-to-new-relic', () => {
             // Verify
             expect(globals.logger.error).toHaveBeenCalledWith(
                 expect.stringContaining(
-                    'USER EVENT NEW RELIC: Error sending user event'
+                    'USER EVENT NEW RELIC: Error saving user event to New Relic!'
                 )
             );
             expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
                 'NEW_RELIC_POST',
                 '',
                 expect.objectContaining({
-                    operation: 'user_event_post',
-                    error_category: expect.any(String),
-                })
+                    module: 'USER_EVENTS_NEW_RELIC',
+                }),
+                expect.any(Error)
             );
             expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
                 'NEW_RELIC_POST',
                 '',
                 expect.objectContaining({
-                    operation: 'user_event_post',
-                    error_category: expect.any(String),
-                })
+                    module: 'USER_EVENTS_NEW_RELIC',
+                }),
+                expect.any(Error)
             );
         });
     });
