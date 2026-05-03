@@ -95,8 +95,16 @@ export class ErrorTracker {
                 });
             }
 
-            // Log current error statistics
-            await this.logErrorSummary();
+            // Log current error statistics only when enabled in config.
+            // Default to true to preserve existing behavior if the config key is absent.
+            const isLogSummaryEnabled =
+                globals.config?.has?.('Butler-SOS.errorTracking.logSummary.enable')
+                    ? globals.config.get('Butler-SOS.errorTracking.logSummary.enable')
+                    : true;
+
+            if (isLogSummaryEnabled) {
+                await this.logErrorSummary();
+            }
 
             // Write individual error event to InfluxDB (non-blocking)
             if (this._isInfluxDbErrorTrackingEnabled()) {
