@@ -170,7 +170,6 @@ GROUP BY "error_type", "server_name" FILL(0)
 
 Unit tests for the ErrorTracker are located at:
 - `src/lib/__tests__/error-tracker.test.js` - Core ErrorTracker functionality
-- `src/lib/influxdb/__tests__/error-metrics.test.js` - Backwards compatibility tests
 
 Run tests with:
 ```bash
