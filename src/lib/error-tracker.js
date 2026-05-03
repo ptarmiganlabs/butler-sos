@@ -97,10 +97,11 @@ export class ErrorTracker {
 
             // Log current error statistics only when enabled in config.
             // Default to true to preserve existing behavior if the config key is absent.
-            const isLogSummaryEnabled =
-                globals.config?.has?.('Butler-SOS.errorTracking.logSummary.enable')
-                    ? globals.config.get('Butler-SOS.errorTracking.logSummary.enable')
-                    : true;
+            const isLogSummaryEnabled = globals.config?.has?.(
+                'Butler-SOS.errorTracking.logSummary.enable'
+            )
+                ? globals.config.get('Butler-SOS.errorTracking.logSummary.enable')
+                : true;
 
             if (isLogSummaryEnabled) {
                 await this.logErrorSummary();
@@ -151,7 +152,9 @@ export class ErrorTracker {
      * @private
      */
     async _writeErrorToInfluxDB(apiType, serverName, metadata) {
-        const measurementName = globals.config.get('Butler-SOS.errorTracking.influxdb.measurementName') || 'sense_errors';
+        const measurementName =
+            globals.config.get('Butler-SOS.errorTracking.influxdb.measurementName') ||
+            'sense_errors';
         const version = getInfluxDbVersion();
 
         // Build common tags
@@ -210,11 +213,13 @@ export class ErrorTracker {
                 );
             } else if (version === 1) {
                 const { writeBatchToInfluxV1 } = await import('./influxdb/shared/utils.js');
-                const datapoint = [{
-                    measurement: measurementName,
-                    tags,
-                    fields: { error_count: 1 },
-                }];
+                const datapoint = [
+                    {
+                        measurement: measurementName,
+                        tags,
+                        fields: { error_count: 1 },
+                    },
+                ];
                 await writeBatchToInfluxV1(
                     datapoint,
                     `Error event: ${apiType}/${serverName}`,

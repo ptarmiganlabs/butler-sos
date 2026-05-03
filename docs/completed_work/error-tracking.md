@@ -57,7 +57,6 @@ Butler-SOS:
 | Tag: `host` | Hostname/IP of the server where error occurred |
 | Tag: `server_name` | Configured server name |
 | Tag: `virtual_proxy` | Virtual proxy prefix (only present for `PROXY_API` errors) |
-| Tag: `destination_host` | Destination host (for write errors to InfluxDB, MQTT, etc.) |
 | Field: `error_count` | Integer, always `1` per event |
 
 Example InfluxDB line protocol entry:

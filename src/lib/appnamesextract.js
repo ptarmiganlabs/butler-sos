@@ -13,7 +13,9 @@ import { logError } from './log-error.js';
  * @returns {Promise<void>}
  */
 async function trackAppNamesFailure(hostname) {
-    await globals.errorTracker.incrementError('APP_NAMES_EXTRACT', hostname || '', { host: hostname || '' });
+    await globals.errorTracker.incrementError('APP_NAMES_EXTRACT', hostname || '', {
+        host: hostname || '',
+    });
 }
 
 /**
