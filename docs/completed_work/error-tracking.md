@@ -87,49 +87,119 @@ The `module` field in the `metadata` argument identifies which part of Butler SO
 
 ## InfluxDB Data Model
 
-| Element | Value |
-|---------|-------|
-| Measurement | Configurable via `errorTracking.influxdb.measurementName` (default: `butler_sos_errors`) |
-| Tag: `error_type` | One of the error type codes listed above |
-| Tag: `server_name` | Configured Qlik Sense server name (empty string if not applicable) |
-| Tag: `host` | Hostname/IP of the Qlik Sense server or MQTT broker where the error occurred (present when provided) |
-| Tag: `virtual_proxy` | Virtual proxy prefix (present for `PROXY_API` and `PROXY_SESSIONS_MQTT` errors) |
-| Tag: `destination_host` | Target URL/host for outbound write failures (InfluxDB, New Relic, etc.) |
-| Tag: `module` | Butler SOS subsystem that generated the error (see Module Context Values above) |
-| Field: `error_count` | Integer, always `1` per event |
-| Field: `error_category` | String derived from the error object (e.g. `timeout`, `connection_refused`, `auth_error`, `http_error`, `unknown`) |
+Every error event written to InfluxDB produces one data point with a mix of **tags** (indexed, for filtering/grouping) and **fields** (values, for querying/alerting).
 
-Example InfluxDB line protocol entries:
+### Tags
+
+| Tag | Always present | Value |
+|-----|---------------|-------|
+| `error_type` | Yes | One of the error type codes (e.g. `HEALTH_API`, `INFLUXDB_V3_WRITE`) |
+| `server_name` | Yes | Configured Qlik Sense server name, or `''` if not applicable |
+| `host` | When provided | Hostname/IP of the Qlik Sense server or MQTT broker |
+| `virtual_proxy` | `PROXY_API`, `PROXY_SESSIONS_MQTT` only | Virtual proxy prefix (e.g. `/`, `/hdr`) |
+| `destination_host` | Destination write errors | Target URL for InfluxDB, New Relic etc. |
+| `module` | When provided | Butler SOS subsystem (see Module Context Values table) |
+
+### Fields
+
+| Field | Type | Always present | Description |
+|-------|------|---------------|-------------|
+| `error_count` | integer | Yes | Always `1` — one point per error event |
+| `error_category` | string | Yes | Human-readable category (see Error Categorization below) |
+| `error_code` | string | When present | OS/library error code (e.g. `ECONNREFUSED`, `ETIMEDOUT`) |
+| `http_status` | integer | HTTP errors only | HTTP response status code (e.g. `401`, `503`) |
+| `request_url` | string | Axios errors only | Sanitized request URL — scheme + host + path, **query string stripped** |
+| `request_timeout_ms` | integer | Axios errors with timeout | Configured Axios timeout in milliseconds (e.g. `5000`) |
+| `remote_address` | string | TCP connection errors | Remote IP that was dialled (from `err.cause.address`) |
+| `remote_port` | integer | TCP connection errors | Remote port that was dialled (from `err.cause.port`) |
+| `syscall` | string | TCP connection errors | OS syscall that failed (e.g. `connect`) |
+
+> `request_url` has query parameters stripped to avoid leaking secrets (e.g. `Xrfkey` values) into InfluxDB.
+
+### Example line protocol entries
 
 ```text
-# Health API failure for a Qlik Sense server
-butler_sos_errors,error_type=HEALTH_API,server_name=Sense1,host=sense1.example.com:4747,module=HEALTH_METRICS error_count=1i,error_category="connection_refused"
+# ECONNREFUSED dialling Qlik Sense proxy
+butler_sos_errors,error_type=PROXY_API,server_name=sense2,host=pro2-win2.lab.ptarmiganlabs.net,virtual_proxy=/ error_count=1i,error_category="connection_refused",error_code="ECONNREFUSED",request_url="https://pro2-win2.lab.ptarmiganlabs.net:4243/qps/session",request_timeout_ms=5000i,remote_address="192.168.100.110",remote_port=4243i,syscall="connect"
 
-# InfluxDB v1 write failure
-butler_sos_errors,error_type=INFLUXDB_V1_WRITE,server_name=Sense1,module=HEALTH_METRICS error_count=1i,error_category="timeout"
+# Timeout calling Qlik Sense health API
+butler_sos_errors,error_type=HEALTH_API,server_name=sense1,host=sense1.example.com error_count=1i,error_category="timeout",error_code="ECONNABORTED",request_url="https://sense1.example.com:4747/engine/healthcheck",request_timeout_ms=5000i
 
-# MQTT publish failure
-butler_sos_errors,error_type=MQTT_PUBLISH,server_name=Sense1,host=mqtt.example.com,module=HEALTH_METRICS_MQTT error_count=1i,error_category="connection_refused"
+# HTTP 401 from New Relic
+butler_sos_errors,error_type=NEW_RELIC_POST,server_name=,module=HEALTH_METRICS_NEW_RELIC,destination_host=https://metric-api.newrelic.com error_count=1i,error_category="auth_error",http_status=401i,error_code=""
+
+# InfluxDB v3 write failure (non-network)
+butler_sos_errors,error_type=INFLUXDB_V3_WRITE,server_name=sense1,module=HEALTH_METRICS error_count=1i,error_category="unknown",error_code=""
 
 # UDP event processing failure
-butler_sos_errors,error_type=UDP_USER_EVENT,server_name=,module=UDP_USER_EVENTS error_count=1i,error_category="unknown"
+butler_sos_errors,error_type=UDP_USER_EVENT,server_name=,module=UDP_USER_EVENTS error_count=1i,error_category="unknown",error_code=""
 ```
 
 ## Error Categorization
 
-The `error_category` field is derived by `error-categorizer.js` from the original `Error` object. Categories are:
+The `error_category` field is derived by `getErrorCategory()` in [src/lib/error-categorizer.js](../../src/lib/error-categorizer.js) from the original `Error` object passed to `incrementError`.
 
-| Category | Condition |
+`getErrorMetadata()` in the same file additionally extracts Axios-specific fields (`request_url`, `request_timeout_ms`) and network-level fields from `err.cause` (`remote_address`, `remote_port`, `syscall`).
+
+### Categories
+
+| Category | Trigger condition |
 |---|---|
-| `timeout` | ETIMEDOUT, ESOCKETTIMEDOUT, request timed out |
-| `connection_refused` | ECONNREFUSED |
-| `connection_reset` | ECONNRESET |
-| `not_found` | ENOTFOUND, 404 HTTP |
-| `auth_error` | 401, 403 HTTP |
-| `rate_limit` | 429 HTTP |
-| `server_error` | 5xx HTTP |
-| `http_error` | Other HTTP error codes |
-| `unknown` | No `err` object passed, or unrecognized error |
+| `timeout` | `err.code === 'ETIMEDOUT'` or `'ECONNABORTED'`, message contains `'timeout'`, or `err.name === 'RequestTimedOutError'` |
+| `connection_refused` | `err.code === 'ECONNREFUSED'` |
+| `host_not_found` | `err.code === 'ENOTFOUND'` |
+| `connection_reset` | `err.code === 'ECONNRESET'` |
+| `auth_error` | HTTP status 401 or 403 |
+| `not_found` | HTTP status 404 |
+| `rate_limited` | HTTP status 429 |
+| `http_5xx` | HTTP status ≥ 500 |
+| `http_4xx` | HTTP status 400–499 (other than 401, 403, 404, 429) |
+| `certificate_error` | Error message contains `'cert'`, `'TLS'`, or `'SSL'` |
+| `mqtt_error` | Error message contains `'mqtt'` |
+| `new_relic_error` | Error message contains `'new relic'` |
+| `unknown` | No `err` object passed, or none of the above matched |
+
+### Axios errors (ECONNREFUSED, ETIMEDOUT etc.)
+
+For Axios-originated errors, `err.code` reflects the outer Axios wrapper (`ECONNREFUSED`, `ECONNABORTED`, `ETIMEDOUT`). The actual TCP-level cause is in `err.cause`, which holds the raw `Error` from Node's net layer with `.address`, `.port`, and `.syscall` properties. Both levels are captured.
+
+## Console Logging
+
+### Per-error summary (on every error)
+
+When `Butler-SOS.errorTracking.logSummary.enable: true` (the default), every call to `incrementError` logs a running cumulative total at `info` level:
+
+```
+2026-05-03T16:10:09.420Z info: ERROR TRACKER: Error counts today (UTC): Total=3, Details={"PROXY_API":{"total":2,"servers":{"sense1":2}},"HEALTH_API":{"total":1,"servers":{"sense1":1}}}
+```
+
+The `Details` JSON is grouped by error type → `{ total, servers: { serverName: count } }`. For errors with no server context the key `_no_server_context` is used.
+
+### Daily midnight reset
+
+At midnight UTC the tracker logs a final summary then resets all counters:
+
+```
+ERROR TRACKER: Midnight UTC reached, resetting error counters
+ERROR TRACKER: Error counts today (UTC): Total=47, Details={...}
+ERROR TRACKER: Reset all error counters
+ERROR TRACKER: Scheduled next error counter reset at 2026-05-04T00:00:00.000Z (in 1440 minutes)
+```
+
+### Debug-level messages
+
+At `debug` log level, individual counter increments are also logged:
+
+```
+ERROR TRACKER: Adding first error count for PROXY_API/sense1
+ERROR TRACKER: Incremented error count for PROXY_API/sense1, new count: 2
+ERROR TRACKER: Date changed from 2026-05-03 to 2026-05-04, resetting counters
+ERROR TRACKER: Error writing error event to InfluxDB: <message>   ← only on InfluxDB write failure
+```
+
+### InfluxDB write failures (non-blocking)
+
+InfluxDB writes are dispatched via `setImmediate` so they never block the error tracking path. Failures are logged at `debug` level only and do not affect in-memory counting or console summary logging.
 
 ## Usage Examples
 
@@ -173,40 +243,9 @@ await writeToInfluxWithRetry(
 );
 ```
 
-## Migration from Legacy `failedPollsTracking`
-
-The previous `influxdbConfig.failedPollsTracking` config has been consolidated into `errorTracking`. The new system:
-
-- **Tracks ALL error types** (not just Qlik Sense API polls)
-- **Uses a single `incrementError()` call** with metadata and error object support
-- **Provides consistent error tracking** across all Butler SOS operations
-
-### Config Migration
-
-**Old config:**
-
-```yaml
-Butler-SOS:
-  influxdbConfig:
-    failedPollsTracking:
-      enable: true
-      measurementName: sense_failed_polls
-```
-
-**New config:**
-
-```yaml
-Butler-SOS:
-  errorTracking:
-    enable: true
-    influxdb:
-      enable: true
-      measurementName: butler_sos_errors
-```
-
 ## Grafana Usage Examples
 
-### Rate of errors by module (InfluxDB v2 / Flux)
+### Rate of errors by type and module (InfluxDB v2 / Flux)
 
 ```flux
 from(bucket: "mybucket")
@@ -229,15 +268,39 @@ from(bucket: "mybucket")
   |> group(columns: ["server_name"])
 ```
 
-### Errors by category (InfluxDB v2 / Flux)
+### Errors broken down by category (InfluxDB v2 / Flux)
+
+```flux
+from(bucket: "mybucket")
+  |> range(start: -24h)
+  |> filter(fn: (r) => r._measurement == "butler_sos_errors")
+  |> filter(fn: (r) => r._field == "error_count")
+  |> group(columns: ["error_category"])
+  |> sum()
+```
+
+### Remote addresses that caused connection errors (InfluxDB v2 / Flux)
+
+```flux
+from(bucket: "mybucket")
+  |> range(start: -24h)
+  |> filter(fn: (r) => r._measurement == "butler_sos_errors")
+  |> filter(fn: (r) => r._field == "remote_address")
+  |> group(columns: ["server_name", "error_type"])
+  |> last()
+```
+
+### Errors with request URL detail (InfluxDB v2 / Flux)
+
+Useful for confirming which endpoint is being called when errors occur:
 
 ```flux
 from(bucket: "mybucket")
   |> range(start: -1h)
   |> filter(fn: (r) => r._measurement == "butler_sos_errors")
-  |> filter(fn: (r) => r._field == "error_category")
-  |> group(columns: ["error_category"])
-  |> count()
+  |> filter(fn: (r) => r._field == "request_url")
+  |> group(columns: ["error_type", "server_name"])
+  |> last()
 ```
 
 ### Total errors by type (InfluxQL / InfluxDB v1)
@@ -248,14 +311,21 @@ WHERE time > NOW() - 1h
 GROUP BY "error_type", "server_name", "module" FILL(0)
 ```
 
-## Testing
+### Connection error detail (InfluxQL / InfluxDB v1)
 
-Unit tests for the ErrorTracker are located at:
+```sql
+SELECT "remote_address", "remote_port", "request_url", "error_category"
+FROM "butler_sos_errors"
+WHERE "error_type" = 'PROXY_API' AND time > NOW() - 1h
+ORDER BY time DESC
+```
 
-- `src/lib/__tests__/error-tracker.test.js` - Core ErrorTracker functionality
+### InfluxDB v3 / SQL
 
-Run tests with:
-
-```bash
-npm run test
+```sql
+SELECT error_type, server_name, error_category, error_code,
+       remote_address, remote_port, request_url, request_timeout_ms
+FROM butler_sos_errors
+WHERE time > now() - interval '1 hour'
+ORDER BY time DESC
 ```
