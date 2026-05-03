@@ -36,7 +36,9 @@ describe('post-to-mqtt', () => {
     beforeEach(() => {
         // Reset all mocks before each test
         jest.clearAllMocks();
-        globals.mqttClient.publish.mockImplementation(() => {});
+        globals.mqttClient.publish.mockImplementation((topic, msg, cb) => {
+            if (typeof cb === 'function') cb(null);
+        });
         // Setup default config values
         globals.config.get.mockImplementation((path) => {
             if (path === 'Butler-SOS.errorTracking.enable') return true;
@@ -135,91 +137,113 @@ describe('post-to-mqtt', () => {
             // Verify MQTT messages were published with the correct topics and payloads
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/version',
-                '13.95.4'
+                '13.95.4',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/started',
-                '2023-01-01T10:00:00.000Z'
+                '2023-01-01T10:00:00.000Z',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/mem/comitted',
-                '5000'
+                '5000',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/mem/allocated',
-                '8000'
+                '8000',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/mem/free',
-                '3000'
+                '3000',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/cpu/total',
-                '25.5'
+                '25.5',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/session/active',
-                '10'
+                '10',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/session/total',
-                '50'
+                '50',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/apps/active_docs',
-                '5'
+                '5',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/apps/loaded_docs',
-                '15'
+                '15',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/apps/in_memory_docs',
-                '8'
+                '8',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/apps/calls',
-                '100'
+                '100',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/apps/selections',
-                '200'
+                '200',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/users/active',
-                '20'
+                '20',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/users/total',
-                '100'
+                '100',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/cache/hits',
-                '150'
+                '150',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/cache/lookups',
-                '200'
+                '200',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/cache/added',
-                '50'
+                '50',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/cache/replaced',
-                '25'
+                '25',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/cache/bytes_added',
-                '1024'
+                '1024',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/cache/hit_ratio',
-                '75'
+                '75',
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlik1/saturated',
-                '0'
+                '0',
+                expect.any(Function)
             );
         });
 
@@ -288,7 +312,8 @@ describe('post-to-mqtt', () => {
             // Verify MQTT message was published with the correct topic and payload
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/qlikserver.example.com/usersession/vptest',
-                sessionData
+                sessionData,
+                expect.any(Function)
             );
         });
     });
@@ -313,17 +338,20 @@ describe('post-to-mqtt', () => {
             // Verify MQTT message was published to the everything topic
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/userevents/everything',
-                expect.stringContaining('"messageType":"user-event"')
+                expect.stringContaining('"messageType":"user-event"'),
+                expect.any(Function)
             );
 
             // Verify custom tags were added to the payload
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 expect.any(String),
-                expect.stringContaining('"environment":"production"')
+                expect.stringContaining('"environment":"production"'),
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 expect.any(String),
-                expect.stringContaining('"region":"eu-west"')
+                expect.stringContaining('"region":"eu-west"'),
+                expect.any(Function)
             );
         });
 
@@ -346,11 +374,13 @@ describe('post-to-mqtt', () => {
             // Verify MQTT message was published to both the everything topic and session start topic
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/userevents/everything',
-                expect.any(String)
+                expect.any(String),
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/userevents/session/start',
-                expect.any(String)
+                expect.any(String),
+                expect.any(Function)
             );
         });
 
@@ -373,11 +403,13 @@ describe('post-to-mqtt', () => {
             // Verify MQTT message was published to both the everything topic and session stop topic
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/userevents/everything',
-                expect.any(String)
+                expect.any(String),
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/userevents/session/stop',
-                expect.any(String)
+                expect.any(String),
+                expect.any(Function)
             );
         });
 
@@ -400,11 +432,13 @@ describe('post-to-mqtt', () => {
             // Verify MQTT message was published to both the everything topic and connection open topic
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/userevents/everything',
-                expect.any(String)
+                expect.any(String),
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/userevents/connection/open',
-                expect.any(String)
+                expect.any(String),
+                expect.any(Function)
             );
         });
 
@@ -427,11 +461,13 @@ describe('post-to-mqtt', () => {
             // Verify MQTT message was published to both the everything topic and connection close topic
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/userevents/everything',
-                expect.any(String)
+                expect.any(String),
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/userevents/connection/close',
-                expect.any(String)
+                expect.any(String),
+                expect.any(Function)
             );
         });
 
@@ -456,11 +492,13 @@ describe('post-to-mqtt', () => {
             // Verify app info was included in the payload
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 expect.any(String),
-                expect.stringContaining('"appId":"12345-67890"')
+                expect.stringContaining('"appId":"12345-67890"'),
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 expect.any(String),
-                expect.stringContaining('"appName":"Sales Dashboard"')
+                expect.stringContaining('"appName":"Sales Dashboard"'),
+                expect.any(Function)
             );
         });
 
@@ -493,24 +531,28 @@ describe('post-to-mqtt', () => {
             // Verify user agent info was included in the payload
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 expect.any(String),
-                expect.stringContaining('"uaBrowserName":"Chrome"')
+                expect.stringContaining('"uaBrowserName":"Chrome"'),
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 expect.any(String),
-                expect.stringContaining('"uaBrowserMajorVersion":"90"')
+                expect.stringContaining('"uaBrowserMajorVersion":"90"'),
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 expect.any(String),
-                expect.stringContaining('"uaOsName":"Windows"')
+                expect.stringContaining('"uaOsName":"Windows"'),
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 expect.any(String),
-                expect.stringContaining('"uaOsVersion":"10"')
+                expect.stringContaining('"uaOsVersion":"10"'),
+                expect.any(Function)
             );
         });
 
-        test('should handle errors during publishing', async () => {
-            // Force an error by making the MQTT client throw
+        test('should handle synchronous errors during publishing', async () => {
+            // Force a synchronous error by making the MQTT client throw
             globals.mqttClient.publish.mockImplementation(() => {
                 throw new Error('MQTT publish error');
             });
@@ -533,6 +575,37 @@ describe('post-to-mqtt', () => {
             // Verify error was logged
             expect(mockLogError).toHaveBeenCalledWith(
                 expect.stringContaining('USER EVENT MQTT: Failed posting message to MQTT'),
+                expect.any(Error)
+            );
+        });
+
+        test('should handle broker-side async errors during publishing', async () => {
+            // Simulate broker rejection via callback
+            globals.mqttClient.publish.mockImplementation((topic, msg, cb) => {
+                if (typeof cb === 'function') cb(new Error('Broker connection error'));
+            });
+
+            const userEvent = {
+                messageType: 'user-event',
+                host: 'qlikserver.example.com',
+                command: 'Generic command',
+                user_directory: 'INTERNAL',
+                user_id: 'sa_admin',
+                origin: 'qlik',
+                context: 'session',
+                message: 'User action performed',
+            };
+
+            await postUserEventToMQTT(userEvent);
+
+            expect(mockLogError).toHaveBeenCalledWith(
+                expect.stringContaining('USER EVENT MQTT: Failed posting message to MQTT'),
+                expect.any(Error)
+            );
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'MQTT_PUBLISH',
+                'qlikserver.example.com',
+                expect.objectContaining({ module: 'USER_EVENTS_MQTT' }),
                 expect.any(Error)
             );
         });
@@ -566,11 +639,13 @@ describe('post-to-mqtt', () => {
             expect(globals.mqttClient.publish).toHaveBeenCalledTimes(2);
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/log',
-                expect.any(String)
+                expect.any(String),
+                expect.any(Function)
             );
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/log/engine/common',
-                expect.any(String)
+                expect.any(String),
+                expect.any(Function)
             );
 
             const payload = JSON.parse(globals.mqttClient.publish.mock.calls[0][1]);
@@ -597,7 +672,8 @@ describe('post-to-mqtt', () => {
 
             expect(globals.mqttClient.publish).toHaveBeenCalledWith(
                 'butler-sos/log/engine/common',
-                expect.any(String)
+                expect.any(String),
+                expect.any(Function)
             );
         });
 

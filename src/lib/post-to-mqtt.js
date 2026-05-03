@@ -2,6 +2,24 @@ import globals from '../globals.js';
 import { logError } from './log-error.js';
 
 /**
+ * Wraps `mqttClient.publish()` in a Promise so that both synchronous argument
+ * errors and asynchronous broker/network failures (reported via the publish
+ * callback) are surfaced as Promise rejections.
+ *
+ * @param {string} topic - The MQTT topic to publish to
+ * @param {string} message - The message payload
+ * @returns {Promise<void>}
+ */
+function publishAsync(topic, message) {
+    return new Promise((resolve, reject) => {
+        globals.mqttClient.publish(topic, message, (err) => {
+            if (err) reject(err);
+            else resolve();
+        });
+    });
+}
+
+/**
  * Posts health metrics from Qlik Sense engine healthcheck API to MQTT.
  *
  * This function publishes various metrics (memory usage, CPU usage, sessions, cache, etc.)
@@ -10,102 +28,62 @@ import { logError } from './log-error.js';
  * @param {string} _host - The host name or IP (not used)
  * @param {string} serverName - The name of the server, used in MQTT topic path
  * @param {object} body - The health metrics data from Sense engine healthcheck API
- * @returns {void}
+ * @returns {Promise<void>}
  */
 export async function postHealthToMQTT(_host, serverName, body) {
     // Get base MQTT topic
     const baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
     const brokerHost = globals.config.get('Butler-SOS.mqttConfig.brokerHost');
 
-    try {
-        // Send to MQTT
-        globals.mqttClient.publish(`${baseTopic + serverName}/version`, body.version);
-        globals.mqttClient.publish(`${baseTopic + serverName}/started`, body.started);
-        globals.mqttClient.publish(
-            `${baseTopic + serverName}/mem/comitted`,
-            body.mem.committed.toString()
-        );
-        globals.mqttClient.publish(
-            `${baseTopic + serverName}/mem/allocated`,
-            body.mem.allocated.toString()
-        );
-        globals.mqttClient.publish(`${baseTopic + serverName}/mem/free`, body.mem.free.toString());
-
-        globals.mqttClient.publish(
-            `${baseTopic + serverName}/cpu/total`,
-            body.cpu.total.toString()
-        );
-
-        globals.mqttClient.publish(
-            `${baseTopic + serverName}/session/active`,
-            body.session.active.toString()
-        );
-        globals.mqttClient.publish(
-            `${baseTopic + serverName}/session/total`,
-            body.session.total.toString()
-        );
-
-        globals.mqttClient.publish(
+    // Build the list of publishes up-front so all calls to mqttClient.publish()
+    // happen synchronously; broker-side failures are captured via the callback.
+    const publishes = [
+        publishAsync(`${baseTopic + serverName}/version`, body.version),
+        publishAsync(`${baseTopic + serverName}/started`, body.started),
+        publishAsync(`${baseTopic + serverName}/mem/comitted`, body.mem.committed.toString()),
+        publishAsync(`${baseTopic + serverName}/mem/allocated`, body.mem.allocated.toString()),
+        publishAsync(`${baseTopic + serverName}/mem/free`, body.mem.free.toString()),
+        publishAsync(`${baseTopic + serverName}/cpu/total`, body.cpu.total.toString()),
+        publishAsync(`${baseTopic + serverName}/session/active`, body.session.active.toString()),
+        publishAsync(`${baseTopic + serverName}/session/total`, body.session.total.toString()),
+        publishAsync(
             `${baseTopic + serverName}/apps/active_docs`,
             body.apps.active_docs.toString()
-        );
-        globals.mqttClient.publish(
+        ),
+        publishAsync(
             `${baseTopic + serverName}/apps/loaded_docs`,
             body.apps.loaded_docs.toString()
-        );
-        globals.mqttClient.publish(
+        ),
+        publishAsync(
             `${baseTopic + serverName}/apps/in_memory_docs`,
             body.apps.in_memory_docs.toString()
-        );
-        globals.mqttClient.publish(
-            `${baseTopic + serverName}/apps/calls`,
-            body.apps.calls.toString()
-        );
-        globals.mqttClient.publish(
-            `${baseTopic + serverName}/apps/selections`,
-            body.apps.selections.toString()
-        );
-
-        globals.mqttClient.publish(
-            `${baseTopic + serverName}/users/active`,
-            body.users.active.toString()
-        );
-        globals.mqttClient.publish(
-            `${baseTopic + serverName}/users/total`,
-            body.users.total.toString()
-        );
-
-        globals.mqttClient.publish(
-            `${baseTopic + serverName}/cache/hits`,
-            body.cache.hits.toString()
-        );
-        globals.mqttClient.publish(
-            `${baseTopic + serverName}/cache/lookups`,
-            body.cache.lookups.toString()
-        );
-        globals.mqttClient.publish(
-            `${baseTopic + serverName}/cache/added`,
-            body.cache.added.toString()
-        );
-        globals.mqttClient.publish(
-            `${baseTopic + serverName}/cache/replaced`,
-            body.cache.replaced.toString()
-        );
-        globals.mqttClient.publish(
+        ),
+        publishAsync(`${baseTopic + serverName}/apps/calls`, body.apps.calls.toString()),
+        publishAsync(`${baseTopic + serverName}/apps/selections`, body.apps.selections.toString()),
+        publishAsync(`${baseTopic + serverName}/users/active`, body.users.active.toString()),
+        publishAsync(`${baseTopic + serverName}/users/total`, body.users.total.toString()),
+        publishAsync(`${baseTopic + serverName}/cache/hits`, body.cache.hits.toString()),
+        publishAsync(`${baseTopic + serverName}/cache/lookups`, body.cache.lookups.toString()),
+        publishAsync(`${baseTopic + serverName}/cache/added`, body.cache.added.toString()),
+        publishAsync(`${baseTopic + serverName}/cache/replaced`, body.cache.replaced.toString()),
+        publishAsync(
             `${baseTopic + serverName}/cache/bytes_added`,
             body.cache.bytes_added.toString()
-        );
-        if (body.cache.lookups > 0) {
-            globals.mqttClient.publish(
+        ),
+        publishAsync(`${baseTopic + serverName}/saturated`, body.saturated.toString()),
+    ];
+
+    if (body.cache.lookups > 0) {
+        publishes.push(
+            publishAsync(
                 `${baseTopic + serverName}/cache/hit_ratio`,
                 Math.floor((body.cache.hits / body.cache.lookups) * 100).toString()
-            );
-        }
-
-        globals.mqttClient.publish(
-            `${baseTopic + serverName}/saturated`,
-            body.saturated.toString()
+            )
         );
+    }
+
+    try {
+        await Promise.all(publishes);
     } catch (err) {
         await globals.errorTracker.incrementError(
             'MQTT_PUBLISH',
@@ -130,7 +108,7 @@ export async function postHealthToMQTT(_host, serverName, body) {
  * @param {string} host - The host name of the Qlik Sense server
  * @param {string} virtualProxy - The virtual proxy prefix
  * @param {string} body - JSON string containing user session information
- * @returns {void}
+ * @returns {Promise<void>}
  */
 export async function postUserSessionsToMQTT(host, virtualProxy, body) {
     // Get base MQTT topic
@@ -138,8 +116,7 @@ export async function postUserSessionsToMQTT(host, virtualProxy, body) {
     const brokerHost = globals.config.get('Butler-SOS.mqttConfig.brokerHost');
 
     try {
-        // Send to MQTT
-        globals.mqttClient.publish(`${baseTopic + host}/usersession${virtualProxy}`, body);
+        await publishAsync(`${baseTopic + host}/usersession${virtualProxy}`, body);
     } catch (err) {
         await globals.errorTracker.incrementError(
             'MQTT_PUBLISH',
@@ -215,15 +192,18 @@ export async function postUserEventToMQTT(msg) {
         }
 
         // Send message to MQTT topics, as defined in the config file.
-        let topic;
+        // Collect all publish Promises so mqttClient.publish() is called
+        // synchronously for each topic before we await completion.
+        const publishes = [];
+
         if (
             globals.config.get('Butler-SOS.userEvents.sendToMQTT.postTo.everythingTopic.enable') ===
             true
         ) {
-            topic = globals.config.get(
+            const everythingTopic = globals.config.get(
                 'Butler-SOS.userEvents.sendToMQTT.postTo.everythingTopic.topic'
             );
-            globals.mqttClient.publish(topic, JSON.stringify(payload));
+            publishes.push(publishAsync(everythingTopic, JSON.stringify(payload)));
         }
 
         if (
@@ -232,10 +212,10 @@ export async function postUserEventToMQTT(msg) {
             ) === true &&
             payload.command === 'Start session'
         ) {
-            topic = globals.config.get(
+            const sessionStartTopic = globals.config.get(
                 'Butler-SOS.userEvents.sendToMQTT.postTo.sessionStartTopic.topic'
             );
-            globals.mqttClient.publish(topic, JSON.stringify(payload));
+            publishes.push(publishAsync(sessionStartTopic, JSON.stringify(payload)));
         }
 
         if (
@@ -244,10 +224,10 @@ export async function postUserEventToMQTT(msg) {
             ) === true &&
             payload.command === 'Stop session'
         ) {
-            topic = globals.config.get(
+            const sessionStopTopic = globals.config.get(
                 'Butler-SOS.userEvents.sendToMQTT.postTo.sessionStopTopic.topic'
             );
-            globals.mqttClient.publish(topic, JSON.stringify(payload));
+            publishes.push(publishAsync(sessionStopTopic, JSON.stringify(payload)));
         }
 
         if (
@@ -256,10 +236,10 @@ export async function postUserEventToMQTT(msg) {
             ) === true &&
             payload.command === 'Open connection'
         ) {
-            topic = globals.config.get(
+            const connectionOpenTopic = globals.config.get(
                 'Butler-SOS.userEvents.sendToMQTT.postTo.connectionOpenTopic.topic'
             );
-            globals.mqttClient.publish(topic, JSON.stringify(payload));
+            publishes.push(publishAsync(connectionOpenTopic, JSON.stringify(payload)));
         }
 
         if (
@@ -268,11 +248,13 @@ export async function postUserEventToMQTT(msg) {
             ) === true &&
             payload.command === 'Close connection'
         ) {
-            topic = globals.config.get(
+            const connectionCloseTopic = globals.config.get(
                 'Butler-SOS.userEvents.sendToMQTT.postTo.connectionCloseTopic.topic'
             );
-            globals.mqttClient.publish(topic, JSON.stringify(payload));
+            publishes.push(publishAsync(connectionCloseTopic, JSON.stringify(payload)));
         }
+
+        await Promise.all(publishes);
     } catch (err) {
         let brokerHost = '';
         try {
@@ -329,29 +311,33 @@ export async function postLogEventToMQTT(msg) {
             }
         }
 
+        // Collect all publish Promises so mqttClient.publish() is called
+        // synchronously for each topic before we await completion.
+        const publishes = [];
+
         // Send to MQTT root topic
         if (globals.config.get('Butler-SOS.logEvents.sendToMQTT.postTo.baseTopic') === true) {
-            globals.mqttClient.publish(baseTopic, JSON.stringify(msg));
+            publishes.push(publishAsync(baseTopic, JSON.stringify(msg)));
         }
 
         // Send to MQTT sub-topics
         if (globals.config.get('Butler-SOS.logEvents.sendToMQTT.postTo.subsystemTopics') === true) {
-            // Add / to topic path if it's not already there
-            if (baseTopic.slice(-1) !== '/') {
-                baseTopic = `${baseTopic}/`;
-            }
+            // Build the subsystem topic path from the base topic
+            let topicPath = baseTopic.slice(-1) !== '/' ? `${baseTopic}/` : baseTopic;
 
             const topicTree = msg.subsystem.split('.');
 
             topicTree.forEach((element) => {
-                baseTopic += `${element.toLowerCase()}/`;
+                topicPath += `${element.toLowerCase()}/`;
             });
 
             // Remove / at end of topic path
-            baseTopic = baseTopic.substring(0, baseTopic.length - 1);
+            topicPath = topicPath.substring(0, topicPath.length - 1);
 
-            globals.mqttClient.publish(baseTopic, JSON.stringify(msg));
+            publishes.push(publishAsync(topicPath, JSON.stringify(msg)));
         }
+
+        await Promise.all(publishes);
     } catch (err) {
         let brokerHost = '';
         try {
