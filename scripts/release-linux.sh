@@ -26,7 +26,6 @@ zip -9 -u -r "../${DIST_FILE_NAME}-${RELEASE_VERSION}-linux-x64.zip" "./config/p
 
 ls -la
 
-# Clean up build artifacts (but keep zip file for upload step)
+# Return to repository root. Build artifacts are kept here so the workflow's
+# later cleanup step can remove them without failing on already-missing files.
 cd ..
-rm build.cjs
-rm "./${DIST_FILE_NAME}"
