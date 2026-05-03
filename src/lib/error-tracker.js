@@ -122,6 +122,8 @@ export class ErrorTracker {
     _isInfluxDbErrorTrackingEnabled() {
         try {
             return (
+                globals.config.has('Butler-SOS.errorTracking.enable') &&
+                globals.config.get('Butler-SOS.errorTracking.enable') === true &&
                 globals.config.has('Butler-SOS.errorTracking.influxdb.enable') &&
                 globals.config.get('Butler-SOS.errorTracking.influxdb.enable') === true &&
                 isInfluxDbEnabled()
