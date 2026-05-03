@@ -82,6 +82,7 @@ The `module` field in the `metadata` argument identifies which part of Butler SO
 | `LOG_EVENTS_MQTT` | MQTT publish for log events |
 | `HEALTH_METRICS_NEW_RELIC` | New Relic post for health metrics |
 | `PROXY_SESSIONS_NEW_RELIC` | New Relic post for proxy sessions |
+| `UPTIME_NEW_RELIC` | New Relic post for Butler SOS uptime |
 | `UDP_USER_EVENTS` | UDP handler for user events |
 | `UDP_LOG_EVENTS` | UDP handler for log events |
 
