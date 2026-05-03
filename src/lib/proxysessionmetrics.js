@@ -10,7 +10,6 @@ import { Point as Point3 } from '@influxdata/influxdb3-client';
 
 import globals from '../globals.js';
 import { postProxySessionsToInfluxdb } from './influxdb/index.js';
-import { postFailedPollToInfluxdb } from './influxdb/error-metrics.js';
 import { postProxySessionsToNewRelic } from './post-to-new-relic.js';
 import { applyTagsToPoint3, validateUnsignedField } from './influxdb/shared/utils.js';
 import { postUserSessionsToMQTT } from './post-to-mqtt.js';
@@ -357,20 +356,8 @@ export async function getProxySessionStatsFromSense(serverName, host, virtualPro
             }
         }
     } catch (err) {
-        // Track error count
-        await globals.errorTracker.incrementError('PROXY_API', serverName);
-
-        // Store failed poll event to InfluxDB if tracking is enabled
-        postFailedPollToInfluxdb({
-            host,
-            serverName,
-            errorType: 'PROXY_API',
-            virtualProxy,
-        }).catch((influxErr) => {
-            globals.logger.debug(
-                `PROXY SESSIONS: Error storing failed poll to InfluxDB: ${globals.getErrorMessage(influxErr)}`
-            );
-        });
+        // Track error count - single call handles both in-memory counter and InfluxDB write
+        await globals.errorTracker.incrementError('PROXY_API', serverName, { host, virtualProxy });
 
         logError(
             `PROXY SESSIONS: Error when calling proxy session API for server '${serverName}' (${host}), virtual proxy '${virtualProxy}'`,

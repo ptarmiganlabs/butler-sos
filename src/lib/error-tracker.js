@@ -1,16 +1,17 @@
 import { Mutex } from 'async-mutex';
 
 import globals from '../globals.js';
-import { postErrorMetricsToInfluxdb } from './influxdb/error-metrics.js';
+import { getInfluxDbVersion, isInfluxDbEnabled } from './influxdb/shared/utils.js';
 
 /**
  * Class for tracking counts of API errors in Butler SOS.
  *
  * This class provides thread-safe methods to track different types of API errors:
- * - Qlik Sense API errors (Health API, Proxy Sessions API)
+ * - Qlik Sense API errors (Health API, Proxy Sessions API, App Names Extract)
  * - Data destination errors (InfluxDB, New Relic, MQTT)
  *
  * Counters reset daily at midnight UTC.
+ * Optionally writes individual error events to InfluxDB if configured.
  */
 export class ErrorTracker {
     /**
@@ -37,12 +38,14 @@ export class ErrorTracker {
 
     /**
      * Increments the error count for a specific API type and server.
+     * Optionally writes the error event to InfluxDB if configured.
      *
      * @param {string} apiType - The type of API that encountered an error (e.g., 'HEALTH_API', 'PROXY_API')
      * @param {string} serverName - The name of the server where the error occurred (empty string if not applicable)
+     * @param {object} [metadata] - Optional metadata for InfluxDB tags (e.g., { host: '...', virtualProxy: '...' })
      * @returns {Promise<void>}
      */
-    async incrementError(apiType, serverName) {
+    async incrementError(apiType, serverName, metadata = {}) {
         // Ensure the passed parameters are strings
         if (typeof apiType !== 'string') {
             this.logger.error(
@@ -95,17 +98,122 @@ export class ErrorTracker {
             // Log current error statistics
             await this.logErrorSummary();
 
-            // Call placeholder function to store to InfluxDB (non-blocking)
-            // This will be implemented later
-            setImmediate(() => {
-                postErrorMetricsToInfluxdb(this.getErrorStats()).catch((err) => {
-                    this.logger.debug(
-                        `ERROR TRACKER: Error calling placeholder InfluxDB function: ${err.message}`
-                    );
+            // Write individual error event to InfluxDB (non-blocking)
+            if (this._isInfluxDbErrorTrackingEnabled()) {
+                setImmediate(() => {
+                    this._writeErrorToInfluxDB(apiType, serverName, metadata).catch((err) => {
+                        this.logger.debug(
+                            `ERROR TRACKER: Error writing error event to InfluxDB: ${err.message}`
+                        );
+                    });
                 });
-            });
+            }
         } finally {
             release();
+        }
+    }
+
+    /**
+     * Checks if InfluxDB error tracking is enabled in config.
+     *
+     * @returns {boolean} True if enabled
+     * @private
+     */
+    _isInfluxDbErrorTrackingEnabled() {
+        try {
+            return (
+                globals.config.has('Butler-SOS.errorTracking.influxdb.enable') &&
+                globals.config.get('Butler-SOS.errorTracking.influxdb.enable') === true &&
+                isInfluxDbEnabled()
+            );
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Writes a single error event to InfluxDB.
+     *
+     * @param {string} apiType - The error type
+     * @param {string} serverName - The server name
+     * @param {object} metadata - Additional tags for InfluxDB
+     * @returns {Promise<void>}
+     * @private
+     */
+    async _writeErrorToInfluxDB(apiType, serverName, metadata) {
+        const measurementName = globals.config.get('Butler-SOS.errorTracking.influxdb.measurementName') || 'sense_errors';
+        const version = getInfluxDbVersion();
+
+        // Build common tags
+        const tags = {
+            error_type: apiType,
+            server_name: serverName,
+        };
+
+        // Add metadata tags if provided
+        if (metadata.host) {
+            tags.host = metadata.host;
+        }
+        if (metadata.virtualProxy) {
+            tags.virtual_proxy = metadata.virtualProxy;
+        }
+        if (metadata.destinationHost) {
+            tags.destination_host = metadata.destinationHost;
+        }
+
+        try {
+            if (version === 3) {
+                const { Point: Point3 } = await import('@influxdata/influxdb3-client');
+                const point = new Point3(measurementName);
+                Object.entries(tags).forEach(([key, value]) => {
+                    point.setTag(key, value);
+                });
+                point.setIntegerField('error_count', 1);
+
+                const { writeBatchToInfluxV3 } = await import('./influxdb/shared/utils.js');
+                const database = globals.config.get('Butler-SOS.influxdbConfig.v3Config.database');
+                await writeBatchToInfluxV3(
+                    [point],
+                    database,
+                    `Error event: ${apiType}/${serverName}`,
+                    serverName,
+                    globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+                );
+            } else if (version === 2) {
+                const { Point: Point2 } = await import('@influxdata/influxdb-client');
+                const point = new Point2(measurementName);
+                Object.entries(tags).forEach(([key, value]) => {
+                    point.tag(key, value);
+                });
+                point.intField('error_count', 1);
+
+                const { writeBatchToInfluxV2 } = await import('./influxdb/shared/utils.js');
+                const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
+                const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
+                await writeBatchToInfluxV2(
+                    [point],
+                    org,
+                    bucketName,
+                    `Error event: ${apiType}/${serverName}`,
+                    serverName,
+                    globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+                );
+            } else if (version === 1) {
+                const { writeBatchToInfluxV1 } = await import('./influxdb/shared/utils.js');
+                const datapoint = [{
+                    measurement: measurementName,
+                    tags,
+                    fields: { error_count: 1 },
+                }];
+                await writeBatchToInfluxV1(
+                    datapoint,
+                    `Error event: ${apiType}/${serverName}`,
+                    serverName,
+                    globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+                );
+            }
+        } catch (err) {
+            this.logger.debug(`ERROR TRACKER: InfluxDB write failed: ${err.message}`);
         }
     }
 

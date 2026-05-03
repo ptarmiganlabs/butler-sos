@@ -77,10 +77,6 @@ jest.unstable_mockModule('../log-error.js', () => ({
 }));
 const { logError } = await import('../log-error.js');
 
-jest.unstable_mockModule('../influxdb/error-metrics.js', () => ({
-    postFailedPollToInfluxdb: jest.fn().mockResolvedValue(),
-}));
-
 // Import the module to test
 const { getHealthStatsFromSense, setupHealthMetricsTimer } = await import('../healthmetrics.js');
 

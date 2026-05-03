@@ -11,11 +11,11 @@ jest.unstable_mockModule('../../globals.js', () => ({
     default: {
         logger: mockLogger,
         errorTracker: null,
+        config: {
+            get: jest.fn(),
+            has: jest.fn(),
+        },
     },
-}));
-
-jest.unstable_mockModule('../influxdb/error-metrics.js', () => ({
-    postErrorMetricsToInfluxdb: jest.fn().mockResolvedValue(true),
 }));
 
 const { ErrorTracker } = await import('../error-tracker.js');
