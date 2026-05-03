@@ -86,8 +86,11 @@ describe('v3/health-metrics', () => {
         globals.config.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.influxdbConfig.v3Config.database') return 'test-db';
             if (key === 'Butler-SOS.influxdbConfig.maxBatchSize') return 100;
+            if (key === 'Butler-SOS.errorTracking.enable') return true;
+            if (key === 'Butler-SOS.influxdbConfig.host') return 'test-host';
             return false;
         });
+        globals.config.has.mockImplementation((key) => key === 'Butler-SOS.errorTracking.enable');
 
         builder.buildHealthMetricDatapoints.mockResolvedValue({
             formattedTime: '1d 2h 30m',
@@ -268,10 +271,15 @@ describe('v3/health-metrics', () => {
 
         await postHealthMetricsToInfluxdbV3('test-server', 'test-host', body, {});
 
-        expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
-            'INFLUXDB_V3_WRITE',
-            'test-server'
-        );
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'INFLUXDB_V3_WRITE',
+                'test-server',
+                expect.objectContaining({
+                    operation: 'health_metrics_write',
+                    destinationHost: expect.any(String),
+                    error_category: expect.any(String),
+                })
+            );
         expect(globals.logger.error).toHaveBeenCalledWith(
             expect.stringContaining('Error saving health data to InfluxDB v3')
         );

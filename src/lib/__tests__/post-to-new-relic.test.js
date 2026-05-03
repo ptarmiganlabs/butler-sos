@@ -577,7 +577,23 @@ describe('post-to-new-relic', () => {
 
             // Verify
             expect(globals.logger.error).toHaveBeenCalledWith(
-                expect.stringContaining('HEALTH METRICS NEW RELIC: Error sending proxy sessions')
+                expect.stringContaining('HEALTH METRICS NEW RELIC: Error sending health metrics')
+            );
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'NEW_RELIC_POST',
+                '',
+                expect.objectContaining({
+                    operation: 'health_metrics_post',
+                    error_category: expect.any(String),
+                })
+            );
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'NEW_RELIC_POST',
+                '',
+                expect.objectContaining({
+                    operation: 'health_metrics_post',
+                    error_category: expect.any(String),
+                })
             );
         });
     });
@@ -685,6 +701,14 @@ describe('post-to-new-relic', () => {
             expect(globals.logger.error).toHaveBeenCalledWith(
                 expect.stringContaining('UPTIME NEW RELIC: Error sending uptime')
             );
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'NEW_RELIC_POST',
+                '',
+                expect.objectContaining({
+                    operation: 'uptime_post',
+                    error_category: expect.any(String),
+                })
+            );
         });
     });
 
@@ -784,8 +808,24 @@ describe('post-to-new-relic', () => {
             // Verify
             expect(globals.logger.error).toHaveBeenCalledWith(
                 expect.stringContaining(
-                    'USER EVENT NEW RELIC: Error saving user event to New Relic!'
+                    'USER EVENT NEW RELIC: Error sending user event'
                 )
+            );
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'NEW_RELIC_POST',
+                '',
+                expect.objectContaining({
+                    operation: 'user_event_post',
+                    error_category: expect.any(String),
+                })
+            );
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'NEW_RELIC_POST',
+                '',
+                expect.objectContaining({
+                    operation: 'user_event_post',
+                    error_category: expect.any(String),
+                })
             );
         });
     });

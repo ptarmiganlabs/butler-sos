@@ -12,6 +12,7 @@ const mockGlobals = {
     },
     config: {
         get: jest.fn(),
+        has: jest.fn(),
     },
     influx: {
         write: jest.fn(),
@@ -63,8 +64,11 @@ describe('v3/sessions', () => {
         globals.config.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.influxdbConfig.v3Config.database') return 'test-db';
             if (key === 'Butler-SOS.influxdbConfig.maxBatchSize') return 100;
+            if (key === 'Butler-SOS.errorTracking.enable') return true;
+            if (key === 'Butler-SOS.influxdbConfig.host') return 'test-host';
             return undefined;
         });
+        globals.config.has = jest.fn((key) => key === 'Butler-SOS.errorTracking.enable');
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeBatchToInfluxV3.mockResolvedValue();
     });
@@ -153,7 +157,13 @@ describe('v3/sessions', () => {
             );
             expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
                 'INFLUXDB_V3_WRITE',
-                'QSE1'
+                userSessions.serverName,
+                expect.objectContaining({
+                    operation: 'sessions_write',
+                    destinationHost: expect.any(String),
+                    virtualProxy: expect.any(String),
+                    error_category: expect.any(String)
+                })
             );
         });
 

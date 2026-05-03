@@ -81,7 +81,7 @@ Butler-SOS:
             enable: true # Log daily error summary to console at midnight UTC
         influxdb:
             enable: true # Write individual error events to InfluxDB
-            measurementName: sense_errors # Name of InfluxDB measurement for error events
+            measurementName: butler_sos_errors # Name of InfluxDB measurement for error events
 
     # Credentials for third party systems that Butler SOS integrate with.
     # These can also be specified via command line parameters when starting Butler SOS.

@@ -202,7 +202,13 @@ describe('v3/user-events', () => {
             );
             expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
                 'INFLUXDB_V3_WRITE',
-                ''
+                '',
+                expect.objectContaining({
+                    operation: 'user_events_write',
+                    destinationHost: expect.any(String),
+                    command: expect.any(String),
+                    error_category: expect.any(String)
+                })
             );
         });
 

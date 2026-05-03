@@ -39,6 +39,7 @@ describe('post-to-mqtt', () => {
         globals.mqttClient.publish.mockImplementation(() => {});
         // Setup default config values
         globals.config.get.mockImplementation((path) => {
+            if (path === 'Butler-SOS.errorTracking.enable') return true;
             if (path === 'Butler-SOS.mqttConfig.baseTopic') {
                 return 'butler-sos/';
             } else if (path === 'Butler-SOS.userEvents.sendToMQTT.postTo.everythingTopic.enable') {
@@ -608,7 +609,14 @@ describe('post-to-mqtt', () => {
 
             await postLogEventToMQTT(msg);
 
-            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith('MQTT_PUBLISH', '');
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'MQTT_PUBLISH',
+                '',
+                expect.objectContaining({
+                    operation: expect.any(String),
+                    error_category: expect.any(String),
+                })
+            );
             expect(mockLogError).toHaveBeenCalled();
         });
     });

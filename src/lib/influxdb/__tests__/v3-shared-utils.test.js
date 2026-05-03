@@ -10,8 +10,12 @@ const mockGlobals = {
         warn: jest.fn(),
     },
     config: {
-        get: jest.fn(),
-        has: jest.fn(),
+        get: jest.fn((key) => {
+            if (key === 'Butler-SOS.errorTracking.enable') return true;
+            if (key === 'Butler-SOS.influxdbConfig.host') return 'test-host';
+            return undefined;
+        }),
+        has: jest.fn((key) => key === 'Butler-SOS.errorTracking.enable'),
     },
     influx: {
         write: jest.fn(),
@@ -45,6 +49,13 @@ describe('InfluxDB v3 Shared Utils', () => {
         jest.clearAllMocks();
         globals = (await import('../../../globals.js')).default;
         utils = await import('../shared/utils.js');
+
+        // Setup default config mocks
+        globals.config.get.mockImplementation((key) => {
+            if (key === 'Butler-SOS.errorTracking.enable') return true;
+            return undefined;
+        });
+        globals.config.has.mockImplementation((key) => key === 'Butler-SOS.errorTracking.enable');
     });
 
     describe('getInfluxDbVersion', () => {
@@ -145,7 +156,13 @@ describe('InfluxDB v3 Shared Utils', () => {
             );
             expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
                 'INFLUXDB_V3_WRITE',
-                ''
+                '',
+                expect.objectContaining({
+                    operation: 'Test context',
+                    destinationHost: expect.any(String),
+                    error_category: expect.any(String),
+                    maxRetries: expect.any(Number),
+                })
             );
         });
 
