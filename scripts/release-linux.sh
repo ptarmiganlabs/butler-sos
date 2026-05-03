@@ -5,7 +5,7 @@ set -e
 node --experimental-sea-config src/sea-config.json
 
 # Get a copy of the Node executable
-cp $(command -v node) ${DIST_FILE_NAME}
+cp "$(node -p 'process.execPath')" "${DIST_FILE_NAME}"
 npx postject ${DIST_FILE_NAME} NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
 
 # Make binary executable
