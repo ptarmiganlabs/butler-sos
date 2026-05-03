@@ -12,9 +12,12 @@ import { logError } from './log-error.js';
  * @param {object} body - The health metrics data from Sense engine healthcheck API
  * @returns {void}
  */
-export function postHealthToMQTT(_host, serverName, body) {
+export async function postHealthToMQTT(_host, serverName, body) {
     // Get base MQTT topic
     const baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
+    const brokerHost = globals.config.get('Butler-SOS.mqttConfig.brokerHost');
+
+    try {
 
     // Send to MQTT
     globals.mqttClient.publish(`${baseTopic + serverName}/version`, body.version);
@@ -91,7 +94,23 @@ export function postHealthToMQTT(_host, serverName, body) {
         );
     }
 
-    globals.mqttClient.publish(`${baseTopic + serverName}/saturated`, body.saturated.toString());
+        globals.mqttClient.publish(
+            `${baseTopic + serverName}/saturated`,
+            body.saturated.toString()
+        );
+    } catch (err) {
+        await globals.errorTracker.incrementError(
+            'MQTT_PUBLISH',
+            serverName,
+            { host: brokerHost, module: 'HEALTH_METRICS_MQTT' },
+            err
+        );
+
+        logError(
+            `HEALTH METRICS MQTT: Failed publishing health metrics for server '${serverName}'`,
+            err
+        );
+    }
 }
 
 /**
@@ -105,12 +124,27 @@ export function postHealthToMQTT(_host, serverName, body) {
  * @param {string} body - JSON string containing user session information
  * @returns {void}
  */
-export function postUserSessionsToMQTT(host, virtualProxy, body) {
+export async function postUserSessionsToMQTT(host, virtualProxy, body) {
     // Get base MQTT topic
     const baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
+    const brokerHost = globals.config.get('Butler-SOS.mqttConfig.brokerHost');
 
-    // Send to MQTT
-    globals.mqttClient.publish(`${baseTopic + host}/usersession${virtualProxy}`, body);
+    try {
+        // Send to MQTT
+        globals.mqttClient.publish(`${baseTopic + host}/usersession${virtualProxy}`, body);
+    } catch (err) {
+        await globals.errorTracker.incrementError(
+            'MQTT_PUBLISH',
+            host,
+            { host: brokerHost, virtualProxy, module: 'PROXY_SESSIONS_MQTT' },
+            err
+        );
+
+        logError(
+            `PROXY SESSIONS MQTT: Failed publishing session data for host '${host}', virtual proxy '${virtualProxy}'`,
+            err
+        );
+    }
 }
 
 /**
@@ -232,8 +266,15 @@ export async function postUserEventToMQTT(msg) {
             globals.mqttClient.publish(topic, JSON.stringify(payload));
         }
     } catch (err) {
-        // Track error count
-        await globals.errorTracker.incrementError('MQTT_PUBLISH', '');
+        let brokerHost = '';
+        try { brokerHost = globals.config.get('Butler-SOS.mqttConfig.brokerHost') ?? ''; } catch (_) { /* ignore */ }
+
+        await globals.errorTracker.incrementError(
+            'MQTT_PUBLISH',
+            msg?.host || '',
+            { host: brokerHost, module: 'USER_EVENTS_MQTT' },
+            err
+        );
 
         logError('USER EVENT MQTT: Failed posting message to MQTT', err);
     }
@@ -300,8 +341,15 @@ export async function postLogEventToMQTT(msg) {
             globals.mqttClient.publish(baseTopic, JSON.stringify(msg));
         }
     } catch (err) {
-        // Track error count
-        await globals.errorTracker.incrementError('MQTT_PUBLISH', '');
+        let brokerHost = '';
+        try { brokerHost = globals.config.get('Butler-SOS.mqttConfig.brokerHost') ?? ''; } catch (_) { /* ignore */ }
+
+        await globals.errorTracker.incrementError(
+            'MQTT_PUBLISH',
+            msg?.hostname || '',
+            { host: brokerHost, module: 'LOG_EVENTS_MQTT' },
+            err
+        );
 
         logError('LOG EVENT MQTT: Failed posting message to MQTT', err);
     }

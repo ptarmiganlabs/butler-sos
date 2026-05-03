@@ -12,6 +12,9 @@
  * @returns {string} Error category: 'timeout', 'connection_refused', 'auth_error', etc.
  */
 export function getErrorCategory(err) {
+    // TODO: Remove in production
+    console.log('Categorizing error:', err);
+
     if (!err) return 'unknown';
 
     // Timeout errors

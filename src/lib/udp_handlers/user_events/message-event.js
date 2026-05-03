@@ -238,6 +238,13 @@ export async function messageEventHandler(message, _remote) {
             postUserEventToNewRelic(msgObj);
         }
     } catch (err) {
+        await globals.errorTracker.incrementError(
+            'UDP_USER_EVENT',
+            '',
+            { module: 'UDP_USER_EVENTS' },
+            err
+        );
+
         logError('USER EVENT: Error processing user activity event', err);
     }
 }

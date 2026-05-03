@@ -97,7 +97,12 @@ export async function storeUserEventV1(msg) {
 
         globals.logger.verbose('USER EVENT V1: Sent user event data to InfluxDB');
     } catch (err) {
-        await globals.errorTracker.incrementError('INFLUXDB_V1_WRITE', msg.host);
+        await globals.errorTracker.incrementError(
+            'INFLUXDB_V1_WRITE',
+            msg.host,
+            { module: 'USER_EVENTS' },
+            err
+        );
         globals.logger.error(
             `USER EVENT V1: Error saving user event: ${globals.getErrorMessage(err)}`
         );

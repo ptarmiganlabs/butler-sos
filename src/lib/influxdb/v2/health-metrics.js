@@ -142,7 +142,8 @@ export async function postHealthMetricsToInfluxdbV2(serverName, host, body, serv
         () => writePointsToInfluxV2(globals.influx, org, bucketName, points),
         `Health metrics from ${serverName}`,
         'v2',
-        serverName
+        serverName,
+        { module: 'HEALTH_METRICS' }
     );
 
     globals.logger.verbose(`HEALTH METRICS V2: Stored health data from server: ${serverName}`);

@@ -57,7 +57,12 @@ export async function postButlerSOSMemoryUsageToInfluxdbV3(memory) {
         );
         globals.logger.debug(`MEMORY USAGE V3: Wrote data to InfluxDB v3`);
     } catch (err) {
-        await globals.errorTracker.incrementError('INFLUXDB_V3_WRITE', '');
+        await globals.errorTracker.incrementError(
+            'INFLUXDB_V3_WRITE',
+            '',
+            { module: 'BUTLER_MEMORY' },
+            err
+        );
         globals.logger.error(
             `MEMORY USAGE V3: Error saving memory usage data to InfluxDB v3! ${globals.getErrorMessage(err)}`
         );

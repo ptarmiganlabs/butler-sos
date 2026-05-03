@@ -160,7 +160,12 @@ export async function postHealthMetricsToInfluxdbV1(serverTags, body) {
             `HEALTH METRICS V1: Stored health data from server: ${serverTags.server_name}`
         );
     } catch (err) {
-        await globals.errorTracker.incrementError('INFLUXDB_V1_WRITE', serverTags.server_name);
+        await globals.errorTracker.incrementError(
+            'INFLUXDB_V1_WRITE',
+            serverTags.server_name,
+            { module: 'HEALTH_METRICS' },
+            err
+        );
         globals.logger.error(
             `HEALTH METRICS V1: Error saving health data for ${serverTags.server_name}: ${globals.getErrorMessage(err)}`
         );

@@ -2,6 +2,7 @@ import { Mutex } from 'async-mutex';
 
 import globals from '../globals.js';
 import { getInfluxDbVersion, isInfluxDbEnabled } from './influxdb/shared/utils.js';
+import { getErrorCategory } from './error-categorizer.js';
 
 /**
  * Class for tracking counts of API errors in Butler SOS.
@@ -42,10 +43,23 @@ export class ErrorTracker {
      *
      * @param {string} apiType - The type of API that encountered an error (e.g., 'HEALTH_API', 'PROXY_API')
      * @param {string} serverName - The name of the server where the error occurred (empty string if not applicable)
-     * @param {object} [metadata] - Optional metadata for InfluxDB tags (e.g., { host: '...', virtualProxy: '...' })
+     * @param {object} [metadata] - Optional metadata for InfluxDB tags (e.g., { host: '...', virtualProxy: '...', module: '...' })
+     * @param {Error|null} [err] - Optional original error object, used to derive error_category for InfluxDB
      * @returns {Promise<void>}
      */
-    async incrementError(apiType, serverName, metadata = {}) {
+    async incrementError(apiType, serverName, metadata = {}, err = null) {
+        // Respect the master switch - if error tracking is disabled, do nothing
+        try {
+            if (
+                globals.config?.has?.('Butler-SOS.errorTracking.enable') &&
+                globals.config.get('Butler-SOS.errorTracking.enable') === false
+            ) {
+                return;
+            }
+        } catch {
+            // Config not yet available - continue with tracking
+        }
+
         // Ensure the passed parameters are strings
         if (typeof apiType !== 'string') {
             this.logger.error(
@@ -109,12 +123,15 @@ export class ErrorTracker {
 
             // Write individual error event to InfluxDB (non-blocking)
             if (this._isInfluxDbErrorTrackingEnabled()) {
+                const capturedErr = err;
                 setImmediate(() => {
-                    this._writeErrorToInfluxDB(apiType, serverName, metadata).catch((err) => {
-                        this.logger.debug(
-                            `ERROR TRACKER: Error writing error event to InfluxDB: ${err.message}`
-                        );
-                    });
+                    this._writeErrorToInfluxDB(apiType, serverName, metadata, capturedErr).catch(
+                        (writeErr) => {
+                            this.logger.debug(
+                                `ERROR TRACKER: Error writing error event to InfluxDB: ${writeErr.message}`
+                            );
+                        }
+                    );
                 });
             }
         } finally {
@@ -148,13 +165,14 @@ export class ErrorTracker {
      * @param {string} apiType - The error type
      * @param {string} serverName - The server name
      * @param {object} metadata - Additional tags for InfluxDB
+     * @param {Error|null} err - Original error object for category derivation
      * @returns {Promise<void>}
      * @private
      */
-    async _writeErrorToInfluxDB(apiType, serverName, metadata) {
+    async _writeErrorToInfluxDB(apiType, serverName, metadata, err) {
         const measurementName =
             globals.config.get('Butler-SOS.errorTracking.influxdb.measurementName') ||
-            'sense_errors';
+            'butler_sos_errors';
         const version = getInfluxDbVersion();
 
         // Build common tags
@@ -173,6 +191,12 @@ export class ErrorTracker {
         if (metadata.destinationHost) {
             tags.destination_host = metadata.destinationHost;
         }
+        if (metadata.module) {
+            tags.module = metadata.module;
+        }
+
+        // Derive error category from the original error object (stored as a field, not tag)
+        const errorCategory = err ? getErrorCategory(err) : 'unknown';
 
         try {
             if (version === 3) {
@@ -182,6 +206,7 @@ export class ErrorTracker {
                     point.setTag(key, value);
                 });
                 point.setIntegerField('error_count', 1);
+                point.setStringField('error_category', errorCategory);
 
                 const { writeBatchToInfluxV3 } = await import('./influxdb/shared/utils.js');
                 const database = globals.config.get('Butler-SOS.influxdbConfig.v3Config.database');
@@ -199,6 +224,7 @@ export class ErrorTracker {
                     point.tag(key, value);
                 });
                 point.intField('error_count', 1);
+                point.stringField('error_category', errorCategory);
 
                 const { writeBatchToInfluxV2 } = await import('./influxdb/shared/utils.js');
                 const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
@@ -217,7 +243,7 @@ export class ErrorTracker {
                     {
                         measurement: measurementName,
                         tags,
-                        fields: { error_count: 1 },
+                        fields: { error_count: 1, error_category: errorCategory },
                     },
                 ];
                 await writeBatchToInfluxV1(

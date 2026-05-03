@@ -84,7 +84,8 @@ export async function storeUserEventV2(msg) {
         () => writePointsToInfluxV2(globals.influx, org, bucketName, point),
         `User event for ${msg.host}`,
         'v2',
-        msg.host
+        msg.host,
+        { module: 'USER_EVENTS' }
     );
 
     globals.logger.verbose('USER EVENT V2: Sent user event data to InfluxDB');

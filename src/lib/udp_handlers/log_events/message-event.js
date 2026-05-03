@@ -205,6 +205,13 @@ export async function messageEventHandler(message, _remote) {
             }
         }
     } catch (err) {
+        await globals.errorTracker.incrementError(
+            'UDP_LOG_EVENT',
+            '',
+            { module: 'UDP_LOG_EVENTS' },
+            err
+        );
+
         logError('LOG EVENT: Error handling message', err);
     }
 }
