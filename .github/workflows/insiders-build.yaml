@@ -126,10 +126,13 @@ jobs:
             - name: Deploy Windows insider build
               shell: powershell
               continue-on-error: true
+              env:
+                RUNNER_NAME: ${{ runner.name }}
+                GITHUB_SHA: ${{ github.sha }}
               run: |
                   Write-Host "Starting deployment of Butler SOS insiders build..."
                   Write-Host "Using configuration:"
-                  Write-Host "  Runner: ${{ runner.name }}"
+                  Write-Host "  Runner: $env:RUNNER_NAME"
                   Write-Host "  Service Name: $env:BUTLER_SOS_INSIDER_SERVICE_NAME"
                   Write-Host "  Deploy Path: $env:BUTLER_SOS_INSIDER_DEPLOY_PATH"
                   Write-Host "  Service Timeout: $env:BUTLER_SOS_INSIDER_SERVICE_TIMEOUT seconds"
@@ -137,7 +140,7 @@ jobs:
 
                   # Define variables from environment
                   $serviceName = $env:BUTLER_SOS_INSIDER_SERVICE_NAME
-                  $artifactPath = "$env:BUTLER_SOS_INSIDER_DOWNLOAD_PATH\butler-sos--win-x64--${{ github.sha }}.zip"
+                  $artifactPath = "$env:BUTLER_SOS_INSIDER_DOWNLOAD_PATH\butler-sos--win-x64--$($env:GITHUB_SHA).zip"
                   $deployPath = $env:BUTLER_SOS_INSIDER_DEPLOY_PATH
                   $serviceTimeout = [System.Convert]::ToInt32($env:BUTLER_SOS_INSIDER_SERVICE_TIMEOUT)
 
