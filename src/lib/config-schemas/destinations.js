@@ -4,34 +4,8 @@
 // - New Relic integration for events and metrics
 // - Prometheus metrics endpoint configuration
 // - InfluxDB time-series database configuration (both v1 and v2)
-// - Error tracking configuration
 
 export const destinationsSchema = {
-    errorTracking: {
-        type: 'object',
-        properties: {
-            enable: { type: 'boolean' },
-            logSummary: {
-                type: 'object',
-                properties: {
-                    enable: { type: 'boolean' },
-                },
-                required: ['enable'],
-                additionalProperties: false,
-            },
-            influxdb: {
-                type: 'object',
-                properties: {
-                    enable: { type: 'boolean' },
-                    measurementName: { type: 'string' },
-                },
-                required: ['enable', 'measurementName'],
-                additionalProperties: false,
-            },
-        },
-        required: ['enable', 'logSummary', 'influxdb'],
-        additionalProperties: false,
-    },
     mqttConfig: {
         type: 'object',
         properties: {

@@ -8,6 +8,7 @@ import { qlikSenseEventsSchema } from './qlik-sense-events.js';
 import { userEventsSchema } from './user-events.js';
 import { logEventsSchema } from './log-events.js';
 import { destinationsSchema } from './destinations.js';
+import { errorTrackingSchema } from './error-tracking.js';
 import { appSessionsSchema } from './app-sessions.js';
 import { serversSchema } from './servers.js';
 import { auditEventsSchema } from './audit-events.js';
@@ -34,31 +35,7 @@ const configFileSchema = {
                 ...logEventsSchema,
 
                 // Error tracking configuration
-                errorTracking: {
-                    type: 'object',
-                    properties: {
-                        enable: { type: 'boolean' },
-                        logSummary: {
-                            type: 'object',
-                            properties: {
-                                enable: { type: 'boolean' },
-                            },
-                            required: ['enable'],
-                            additionalProperties: false,
-                        },
-                        influxdb: {
-                            type: 'object',
-                            properties: {
-                                enable: { type: 'boolean' },
-                                measurementName: { type: 'string' },
-                            },
-                            required: ['enable', 'measurementName'],
-                            additionalProperties: false,
-                        },
-                    },
-                    required: ['enable', 'logSummary', 'influxdb'],
-                    additionalProperties: false,
-                },
+                ...errorTrackingSchema,
 
                 // Destination systems
                 ...destinationsSchema,
