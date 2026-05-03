@@ -357,7 +357,12 @@ export async function getProxySessionStatsFromSense(serverName, host, virtualPro
         }
     } catch (err) {
         // Track error count - single call handles both in-memory counter and InfluxDB write
-        await globals.errorTracker.incrementError('PROXY_API', serverName, { host, virtualProxy });
+        await globals.errorTracker.incrementError(
+            'PROXY_API',
+            serverName,
+            { host, virtualProxy },
+            err
+        );
 
         logError(
             `PROXY SESSIONS: Error when calling proxy session API for server '${serverName}' (${host}), virtual proxy '${virtualProxy}'`,

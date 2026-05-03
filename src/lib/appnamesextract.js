@@ -10,12 +10,19 @@ import { logError } from './log-error.js';
  * The error tracker handles both in-memory counting and InfluxDB writes.
  *
  * @param {string} hostname - The QRS host that was queried
+ * @param {Error|null} [err] - The original error object, used to derive error_category for InfluxDB
+ *
  * @returns {Promise<void>}
  */
-async function trackAppNamesFailure(hostname) {
-    await globals.errorTracker.incrementError('APP_NAMES_EXTRACT', hostname || '', {
-        host: hostname || '',
-    });
+async function trackAppNamesFailure(hostname, err = null) {
+    await globals.errorTracker.incrementError(
+        'APP_NAMES_EXTRACT',
+        hostname || '',
+        {
+            host: hostname || '',
+        },
+        err
+    );
 }
 
 /**
@@ -69,7 +76,7 @@ export async function getAppNames() {
         globals.logger.verbose('APP NAMES: Done getting app names from repository db');
     } catch (err) {
         const hostname = globals.config.get('Butler-SOS.appNames.hostIP');
-        await trackAppNamesFailure(hostname);
+        await trackAppNamesFailure(hostname, err);
 
         logError('APP NAMES: Error getting app names', err);
     }

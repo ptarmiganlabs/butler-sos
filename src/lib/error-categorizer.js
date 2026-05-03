@@ -12,14 +12,12 @@
  * @returns {string} Error category: 'timeout', 'connection_refused', 'auth_error', etc.
  */
 export function getErrorCategory(err) {
-    // TODO: Remove in production
-    console.log('Categorizing error:', err);
-
     if (!err) return 'unknown';
 
     // Timeout errors
     if (
         err.code === 'ETIMEDOUT' ||
+        err.code === 'ECONNABORTED' ||
         err.message?.includes('timeout') ||
         err.name === 'RequestTimedOutError'
     ) {
@@ -62,13 +60,44 @@ export function getErrorCategory(err) {
 /**
  * Extracts error metadata from an error object.
  *
+ * Handles Axios errors specially: extracts remote address/port, sanitized
+ * request URL (query string stripped), configured timeout, and syscall.
+ *
  * @param {Error} err - The error object
- * @returns {object} Metadata with error_category, error_code, http_status
+ *
+ * @returns {object} Metadata object with string and numeric properties:
+ *   error_category, error_code, http_status, request_url,
+ *   request_timeout_ms, remote_address, remote_port, syscall
  */
 export function getErrorMetadata(err) {
-    return {
+    const meta = {
         error_category: getErrorCategory(err),
         error_code: err?.code || '',
-        http_status: err?.response?.status || null,
+        http_status: err?.response?.status ?? null,
     };
+
+    // Axios request configuration extras
+    if (err?.config) {
+        if (err.config.timeout != null) {
+            meta.request_timeout_ms = err.config.timeout;
+        }
+        if (err.config.url) {
+            try {
+                const u = new URL(err.config.url);
+                meta.request_url = `${u.origin}${u.pathname}`;
+            } catch {
+                meta.request_url = err.config.url.split('?')[0];
+            }
+        }
+    }
+
+    // Network-level cause (e.g. ECONNREFUSED — populated by Node's net layer)
+    const cause = err?.cause;
+    if (cause) {
+        if (cause.address) meta.remote_address = cause.address;
+        if (cause.port != null) meta.remote_port = cause.port;
+        if (cause.syscall) meta.syscall = cause.syscall;
+    }
+
+    return meta;
 }

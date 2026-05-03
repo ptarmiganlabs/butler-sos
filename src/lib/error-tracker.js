@@ -2,7 +2,7 @@ import { Mutex } from 'async-mutex';
 
 import globals from '../globals.js';
 import { getInfluxDbVersion, isInfluxDbEnabled } from './influxdb/shared/utils.js';
-import { getErrorCategory } from './error-categorizer.js';
+import { getErrorMetadata } from './error-categorizer.js';
 
 /**
  * Class for tracking counts of API errors in Butler SOS.
@@ -195,8 +195,22 @@ export class ErrorTracker {
             tags.module = metadata.module;
         }
 
-        // Derive error category from the original error object (stored as a field, not tag)
-        const errorCategory = err ? getErrorCategory(err) : 'unknown';
+        // Derive error fields from the original error object
+        const errMeta = getErrorMetadata(err);
+
+        // String fields (written to all InfluxDB versions)
+        const stringFields = { error_category: errMeta.error_category };
+        if (errMeta.error_code) stringFields.error_code = errMeta.error_code;
+        if (errMeta.request_url) stringFields.request_url = errMeta.request_url;
+        if (errMeta.remote_address) stringFields.remote_address = errMeta.remote_address;
+        if (errMeta.syscall) stringFields.syscall = errMeta.syscall;
+
+        // Integer fields
+        const intFields = { error_count: 1 };
+        if (errMeta.request_timeout_ms != null)
+            intFields.request_timeout_ms = errMeta.request_timeout_ms;
+        if (errMeta.remote_port != null) intFields.remote_port = errMeta.remote_port;
+        if (errMeta.http_status != null) intFields.http_status = errMeta.http_status;
 
         try {
             if (version === 3) {
@@ -205,8 +219,12 @@ export class ErrorTracker {
                 Object.entries(tags).forEach(([key, value]) => {
                     point.setTag(key, value);
                 });
-                point.setIntegerField('error_count', 1);
-                point.setStringField('error_category', errorCategory);
+                Object.entries(stringFields).forEach(([k, v]) => {
+                    point.setStringField(k, v);
+                });
+                Object.entries(intFields).forEach(([k, v]) => {
+                    point.setIntegerField(k, v);
+                });
 
                 const { writeBatchToInfluxV3 } = await import('./influxdb/shared/utils.js');
                 const database = globals.config.get('Butler-SOS.influxdbConfig.v3Config.database');
@@ -223,8 +241,12 @@ export class ErrorTracker {
                 Object.entries(tags).forEach(([key, value]) => {
                     point.tag(key, value);
                 });
-                point.intField('error_count', 1);
-                point.stringField('error_category', errorCategory);
+                Object.entries(stringFields).forEach(([k, v]) => {
+                    point.stringField(k, v);
+                });
+                Object.entries(intFields).forEach(([k, v]) => {
+                    point.intField(k, v);
+                });
 
                 const { writeBatchToInfluxV2 } = await import('./influxdb/shared/utils.js');
                 const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
@@ -243,7 +265,7 @@ export class ErrorTracker {
                     {
                         measurement: measurementName,
                         tags,
-                        fields: { error_count: 1, error_category: errorCategory },
+                        fields: { ...stringFields, ...intFields },
                     },
                 ];
                 await writeBatchToInfluxV1(

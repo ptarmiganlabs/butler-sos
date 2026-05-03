@@ -347,7 +347,8 @@ describe('proxysessionmetrics', () => {
             expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
                 'PROXY_API',
                 serverName,
-                expect.objectContaining({ host, virtualProxy })
+                expect.objectContaining({ host, virtualProxy }),
+                expect.any(Error)
             );
         });
     });

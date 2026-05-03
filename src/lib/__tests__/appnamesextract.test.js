@@ -128,7 +128,8 @@ describe('appnamesextract', () => {
             '192.168.1.123',
             expect.objectContaining({
                 host: '192.168.1.123',
-            })
+            }),
+            expect.any(Error)
         );
     });
 

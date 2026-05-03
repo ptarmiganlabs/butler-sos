@@ -110,7 +110,7 @@ export async function getHealthStatsFromSense(serverName, host, tags, headers) {
         }
     } catch (err) {
         // Track error count - single call handles both in-memory counter and InfluxDB write
-        await globals.errorTracker.incrementError('HEALTH_API', serverName, { host });
+        await globals.errorTracker.incrementError('HEALTH_API', serverName, { host }, err);
 
         logError(
             `HEALTH: Error when calling health check API for server '${serverName}' (${host})`,
