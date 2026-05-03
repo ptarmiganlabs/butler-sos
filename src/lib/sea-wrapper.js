@@ -34,7 +34,7 @@ const seaWrapper = {
      *
      * @param {string} key - Asset key
      * @param {string} encoding - Encoding type
-     * @returns {any} The asset content or undefined
+     * @returns {string|Buffer|undefined} The asset content or undefined
      */
     getAsset(key, encoding) {
         // In actual SEA environments, this will be replaced by the real implementation
