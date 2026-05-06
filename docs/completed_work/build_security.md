@@ -50,7 +50,7 @@ jobs:
 - **Action Pinning**: All actions pinned to specific SHAs (not mutable tags)
 - **SBOM Generation**: Microsoft SBOM tool generates Software Bill of Materials for each release
 - **Lockfile Integrity**: `lockfile-lint` validates package-lock.json sources use HTTPS
-- **License Enforcement**: Only MIT, Apache-2.0, BSD-3-Clause, and ISC licenses allowed
+- **License Check**: Only MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, and 0BSD licenses allowed
 
 ```mermaid
 flowchart LR
