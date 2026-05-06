@@ -3,12 +3,38 @@ import FastifyRateLimit from '@fastify/rate-limit';
 import FastifyCors from '@fastify/cors';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
 import globals from '../globals.js';
 import { downloadScreenshot } from './audit-screenshots.js';
 import { writeAuditEventToDestinations } from './audit-destinations/index.js';
+
+/**
+ * Compares two strings using a constant-time algorithm to prevent timing attacks.
+ *
+ * Falls back to a dummy comparison when the strings have different lengths so that
+ * timing does not reveal the expected token length.
+ *
+ * @param {string} a First string.
+ * @param {string} b Second string.
+ * @returns {boolean} True if the strings are equal.
+ */
+function safeStringEqual(a, b) {
+    try {
+        const bufA = Buffer.from(a, 'utf8');
+        const bufB = Buffer.from(b, 'utf8');
+        if (bufA.length !== bufB.length) {
+            // Run a dummy timingSafeEqual so the branch does not become a timing oracle.
+            crypto.timingSafeEqual(bufA, bufA);
+            return false;
+        }
+        return crypto.timingSafeEqual(bufA, bufB);
+    } catch {
+        return false;
+    }
+}
 
 /**
  * @typedef {object} AuditEventEnvelope
@@ -749,7 +775,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
         if (!apiToken) return;
 
         const token = getBearerToken(request.headers.authorization);
-        if (!token || token !== apiToken) {
+        if (!token || !safeStringEqual(token, apiToken)) {
             globals.logger.warn(
                 `AUDIT API: Unauthorized request ip=${request.ip} method=${request.method} url=${request.url}`
             );

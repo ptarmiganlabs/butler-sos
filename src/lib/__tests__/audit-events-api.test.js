@@ -647,3 +647,93 @@ describe('setupAuditEventsApiServer', () => {
         );
     });
 });
+
+describe('audit-events-api token comparison security', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('rejects request with wrong token', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'correct-secret', corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                authorization: 'Bearer wrong-secret',
+            },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'evt-1',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.state.changed',
+                payload: {},
+            },
+        });
+
+        expect(res.statusCode).toBe(401);
+    });
+
+    test('rejects request with empty bearer token', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'correct-secret', corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                authorization: 'Bearer ',
+            },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'evt-1',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.state.changed',
+                payload: {},
+            },
+        });
+
+        expect(res.statusCode).toBe(401);
+    });
+
+    test('accepts request with correct token using timing-safe comparison', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, {
+            apiToken: 'correct-secret',
+            corsOrigins: ['*'],
+        });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                authorization: 'Bearer correct-secret',
+            },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'evt-timing-1',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.state.changed',
+                payload: {},
+            },
+        });
+
+        expect(res.statusCode).toBe(202);
+    });
+});

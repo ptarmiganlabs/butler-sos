@@ -995,6 +995,23 @@ export async function downloadScreenshot(url, envelope, config, logger) {
 
     const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
 
+    // Validate the URL scheme to prevent Server-Side Request Forgery (SSRF).
+    // Only http: and https: schemes are permitted; file://, ftp://, data:, etc. are rejected.
+    try {
+        const parsedUrl = new URL(url);
+        if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
+            logger.warn(
+                `AUDIT API: Screenshot download rejected — URL scheme '${parsedUrl.protocol}' is not allowed. Only http: and https: are permitted. selectionTxnId=${selectionTxnId}`
+            );
+            return null;
+        }
+    } catch {
+        logger.warn(
+            `AUDIT API: Screenshot download rejected — URL is not a valid absolute URL. selectionTxnId=${selectionTxnId}`
+        );
+        return null;
+    }
+
     const targets = Array.isArray(config.storageTargets)
         ? config.storageTargets.filter((t) => t && t.enable === true)
         : [];
