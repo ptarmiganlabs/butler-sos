@@ -1,5 +1,97 @@
 # Changelog
 
+## [14.1.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v14.0.0...butler-sos-v14.1.0) (2026-05-06)
+
+
+### Features
+
+* **audit:** enhance debug logging for audit events and screenshot handling ([2ce9256](https://github.com/ptarmiganlabs/butler-sos/commit/2ce9256a6ffe49a9aa9407995fa275bf3ab145d2))
+* enhance tag sanitization in InfluxDB functions ([20f116b](https://github.com/ptarmiganlabs/butler-sos/commit/20f116b894d576eb1c603f6f947ec25fce87875d))
+* track failed polls from Qlik Sense servers to InfluxDB ([e91be03](https://github.com/ptarmiganlabs/butler-sos/commit/e91be03c97003bc66e090cb2315ee61ddc1c9f27))
+
+
+### Bug Fixes
+
+* address reviewer feedback on writePointsToInfluxV2 JSDoc and test cleanup ([6796888](https://github.com/ptarmiganlabs/butler-sos/commit/67968885acc1fe274a28e79a610276f2a8796044))
+* **audit-destinations:** add validation for missing or invalid config in Parquet and QVD destinations ([eeec5a6](https://github.com/ptarmiganlabs/butler-sos/commit/eeec5a6b15577ba2a90f9b26b7e4f153e283b87c))
+* **audit-events-api:** improve bearer token extraction logic ([c37054e](https://github.com/ptarmiganlabs/butler-sos/commit/c37054ed1056a7e672ae32a49c976864bbb3d3d8))
+* **audit-events:** improve payload and handler validation logic ([43e9aa0](https://github.com/ptarmiganlabs/butler-sos/commit/43e9aa0c58fba3de448308bbc1b0e7e5669037fc))
+* **ci:** remove corrupted inline script from Windows build ([f999556](https://github.com/ptarmiganlabs/butler-sos/commit/f9995567514394e0e6e3fd11f8c080246a4a631a))
+* **config-visualise:** sanitize filename to prevent directory traversal ([201b024](https://github.com/ptarmiganlabs/butler-sos/commit/201b0248e4983c4318e327e31aceba6233e53849))
+* **dependabot:** add cooldown to reduce supply-chain risk ([093360e](https://github.com/ptarmiganlabs/butler-sos/commit/093360ed21b8acb386643834afb3d62b50ecc88e))
+* **dependencies:** update systeminformation to version 5.31.4 ([8caa3b8](https://github.com/ptarmiganlabs/butler-sos/commit/8caa3b8dd779f7008424e1f10584fcaaa0b91bf1))
+* disable default tracking of failed polls in InfluxDB ([7307a8f](https://github.com/ptarmiganlabs/butler-sos/commit/7307a8f457d744936962e9558c508354bbe4f2ad))
+* **docker-image-build:** enhance input handling and disable debug context dumps ([53ebadd](https://github.com/ptarmiganlabs/butler-sos/commit/53ebaddfac512075cd3445c35980f52518a1a45d))
+* eliminate flaky globals tests by using stable mock references ([952b539](https://github.com/ptarmiganlabs/butler-sos/commit/952b5392b01f73753c7154c142840ed0cdb9fea4))
+* escape dots in semver regex and use double quotes for env var echoes ([d0f6060](https://github.com/ptarmiganlabs/butler-sos/commit/d0f6060a844a650131f693509758dcf465fcaf74))
+* **insider-build-win:** remove ./config staging dir after zipping ([542b715](https://github.com/ptarmiganlabs/butler-sos/commit/542b71565f2e4c0e0b68be20374e30e021802344))
+* **insiders-build:** prevent template-injection in deploy step ([b67b69a](https://github.com/ptarmiganlabs/butler-sos/commit/b67b69ae6773d4c5964651bc0e35dd925ee689eb))
+* **prometheus:** Fix error occuring when no servers to monitor are defined in the YAML config file ([a24c3d9](https://github.com/ptarmiganlabs/butler-sos/commit/a24c3d976ce320045a4fb8cda1208c4dce4c8f8d))
+* Rename InfluxDB audit queue field from `queue_pending` to `queue_running` ([83bbb7b](https://github.com/ptarmiganlabs/butler-sos/commit/83bbb7b6eb6ddefd93b8c06181aa57317a7ed9ab))
+* replace &lt;Unknown&gt; defaults with Unknown to avoid silent stripping by sanitizeInfluxTagValue ([ac9b9af](https://github.com/ptarmiganlabs/butler-sos/commit/ac9b9af9ec8584df552d6f4147145d6cf684828a))
+* **security:** Add path-confinement check to JSON audit destination to prevent path traversal ([0105e87](https://github.com/ptarmiganlabs/butler-sos/commit/0105e8761baa1898bb3003fc5724044e2d90070e))
+* SHA mismatch, add set -e to macOS script, and add Windows error handling ([1340dce](https://github.com/ptarmiganlabs/butler-sos/commit/1340dceade6d307403acffee52bfb7e1eeed5695))
+* standardize measurement names in InfluxDB data model documentation ([818baa7](https://github.com/ptarmiganlabs/butler-sos/commit/818baa7f0f86e4c901f4cf3024cf25ae4c86531e))
+* strip backslashes in sanitizeInfluxTagValue instead of escaping them ([4434366](https://github.com/ptarmiganlabs/butler-sos/commit/443436674d2b9dd4023948d8ee7ec3fa1d761277))
+* update find-my-way to 9.5.0 to address ReDoS vulnerability (alert [#74](https://github.com/ptarmiganlabs/butler-sos/issues/74)) ([f5e25ba](https://github.com/ptarmiganlabs/butler-sos/commit/f5e25baa64dad49c48e0f066b6952b04e8f6c309))
+* Update posthog-node dependency to version 5.32.0 ([a6a3deb](https://github.com/ptarmiganlabs/butler-sos/commit/a6a3deb376031fdcbe6b157697483df8f529123c))
+* update Trivy vulnerability scanner to version 0.36.0 ([2757d11](https://github.com/ptarmiganlabs/butler-sos/commit/2757d1133f4736347e09a8f2406f655ebf1387ac))
+* use callback-based publishAsync to capture broker-side MQTT errors; add broker-side error test ([9b86a0d](https://github.com/ptarmiganlabs/butler-sos/commit/9b86a0d29ab6a911f0234b78e5fc43bba8de1980))
+
+
+### Miscellaneous
+
+* add comprehensive tests for error-categorizer.js (getErrorCategory and getErrorMetadata) ([61fbbe5](https://github.com/ptarmiganlabs/butler-sos/commit/61fbbe56092a105dadc3fc900ec09b7e461f6570))
+* add InfluxDB-writing paths and config gate tests for ErrorTracker; fix config-file-verify.js and docs ([bd48f94](https://github.com/ptarmiganlabs/butler-sos/commit/bd48f94eadd31f15ae4c43c2d3de2b61d8d8f738))
+* add restrictive permissionsto workflow files for improved workflow security ([081f604](https://github.com/ptarmiganlabs/butler-sos/commit/081f6049b24de13162f5be149d78e5b7961b5637))
+* Add unit tests for tracking of error scenarios ([2ab6175](https://github.com/ptarmiganlabs/butler-sos/commit/2ab6175fd345e8808eb0012f7a70d01816ce75e5))
+* clarify sleep test tolerance comment ([c0ba486](https://github.com/ptarmiganlabs/butler-sos/commit/c0ba486010ab4d1dc41892c335d589bbb3606a38))
+* **deps:** update @fastify/cors to v11.2.0, hyparquet-writer to v0.13.0, and @eslint/js to v10.0.1 ([7c487c7](https://github.com/ptarmiganlabs/butler-sos/commit/7c487c739079ee618a77932ec37996e459be7183))
+* **deps:** update actions/setup-node action to v6 ([838f22b](https://github.com/ptarmiganlabs/butler-sos/commit/838f22b5aaa536aa80aae2afd55210a9990b7aa0))
+* **deps:** update crazy-max/ghaction-virustotal action to v5 ([076862c](https://github.com/ptarmiganlabs/butler-sos/commit/076862c71f23cd795b11f137dc12d191e1c6bfb5))
+* **deps:** update dependency node to v24 ([96df379](https://github.com/ptarmiganlabs/butler-sos/commit/96df37982a2aca2874425fb9e40042d7a73f15dd))
+* **deps:** update docker/build-push-action action to v7 ([d6e423a](https://github.com/ptarmiganlabs/butler-sos/commit/d6e423a318eea03ee4835969fdfdc614aaa30e54))
+* **deps:** update docker/login-action action to v4 ([89866f3](https://github.com/ptarmiganlabs/butler-sos/commit/89866f3ba6ad54939660375584240b2e9a20eb02))
+* **deps:** update docker/login-action action to v4 ([f226ea2](https://github.com/ptarmiganlabs/butler-sos/commit/f226ea2309fe91555e04c25e5cf3e0b78cef619b))
+* **deps:** update docker/metadata-action action to v6 ([074e768](https://github.com/ptarmiganlabs/butler-sos/commit/074e768b1449b4a9b8ca2780d53fd5dc47daa780))
+* **deps:** update docker/metadata-action action to v6 ([6fe2623](https://github.com/ptarmiganlabs/butler-sos/commit/6fe2623d123c17e7cd0f89f6eefe15e74a2256a8))
+* **deps:** update docker/setup-buildx-action action to v3.12.0 ([0ed6f93](https://github.com/ptarmiganlabs/butler-sos/commit/0ed6f936e9c1582450b47fbf3faac2e8cda101cf))
+* **deps:** update docker/setup-buildx-action action to v4 ([018732a](https://github.com/ptarmiganlabs/butler-sos/commit/018732a92903ca9d7d30d7f8a4a1d0aedfca4800))
+* **deps:** update docker/setup-buildx-action action to v4 ([e1f276e](https://github.com/ptarmiganlabs/butler-sos/commit/e1f276ee55907ac47d5be40ebfbfe0a98d434653))
+* **deps:** update docker/setup-qemu-action action to v4 ([2e4f670](https://github.com/ptarmiganlabs/butler-sos/commit/2e4f6704ef4f730607ec5322a3618cf40a41ed01))
+* **deps:** update docker/setup-qemu-action action to v4 ([5ce2077](https://github.com/ptarmiganlabs/butler-sos/commit/5ce207727d0414635f13524ea4acb9f8e1f6bbc1))
+* **deps:** update github artifact actions ([41c715a](https://github.com/ptarmiganlabs/butler-sos/commit/41c715a856b30d397cb2529443ccd2ef0776f127))
+* **deps:** update github artifact actions (major) ([1069948](https://github.com/ptarmiganlabs/butler-sos/commit/1069948db1ade0a2ca1fc6ff62bf43eed20f54b9))
+* **deps:** update github/gh-aw action to v0.56.1 ([bd79685](https://github.com/ptarmiganlabs/butler-sos/commit/bd796852439fa07e512e11ec1bf5c5ada46d704b))
+* **deps:** update github/gh-aw action to v0.56.1 ([890a0f0](https://github.com/ptarmiganlabs/butler-sos/commit/890a0f0481a730edbb9c5977e4a2561f5fdb3d50))
+* **security:** Add standalone Zizmor workflow ([34ea6e4](https://github.com/ptarmiganlabs/butler-sos/commit/34ea6e42fecd6f58d8a54dc62cc1815cb2b08f96))
+* **security:** Update Zizmor workflow to upload SARIF file ([0473ae7](https://github.com/ptarmiganlabs/butler-sos/commit/0473ae7d8a803ae22ac063e3eb0a06b53c16a30b))
+* Tighten CI workflow security ([325f48a](https://github.com/ptarmiganlabs/butler-sos/commit/325f48a8c31c4d339f0ddcc01c7ce03607896a4d))
+* update dependencies in package.json ([3ae6a37](https://github.com/ptarmiganlabs/butler-sos/commit/3ae6a377e78adf7fdbaed187d8c3591e941fee41))
+* **workflows:** update cron schedules and action versions in maintenance workflows ([174ca9b](https://github.com/ptarmiganlabs/butler-sos/commit/174ca9b2d318f2a2872156ca2bb2d2a02cf3f7ae))
+
+
+### Refactoring
+
+* **ci:** extract build scripts to external files ([5ee8e74](https://github.com/ptarmiganlabs/butler-sos/commit/5ee8e740a52ed876e09943e805763c6125abb609))
+* consolidate error tracking to be consistent across codebase ([d740287](https://github.com/ptarmiganlabs/butler-sos/commit/d740287d5d3f423af1fa0a8188985d84a588f519))
+* consolidate InfluxDB v3 tag sanitization into shared utility ([9496f6d](https://github.com/ptarmiganlabs/butler-sos/commit/9496f6d0d4a1e9f323e3e9cf4a0571f5cf4452f1))
+* enhance error tracking by including error objects in metrics ([7c1b7e3](https://github.com/ptarmiganlabs/butler-sos/commit/7c1b7e345caae837696d7058213bc16943c5fed1))
+* extract InfluxDB v2 write boilerplate into writePointsToInfluxV2 helper ([15a291b](https://github.com/ptarmiganlabs/butler-sos/commit/15a291bb4db1e8d2c6506d90313d109de61d6785))
+* improve build scripts for Windows, macOS, and Linux; streamline artifact creation process ([bc9feb3](https://github.com/ptarmiganlabs/butler-sos/commit/bc9feb362481d7066a4a17ea19e8abae57a103c8))
+* **influxdb:** Make code a bit easier to maintain ([2546a0b](https://github.com/ptarmiganlabs/butler-sos/commit/2546a0b7af35255a4a7ee0a83f990490fffea325))
+* **insider-build-win:** comment out signing process for review ([e02770f](https://github.com/ptarmiganlabs/butler-sos/commit/e02770f1a4e88d5bbbf85f75910183d40a5892bd))
+* move error tracking configuration to a separate schema file ([3c029b8](https://github.com/ptarmiganlabs/butler-sos/commit/3c029b889f7490a8ff0576b558b8637409e3ca0b))
+* update cron schedule for agentics maintenance and adjust duplicate code detector workflow description ([09596ff](https://github.com/ptarmiganlabs/butler-sos/commit/09596ff3ec9c06125cbed4e0d8eec99cf484572b))
+
+
+### Documentation
+
+* add additional notes on audit extension limits ([e3f897a](https://github.com/ptarmiganlabs/butler-sos/commit/e3f897af4c5ea1863ec3efac4d8f855930d3ea51))
+* add comprehensive security precautions documentation ([a0083ba](https://github.com/ptarmiganlabs/butler-sos/commit/a0083ba181b68252a83e00ba1cebf1169928565d))
+* Add docs describing Audit.qs server-side features ([09cd7bf](https://github.com/ptarmiganlabs/butler-sos/commit/09cd7bfa328ef4b6f71a88a3feb982afc72fd394))
+* refine sanitizeInfluxTagValue [@param](https://github.com/param) type to string|number|boolean ([2084fa3](https://github.com/ptarmiganlabs/butler-sos/commit/2084fa368fef0ab0a87fc3cac66bafc579700ebf))
+
 ## [14.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v13.0.0...butler-sos-v14.0.0) (2025-12-09)
 
 
