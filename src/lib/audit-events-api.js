@@ -1079,6 +1079,18 @@ export async function setupAuditEventsApiServer() {
 
         await registerAuditEventRoutes(auditServer, { apiToken, corsOrigins });
 
+        // Add security headers to every response from the audit events API server.
+        // HSTS is only meaningful (and correct) when TLS is active.
+        auditServer.addHook('onSend', async (_request, reply, payload) => {
+            reply.header('X-Content-Type-Options', 'nosniff');
+            reply.header('X-Frame-Options', 'DENY');
+            reply.header('Cache-Control', 'no-store');
+            if (httpsOptions) {
+                reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+            }
+            return payload;
+        });
+
         const host = globals.config.get('Butler-SOS.auditEvents.host');
         const port = globals.config.get('Butler-SOS.auditEvents.port');
 
