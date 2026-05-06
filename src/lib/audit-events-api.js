@@ -6,6 +6,7 @@ import addFormats from 'ajv-formats';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import tls from 'node:tls';
 
 import globals from '../globals.js';
 import { downloadScreenshot } from './audit-screenshots.js';
@@ -187,6 +188,10 @@ function loadAuditEventsTlsOptions(tlsConfig) {
 
     if (typeof tlsConfig.passphrase === 'string' && tlsConfig.passphrase.length > 0) {
         httpsOptions.passphrase = tlsConfig.passphrase;
+    }
+
+    if (typeof tlsConfig.minVersion === 'string' && tlsConfig.minVersion.length > 0) {
+        httpsOptions.minVersion = tlsConfig.minVersion;
     }
 
     return httpsOptions;
@@ -1053,6 +1058,19 @@ export async function setupAuditEventsApiServer() {
                 tlsConfig
             )}`
         );
+
+        if (httpsOptions) {
+            const secureTlsVersions = ['TLSv1.2', 'TLSv1.3'];
+            const effectiveMinVersion = httpsOptions.minVersion || tls.DEFAULT_MIN_VERSION;
+            globals.logger.info(
+                `AUDIT API: TLS minimum version: ${effectiveMinVersion}`
+            );
+            if (!secureTlsVersions.includes(effectiveMinVersion)) {
+                globals.logger.warn(
+                    `AUDIT API: TLS minVersion "${effectiveMinVersion}" is below TLS 1.2 — consider upgrading to TLSv1.2 or TLSv1.3.`
+                );
+            }
+        }
 
         const auditServer = Fastify({
             logger: true,
