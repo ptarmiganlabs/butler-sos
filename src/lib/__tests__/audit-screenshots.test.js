@@ -532,3 +532,119 @@ describe('audit-screenshots', () => {
         expect(logger.error).not.toHaveBeenCalled();
     });
 });
+
+describe('audit-screenshots SSRF protection', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    const logger = {
+        info: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        error: jest.fn(),
+    };
+
+    const baseConfig = {
+        enable: true,
+        downloadTimeoutMs: 5000,
+        storageTargets: [{ enable: true, type: 'flat', directory: '/tmp/screenshots' }],
+    };
+
+    test('rejects file:// URLs to prevent SSRF', async () => {
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const result = await downloadScreenshot(
+            'file:///etc/passwd',
+            { eventId: 'evt-1', correlationId: 'corr-1' },
+            baseConfig,
+            logger
+        );
+
+        expect(result).toBeNull();
+        expect(mockAxios.request).not.toHaveBeenCalled();
+        expect(logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining("URL scheme 'file:' is not allowed")
+        );
+    });
+
+    test('rejects ftp:// URLs to prevent SSRF', async () => {
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const result = await downloadScreenshot(
+            'ftp://internal.server/file',
+            { eventId: 'evt-2', correlationId: 'corr-2' },
+            baseConfig,
+            logger
+        );
+
+        expect(result).toBeNull();
+        expect(mockAxios.request).not.toHaveBeenCalled();
+        expect(logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining("URL scheme 'ftp:' is not allowed")
+        );
+    });
+
+    test('rejects non-URL strings to prevent SSRF', async () => {
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const result = await downloadScreenshot(
+            'not-a-valid-url',
+            { eventId: 'evt-3', correlationId: 'corr-3' },
+            baseConfig,
+            logger
+        );
+
+        expect(result).toBeNull();
+        expect(mockAxios.request).not.toHaveBeenCalled();
+        expect(logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('URL is not a valid absolute URL')
+        );
+    });
+
+    test('allows https:// URLs', async () => {
+        mockAxios.request.mockResolvedValue({
+            status: 200,
+            headers: { 'content-type': 'image/png' },
+            data: Buffer.alloc(0),
+        });
+
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        // The actual save will fail here (empty buffer → png parse error), but the
+        // SSRF check must NOT block the request. We only care that axios.request was called.
+        await downloadScreenshot(
+            'https://qliksense.example.com/screenshot.png',
+            { eventId: 'evt-4', correlationId: 'corr-4', payload: { event: {} } },
+            baseConfig,
+            logger
+        );
+
+        expect(mockAxios.request).toHaveBeenCalled();
+        expect(logger.warn).not.toHaveBeenCalledWith(
+            expect.stringContaining('URL scheme')
+        );
+    });
+
+    test('allows http:// URLs', async () => {
+        mockAxios.request.mockResolvedValue({
+            status: 200,
+            headers: { 'content-type': 'image/png' },
+            data: Buffer.alloc(0),
+        });
+
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        await downloadScreenshot(
+            'http://qliksense.example.com/screenshot.png',
+            { eventId: 'evt-5', correlationId: 'corr-5', payload: { event: {} } },
+            baseConfig,
+            logger
+        );
+
+        expect(mockAxios.request).toHaveBeenCalled();
+        expect(logger.warn).not.toHaveBeenCalledWith(
+            expect.stringContaining('URL scheme')
+        );
+    });
+});
