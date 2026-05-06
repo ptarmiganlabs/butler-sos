@@ -123,10 +123,11 @@ function buildCorsOptions(corsOriginList) {
         return { origin: false };
     }
 
-    // If wildcard is present, reflect origin (still requires token auth).
+    // If wildcard is present, use a static '*' header — never reflect the request Origin,
+    // as reflected-origin responses are flagged as CORS misconfiguration (CWE-942).
     if (origins.includes('*')) {
         return {
-            origin: true,
+            origin: '*',
             credentials: false,
             methods: ['POST', 'OPTIONS'],
         };
@@ -1103,6 +1104,12 @@ export async function setupAuditEventsApiServer() {
             reply.header('X-Content-Type-Options', 'nosniff');
             reply.header('X-Frame-Options', 'DENY');
             reply.header('Cache-Control', 'no-store');
+            // Pure JSON API — no resources should ever be loaded from responses.
+            reply.header('Content-Security-Policy', "default-src 'none'");
+            // API endpoint — suppress referrer leakage entirely.
+            reply.header('Referrer-Policy', 'no-referrer');
+            // API endpoint — deny all browser feature access.
+            reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
             if (httpsOptions) {
                 reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
             }
