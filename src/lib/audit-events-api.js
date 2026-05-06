@@ -387,7 +387,7 @@ function createTypeHandlers(logger) {
         const dataStateId = envelope?.payload?.event?.dataStateId;
         const objectData = envelope?.payload?.event?.objectData ?? null;
 
-        logger.info(
+        logger.verbose(
             `AUDIT API: screenshot.url.received eventId=${envelope.eventId} objectId=${objectId} selectionTxnId=${selectionTxnId} dataStateId=${dataStateId} url=${screenshotUrl} ip=${requestContext.ip}`
         );
 

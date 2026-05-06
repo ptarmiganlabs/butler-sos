@@ -221,7 +221,7 @@ async function deleteQpsSession(qps, cookieName, sessionId, logger) {
             timeout: 5000,
         });
 
-        logger.info(
+        logger.verbose(
             `AUDIT API: Successfully deleted QPS session ${sessionId} for virtual proxy "${vp}"`
         );
     } catch (err) {
@@ -729,7 +729,7 @@ function cropPngBuffer(buffer, crop, logger) {
             }
         }
 
-        logger.info(
+        logger.debug(
             `AUDIT API: cropPngBuffer source=${src.width}x${src.height} crop={top:${crop.top},left:${crop.left},w:${crop.width},h:${crop.height},scrollTop:${crop.scrollTop || 0},scrollAreaOffsetY:${crop.scrollAreaOffsetY || 0},renderingOverflow:${crop.renderingOverflow || 0}} needsCrop=${src.width > crop.width || src.height > crop.height} contentBottomY=${contentBottomY}`
         );
 
@@ -741,7 +741,7 @@ function cropPngBuffer(buffer, crop, logger) {
             }
             const debugFile = path.join(debugDir, `pre-crop-${src.width}x${src.height}.png`);
             fsSync.writeFileSync(debugFile, buffer);
-            logger.info(`AUDIT API: Saved pre-crop debug image to ${debugFile}`);
+            logger.verbose(`AUDIT API: Saved pre-crop debug image to ${debugFile}`);
         } catch (dbgErr) {
             logger.debug(`AUDIT API: Failed to save debug image: ${dbgErr.message}`);
         }
@@ -1199,7 +1199,7 @@ export async function downloadScreenshot(url, envelope, config, logger) {
             const crop = envelope?.payload?.event?.crop;
             const evtWidth = envelope?.payload?.event?.width;
             const evtHeight = envelope?.payload?.event?.height;
-            logger.info(
+            logger.debug(
                 `AUDIT API: Pre-crop check: ext=${ext} eventDims=${evtWidth}x${evtHeight} crop=${JSON.stringify(crop)} selectionTxnId=${selectionTxnId}`
             );
             if (
@@ -1213,7 +1213,7 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 try {
                     const beforeLen = buffer.length;
                     buffer = cropPngBuffer(buffer, crop, logger);
-                    logger.info(
+                    logger.debug(
                         `AUDIT API: Cropped screenshot PNG to ${crop.width}x${crop.height} (top=${crop.top ?? 0}, left=${crop.left ?? 0}). selectionTxnId=${selectionTxnId} beforeBytes=${beforeLen} afterBytes=${buffer.length}`
                     );
                 } catch (cropErr) {
