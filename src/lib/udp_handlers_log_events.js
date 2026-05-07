@@ -4,6 +4,10 @@ import { listeningEventHandler, messageEventHandler } from './udp_handlers/log_e
 import { logError } from './log-error.js';
 import { parseAllowedSources, isIpAllowed } from './udp-ip-validator.js';
 
+// Per-source throttle state for reject warnings (avoids log flooding)
+const logEventRejectWarnState = new Map(); // ip -> last warn timestamp (ms)
+const REJECT_WARN_INTERVAL_MS = 60_000; // warn at most once per minute per source
+
 // --------------------------------------------------------
 // Set up UDP server for acting on Sense log events
 // --------------------------------------------------------
@@ -69,15 +73,7 @@ export async function udpInitLogEventServer() {
     // Handler for UDP messages relating to log events
     globals.udpServerLogEvents.socket.on('message', async (message, remote) => {
         try {
-            globals.logger.debug(`[UDP LOG EVENT MSG] !!! RAW MESSAGE EVENT !!!`);
-            globals.logger.debug(`[UDP LOG EVENT MSG] From:  ${remote.address}:${remote.port}`);
-            globals.logger.debug(`[UDP LOG EVENT MSG] Length: ${message.length} bytes`);
-            globals.logger.debug(
-                `[UDP LOG EVENT MSG] First 200 chars: ${message.toString().substring(0, 200)}`
-            );
-            globals.logger.debug(`[UDP LOG EVENT MSG] ---`);
-
-            // Check source IP validation if enabled
+            // Check source IP validation before any other processing
             if (remote?.address) {
                 if (
                     !isIpAllowed(
@@ -86,12 +82,29 @@ export async function udpInitLogEventServer() {
                         globals.udpServerLogEvents.enableSourceValidation
                     )
                 ) {
-                    globals.logger.warn(
-                        `[UDP Log Events] SOURCE VALIDATION: Rejected message from unauthorized source ${remote.address}:${remote.port}`
-                    );
+                    const now = Date.now();
+                    const lastWarn = logEventRejectWarnState.get(remote.address) ?? 0;
+                    if (now - lastWarn >= REJECT_WARN_INTERVAL_MS) {
+                        globals.logger.warn(
+                            `[UDP Log Events] SOURCE VALIDATION: Rejected message from unauthorized source ${remote.address}:${remote.port}`
+                        );
+                        logEventRejectWarnState.set(remote.address, now);
+                    } else {
+                        globals.logger.debug(
+                            `[UDP Log Events] SOURCE VALIDATION: Silently dropping repeated message from ${remote.address}:${remote.port}`
+                        );
+                    }
                     return;
                 }
             }
+
+            globals.logger.debug(`[UDP LOG EVENT MSG] !!! RAW MESSAGE EVENT !!!`);
+            globals.logger.debug(`[UDP LOG EVENT MSG] From:  ${remote.address}:${remote.port}`);
+            globals.logger.debug(`[UDP LOG EVENT MSG] Length: ${message.length} bytes`);
+            globals.logger.debug(
+                `[UDP LOG EVENT MSG] First 200 chars: ${message.toString().substring(0, 200)}`
+            );
+            globals.logger.debug(`[UDP LOG EVENT MSG] ---`);
 
             // Get queue manager
             const queueManager = globals.udpQueueManagerLogEvents;

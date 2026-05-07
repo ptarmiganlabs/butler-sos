@@ -4,6 +4,10 @@ import { listeningEventHandler, messageEventHandler } from './udp_handlers/user_
 import { logError } from './log-error.js';
 import { parseAllowedSources, isIpAllowed } from './udp-ip-validator.js';
 
+// Per-source throttle state for reject warnings (avoids log flooding)
+const userActivityRejectWarnState = new Map(); // ip -> last warn timestamp (ms)
+const REJECT_WARN_INTERVAL_MS = 60_000; // warn at most once per minute per source
+
 // --------------------------------------------------------
 // Set up UDP server for acting on Sense user activity events
 // --------------------------------------------------------
@@ -69,7 +73,7 @@ export async function udpInitUserActivityServer() {
     // Handler for UDP messages relating to user activity events
     globals.udpServerUserActivity.socket.on('message', async (message, remote) => {
         try {
-            // Check source IP validation if enabled
+            // Check source IP validation before any other processing
             if (remote?.address) {
                 if (
                     !isIpAllowed(
@@ -78,9 +82,18 @@ export async function udpInitUserActivityServer() {
                         globals.udpServerUserActivity.enableSourceValidation
                     )
                 ) {
-                    globals.logger.warn(
-                        `[UDP User Activity] SOURCE VALIDATION: Rejected message from unauthorized source ${remote.address}:${remote.port}`
-                    );
+                    const now = Date.now();
+                    const lastWarn = userActivityRejectWarnState.get(remote.address) ?? 0;
+                    if (now - lastWarn >= REJECT_WARN_INTERVAL_MS) {
+                        globals.logger.warn(
+                            `[UDP User Activity] SOURCE VALIDATION: Rejected message from unauthorized source ${remote.address}:${remote.port}`
+                        );
+                        userActivityRejectWarnState.set(remote.address, now);
+                    } else {
+                        globals.logger.debug(
+                            `[UDP User Activity] SOURCE VALIDATION: Silently dropping repeated message from ${remote.address}:${remote.port}`
+                        );
+                    }
                     return;
                 }
             }

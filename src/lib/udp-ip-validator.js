@@ -38,26 +38,34 @@ async function resolveHostname(hostname) {
  * Parse and resolve allowed sources from config.
  *
  * Each entry may be a literal IPv4 address or a hostname that will be resolved
- * via DNS. Any entry that cannot be resolved is reported as an error.
+ * via DNS. Hostname lookups run in parallel. Any entry that cannot be resolved
+ * is reported as an error; successfully resolved entries remain active.
  *
  * @param {string[]} sources - Array of IPv4 addresses or hostnames
  * @returns {Promise<{ allowedIPs: string[], errors: string[] }>} Resolved IPs and any error messages
  */
 export async function parseAllowedSources(sources) {
-    const allowedIPs = [];
-    const errors = [];
-
-    for (const source of sources) {
-        if (isIPv4(source)) {
-            allowedIPs.push(source);
-        } else {
+    const results = await Promise.all(
+        sources.map(async (source) => {
+            if (isIPv4(source)) {
+                return { ips: [source], error: null };
+            }
             // Treat as hostname, try to resolve
             const resolved = await resolveHostname(source);
             if (resolved.length > 0) {
-                allowedIPs.push(...resolved);
-            } else {
-                errors.push(`Cannot resolve hostname or invalid IPv4: "${source}"`);
+                return { ips: resolved, error: null };
             }
+            return { ips: [], error: `Cannot resolve hostname or invalid IPv4: "${source}"` };
+        })
+    );
+
+    const allowedIPs = [];
+    const errors = [];
+    for (const { ips, error } of results) {
+        if (error) {
+            errors.push(error);
+        } else {
+            allowedIPs.push(...ips);
         }
     }
 
