@@ -18,7 +18,7 @@ At the start of each session, read:
 When writing code, Copilot must not finish until all of these succeed:
 
 1. `npm run lint:fix`
-2. All unit tests (`npm run test`) pass
+2. All unit tests (`npm run test:unit`) pass
 
 If any check fails, fix the issues and run checks again.
 
@@ -34,7 +34,7 @@ If any check fails, fix the issues and run checks again.
 - Run the app (requires config file): `node src/butler-sos.js -c <path-to-config.yaml>`
 - Common scripts:
     - `npm run lint:fix`
-    - `npm run test`
+    - `npm run test:unit`
     - `npm run format`
 
 ## 🧪 Testing (Jest v30 + ES modules)
