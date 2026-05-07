@@ -45,6 +45,7 @@ jest.unstable_mockModule('../cert-utils.js', () => ({
 describe('audit-screenshots', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        jest.useRealTimers();
 
         mockGlobals.config.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.serversToMonitor.rejectUnauthorized') return false;
@@ -66,11 +67,16 @@ describe('audit-screenshots', () => {
     });
 
     test('retries download with backoff when screenshot is not yet available (404 -> 200)', async () => {
-        jest.useFakeTimers();
+        // Replace setTimeout with an immediate callback so the 500 ms backoff does not block.
+        const setTimeoutSpy = jest.spyOn(globalThis, 'setTimeout').mockImplementation((fn) => {
+            fn();
+            return 0;
+        });
 
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 
         const logger = {
+            debug: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
@@ -95,7 +101,7 @@ describe('audit-screenshots', () => {
             };
         });
 
-        const promise = downloadScreenshot(
+        await downloadScreenshot(
             'https://example.com/screenshot.png',
             {
                 eventId: 'evt-retry',
@@ -129,26 +135,19 @@ describe('audit-screenshots', () => {
             logger
         );
 
-        // Allow the first request to run and schedule the backoff.
-        await Promise.resolve();
-        expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('retrying attempt=2/3'));
-
-        // Backoff for attempt 2 is 500ms.
-        await jest.advanceTimersByTimeAsync(500);
-
-        await promise;
-
         expect(mockAxios.request).toHaveBeenCalledTimes(2);
         expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(1);
+        expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('retrying attempt=2/3'));
         expect(logger.error).not.toHaveBeenCalled();
 
-        jest.useRealTimers();
+        setTimeoutSpy.mockRestore();
     });
 
     test('downloads screenshot without auth and writes file', async () => {
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 
         const logger = {
+            debug: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
@@ -198,6 +197,7 @@ describe('audit-screenshots', () => {
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 
         const logger = {
+            debug: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
@@ -273,6 +273,7 @@ describe('audit-screenshots', () => {
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 
         const logger = {
+            debug: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
@@ -391,6 +392,7 @@ describe('audit-screenshots', () => {
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 
         const logger = {
+            debug: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
@@ -461,6 +463,7 @@ describe('audit-screenshots', () => {
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 
         const logger = {
+            debug: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),

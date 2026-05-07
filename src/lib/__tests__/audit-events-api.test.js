@@ -1323,3 +1323,94 @@ describe('audit-events-api SSRF protection', () => {
         expect(downloadScreenshot).toHaveBeenCalled();
     });
 });
+
+describe('audit-events-api GET /api/v1/test-connection', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('returns 200 with status ok when no apiToken is configured', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = res.json();
+        expect(body.status).toBe('ok');
+        expect(body.message).toBe('Butler SOS Audit API is reachable');
+        expect(typeof body.timestamp).toBe('string');
+    });
+
+    test('returns 200 with valid bearer token', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            headers: { authorization: 'Bearer secret' },
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = res.json();
+        expect(body.status).toBe('ok');
+    });
+
+    test('returns 401 when apiToken is configured and no token is provided', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+        });
+
+        expect(res.statusCode).toBe(401);
+        expect(res.json().error).toBe('Unauthorized');
+    });
+
+    test('returns 401 when apiToken is configured and wrong token is provided', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            headers: { authorization: 'Bearer wrong' },
+        });
+
+        expect(res.statusCode).toBe(401);
+        expect(res.json().error).toBe('Unauthorized');
+    });
+
+    test('timestamp in response is a valid ISO 8601 string', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const before = Date.now();
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+        });
+        const after = Date.now();
+
+        const body = res.json();
+        const ts = new Date(body.timestamp).getTime();
+        expect(ts).toBeGreaterThanOrEqual(before);
+        expect(ts).toBeLessThanOrEqual(after);
+    });
+});

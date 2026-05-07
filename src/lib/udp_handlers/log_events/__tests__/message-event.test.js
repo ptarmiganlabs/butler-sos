@@ -211,7 +211,7 @@ describe('messageEventHandler', () => {
         await messageEventHandler(msg, {});
 
         expect(globals.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('unrecognized log event')
+            expect.stringContaining('Unrecognized log event')
         );
         expect(globals.udpEvents.addLogEvent).toHaveBeenCalledWith(
             expect.objectContaining({ source: 'unknown' })
