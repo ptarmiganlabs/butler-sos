@@ -504,6 +504,41 @@ function createTypeHandlers(logger) {
             return;
         }
 
+        // SSRF protection: enforce an explicit hostname allow-list (fail-closed).
+        // Absent, null, or empty allowedImageDownloadHosts → block all downloads.
+        const rawAllowedHosts = globals.config.has(
+            'Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts'
+        )
+            ? globals.config.get('Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts')
+            : null;
+        const allowedImageDownloadHosts =
+            Array.isArray(rawAllowedHosts) && rawAllowedHosts.length > 0 ? rawAllowedHosts : null;
+
+        if (allowedImageDownloadHosts === null) {
+            logger.warn(
+                `AUDIT API: Screenshot download blocked — no allowedImageDownloadHosts configured eventId=${envelope.eventId} selectionTxnId=${selectionTxnId}`
+            );
+            return;
+        }
+
+        let parsedScreenshotUrl;
+        try {
+            parsedScreenshotUrl = new URL(screenshotUrl);
+        } catch {
+            logger.warn(
+                `AUDIT API: Screenshot download blocked — screenshotUrl is not a valid absolute URL eventId=${envelope.eventId} selectionTxnId=${selectionTxnId}`
+            );
+            return;
+        }
+
+        const hostname = parsedScreenshotUrl.hostname.toLowerCase();
+        if (!allowedImageDownloadHosts.some((h) => h.toLowerCase() === hostname)) {
+            logger.warn(
+                `AUDIT API: Screenshot download blocked — hostname '${hostname}' is not in allowedImageDownloadHosts eventId=${envelope.eventId} selectionTxnId=${selectionTxnId}`
+            );
+            return;
+        }
+
         const screenshotDownloadConfig = {
             enable: true,
             downloadTimeoutMs: globals.config.get(

@@ -198,10 +198,12 @@ describe('audit-events-api event types', () => {
 
         mockGlobals.config.has.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts') return true;
             return false;
         });
         mockGlobals.config.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts') return ['example.com'];
             if (key === 'Butler-SOS.auditEvents.screenshots.storageTargets') return ['local'];
             return null;
         });
@@ -242,10 +244,12 @@ describe('audit-events-api event types', () => {
 
         mockGlobals.config.has.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts') return true;
             return false;
         });
         mockGlobals.config.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts') return ['example.com'];
             if (key === 'Butler-SOS.auditEvents.screenshots.storageTargets') return ['local'];
             return null;
         });
@@ -1161,5 +1165,161 @@ describe('audit-events-api field-length and source constraints', () => {
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Payload validation failed')
         );
+    });
+});
+
+describe('audit-events-api SSRF protection', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+        mockGlobals.auditEventsQueueManager = null;
+    });
+
+    const SCREENSHOT_ENVELOPE = {
+        schemaVersion: 1,
+        eventId: 'a0000000-0000-4000-8000-000000000003',
+        timestamp: '2025-01-01T00:00:00.000Z',
+        type: 'screenshot.url.received',
+        payload: {
+            event: {
+                screenshotUrl: 'https://example.com/screenshot.png',
+                selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+            },
+        },
+    };
+
+    function screenshotConfigMock(allowedImageDownloadHosts) {
+        return {
+            has: jest.fn((key) => {
+                if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
+                if (key === 'Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts')
+                    return allowedImageDownloadHosts !== undefined;
+                return false;
+            }),
+            get: jest.fn((key) => {
+                if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
+                if (key === 'Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts') return allowedImageDownloadHosts;
+                if (key === 'Butler-SOS.auditEvents.screenshots.storageTargets') return ['local'];
+                return null;
+            }),
+        };
+    }
+
+    async function postScreenshot(fastify, envelopeOverride = {}) {
+        return fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                authorization: 'Bearer secret',
+            },
+            payload: { ...SCREENSHOT_ENVELOPE, ...envelopeOverride },
+        });
+    }
+
+    test('blocks download when allowedImageDownloadHosts key is absent in config (fail-closed)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+        // allowedImageDownloadHosts key absent: has() returns false
+        const mock = screenshotConfigMock(undefined);
+        mockGlobals.config.has.mockImplementation(mock.has);
+        mockGlobals.config.get.mockImplementation(mock.get);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postScreenshot(fastify);
+
+        expect(res.statusCode).toBe(202);
+        expect(downloadScreenshot).not.toHaveBeenCalled();
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('no allowedImageDownloadHosts configured')
+        );
+    });
+
+    test('blocks download when allowedImageDownloadHosts is an empty array (fail-closed)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+        const mock = screenshotConfigMock([]);
+        mockGlobals.config.has.mockImplementation(mock.has);
+        mockGlobals.config.get.mockImplementation(mock.get);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postScreenshot(fastify);
+
+        expect(res.statusCode).toBe(202);
+        expect(downloadScreenshot).not.toHaveBeenCalled();
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('no allowedImageDownloadHosts configured')
+        );
+    });
+
+    test('allows download when URL hostname is in allowedImageDownloadHosts', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+        downloadScreenshot.mockResolvedValue({ savedPaths: ['/tmp/shot.png'] });
+        const mock = screenshotConfigMock(['example.com']);
+        mockGlobals.config.has.mockImplementation(mock.has);
+        mockGlobals.config.get.mockImplementation(mock.get);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postScreenshot(fastify);
+
+        expect(res.statusCode).toBe(202);
+        expect(downloadScreenshot).toHaveBeenCalled();
+    });
+
+    test('blocks download when URL hostname is not in allowedImageDownloadHosts', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+        const mock = screenshotConfigMock(['example.com']);
+        mockGlobals.config.has.mockImplementation(mock.has);
+        mockGlobals.config.get.mockImplementation(mock.get);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        // Use a different hostname not in the allow-list
+        const envelope = {
+            ...SCREENSHOT_ENVELOPE,
+            payload: {
+                event: {
+                    screenshotUrl: 'https://evil.internal/screenshot.png',
+                    selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                },
+            },
+        };
+        const res = await postScreenshot(fastify, { payload: envelope.payload });
+
+        expect(res.statusCode).toBe(202);
+        expect(downloadScreenshot).not.toHaveBeenCalled();
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('is not in allowedImageDownloadHosts')
+        );
+    });
+
+    test('allowedImageDownloadHosts matching is case-insensitive', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+        downloadScreenshot.mockResolvedValue({ savedPaths: ['/tmp/shot.png'] });
+        // Configured with uppercase; URL uses lowercase
+        const mock = screenshotConfigMock(['EXAMPLE.COM']);
+        mockGlobals.config.has.mockImplementation(mock.has);
+        mockGlobals.config.get.mockImplementation(mock.get);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        // URL hostname is lowercase example.com
+        const res = await postScreenshot(fastify);
+
+        expect(res.statusCode).toBe(202);
+        expect(downloadScreenshot).toHaveBeenCalled();
     });
 });

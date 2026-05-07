@@ -600,6 +600,11 @@ export const auditEventsSchema = {
                             additionalProperties: false,
                         },
                     },
+                    allowedImageDownloadHosts: {
+                        type: ['array', 'null'],
+                        items: { type: 'string', minLength: 1 },
+                        default: null,
+                    },
                 },
                 required: ['enable', 'downloadTimeoutMs', 'storageTargets'],
                 additionalProperties: false,
