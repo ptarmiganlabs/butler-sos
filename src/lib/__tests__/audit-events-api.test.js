@@ -124,7 +124,7 @@ describe('audit-events-api event types', () => {
                 type: 'object.view.duration',
                 source: {
                     kind: 'qlik-sense-extension',
-                    name: 'butler-sos-audit',
+                    name: 'audit-qs',
                 },
                 payload: {
                     timestamp: '2025-12-27T05:46:40.337Z',
@@ -143,7 +143,7 @@ describe('audit-events-api event types', () => {
                         leftAt: '2025-12-27T05:46:40.337Z',
                         duration: 20000,
                         visible: false,
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                         enterSelectionTxnId: 'txn-0',
                         leaveSelectionTxnId: 'txn-1',
                         dataStateId: 123,
@@ -225,7 +225,7 @@ describe('audit-events-api event types', () => {
                 payload: {
                     event: {
                         screenshotUrl: 'https://example.com/screenshot.png',
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                     },
                 },
             },
@@ -277,7 +277,7 @@ describe('audit-events-api event types', () => {
                 payload: {
                     event: {
                         screenshotUrl: 'https://example.com/screenshot.png',
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                         objectData,
                     },
                 },
@@ -310,7 +310,7 @@ describe('audit-events-api event types', () => {
             type: 'selection.state.changed',
             payload: {
                 event: {
-                    selectionTxnId: 'txn-123',
+                    selectionTxnId: 'c0000000-0000-4000-8000-000000000002',
                     details: [
                         { qField: 'Dim1', qSelectedCount: 1, qSelected: 'A', extra: 'ignored' },
                     ],
@@ -352,7 +352,7 @@ describe('audit-events-api event types', () => {
             type: 'app.model.validated',
             payload: {
                 event: {
-                    selectionTxnId: 'txn-123',
+                    selectionTxnId: 'c0000000-0000-4000-8000-000000000002',
                     dataStateId: 1766865955336,
                 },
             },
@@ -427,7 +427,7 @@ describe('audit-events-api queue manager', () => {
                         userAgent: 'UA',
                     },
                     event: {
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                         details: [],
                     },
                 },
@@ -470,7 +470,7 @@ describe('audit-events-api queue manager', () => {
                         userAgent: 'UA',
                     },
                     event: {
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                         details: [],
                     },
                 },
@@ -515,7 +515,7 @@ describe('audit-events-api queue manager', () => {
                         userAgent: 'UA',
                     },
                     event: {
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                         details: [],
                     },
                 },
@@ -559,7 +559,7 @@ describe('audit-events-api queue manager', () => {
                         userAgent: 'UA',
                     },
                     event: {
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                         details: [],
                     },
                 },
@@ -606,7 +606,7 @@ describe('audit-events-api queue manager', () => {
                         userAgent: 'UA',
                     },
                     event: {
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                         details: [],
                     },
                 },
@@ -937,6 +937,229 @@ describe('audit-events-api envelope constraint validation', () => {
         expect(res.statusCode).toBe(202);
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('type is not a recognised event type')
+        );
+    });
+});
+
+describe('audit-events-api field-length and source constraints', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+        mockGlobals.auditEventsQueueManager = null;
+    });
+
+    function baseEnvelope(payloadOverrides = {}) {
+        return {
+            schemaVersion: 1,
+            eventId: 'a0000000-0000-4000-8000-000000000001',
+            timestamp: '2025-01-01T00:00:00.000Z',
+            type: 'selection.state.changed',
+            payload: {
+                context: {
+                    appId: 'b0000000-0000-4000-8000-000000000001',
+                    appName: 'My App',
+                    sheetId: 'sheet-1',
+                    sheetName: 'Sheet 1',
+                    userId: 'UserDirectory=LAB; UserId=user1',
+                    userAgent: 'Mozilla/5.0',
+                },
+                event: {
+                    selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                    details: [],
+                },
+                ...payloadOverrides,
+            },
+        };
+    }
+
+    async function post(fastify, payload) {
+        return fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                authorization: 'Bearer secret',
+            },
+            payload,
+        });
+    }
+
+    // --- source object ---
+
+    test('accepts valid source with kind and name', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const envelope = {
+            ...baseEnvelope(),
+            source: { kind: 'qlik-sense-extension', name: 'audit-qs' },
+        };
+        const res = await post(fastify, envelope);
+
+        expect(res.statusCode).toBe(202);
+    });
+
+    test('rejects source with unknown kind (Fastify schema → 400)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const envelope = {
+            ...baseEnvelope(),
+            source: { kind: 'unknown-tool', name: 'audit-qs' },
+        };
+        const res = await post(fastify, envelope);
+
+        expect(res.statusCode).toBe(400);
+    });
+
+    test('accepts source with extra properties (enum guards kind/name; Fastify strips unknown fields)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const envelope = {
+            ...baseEnvelope(),
+            source: { kind: 'qlik-sense-extension', name: 'audit-qs', extra: 'injected' },
+        };
+        const res = await post(fastify, envelope);
+
+        // Fastify passes nested additionalProperties through; enum constraints on kind/name are the real gate
+        expect(res.statusCode).toBe(202);
+    });
+
+    // --- payload.context field lengths ---
+
+    test('drops event when appName exceeds 64 chars (AJV → 202 warn)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await post(
+            fastify,
+            baseEnvelope({ context: { appName: 'A'.repeat(65), sheetId: 's', sheetName: 's', userId: 'u', userAgent: 'ua' } })
+        );
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+
+    test('drops event when userAgent exceeds 512 chars (AJV → 202 warn)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await post(
+            fastify,
+            baseEnvelope({ context: { appName: 'App', sheetId: 's', sheetName: 's', userId: 'u', userAgent: 'x'.repeat(513) } })
+        );
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+
+    test('drops event when userId exceeds 128 chars (AJV → 202 warn)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await post(
+            fastify,
+            baseEnvelope({ context: { appName: 'App', sheetId: 's', sheetName: 's', userId: 'u'.repeat(129), userAgent: 'ua' } })
+        );
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+
+    // --- event.selectionTxnId UUID ---
+
+    test('drops event when selectionTxnId is not a UUID (AJV → 202 warn)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await post(
+            fastify,
+            baseEnvelope({ event: { selectionTxnId: 'not-a-uuid', details: [] } })
+        );
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+
+    test('accepts selectionTxnId as valid UUID', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await post(fastify, baseEnvelope());
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).not.toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+
+    // --- event.unsupported.visualization string lengths ---
+
+    test('drops event.unsupported.visualization when vizType exceeds 64 chars', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const envelope = {
+            ...baseEnvelope(),
+            type: 'event.unsupported.visualization',
+            payload: {
+                event: {
+                    vizType: 'v'.repeat(65),
+                    selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                },
+            },
+        };
+        const res = await post(fastify, envelope);
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+
+    // --- object.view.duration objectId length ---
+
+    test('drops object.view.duration when objectId exceeds 64 chars', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const envelope = {
+            ...baseEnvelope(),
+            type: 'object.view.duration',
+            payload: {
+                event: {
+                    objectId: 'o'.repeat(65),
+                    duration: 1000,
+                    leftAt: '2025-01-01T00:01:00.000Z',
+                },
+            },
+        };
+        const res = await post(fastify, envelope);
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
         );
     });
 });

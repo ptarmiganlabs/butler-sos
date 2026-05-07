@@ -131,7 +131,11 @@ function getAuditEventSchema() {
                 type: { type: 'string', minLength: 1 },
                 source: {
                     type: 'object',
-                    additionalProperties: true,
+                    properties: {
+                        kind: { type: 'string', enum: ['qlik-sense-extension'] },
+                        name: { type: 'string', enum: ['audit-qs'] },
+                    },
+                    additionalProperties: false,
                 },
                 payload: {
                     type: 'object',
@@ -639,12 +643,24 @@ function createPayloadValidators() {
     const screenshotUrlReceivedPayloadSchema = {
         type: 'object',
         properties: {
+            context: {
+                type: 'object',
+                properties: {
+                    appId:      { type: 'string' },
+                    appName:   { type: 'string', maxLength: 64 },
+                    sheetId:   { type: 'string', maxLength: 64 },
+                    sheetName: { type: 'string', maxLength: 64 },
+                    userId:    { type: 'string', maxLength: 128 },
+                    userAgent: { type: 'string', maxLength: 512 },
+                },
+                additionalProperties: true,
+            },
             event: {
                 type: 'object',
                 properties: {
-                    screenshotUrl: { type: 'string', minLength: 1, format: 'uri' },
-                    objectId: { type: ['string', 'null'] },
-                    selectionTxnId: { type: 'string', minLength: 1 },
+                    screenshotUrl: { type: 'string', minLength: 1, maxLength: 2048, format: 'uri' },
+                    objectId: { type: ['string', 'null'], maxLength: 64 },
+                    selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
                 },
                 required: ['screenshotUrl', 'selectionTxnId'],
                 additionalProperties: true,
@@ -662,15 +678,27 @@ function createPayloadValidators() {
     const unsupportedVisualizationPayloadSchema = {
         type: 'object',
         properties: {
+            context: {
+                type: 'object',
+                properties: {
+                    appId:      { type: 'string' },
+                    appName:   { type: 'string', maxLength: 64 },
+                    sheetId:   { type: 'string', maxLength: 64 },
+                    sheetName: { type: 'string', maxLength: 64 },
+                    userId:    { type: 'string', maxLength: 128 },
+                    userAgent: { type: 'string', maxLength: 512 },
+                },
+                additionalProperties: true,
+            },
             event: {
                 type: 'object',
                 properties: {
-                    objectId: { type: ['string', 'null'] },
-                    vizType: { type: 'string', minLength: 1 },
-                    title: { type: ['string', 'null'] },
-                    trigger: { type: ['string', 'null'] },
+                    objectId: { type: ['string', 'null'], maxLength: 64 },
+                    vizType: { type: 'string', minLength: 1, maxLength: 64 },
+                    title: { type: ['string', 'null'], maxLength: 64 },
+                    trigger: { type: ['string', 'null'], maxLength: 64 },
                     dataStateId: { type: ['number', 'string', 'null'] },
-                    selectionTxnId: { type: 'string', minLength: 1 },
+                    selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
                 },
                 required: ['vizType', 'selectionTxnId'],
                 additionalProperties: true,
@@ -688,10 +716,22 @@ function createPayloadValidators() {
     const selectionTransactionFinalizedPayloadSchema = {
         type: 'object',
         properties: {
+            context: {
+                type: 'object',
+                properties: {
+                    appId:      { type: 'string' },
+                    appName:   { type: 'string', maxLength: 64 },
+                    sheetId:   { type: 'string', maxLength: 64 },
+                    sheetName: { type: 'string', maxLength: 64 },
+                    userId:    { type: 'string', maxLength: 128 },
+                    userAgent: { type: 'string', maxLength: 512 },
+                },
+                additionalProperties: true,
+            },
             event: {
                 type: 'object',
                 properties: {
-                    selectionTxnId: { type: 'string', minLength: 1 },
+                    selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
                     beforeSelections: { type: 'array' },
                     afterSelections: { type: 'array' },
                 },
@@ -711,10 +751,22 @@ function createPayloadValidators() {
     const selectionStateChangedPayloadSchema = {
         type: 'object',
         properties: {
+            context: {
+                type: 'object',
+                properties: {
+                    appId:      { type: 'string' },
+                    appName:   { type: 'string', maxLength: 64 },
+                    sheetId:   { type: 'string', maxLength: 64 },
+                    sheetName: { type: 'string', maxLength: 64 },
+                    userId:    { type: 'string', maxLength: 128 },
+                    userAgent: { type: 'string', maxLength: 512 },
+                },
+                additionalProperties: true,
+            },
             event: {
                 type: 'object',
                 properties: {
-                    selectionTxnId: { type: 'string', minLength: 1 },
+                    selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
                     details: { type: 'array' },
                 },
                 required: ['selectionTxnId', 'details'],
@@ -733,10 +785,22 @@ function createPayloadValidators() {
     const appModelValidatedPayloadSchema = {
         type: 'object',
         properties: {
+            context: {
+                type: 'object',
+                properties: {
+                    appId:      { type: 'string' },
+                    appName:   { type: 'string', maxLength: 64 },
+                    sheetId:   { type: 'string', maxLength: 64 },
+                    sheetName: { type: 'string', maxLength: 64 },
+                    userId:    { type: 'string', maxLength: 128 },
+                    userAgent: { type: 'string', maxLength: 512 },
+                },
+                additionalProperties: true,
+            },
             event: {
                 type: 'object',
                 properties: {
-                    selectionTxnId: { type: 'string', minLength: 1 },
+                    selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
                     dataStateId: { type: ['integer', 'null'] },
                     captureScheduled: { type: ['boolean', 'null'] },
                 },
@@ -756,17 +820,29 @@ function createPayloadValidators() {
     const objectViewDurationPayloadSchema = {
         type: 'object',
         properties: {
+            context: {
+                type: 'object',
+                properties: {
+                    appId:      { type: 'string' },
+                    appName:   { type: 'string', maxLength: 64 },
+                    sheetId:   { type: 'string', maxLength: 64 },
+                    sheetName: { type: 'string', maxLength: 64 },
+                    userId:    { type: 'string', maxLength: 128 },
+                    userAgent: { type: 'string', maxLength: 512 },
+                },
+                additionalProperties: true,
+            },
             event: {
                 type: 'object',
                 properties: {
-                    objectId: { type: 'string', minLength: 1 },
+                    objectId: { type: 'string', minLength: 1, maxLength: 64 },
                     duration: { type: 'number', minimum: 0 },
                     enteredAt: { type: ['string', 'null'], format: 'date-time' },
                     leftAt: { type: 'string', format: 'date-time' },
                     visible: { type: ['boolean', 'null'] },
-                    selectionTxnId: { type: ['string', 'null'] },
-                    enterSelectionTxnId: { type: ['string', 'null'] },
-                    leaveSelectionTxnId: { type: ['string', 'null'] },
+                    selectionTxnId: { type: ['string', 'null'], maxLength: 36 },
+                    enterSelectionTxnId: { type: ['string', 'null'], maxLength: 36 },
+                    leaveSelectionTxnId: { type: ['string', 'null'], maxLength: 36 },
                     dataStateId: { type: ['integer', 'null'] },
                 },
                 required: ['objectId', 'duration', 'leftAt'],
