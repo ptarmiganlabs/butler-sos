@@ -2,6 +2,7 @@
 import globals from '../globals.js';
 import { listeningEventHandler, messageEventHandler } from './udp_handlers/log_events/index.js';
 import { logError } from './log-error.js';
+import { parseAllowedSources, isIpAllowed } from './udp-ip-validator.js';
 
 // --------------------------------------------------------
 // Set up UDP server for acting on Sense log events
@@ -12,11 +13,44 @@ import { logError } from './log-error.js';
  * This function sets up event handlers for the UDP server that listens for
  * log events from Qlik Sense services (such as engine, proxy, repository,
  * and scheduler services). It also adds queue management, rate limiting,
- * and error handling capabilities.
+ * source IP validation, and error handling capabilities.
  *
- * @returns {void}
+ * @returns {Promise<void>} A promise that resolves when the server is initialized
  */
-export function udpInitLogEventServer() {
+export async function udpInitLogEventServer() {
+    // Resolve allowed source IPs if source validation is enabled
+    if (
+        globals.udpServerLogEvents.enableSourceValidation &&
+        globals.udpServerLogEvents.allowedSourcesConfig.length > 0
+    ) {
+        try {
+            const { allowedIPs, errors } = await parseAllowedSources(
+                globals.udpServerLogEvents.allowedSourcesConfig
+            );
+            if (errors.length > 0) {
+                errors.forEach((err) =>
+                    globals.logger.error(`[UDP Log Events] SOURCE VALIDATION: ${err}`)
+                );
+                globals.logger.warn(
+                    '[UDP Log Events] SOURCE VALIDATION: Disabling source validation due to config errors'
+                );
+                globals.udpServerLogEvents.enableSourceValidation = false;
+            } else {
+                globals.udpServerLogEvents.allowedIPs = allowedIPs;
+                globals.logger.info(
+                    `[UDP Log Events] SOURCE VALIDATION: Enabled, ${allowedIPs.length} IP(s) loaded`
+                );
+            }
+        } catch (err) {
+            logError('[UDP Log Events] SOURCE VALIDATION: Error parsing allowed sources', err);
+            globals.udpServerLogEvents.enableSourceValidation = false;
+        }
+    } else if (globals.udpServerLogEvents.enableSourceValidation) {
+        globals.logger.warn(
+            '[UDP Log Events] SOURCE VALIDATION: Enabled but no allowed sources configured - all sources will be blocked'
+        );
+    }
+
     // Handler for UDP server startup event
     globals.udpServerLogEvents.socket.on('listening', listeningEventHandler);
 
@@ -30,6 +64,16 @@ export function udpInitLogEventServer() {
                 `[UDP LOG EVENT MSG] First 200 chars: ${message.toString().substring(0, 200)}`
             );
             globals.logger.debug(`[UDP LOG EVENT MSG] ---`);
+
+            // Check source IP validation if enabled
+            if (globals.udpServerLogEvents.enableSourceValidation && remote?.address) {
+                if (!isIpAllowed(remote.address, globals.udpServerLogEvents.allowedIPs)) {
+                    globals.logger.warn(
+                        `[UDP Log Events] SOURCE VALIDATION: Rejected message from unauthorized source ${remote.address}:${remote.port}`
+                    );
+                    return;
+                }
+            }
 
             // Get queue manager
             const queueManager = globals.udpQueueManagerLogEvents;

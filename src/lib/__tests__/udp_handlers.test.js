@@ -9,6 +9,11 @@ const globalsPath = path.resolve(__dirname, '../../globals.js');
 const logErrorPath = path.resolve(__dirname, '../log-error.js');
 const logEventsPath = path.resolve(__dirname, '../udp_handlers/log_events/index.js');
 const userEventsPath = path.resolve(__dirname, '../udp_handlers/user_events/index.js');
+const udpIpValidatorPath = path.resolve(__dirname, '../udp-ip-validator.js');
+
+// Hoist mocks outside factories for stable references (Jest ESM pattern)
+const parseAllowedSourcesMock = jest.fn();
+const isIpAllowedMock = jest.fn();
 
 // Mock dependencies
 jest.unstable_mockModule(globalsPath, () => ({
@@ -48,6 +53,9 @@ jest.unstable_mockModule(globalsPath, () => ({
                 bind: jest.fn(),
                 address: jest.fn().mockReturnValue({ address: '0.0.0.0', port: 9876 }),
             },
+            enableSourceValidation: false,
+            allowedSourcesConfig: [],
+            allowedIPs: [],
         },
         udpQueueManagerLogEvents: {
             validateMessageSize: jest.fn().mockReturnValue(true),
@@ -65,6 +73,9 @@ jest.unstable_mockModule(globalsPath, () => ({
                 bind: jest.fn(),
                 address: jest.fn().mockReturnValue({ address: '0.0.0.0', port: 9876 }),
             },
+            enableSourceValidation: false,
+            allowedSourcesConfig: [],
+            allowedIPs: [],
         },
         udpQueueManagerUserActivity: {
             validateMessageSize: jest.fn().mockReturnValue(true),
@@ -94,6 +105,11 @@ jest.unstable_mockModule(userEventsPath, () => ({
     messageEventHandler: jest.fn(),
 }));
 
+jest.unstable_mockModule(udpIpValidatorPath, () => ({
+    parseAllowedSources: parseAllowedSourcesMock,
+    isIpAllowed: isIpAllowedMock,
+}));
+
 const globals = (await import(globalsPath)).default;
 const { logError } = await import(logErrorPath);
 const { listeningEventHandler, messageEventHandler } = await import(logEventsPath);
@@ -109,6 +125,18 @@ describe('UDP Handlers', () => {
     beforeEach(async () => {
         jest.clearAllMocks();
 
+        // Reset source validation state to defaults
+        globals.udpServerLogEvents.enableSourceValidation = false;
+        globals.udpServerLogEvents.allowedSourcesConfig = [];
+        globals.udpServerLogEvents.allowedIPs = [];
+        globals.udpServerUserActivity.enableSourceValidation = false;
+        globals.udpServerUserActivity.allowedSourcesConfig = [];
+        globals.udpServerUserActivity.allowedIPs = [];
+
+        // Default: isIpAllowed returns true (allow all)
+        isIpAllowedMock.mockReturnValue(true);
+        parseAllowedSourcesMock.mockResolvedValue({ allowedIPs: [], errors: [] });
+
         // Import the modules under test
         udpHandlersLogEvents = await import('../udp_handlers_log_events.js');
         udpHandlersUserActivity = await import('../udp_handlers_user_activity.js');
@@ -123,7 +151,7 @@ describe('UDP Handlers', () => {
                 });
 
                 // Execute
-                udpHandlersLogEvents.udpInitLogEventServer();
+                await udpHandlersLogEvents.udpInitLogEventServer();
 
                 // Verify setup
                 expect(globals.udpServerLogEvents.socket.on).toHaveBeenCalledWith(
@@ -188,7 +216,7 @@ describe('UDP Handlers', () => {
                     handlers[event] = handler;
                 });
 
-                udpHandlersLogEvents.udpInitLogEventServer();
+                await udpHandlersLogEvents.udpInitLogEventServer();
 
                 globals.udpQueueManagerLogEvents.addToQueue.mockRejectedValueOnce(
                     new Error('Queue error')
@@ -197,6 +225,109 @@ describe('UDP Handlers', () => {
 
                 expect(logError).toHaveBeenCalledWith(
                     '[UDP Queue] Error handling log event message',
+                    expect.any(Error)
+                );
+            });
+
+            test('should resolve allowed sources when source validation is enabled', async () => {
+                globals.udpServerLogEvents.enableSourceValidation = true;
+                globals.udpServerLogEvents.allowedSourcesConfig = ['192.168.1.1'];
+                parseAllowedSourcesMock.mockResolvedValueOnce({
+                    allowedIPs: ['192.168.1.1'],
+                    errors: [],
+                });
+
+                await udpHandlersLogEvents.udpInitLogEventServer();
+
+                expect(parseAllowedSourcesMock).toHaveBeenCalledWith(['192.168.1.1']);
+                expect(globals.udpServerLogEvents.allowedIPs).toEqual(['192.168.1.1']);
+                expect(globals.logger.info).toHaveBeenCalledWith(
+                    expect.stringContaining('SOURCE VALIDATION: Enabled')
+                );
+            });
+
+            test('should disable source validation when allowed sources cannot be resolved', async () => {
+                globals.udpServerLogEvents.enableSourceValidation = true;
+                globals.udpServerLogEvents.allowedSourcesConfig = ['bad.host'];
+                parseAllowedSourcesMock.mockResolvedValueOnce({
+                    allowedIPs: [],
+                    errors: ['Cannot resolve hostname or invalid IPv4: "bad.host"'],
+                });
+
+                await udpHandlersLogEvents.udpInitLogEventServer();
+
+                expect(globals.udpServerLogEvents.enableSourceValidation).toBe(false);
+                expect(globals.logger.warn).toHaveBeenCalledWith(
+                    expect.stringContaining('Disabling source validation')
+                );
+            });
+
+            test('should warn when source validation is enabled but no sources configured', async () => {
+                globals.udpServerLogEvents.enableSourceValidation = true;
+                globals.udpServerLogEvents.allowedSourcesConfig = [];
+
+                await udpHandlersLogEvents.udpInitLogEventServer();
+
+                expect(globals.logger.warn).toHaveBeenCalledWith(
+                    expect.stringContaining('no allowed sources configured')
+                );
+                expect(parseAllowedSourcesMock).not.toHaveBeenCalled();
+            });
+
+            test('should reject messages from unauthorized source IPs when validation is enabled', async () => {
+                globals.udpServerLogEvents.enableSourceValidation = true;
+                globals.udpServerLogEvents.allowedIPs = ['192.168.1.1'];
+                isIpAllowedMock.mockReturnValue(false);
+
+                const handlers = {};
+                globals.udpServerLogEvents.socket.on.mockImplementation((event, handler) => {
+                    handlers[event] = handler;
+                });
+
+                await udpHandlersLogEvents.udpInitLogEventServer();
+
+                const mockMsg = Buffer.from('test message');
+                const mockRemote = { address: '10.0.0.99', port: 1234 };
+                await handlers['message'](mockMsg, mockRemote);
+
+                expect(globals.logger.warn).toHaveBeenCalledWith(
+                    expect.stringContaining('Rejected message from unauthorized source')
+                );
+                expect(messageEventHandler).not.toHaveBeenCalled();
+            });
+
+            test('should allow messages from authorized source IPs when validation is enabled', async () => {
+                globals.udpServerLogEvents.enableSourceValidation = true;
+                globals.udpServerLogEvents.allowedIPs = ['192.168.1.1'];
+                isIpAllowedMock.mockReturnValue(true);
+
+                const handlers = {};
+                globals.udpServerLogEvents.socket.on.mockImplementation((event, handler) => {
+                    handlers[event] = handler;
+                });
+
+                await udpHandlersLogEvents.udpInitLogEventServer();
+
+                const mockMsg = Buffer.from('test message');
+                const mockRemote = { address: '192.168.1.1', port: 1234 };
+                await handlers['message'](mockMsg, mockRemote);
+
+                expect(isIpAllowedMock).toHaveBeenCalledWith(
+                    '192.168.1.1',
+                    globals.udpServerLogEvents.allowedIPs
+                );
+                expect(messageEventHandler).toHaveBeenCalledWith(mockMsg, mockRemote);
+            });
+            test('should disable source validation when parseAllowedSources throws', async () => {
+                globals.udpServerLogEvents.enableSourceValidation = true;
+                globals.udpServerLogEvents.allowedSourcesConfig = ['192.168.1.1'];
+                parseAllowedSourcesMock.mockRejectedValueOnce(new Error('DNS failure'));
+
+                await udpHandlersLogEvents.udpInitLogEventServer();
+
+                expect(globals.udpServerLogEvents.enableSourceValidation).toBe(false);
+                expect(logError).toHaveBeenCalledWith(
+                    '[UDP Log Events] SOURCE VALIDATION: Error parsing allowed sources',
                     expect.any(Error)
                 );
             });
@@ -212,7 +343,7 @@ describe('UDP Handlers', () => {
                 });
 
                 // Execute
-                udpHandlersUserActivity.udpInitUserActivityServer();
+                await udpHandlersUserActivity.udpInitUserActivityServer();
 
                 // Verify setup
                 expect(globals.udpServerUserActivity.socket.on).toHaveBeenCalledWith(
@@ -280,7 +411,7 @@ describe('UDP Handlers', () => {
                     handlers[event] = handler;
                 });
 
-                udpHandlersUserActivity.udpInitUserActivityServer();
+                await udpHandlersUserActivity.udpInitUserActivityServer();
 
                 globals.udpQueueManagerUserActivity.addToQueue.mockRejectedValueOnce(
                     new Error('Queue error')
@@ -292,6 +423,111 @@ describe('UDP Handlers', () => {
                     expect.any(Error)
                 );
             });
+
+            test('should resolve allowed sources when source validation is enabled', async () => {
+                globals.udpServerUserActivity.enableSourceValidation = true;
+                globals.udpServerUserActivity.allowedSourcesConfig = ['10.0.0.1'];
+                parseAllowedSourcesMock.mockResolvedValueOnce({
+                    allowedIPs: ['10.0.0.1'],
+                    errors: [],
+                });
+
+                await udpHandlersUserActivity.udpInitUserActivityServer();
+
+                expect(parseAllowedSourcesMock).toHaveBeenCalledWith(['10.0.0.1']);
+                expect(globals.udpServerUserActivity.allowedIPs).toEqual(['10.0.0.1']);
+                expect(globals.logger.info).toHaveBeenCalledWith(
+                    expect.stringContaining('SOURCE VALIDATION: Enabled')
+                );
+            });
+
+            test('should disable source validation when allowed sources cannot be resolved', async () => {
+                globals.udpServerUserActivity.enableSourceValidation = true;
+                globals.udpServerUserActivity.allowedSourcesConfig = ['bad.host'];
+                parseAllowedSourcesMock.mockResolvedValueOnce({
+                    allowedIPs: [],
+                    errors: ['Cannot resolve hostname or invalid IPv4: "bad.host"'],
+                });
+
+                await udpHandlersUserActivity.udpInitUserActivityServer();
+
+                expect(globals.udpServerUserActivity.enableSourceValidation).toBe(false);
+                expect(globals.logger.warn).toHaveBeenCalledWith(
+                    expect.stringContaining('Disabling source validation')
+                );
+            });
+
+            test('should warn when source validation is enabled but no sources configured', async () => {
+                globals.udpServerUserActivity.enableSourceValidation = true;
+                globals.udpServerUserActivity.allowedSourcesConfig = [];
+
+                await udpHandlersUserActivity.udpInitUserActivityServer();
+
+                expect(globals.logger.warn).toHaveBeenCalledWith(
+                    expect.stringContaining('no allowed sources configured')
+                );
+                expect(parseAllowedSourcesMock).not.toHaveBeenCalled();
+            });
+
+            test('should reject messages from unauthorized source IPs when validation is enabled', async () => {
+                globals.udpServerUserActivity.enableSourceValidation = true;
+                globals.udpServerUserActivity.allowedIPs = ['192.168.1.1'];
+                isIpAllowedMock.mockReturnValue(false);
+
+                const handlers = {};
+                globals.udpServerUserActivity.socket.on.mockImplementation((event, handler) => {
+                    handlers[event] = handler;
+                });
+
+                await udpHandlersUserActivity.udpInitUserActivityServer();
+
+                const mockMsg = Buffer.from('test message');
+                const mockRemote = { address: '10.0.0.99', port: 1234 };
+                await handlers['message'](mockMsg, mockRemote);
+
+                expect(globals.logger.warn).toHaveBeenCalledWith(
+                    expect.stringContaining('Rejected message from unauthorized source')
+                );
+                expect(messageEventHandlerUser).not.toHaveBeenCalled();
+            });
+
+            test('should allow messages from authorized source IPs when validation is enabled', async () => {
+                globals.udpServerUserActivity.enableSourceValidation = true;
+                globals.udpServerUserActivity.allowedIPs = ['192.168.1.1'];
+                isIpAllowedMock.mockReturnValue(true);
+
+                const handlers = {};
+                globals.udpServerUserActivity.socket.on.mockImplementation((event, handler) => {
+                    handlers[event] = handler;
+                });
+
+                await udpHandlersUserActivity.udpInitUserActivityServer();
+
+                const mockMsg = Buffer.from('test message');
+                const mockRemote = { address: '192.168.1.1', port: 1234 };
+                await handlers['message'](mockMsg, mockRemote);
+
+                expect(isIpAllowedMock).toHaveBeenCalledWith(
+                    '192.168.1.1',
+                    globals.udpServerUserActivity.allowedIPs
+                );
+                expect(messageEventHandlerUser).toHaveBeenCalledWith(mockMsg, mockRemote);
+            });
+
+            test('should disable source validation when parseAllowedSources throws', async () => {
+                globals.udpServerUserActivity.enableSourceValidation = true;
+                globals.udpServerUserActivity.allowedSourcesConfig = ['192.168.1.1'];
+                parseAllowedSourcesMock.mockRejectedValueOnce(new Error('DNS failure'));
+
+                await udpHandlersUserActivity.udpInitUserActivityServer();
+
+                expect(globals.udpServerUserActivity.enableSourceValidation).toBe(false);
+                expect(logError).toHaveBeenCalledWith(
+                    '[UDP User Activity] SOURCE VALIDATION: Error parsing allowed sources',
+                    expect.any(Error)
+                );
+            });
         });
     });
 });
+

@@ -138,6 +138,11 @@ Butler-SOS:
                 enable: false # Enable rate limiting (default: false)
                 maxMessagesPerMinute: 600 # Max messages per minute, ~10/sec (default: 600)
             maxMessageSize: 65507 # Max UDP message size in bytes (default: 65507, UDP max)
+            # Source IP validation for incoming UDP messages
+            enableSourceValidation: false # Enable validation of source IP for incoming UDP messages (default: false)
+            allowedSources: # List of allowed source hosts/IPs. Only used if enableSourceValidation is true.
+                # - 192.168.1.100
+                # - sense-server-01.mydomain.com
             # Queue metrics storage in InfluxDB
             queueMetrics:
                 influxdb:
@@ -192,6 +197,11 @@ Butler-SOS:
                 enable: false # Enable rate limiting (default: false)
                 maxMessagesPerMinute: 600 # Max messages per minute, ~10/sec (default: 600)
             maxMessageSize: 65507 # Max UDP message size in bytes (default: 65507, UDP max)
+            # Source IP validation for incoming UDP messages
+            enableSourceValidation: false # Enable validation of source IP for incoming UDP messages (default: false)
+            allowedSources: # List of allowed source hosts/IPs. Only used if enableSourceValidation is true.
+                # - 192.168.1.100
+                # - sense-server-01.mydomain.com
             # Queue metrics storage in InfluxDB
             queueMetrics:
                 influxdb:

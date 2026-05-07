@@ -211,7 +211,7 @@ async function mainScript() {
 
     // Set up UDP handler for user activity/events
     if (globals.config.get('Butler-SOS.userEvents.enable')) {
-        udpInitUserActivityServer();
+        await udpInitUserActivityServer();
 
         globals.logger.debug(
             `MAIN: Server for user activity/events UDP server: ${globals.udpServerUserActivity.host}`
@@ -232,7 +232,7 @@ async function mainScript() {
         globals.config.get('Butler-SOS.logEvents.source.engine.enable') ||
         globals.config.get('Butler-SOS.logEvents.source.qixPerf.enable')
     ) {
-        udpInitLogEventServer();
+        await udpInitLogEventServer();
 
         globals.logger.debug(
             `MAIN: Server for user activity/events UDP server: ${globals.udpServerLogEvents.host}`

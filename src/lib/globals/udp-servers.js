@@ -27,6 +27,14 @@ export function initUdp(settings) {
         settings.udpServerUserActivity.portUserActivity = settings.config.get(
             'Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents'
         );
+
+        // Source validation settings
+        settings.udpServerUserActivity.enableSourceValidation = settings.config.get(
+            'Butler-SOS.userEvents.udpServerConfig.enableSourceValidation'
+        );
+        settings.udpServerUserActivity.allowedSourcesConfig =
+            settings.config.get('Butler-SOS.userEvents.udpServerConfig.allowedSources') || [];
+        settings.udpServerUserActivity.allowedIPs = []; // Populated after DNS resolution at startup
     } catch (err) {
         settings.logger.error(
             `CONFIG: Setting up UDP user activity listener: ${settings.getErrorMessage(err)}`
@@ -51,6 +59,14 @@ export function initUdp(settings) {
         settings.udpServerLogEvents.port = settings.config.get(
             'Butler-SOS.logEvents.udpServerConfig.portLogEvents'
         );
+
+        // Source validation settings
+        settings.udpServerLogEvents.enableSourceValidation = settings.config.get(
+            'Butler-SOS.logEvents.udpServerConfig.enableSourceValidation'
+        );
+        settings.udpServerLogEvents.allowedSourcesConfig =
+            settings.config.get('Butler-SOS.logEvents.udpServerConfig.allowedSources') || [];
+        settings.udpServerLogEvents.allowedIPs = []; // Populated after DNS resolution at startup
     } catch (err) {
         settings.logger.error(
             `CONFIG: Setting up UDP log events listener: ${settings.getErrorMessage(err)}`

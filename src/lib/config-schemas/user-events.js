@@ -55,6 +55,12 @@ export const userEventsSchema = {
                         additionalProperties: false,
                     },
                     maxMessageSize: { type: 'number', default: 65507 },
+                    enableSourceValidation: { type: 'boolean', default: false },
+                    allowedSources: {
+                        type: ['array', 'null'],
+                        items: { type: 'string' },
+                        default: [],
+                    },
                     queueMetrics: {
                         type: 'object',
                         properties: {
@@ -94,6 +100,8 @@ export const userEventsSchema = {
                     'messageQueue',
                     'rateLimit',
                     'maxMessageSize',
+                    'enableSourceValidation',
+                    'allowedSources',
                     'queueMetrics',
                 ],
                 additionalProperties: false,
