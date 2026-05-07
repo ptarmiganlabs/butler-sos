@@ -21,6 +21,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
  */
 const VALID_EVENT_TYPES = new Set([
     'selection.state.changed',
+    'selection.transaction.finalized',
     'object.visibility.changed',
     'object.view.duration',
     'navigation.sheet.loaded',
@@ -92,7 +93,9 @@ function validateEnvelopeConstraints(envelope) {
     }
 
     if (envelope.correlationId !== undefined && envelope.correlationId.length > 64) {
-        reasons.push(`correlationId exceeds 64 characters (length=${envelope.correlationId.length})`);
+        reasons.push(
+            `correlationId exceeds 64 characters (length=${envelope.correlationId.length})`
+        );
     }
 
     const appId = envelope.payload?.context?.appId;
@@ -452,7 +455,7 @@ function createTypeHandlers(logger) {
         const objectData = envelope?.payload?.event?.objectData ?? null;
 
         logger.verbose(
-            `AUDIT API: screenshot.url.received eventId=${envelope.eventId} objectId=${objectId} selectionTxnId=${selectionTxnId} dataStateId=${dataStateId} url=${screenshotUrl} ip=${requestContext.ip}`
+            `AUDIT API: screenshot.url.received eventId=${envelope.eventId} objectId=${objectId} selectionTxnId=${selectionTxnId} dataStateId=${dataStateId} urlSummary="${summarizeUrlForDebug(screenshotUrl)}" ip=${requestContext.ip}`
         );
 
         debugLog(
@@ -681,11 +684,11 @@ function createPayloadValidators() {
             context: {
                 type: 'object',
                 properties: {
-                    appId:      { type: 'string' },
-                    appName:   { type: 'string', maxLength: 64 },
-                    sheetId:   { type: 'string', maxLength: 64 },
+                    appId: { type: 'string' },
+                    appName: { type: 'string', maxLength: 64 },
+                    sheetId: { type: 'string', maxLength: 64 },
                     sheetName: { type: 'string', maxLength: 64 },
-                    userId:    { type: 'string', maxLength: 128 },
+                    userId: { type: 'string', maxLength: 128 },
                     userAgent: { type: 'string', maxLength: 512 },
                 },
                 additionalProperties: true,
@@ -716,11 +719,11 @@ function createPayloadValidators() {
             context: {
                 type: 'object',
                 properties: {
-                    appId:      { type: 'string' },
-                    appName:   { type: 'string', maxLength: 64 },
-                    sheetId:   { type: 'string', maxLength: 64 },
+                    appId: { type: 'string' },
+                    appName: { type: 'string', maxLength: 64 },
+                    sheetId: { type: 'string', maxLength: 64 },
                     sheetName: { type: 'string', maxLength: 64 },
-                    userId:    { type: 'string', maxLength: 128 },
+                    userId: { type: 'string', maxLength: 128 },
                     userAgent: { type: 'string', maxLength: 512 },
                 },
                 additionalProperties: true,
@@ -754,11 +757,11 @@ function createPayloadValidators() {
             context: {
                 type: 'object',
                 properties: {
-                    appId:      { type: 'string' },
-                    appName:   { type: 'string', maxLength: 64 },
-                    sheetId:   { type: 'string', maxLength: 64 },
+                    appId: { type: 'string' },
+                    appName: { type: 'string', maxLength: 64 },
+                    sheetId: { type: 'string', maxLength: 64 },
                     sheetName: { type: 'string', maxLength: 64 },
-                    userId:    { type: 'string', maxLength: 128 },
+                    userId: { type: 'string', maxLength: 128 },
                     userAgent: { type: 'string', maxLength: 512 },
                 },
                 additionalProperties: true,
@@ -767,8 +770,8 @@ function createPayloadValidators() {
                 type: 'object',
                 properties: {
                     selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
-                    beforeSelections: { type: 'array' },
-                    afterSelections: { type: 'array' },
+                    beforeSelections: { type: 'array', maxItems: 500 },
+                    afterSelections: { type: 'array', maxItems: 500 },
                 },
                 required: ['selectionTxnId', 'beforeSelections', 'afterSelections'],
                 additionalProperties: true,
@@ -789,11 +792,11 @@ function createPayloadValidators() {
             context: {
                 type: 'object',
                 properties: {
-                    appId:      { type: 'string' },
-                    appName:   { type: 'string', maxLength: 64 },
-                    sheetId:   { type: 'string', maxLength: 64 },
+                    appId: { type: 'string' },
+                    appName: { type: 'string', maxLength: 64 },
+                    sheetId: { type: 'string', maxLength: 64 },
                     sheetName: { type: 'string', maxLength: 64 },
-                    userId:    { type: 'string', maxLength: 128 },
+                    userId: { type: 'string', maxLength: 128 },
                     userAgent: { type: 'string', maxLength: 512 },
                 },
                 additionalProperties: true,
@@ -802,7 +805,7 @@ function createPayloadValidators() {
                 type: 'object',
                 properties: {
                     selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
-                    details: { type: 'array' },
+                    details: { type: 'array', maxItems: 500 },
                 },
                 required: ['selectionTxnId', 'details'],
                 additionalProperties: true,
@@ -823,11 +826,11 @@ function createPayloadValidators() {
             context: {
                 type: 'object',
                 properties: {
-                    appId:      { type: 'string' },
-                    appName:   { type: 'string', maxLength: 64 },
-                    sheetId:   { type: 'string', maxLength: 64 },
+                    appId: { type: 'string' },
+                    appName: { type: 'string', maxLength: 64 },
+                    sheetId: { type: 'string', maxLength: 64 },
                     sheetName: { type: 'string', maxLength: 64 },
-                    userId:    { type: 'string', maxLength: 128 },
+                    userId: { type: 'string', maxLength: 128 },
                     userAgent: { type: 'string', maxLength: 512 },
                 },
                 additionalProperties: true,
@@ -858,11 +861,11 @@ function createPayloadValidators() {
             context: {
                 type: 'object',
                 properties: {
-                    appId:      { type: 'string' },
-                    appName:   { type: 'string', maxLength: 64 },
-                    sheetId:   { type: 'string', maxLength: 64 },
+                    appId: { type: 'string' },
+                    appName: { type: 'string', maxLength: 64 },
+                    sheetId: { type: 'string', maxLength: 64 },
                     sheetName: { type: 'string', maxLength: 64 },
-                    userId:    { type: 'string', maxLength: 128 },
+                    userId: { type: 'string', maxLength: 128 },
                     userAgent: { type: 'string', maxLength: 512 },
                 },
                 additionalProperties: true,
@@ -1041,7 +1044,8 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
             globals.logger.info(
                 `AUDIT API: Received audit event type=${envelope.type} eventId=${envelope.eventId} ip=${requestContext.ip}`
             );
-            globals.logger.info(`AUDIT API: Full envelope: ${JSON.stringify(envelope)}`);
+            // Log full envelope at debug only — it may contain PII (userAgent, userId, appName, etc.)
+            globals.logger.debug(`AUDIT API: Full envelope: ${JSON.stringify(envelope)}`);
         }
 
         debugLog(
@@ -1087,7 +1091,8 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
 
         // Validate envelope-level semantic constraints (UUID formats, event type allow-list).
         // All checks run unconditionally so every violation is surfaced in a single warning.
-        const { valid: constraintsValid, reasons: constraintReasons } = validateEnvelopeConstraints(envelope);
+        const { valid: constraintsValid, reasons: constraintReasons } =
+            validateEnvelopeConstraints(envelope);
         if (!constraintsValid) {
             globals.logger.warn(
                 `AUDIT API: Dropped audit event - constraint violations: ${constraintReasons.join('; ')} [eventId=${envelope?.eventId ?? 'n/a'} type=${envelope?.type ?? 'n/a'}]`

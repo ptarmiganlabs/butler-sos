@@ -1094,7 +1094,13 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 responseType: 'arraybuffer',
                 httpsAgent,
                 timeout: timeoutMs,
-                maxRedirects: 5,
+                // Disable redirects to prevent redirect-based SSRF bypasses.
+                // The hostname allow-list is validated on the original URL; following
+                // redirects could allow an allow-listed host to redirect to an
+                // internal/private endpoint (e.g. 169.254.169.254 or 127.0.0.1).
+                maxRedirects: 0,
+                // Limit downloaded content to 50 MB to prevent memory exhaustion.
+                maxContentLength: 50 * 1024 * 1024,
                 validateStatus: acceptAllHttpStatuses,
             });
 

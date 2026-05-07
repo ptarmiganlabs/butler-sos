@@ -1414,3 +1414,104 @@ describe('audit-events-api GET /api/v1/test-connection', () => {
         expect(ts).toBeLessThanOrEqual(after);
     });
 });
+
+describe('audit-events-api array maxItems constraints', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+        mockGlobals.auditEventsQueueManager = null;
+    });
+
+    test('drops selection.transaction.finalized with oversized beforeSelections array', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: { 'content-type': 'application/json' },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'a0000000-0000-4000-8000-000000000001',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.transaction.finalized',
+                payload: {
+                    event: {
+                        selectionTxnId: 'b1000000-0000-4000-8000-000000000001',
+                        beforeSelections: Array.from({ length: 501 }, (_, i) => ({ field: i })),
+                        afterSelections: [],
+                    },
+                },
+            },
+        });
+
+        // accept-and-drop behaviour: 202 but warn about validation failure
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+
+    test('accepts selection.transaction.finalized with arrays at the limit', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { writeAuditEventToDestinations } = await import('../audit-destinations/index.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: { 'content-type': 'application/json' },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'a0000000-0000-4000-8000-000000000002',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.transaction.finalized',
+                payload: {
+                    event: {
+                        selectionTxnId: 'b1000000-0000-4000-8000-000000000002',
+                        beforeSelections: Array.from({ length: 500 }, (_, i) => ({ field: i })),
+                        afterSelections: Array.from({ length: 500 }, (_, i) => ({ field: i })),
+                    },
+                },
+            },
+        });
+
+        expect(res.statusCode).toBe(202);
+        expect(writeAuditEventToDestinations).toHaveBeenCalled();
+    });
+
+    test('drops selection.state.changed with oversized details array', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: { 'content-type': 'application/json' },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'a0000000-0000-4000-8000-000000000003',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.state.changed',
+                payload: {
+                    event: {
+                        selectionTxnId: 'b1000000-0000-4000-8000-000000000003',
+                        details: Array.from({ length: 501 }, (_, i) => ({ field: i })),
+                    },
+                },
+            },
+        });
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+});

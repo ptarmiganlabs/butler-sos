@@ -650,4 +650,48 @@ describe('audit-screenshots SSRF protection', () => {
             expect.stringContaining('URL scheme')
         );
     });
+
+    test('passes maxRedirects: 0 to axios to prevent redirect-induced SSRF', async () => {
+        mockAxios.request.mockResolvedValue({
+            status: 200,
+            headers: { 'content-type': 'image/png' },
+            data: Buffer.alloc(0),
+        });
+
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        await downloadScreenshot(
+            'https://qliksense.example.com/screenshot.png',
+            { eventId: 'evt-6', correlationId: 'corr-6', payload: { event: {} } },
+            baseConfig,
+            logger
+        );
+
+        expect(mockAxios.request).toHaveBeenCalled();
+        const callArgs = mockAxios.request.mock.calls[0][0];
+        expect(callArgs.maxRedirects).toBe(0);
+    });
+
+    test('passes maxContentLength to axios to bound downloaded image size', async () => {
+        mockAxios.request.mockResolvedValue({
+            status: 200,
+            headers: { 'content-type': 'image/png' },
+            data: Buffer.alloc(0),
+        });
+
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        await downloadScreenshot(
+            'https://qliksense.example.com/screenshot.png',
+            { eventId: 'evt-7', correlationId: 'corr-7', payload: { event: {} } },
+            baseConfig,
+            logger
+        );
+
+        expect(mockAxios.request).toHaveBeenCalled();
+        const callArgs = mockAxios.request.mock.calls[0][0];
+        // 50 MB = 50 * 1024 * 1024
+        expect(callArgs.maxContentLength).toBeGreaterThan(0);
+        expect(callArgs.maxContentLength).toBeLessThanOrEqual(50 * 1024 * 1024);
+    });
 });

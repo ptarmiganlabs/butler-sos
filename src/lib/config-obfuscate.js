@@ -201,6 +201,12 @@ function configObfuscate(config) {
             };
         });
 
+        // Obfuscate Butler-SOS.auditEvents.apiToken — mask the entire token,
+        // it is a bearer credential and must not appear in the config visualisation UI.
+        if (obfuscatedConfig['Butler-SOS']?.auditEvents?.apiToken) {
+            obfuscatedConfig['Butler-SOS'].auditEvents.apiToken = '*'.repeat(10);
+        }
+
         return obfuscatedConfig;
     } catch (err) {
         globals.logger.error(
