@@ -192,9 +192,7 @@ export async function messageEventHandler(message, _remote) {
                     subsystem = msgParts[5];
                 }
 
-                globals.logger.warn(
-                    `LOG EVENT: Received message that is an unrecognized log event: ${source}`
-                );
+                globals.logger.warn(`LOG EVENT: Unrecognized log event type: ${source}`);
 
                 // Increase counter for log events
                 await globals.udpEvents.addLogEvent({
