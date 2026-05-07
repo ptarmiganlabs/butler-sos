@@ -47,28 +47,36 @@ describe('udp-ip-validator', () => {
 
     // -------------------------------------------------------
     describe('isIpAllowed', () => {
-        test('should return true when allowedIPs list is empty', () => {
+        test('should return true when validationEnabled is false (default)', () => {
+            // Validation disabled — always allow regardless of list
             expect(isIpAllowed('192.168.1.1', [])).toBe(true);
-        });
-
-        test('should return true when allowedIPs is null', () => {
             expect(isIpAllowed('192.168.1.1', null)).toBe(true);
-        });
-
-        test('should return true when allowedIPs is undefined', () => {
             expect(isIpAllowed('192.168.1.1', undefined)).toBe(true);
+            expect(isIpAllowed('192.168.1.1', ['10.0.0.1'])).toBe(true);
         });
 
-        test('should return true when IP is in the allowed list', () => {
-            const allowedIPs = ['192.168.1.1', '10.0.0.5'];
-            expect(isIpAllowed('192.168.1.1', allowedIPs)).toBe(true);
-            expect(isIpAllowed('10.0.0.5', allowedIPs)).toBe(true);
+        test('should return false when validationEnabled is true and allowedIPs is empty', () => {
+            expect(isIpAllowed('192.168.1.1', [], true)).toBe(false);
         });
 
-        test('should return false when IP is not in the allowed list', () => {
+        test('should return false when validationEnabled is true and allowedIPs is null', () => {
+            expect(isIpAllowed('192.168.1.1', null, true)).toBe(false);
+        });
+
+        test('should return false when validationEnabled is true and allowedIPs is undefined', () => {
+            expect(isIpAllowed('192.168.1.1', undefined, true)).toBe(false);
+        });
+
+        test('should return true when validationEnabled is true and IP is in the allowed list', () => {
             const allowedIPs = ['192.168.1.1', '10.0.0.5'];
-            expect(isIpAllowed('192.168.1.2', allowedIPs)).toBe(false);
-            expect(isIpAllowed('172.16.0.1', allowedIPs)).toBe(false);
+            expect(isIpAllowed('192.168.1.1', allowedIPs, true)).toBe(true);
+            expect(isIpAllowed('10.0.0.5', allowedIPs, true)).toBe(true);
+        });
+
+        test('should return false when validationEnabled is true and IP is not in the allowed list', () => {
+            const allowedIPs = ['192.168.1.1', '10.0.0.5'];
+            expect(isIpAllowed('192.168.1.2', allowedIPs, true)).toBe(false);
+            expect(isIpAllowed('172.16.0.1', allowedIPs, true)).toBe(false);
         });
     });
 

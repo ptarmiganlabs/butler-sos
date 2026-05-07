@@ -100,8 +100,6 @@ export const userEventsSchema = {
                     'messageQueue',
                     'rateLimit',
                     'maxMessageSize',
-                    'enableSourceValidation',
-                    'allowedSources',
                     'queueMetrics',
                 ],
                 additionalProperties: false,

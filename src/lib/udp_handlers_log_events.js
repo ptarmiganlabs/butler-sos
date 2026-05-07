@@ -27,19 +27,31 @@ export async function udpInitLogEventServer() {
             const { allowedIPs, errors } = await parseAllowedSources(
                 globals.udpServerLogEvents.allowedSourcesConfig
             );
+
+            // Log any per-entry resolution errors
             if (errors.length > 0) {
                 errors.forEach((err) =>
                     globals.logger.error(`[UDP Log Events] SOURCE VALIDATION: ${err}`)
                 );
-                globals.logger.warn(
-                    '[UDP Log Events] SOURCE VALIDATION: Disabling source validation due to config errors'
-                );
-                globals.udpServerLogEvents.enableSourceValidation = false;
-            } else {
+            }
+
+            if (allowedIPs.length > 0) {
+                // At least some entries resolved — keep validation active
                 globals.udpServerLogEvents.allowedIPs = allowedIPs;
                 globals.logger.info(
                     `[UDP Log Events] SOURCE VALIDATION: Enabled, ${allowedIPs.length} IP(s) loaded`
                 );
+                if (errors.length > 0) {
+                    globals.logger.warn(
+                        `[UDP Log Events] SOURCE VALIDATION: ${errors.length} source(s) could not be resolved and were skipped`
+                    );
+                }
+            } else {
+                // No IPs could be resolved at all — disable to avoid silently blocking everything
+                globals.logger.warn(
+                    '[UDP Log Events] SOURCE VALIDATION: No source IPs could be resolved — disabling source validation'
+                );
+                globals.udpServerLogEvents.enableSourceValidation = false;
             }
         } catch (err) {
             logError('[UDP Log Events] SOURCE VALIDATION: Error parsing allowed sources', err);
@@ -47,7 +59,7 @@ export async function udpInitLogEventServer() {
         }
     } else if (globals.udpServerLogEvents.enableSourceValidation) {
         globals.logger.warn(
-            '[UDP Log Events] SOURCE VALIDATION: Enabled but no allowed sources configured - all sources will be blocked'
+            '[UDP Log Events] SOURCE VALIDATION: Enabled but no allowed sources configured - all messages will be rejected'
         );
     }
 
@@ -66,8 +78,14 @@ export async function udpInitLogEventServer() {
             globals.logger.debug(`[UDP LOG EVENT MSG] ---`);
 
             // Check source IP validation if enabled
-            if (globals.udpServerLogEvents.enableSourceValidation && remote?.address) {
-                if (!isIpAllowed(remote.address, globals.udpServerLogEvents.allowedIPs)) {
+            if (remote?.address) {
+                if (
+                    !isIpAllowed(
+                        remote.address,
+                        globals.udpServerLogEvents.allowedIPs,
+                        globals.udpServerLogEvents.enableSourceValidation
+                    )
+                ) {
                     globals.logger.warn(
                         `[UDP Log Events] SOURCE VALIDATION: Rejected message from unauthorized source ${remote.address}:${remote.port}`
                     );

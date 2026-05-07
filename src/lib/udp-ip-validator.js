@@ -65,18 +65,26 @@ export async function parseAllowedSources(sources) {
 }
 
 /**
- * Check if an IP address is in the allowed list.
+ * Check if an IP address is allowed to send messages.
  *
- * When the allowed list is empty or null/undefined, all IPs are considered allowed
- * (i.e. no restriction is applied).
+ * The semantics depend on whether source validation is active:
+ * - When `validationEnabled` is false, all IPs are allowed (no restriction).
+ * - When `validationEnabled` is true and `allowedIPs` is non-empty, only listed IPs are allowed.
+ * - When `validationEnabled` is true and `allowedIPs` is empty/null, **no** IP is allowed
+ *   (deny-all when validation is on but the list is empty).
  *
  * @param {string} ip - The IP address to check
  * @param {string[]} allowedIPs - Array of allowed IP addresses
- * @returns {boolean} True if the IP is allowed (or no restriction is configured), false otherwise
+ * @param {boolean} [validationEnabled] - Whether source validation is active
+ * @returns {boolean} True if the IP is allowed, false otherwise
  */
-export function isIpAllowed(ip, allowedIPs) {
+export function isIpAllowed(ip, allowedIPs, validationEnabled = false) {
+    if (!validationEnabled) {
+        return true; // Validation disabled — allow all
+    }
+
     if (!allowedIPs || allowedIPs.length === 0) {
-        return true; // No restrictions
+        return false; // Validation enabled but no IPs configured — deny all
     }
 
     return allowedIPs.includes(ip);

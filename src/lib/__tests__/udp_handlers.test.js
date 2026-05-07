@@ -246,7 +246,25 @@ describe('UDP Handlers', () => {
                 );
             });
 
-            test('should disable source validation when allowed sources cannot be resolved', async () => {
+            test('should keep validation enabled when only some sources fail to resolve', async () => {
+                globals.udpServerLogEvents.enableSourceValidation = true;
+                globals.udpServerLogEvents.allowedSourcesConfig = ['192.168.1.1', 'bad.host'];
+                parseAllowedSourcesMock.mockResolvedValueOnce({
+                    allowedIPs: ['192.168.1.1'],
+                    errors: ['Cannot resolve hostname or invalid IPv4: "bad.host"'],
+                });
+
+                await udpHandlersLogEvents.udpInitLogEventServer();
+
+                // Validation should stay enabled with the resolved IP
+                expect(globals.udpServerLogEvents.enableSourceValidation).toBe(true);
+                expect(globals.udpServerLogEvents.allowedIPs).toEqual(['192.168.1.1']);
+                expect(globals.logger.warn).toHaveBeenCalledWith(
+                    expect.stringContaining('could not be resolved and were skipped')
+                );
+            });
+
+            test('should disable source validation when all allowed sources fail to resolve', async () => {
                 globals.udpServerLogEvents.enableSourceValidation = true;
                 globals.udpServerLogEvents.allowedSourcesConfig = ['bad.host'];
                 parseAllowedSourcesMock.mockResolvedValueOnce({
@@ -258,7 +276,7 @@ describe('UDP Handlers', () => {
 
                 expect(globals.udpServerLogEvents.enableSourceValidation).toBe(false);
                 expect(globals.logger.warn).toHaveBeenCalledWith(
-                    expect.stringContaining('Disabling source validation')
+                    expect.stringContaining('No source IPs could be resolved')
                 );
             });
 
@@ -314,7 +332,8 @@ describe('UDP Handlers', () => {
 
                 expect(isIpAllowedMock).toHaveBeenCalledWith(
                     '192.168.1.1',
-                    globals.udpServerLogEvents.allowedIPs
+                    globals.udpServerLogEvents.allowedIPs,
+                    globals.udpServerLogEvents.enableSourceValidation
                 );
                 expect(messageEventHandler).toHaveBeenCalledWith(mockMsg, mockRemote);
             });
@@ -441,7 +460,25 @@ describe('UDP Handlers', () => {
                 );
             });
 
-            test('should disable source validation when allowed sources cannot be resolved', async () => {
+            test('should keep validation enabled when only some sources fail to resolve', async () => {
+                globals.udpServerUserActivity.enableSourceValidation = true;
+                globals.udpServerUserActivity.allowedSourcesConfig = ['10.0.0.1', 'bad.host'];
+                parseAllowedSourcesMock.mockResolvedValueOnce({
+                    allowedIPs: ['10.0.0.1'],
+                    errors: ['Cannot resolve hostname or invalid IPv4: "bad.host"'],
+                });
+
+                await udpHandlersUserActivity.udpInitUserActivityServer();
+
+                // Validation should stay enabled with the resolved IP
+                expect(globals.udpServerUserActivity.enableSourceValidation).toBe(true);
+                expect(globals.udpServerUserActivity.allowedIPs).toEqual(['10.0.0.1']);
+                expect(globals.logger.warn).toHaveBeenCalledWith(
+                    expect.stringContaining('could not be resolved and were skipped')
+                );
+            });
+
+            test('should disable source validation when all allowed sources fail to resolve', async () => {
                 globals.udpServerUserActivity.enableSourceValidation = true;
                 globals.udpServerUserActivity.allowedSourcesConfig = ['bad.host'];
                 parseAllowedSourcesMock.mockResolvedValueOnce({
@@ -453,7 +490,7 @@ describe('UDP Handlers', () => {
 
                 expect(globals.udpServerUserActivity.enableSourceValidation).toBe(false);
                 expect(globals.logger.warn).toHaveBeenCalledWith(
-                    expect.stringContaining('Disabling source validation')
+                    expect.stringContaining('No source IPs could be resolved')
                 );
             });
 
@@ -509,7 +546,8 @@ describe('UDP Handlers', () => {
 
                 expect(isIpAllowedMock).toHaveBeenCalledWith(
                     '192.168.1.1',
-                    globals.udpServerUserActivity.allowedIPs
+                    globals.udpServerUserActivity.allowedIPs,
+                    globals.udpServerUserActivity.enableSourceValidation
                 );
                 expect(messageEventHandlerUser).toHaveBeenCalledWith(mockMsg, mockRemote);
             });

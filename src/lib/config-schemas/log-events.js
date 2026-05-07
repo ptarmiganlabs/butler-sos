@@ -88,8 +88,6 @@ export const logEventsSchema = {
                     'messageQueue',
                     'rateLimit',
                     'maxMessageSize',
-                    'enableSourceValidation',
-                    'allowedSources',
                     'queueMetrics',
                 ],
                 additionalProperties: false,

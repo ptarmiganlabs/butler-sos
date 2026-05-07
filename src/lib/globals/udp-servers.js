@@ -28,12 +28,17 @@ export function initUdp(settings) {
             'Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents'
         );
 
-        // Source validation settings
-        settings.udpServerUserActivity.enableSourceValidation = settings.config.get(
+        // Source validation settings (optional, defaulting for backward compatibility)
+        settings.udpServerUserActivity.enableSourceValidation = settings.config.has(
             'Butler-SOS.userEvents.udpServerConfig.enableSourceValidation'
-        );
-        settings.udpServerUserActivity.allowedSourcesConfig =
-            settings.config.get('Butler-SOS.userEvents.udpServerConfig.allowedSources') || [];
+        )
+            ? settings.config.get('Butler-SOS.userEvents.udpServerConfig.enableSourceValidation')
+            : false;
+        settings.udpServerUserActivity.allowedSourcesConfig = settings.config.has(
+            'Butler-SOS.userEvents.udpServerConfig.allowedSources'
+        )
+            ? settings.config.get('Butler-SOS.userEvents.udpServerConfig.allowedSources') || []
+            : [];
         settings.udpServerUserActivity.allowedIPs = []; // Populated after DNS resolution at startup
     } catch (err) {
         settings.logger.error(
@@ -60,12 +65,17 @@ export function initUdp(settings) {
             'Butler-SOS.logEvents.udpServerConfig.portLogEvents'
         );
 
-        // Source validation settings
-        settings.udpServerLogEvents.enableSourceValidation = settings.config.get(
+        // Source validation settings (optional, defaulting for backward compatibility)
+        settings.udpServerLogEvents.enableSourceValidation = settings.config.has(
             'Butler-SOS.logEvents.udpServerConfig.enableSourceValidation'
-        );
-        settings.udpServerLogEvents.allowedSourcesConfig =
-            settings.config.get('Butler-SOS.logEvents.udpServerConfig.allowedSources') || [];
+        )
+            ? settings.config.get('Butler-SOS.logEvents.udpServerConfig.enableSourceValidation')
+            : false;
+        settings.udpServerLogEvents.allowedSourcesConfig = settings.config.has(
+            'Butler-SOS.logEvents.udpServerConfig.allowedSources'
+        )
+            ? settings.config.get('Butler-SOS.logEvents.udpServerConfig.allowedSources') || []
+            : [];
         settings.udpServerLogEvents.allowedIPs = []; // Populated after DNS resolution at startup
     } catch (err) {
         settings.logger.error(
