@@ -45,6 +45,7 @@ jest.unstable_mockModule('../cert-utils.js', () => ({
 describe('audit-screenshots', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        jest.useRealTimers();
 
         mockGlobals.config.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.serversToMonitor.rejectUnauthorized') return false;
@@ -66,11 +67,16 @@ describe('audit-screenshots', () => {
     });
 
     test('retries download with backoff when screenshot is not yet available (404 -> 200)', async () => {
-        jest.useFakeTimers();
+        // Replace setTimeout with an immediate callback so the 500 ms backoff does not block.
+        const setTimeoutSpy = jest.spyOn(globalThis, 'setTimeout').mockImplementation((fn) => {
+            fn();
+            return 0;
+        });
 
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 
         const logger = {
+            debug: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
@@ -95,7 +101,7 @@ describe('audit-screenshots', () => {
             };
         });
 
-        const promise = downloadScreenshot(
+        await downloadScreenshot(
             'https://example.com/screenshot.png',
             {
                 eventId: 'evt-retry',
@@ -129,26 +135,19 @@ describe('audit-screenshots', () => {
             logger
         );
 
-        // Allow the first request to run and schedule the backoff.
-        await Promise.resolve();
-        expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('retrying attempt=2/3'));
-
-        // Backoff for attempt 2 is 500ms.
-        await jest.advanceTimersByTimeAsync(500);
-
-        await promise;
-
         expect(mockAxios.request).toHaveBeenCalledTimes(2);
         expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(1);
+        expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('retrying attempt=2/3'));
         expect(logger.error).not.toHaveBeenCalled();
 
-        jest.useRealTimers();
+        setTimeoutSpy.mockRestore();
     });
 
     test('downloads screenshot without auth and writes file', async () => {
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 
         const logger = {
+            debug: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
@@ -198,6 +197,7 @@ describe('audit-screenshots', () => {
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 
         const logger = {
+            debug: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
@@ -273,6 +273,7 @@ describe('audit-screenshots', () => {
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 
         const logger = {
+            debug: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
@@ -391,6 +392,7 @@ describe('audit-screenshots', () => {
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 
         const logger = {
+            debug: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
@@ -461,6 +463,7 @@ describe('audit-screenshots', () => {
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 
         const logger = {
+            debug: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
@@ -530,5 +533,165 @@ describe('audit-screenshots', () => {
         expect(outPng.height).toBeGreaterThan(srcPng.height);
 
         expect(logger.error).not.toHaveBeenCalled();
+    });
+});
+
+describe('audit-screenshots SSRF protection', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    const logger = {
+        info: jest.fn(),
+        warn: jest.fn(),
+        debug: jest.fn(),
+        error: jest.fn(),
+    };
+
+    const baseConfig = {
+        enable: true,
+        downloadTimeoutMs: 5000,
+        storageTargets: [{ enable: true, type: 'flat', directory: '/tmp/screenshots' }],
+    };
+
+    test('rejects file:// URLs to prevent SSRF', async () => {
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const result = await downloadScreenshot(
+            'file:///etc/passwd',
+            { eventId: 'evt-1', correlationId: 'corr-1' },
+            baseConfig,
+            logger
+        );
+
+        expect(result).toBeNull();
+        expect(mockAxios.request).not.toHaveBeenCalled();
+        expect(logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining("URL scheme 'file:' is not allowed")
+        );
+    });
+
+    test('rejects ftp:// URLs to prevent SSRF', async () => {
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const result = await downloadScreenshot(
+            'ftp://internal.server/file',
+            { eventId: 'evt-2', correlationId: 'corr-2' },
+            baseConfig,
+            logger
+        );
+
+        expect(result).toBeNull();
+        expect(mockAxios.request).not.toHaveBeenCalled();
+        expect(logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining("URL scheme 'ftp:' is not allowed")
+        );
+    });
+
+    test('rejects non-URL strings to prevent SSRF', async () => {
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const result = await downloadScreenshot(
+            'not-a-valid-url',
+            { eventId: 'evt-3', correlationId: 'corr-3' },
+            baseConfig,
+            logger
+        );
+
+        expect(result).toBeNull();
+        expect(mockAxios.request).not.toHaveBeenCalled();
+        expect(logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('URL is not a valid absolute URL')
+        );
+    });
+
+    test('allows https:// URLs', async () => {
+        mockAxios.request.mockResolvedValue({
+            status: 200,
+            headers: { 'content-type': 'image/png' },
+            data: Buffer.alloc(0),
+        });
+
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        // The actual save will fail here (empty buffer → png parse error), but the
+        // SSRF check must NOT block the request. We only care that axios.request was called.
+        await downloadScreenshot(
+            'https://qliksense.example.com/screenshot.png',
+            { eventId: 'evt-4', correlationId: 'corr-4', payload: { event: {} } },
+            baseConfig,
+            logger
+        );
+
+        expect(mockAxios.request).toHaveBeenCalled();
+        expect(logger.warn).not.toHaveBeenCalledWith(
+            expect.stringContaining('URL scheme')
+        );
+    });
+
+    test('allows http:// URLs', async () => {
+        mockAxios.request.mockResolvedValue({
+            status: 200,
+            headers: { 'content-type': 'image/png' },
+            data: Buffer.alloc(0),
+        });
+
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        await downloadScreenshot(
+            'http://qliksense.example.com/screenshot.png',
+            { eventId: 'evt-5', correlationId: 'corr-5', payload: { event: {} } },
+            baseConfig,
+            logger
+        );
+
+        expect(mockAxios.request).toHaveBeenCalled();
+        expect(logger.warn).not.toHaveBeenCalledWith(
+            expect.stringContaining('URL scheme')
+        );
+    });
+
+    test('passes maxRedirects: 0 to axios to prevent redirect-induced SSRF', async () => {
+        mockAxios.request.mockResolvedValue({
+            status: 200,
+            headers: { 'content-type': 'image/png' },
+            data: Buffer.alloc(0),
+        });
+
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        await downloadScreenshot(
+            'https://qliksense.example.com/screenshot.png',
+            { eventId: 'evt-6', correlationId: 'corr-6', payload: { event: {} } },
+            baseConfig,
+            logger
+        );
+
+        expect(mockAxios.request).toHaveBeenCalled();
+        const callArgs = mockAxios.request.mock.calls[0][0];
+        expect(callArgs.maxRedirects).toBe(0);
+    });
+
+    test('passes maxContentLength to axios to bound downloaded image size', async () => {
+        mockAxios.request.mockResolvedValue({
+            status: 200,
+            headers: { 'content-type': 'image/png' },
+            data: Buffer.alloc(0),
+        });
+
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        await downloadScreenshot(
+            'https://qliksense.example.com/screenshot.png',
+            { eventId: 'evt-7', correlationId: 'corr-7', payload: { event: {} } },
+            baseConfig,
+            logger
+        );
+
+        expect(mockAxios.request).toHaveBeenCalled();
+        const callArgs = mockAxios.request.mock.calls[0][0];
+        // 50 MB = 50 * 1024 * 1024
+        expect(callArgs.maxContentLength).toBeGreaterThan(0);
+        expect(callArgs.maxContentLength).toBeLessThanOrEqual(50 * 1024 * 1024);
     });
 });

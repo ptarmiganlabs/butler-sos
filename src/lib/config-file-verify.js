@@ -65,7 +65,8 @@ function createConditionalSchema(parsedConfig, baseSchema) {
     makeFeatureConditional('errorTracking');
     makeFeatureConditional('mqttConfig');
     makeFeatureConditional('newRelic');
-    makeFeatureConditional('auditEvents');
+    // auditEvents is intentionally NOT wrapped: when the section is present the full
+    // schema always applies regardless of enable. When absent, it passes (not in root required).
     makeFeatureConditional('userEvents');
     makeFeatureConditional('prometheus');
     makeFeatureConditional('influxdbConfig');

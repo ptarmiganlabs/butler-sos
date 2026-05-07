@@ -3,12 +3,62 @@ import FastifyRateLimit from '@fastify/rate-limit';
 import FastifyCors from '@fastify/cors';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import tls from 'node:tls';
 
 import globals from '../globals.js';
 import { downloadScreenshot } from './audit-screenshots.js';
 import { writeAuditEventToDestinations } from './audit-destinations/index.js';
+
+/** Regex matching a UUID in 8-4-4-4-12 hex format (case-insensitive). */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Exact set of event type strings accepted by this API.
+ * Any type not in this set must match EVENT_WILDCARD_REGEX to be valid.
+ */
+const VALID_EVENT_TYPES = new Set([
+    'selection.state.changed',
+    'selection.transaction.finalized',
+    'object.visibility.changed',
+    'object.view.duration',
+    'navigation.sheet.loaded',
+    'app.model.validated',
+    'screenshot.url.received',
+    'event.bookmark',
+    'event.unsupported.visualization',
+    'audit.event',
+]);
+
+/** Matches dynamic `event.{value}` types; requires at least one character after the dot. */
+const EVENT_WILDCARD_REGEX = /^event\..+$/;
+
+/**
+ * Compares two strings using a constant-time algorithm to prevent timing attacks.
+ *
+ * Falls back to a dummy comparison when the strings have different lengths so that
+ * timing does not reveal the expected token length.
+ *
+ * @param {string} a First string.
+ * @param {string} b Second string.
+ * @returns {boolean} True if the strings are equal.
+ */
+function safeStringEqual(a, b) {
+    try {
+        const bufA = Buffer.from(a, 'utf8');
+        const bufB = Buffer.from(b, 'utf8');
+        if (bufA.length !== bufB.length) {
+            // Run a dummy timingSafeEqual so the branch does not become a timing oracle.
+            crypto.timingSafeEqual(bufA, bufA);
+            return false;
+        }
+        return crypto.timingSafeEqual(bufA, bufB);
+    } catch {
+        return false;
+    }
+}
 
 /**
  * @typedef {object} AuditEventEnvelope
@@ -25,6 +75,40 @@ import { writeAuditEventToDestinations } from './audit-destinations/index.js';
  * @typedef {object} AuditRequestContext
  * @property {string} ip - Client IP address.
  */
+
+/**
+ * Validates semantic constraints on a parsed audit event envelope.
+ *
+ * All checks run unconditionally (no short-circuit) so that all violations
+ * are surfaced in a single warning rather than requiring multiple retries.
+ *
+ * @param {AuditEventEnvelope} envelope - Parsed request body (already passed Fastify schema validation).
+ * @returns {{ valid: boolean, reasons: string[] }} Result with every failure reason collected.
+ */
+function validateEnvelopeConstraints(envelope) {
+    const reasons = [];
+
+    if (envelope.eventId !== undefined && !UUID_REGEX.test(envelope.eventId)) {
+        reasons.push(`eventId is not a valid UUID ("${envelope.eventId}")`);
+    }
+
+    if (envelope.correlationId !== undefined && envelope.correlationId.length > 64) {
+        reasons.push(
+            `correlationId exceeds 64 characters (length=${envelope.correlationId.length})`
+        );
+    }
+
+    const appId = envelope.payload?.context?.appId;
+    if (appId !== undefined && !UUID_REGEX.test(appId)) {
+        reasons.push(`payload.context.appId is not a valid UUID ("${appId}")`);
+    }
+
+    if (!VALID_EVENT_TYPES.has(envelope.type) && !EVENT_WILDCARD_REGEX.test(envelope.type)) {
+        reasons.push(`type is not a recognised event type ("${envelope.type}")`);
+    }
+
+    return { valid: reasons.length === 0, reasons };
+}
 
 /**
  * Returns the Fastify route schema for the audit events endpoint.
@@ -50,7 +134,11 @@ function getAuditEventSchema() {
                 type: { type: 'string', minLength: 1 },
                 source: {
                     type: 'object',
-                    additionalProperties: true,
+                    properties: {
+                        kind: { type: 'string', enum: ['qlik-sense-extension'] },
+                        name: { type: 'string', enum: ['audit-qs'] },
+                    },
+                    additionalProperties: false,
                 },
                 payload: {
                     type: 'object',
@@ -96,10 +184,11 @@ function buildCorsOptions(corsOriginList) {
         return { origin: false };
     }
 
-    // If wildcard is present, reflect origin (still requires token auth).
+    // If wildcard is present, use a static '*' header — never reflect the request Origin,
+    // as reflected-origin responses are flagged as CORS misconfiguration (CWE-942).
     if (origins.includes('*')) {
         return {
-            origin: true,
+            origin: '*',
             credentials: false,
             methods: ['POST', 'OPTIONS'],
         };
@@ -161,6 +250,10 @@ function loadAuditEventsTlsOptions(tlsConfig) {
 
     if (typeof tlsConfig.passphrase === 'string' && tlsConfig.passphrase.length > 0) {
         httpsOptions.passphrase = tlsConfig.passphrase;
+    }
+
+    if (typeof tlsConfig.minVersion === 'string' && tlsConfig.minVersion.length > 0) {
+        httpsOptions.minVersion = tlsConfig.minVersion;
     }
 
     return httpsOptions;
@@ -362,7 +455,7 @@ function createTypeHandlers(logger) {
         const objectData = envelope?.payload?.event?.objectData ?? null;
 
         logger.verbose(
-            `AUDIT API: screenshot.url.received eventId=${envelope.eventId} objectId=${objectId} selectionTxnId=${selectionTxnId} dataStateId=${dataStateId} url=${screenshotUrl} ip=${requestContext.ip}`
+            `AUDIT API: screenshot.url.received eventId=${envelope.eventId} objectId=${objectId} selectionTxnId=${selectionTxnId} dataStateId=${dataStateId} urlSummary="${summarizeUrlForDebug(screenshotUrl)}" ip=${requestContext.ip}`
         );
 
         debugLog(
@@ -389,11 +482,11 @@ function createTypeHandlers(logger) {
         }
 
         const screenshotsEnableConfigExists = globals.config.has(
-            'Butler-SOS.auditEvents.screenshots.enable'
+            'Butler-SOS.auditEvents.destination.screenshots.enable'
         );
         const screenshotsEnabled =
             screenshotsEnableConfigExists &&
-            globals.config.get('Butler-SOS.auditEvents.screenshots.enable') === true;
+            globals.config.get('Butler-SOS.auditEvents.destination.screenshots.enable') === true;
 
         debugLog(
             logger,
@@ -414,20 +507,61 @@ function createTypeHandlers(logger) {
             return;
         }
 
+        // SSRF protection: enforce an explicit hostname allow-list (fail-closed).
+        // Absent, null, or empty allowedImageDownloadHosts → block all downloads.
+        const rawAllowedHosts = globals.config.has(
+            'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts'
+        )
+            ? globals.config.get(
+                  'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts'
+              )
+            : null;
+        const allowedImageDownloadHosts =
+            Array.isArray(rawAllowedHosts) && rawAllowedHosts.length > 0 ? rawAllowedHosts : null;
+
+        if (allowedImageDownloadHosts === null) {
+            logger.warn(
+                `AUDIT API: Screenshot download blocked — no allowedImageDownloadHosts configured eventId=${envelope.eventId} selectionTxnId=${selectionTxnId}`
+            );
+            return;
+        }
+
+        let parsedScreenshotUrl;
+        try {
+            parsedScreenshotUrl = new URL(screenshotUrl);
+        } catch {
+            logger.warn(
+                `AUDIT API: Screenshot download blocked — screenshotUrl is not a valid absolute URL eventId=${envelope.eventId} selectionTxnId=${selectionTxnId}`
+            );
+            return;
+        }
+
+        const hostname = parsedScreenshotUrl.hostname.toLowerCase();
+        if (!allowedImageDownloadHosts.some((h) => h.toLowerCase() === hostname)) {
+            logger.warn(
+                `AUDIT API: Screenshot download blocked — hostname '${hostname}' is not in allowedImageDownloadHosts eventId=${envelope.eventId} selectionTxnId=${selectionTxnId}`
+            );
+            return;
+        }
+
         const screenshotDownloadConfig = {
             enable: true,
             downloadTimeoutMs: globals.config.get(
-                'Butler-SOS.auditEvents.screenshots.downloadTimeoutMs'
+                'Butler-SOS.auditEvents.destination.screenshots.downloadTimeoutMs'
             ),
             addInImageMetadata: globals.config.has(
-                'Butler-SOS.auditEvents.screenshots.addInImageMetadata'
+                'Butler-SOS.auditEvents.destination.screenshots.addInImageMetadata'
             )
-                ? globals.config.get('Butler-SOS.auditEvents.screenshots.addInImageMetadata')
+                ? globals.config.get(
+                      'Butler-SOS.auditEvents.destination.screenshots.addInImageMetadata'
+                  )
                 : undefined,
-            auth: globals.config.has('Butler-SOS.auditEvents.screenshots.auth')
-                ? globals.config.get('Butler-SOS.auditEvents.screenshots.auth')
+            auth: globals.config.has('Butler-SOS.auditEvents.destination.screenshots.auth')
+                ? globals.config.get('Butler-SOS.auditEvents.destination.screenshots.auth')
                 : undefined,
-            storageTargets: globals.config.get('Butler-SOS.auditEvents.screenshots.storageTargets'),
+            storageTargets: globals.config.get(
+                'Butler-SOS.auditEvents.destination.screenshots.storageTargets'
+            ),
         };
 
         debugLog(
@@ -553,12 +687,24 @@ function createPayloadValidators() {
     const screenshotUrlReceivedPayloadSchema = {
         type: 'object',
         properties: {
+            context: {
+                type: 'object',
+                properties: {
+                    appId: { type: 'string' },
+                    appName: { type: 'string', maxLength: 64 },
+                    sheetId: { type: 'string', maxLength: 64 },
+                    sheetName: { type: 'string', maxLength: 64 },
+                    userId: { type: 'string', maxLength: 128 },
+                    userAgent: { type: 'string', maxLength: 512 },
+                },
+                additionalProperties: true,
+            },
             event: {
                 type: 'object',
                 properties: {
-                    screenshotUrl: { type: 'string', minLength: 1, format: 'uri' },
-                    objectId: { type: ['string', 'null'] },
-                    selectionTxnId: { type: 'string', minLength: 1 },
+                    screenshotUrl: { type: 'string', minLength: 1, maxLength: 2048, format: 'uri' },
+                    objectId: { type: ['string', 'null'], maxLength: 64 },
+                    selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
                 },
                 required: ['screenshotUrl', 'selectionTxnId'],
                 additionalProperties: true,
@@ -576,15 +722,27 @@ function createPayloadValidators() {
     const unsupportedVisualizationPayloadSchema = {
         type: 'object',
         properties: {
+            context: {
+                type: 'object',
+                properties: {
+                    appId: { type: 'string' },
+                    appName: { type: 'string', maxLength: 64 },
+                    sheetId: { type: 'string', maxLength: 64 },
+                    sheetName: { type: 'string', maxLength: 64 },
+                    userId: { type: 'string', maxLength: 128 },
+                    userAgent: { type: 'string', maxLength: 512 },
+                },
+                additionalProperties: true,
+            },
             event: {
                 type: 'object',
                 properties: {
-                    objectId: { type: ['string', 'null'] },
-                    vizType: { type: 'string', minLength: 1 },
-                    title: { type: ['string', 'null'] },
-                    trigger: { type: ['string', 'null'] },
+                    objectId: { type: ['string', 'null'], maxLength: 64 },
+                    vizType: { type: 'string', minLength: 1, maxLength: 64 },
+                    title: { type: ['string', 'null'], maxLength: 64 },
+                    trigger: { type: ['string', 'null'], maxLength: 64 },
                     dataStateId: { type: ['number', 'string', 'null'] },
-                    selectionTxnId: { type: 'string', minLength: 1 },
+                    selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
                 },
                 required: ['vizType', 'selectionTxnId'],
                 additionalProperties: true,
@@ -602,12 +760,24 @@ function createPayloadValidators() {
     const selectionTransactionFinalizedPayloadSchema = {
         type: 'object',
         properties: {
+            context: {
+                type: 'object',
+                properties: {
+                    appId: { type: 'string' },
+                    appName: { type: 'string', maxLength: 64 },
+                    sheetId: { type: 'string', maxLength: 64 },
+                    sheetName: { type: 'string', maxLength: 64 },
+                    userId: { type: 'string', maxLength: 128 },
+                    userAgent: { type: 'string', maxLength: 512 },
+                },
+                additionalProperties: true,
+            },
             event: {
                 type: 'object',
                 properties: {
-                    selectionTxnId: { type: 'string', minLength: 1 },
-                    beforeSelections: { type: 'array' },
-                    afterSelections: { type: 'array' },
+                    selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
+                    beforeSelections: { type: 'array', maxItems: 500 },
+                    afterSelections: { type: 'array', maxItems: 500 },
                 },
                 required: ['selectionTxnId', 'beforeSelections', 'afterSelections'],
                 additionalProperties: true,
@@ -625,11 +795,23 @@ function createPayloadValidators() {
     const selectionStateChangedPayloadSchema = {
         type: 'object',
         properties: {
+            context: {
+                type: 'object',
+                properties: {
+                    appId: { type: 'string' },
+                    appName: { type: 'string', maxLength: 64 },
+                    sheetId: { type: 'string', maxLength: 64 },
+                    sheetName: { type: 'string', maxLength: 64 },
+                    userId: { type: 'string', maxLength: 128 },
+                    userAgent: { type: 'string', maxLength: 512 },
+                },
+                additionalProperties: true,
+            },
             event: {
                 type: 'object',
                 properties: {
-                    selectionTxnId: { type: 'string', minLength: 1 },
-                    details: { type: 'array' },
+                    selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
+                    details: { type: 'array', maxItems: 500 },
                 },
                 required: ['selectionTxnId', 'details'],
                 additionalProperties: true,
@@ -647,10 +829,22 @@ function createPayloadValidators() {
     const appModelValidatedPayloadSchema = {
         type: 'object',
         properties: {
+            context: {
+                type: 'object',
+                properties: {
+                    appId: { type: 'string' },
+                    appName: { type: 'string', maxLength: 64 },
+                    sheetId: { type: 'string', maxLength: 64 },
+                    sheetName: { type: 'string', maxLength: 64 },
+                    userId: { type: 'string', maxLength: 128 },
+                    userAgent: { type: 'string', maxLength: 512 },
+                },
+                additionalProperties: true,
+            },
             event: {
                 type: 'object',
                 properties: {
-                    selectionTxnId: { type: 'string', minLength: 1 },
+                    selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
                     dataStateId: { type: ['integer', 'null'] },
                     captureScheduled: { type: ['boolean', 'null'] },
                 },
@@ -670,17 +864,29 @@ function createPayloadValidators() {
     const objectViewDurationPayloadSchema = {
         type: 'object',
         properties: {
+            context: {
+                type: 'object',
+                properties: {
+                    appId: { type: 'string' },
+                    appName: { type: 'string', maxLength: 64 },
+                    sheetId: { type: 'string', maxLength: 64 },
+                    sheetName: { type: 'string', maxLength: 64 },
+                    userId: { type: 'string', maxLength: 128 },
+                    userAgent: { type: 'string', maxLength: 512 },
+                },
+                additionalProperties: true,
+            },
             event: {
                 type: 'object',
                 properties: {
-                    objectId: { type: 'string', minLength: 1 },
+                    objectId: { type: 'string', minLength: 1, maxLength: 64 },
                     duration: { type: 'number', minimum: 0 },
                     enteredAt: { type: ['string', 'null'], format: 'date-time' },
                     leftAt: { type: 'string', format: 'date-time' },
                     visible: { type: ['boolean', 'null'] },
-                    selectionTxnId: { type: ['string', 'null'] },
-                    enterSelectionTxnId: { type: ['string', 'null'] },
-                    leaveSelectionTxnId: { type: ['string', 'null'] },
+                    selectionTxnId: { type: ['string', 'null'], maxLength: 36 },
+                    enterSelectionTxnId: { type: ['string', 'null'], maxLength: 36 },
+                    leaveSelectionTxnId: { type: ['string', 'null'], maxLength: 36 },
                     dataStateId: { type: ['integer', 'null'] },
                 },
                 required: ['objectId', 'duration', 'leftAt'],
@@ -749,7 +955,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
         if (!apiToken) return;
 
         const token = getBearerToken(request.headers.authorization);
-        if (!token || token !== apiToken) {
+        if (!token || !safeStringEqual(token, apiToken)) {
             globals.logger.warn(
                 `AUDIT API: Unauthorized request ip=${request.ip} method=${request.method} url=${request.url}`
             );
@@ -844,7 +1050,8 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
             globals.logger.info(
                 `AUDIT API: Received audit event type=${envelope.type} eventId=${envelope.eventId} ip=${requestContext.ip}`
             );
-            globals.logger.info(`AUDIT API: Full envelope: ${JSON.stringify(envelope)}`);
+            // Log full envelope at debug only — it may contain PII (userAgent, userId, appName, etc.)
+            globals.logger.debug(`AUDIT API: Full envelope: ${JSON.stringify(envelope)}`);
         }
 
         debugLog(
@@ -887,6 +1094,19 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
                 globals.auditEventsQueueManager ? 'present' : 'absent'
             } payloadKeys=${summarizeKeysForDebug(envelope?.payload)}`
         );
+
+        // Validate envelope-level semantic constraints (UUID formats, event type allow-list).
+        // All checks run unconditionally so every violation is surfaced in a single warning.
+        const { valid: constraintsValid, reasons: constraintReasons } =
+            validateEnvelopeConstraints(envelope);
+        if (!constraintsValid) {
+            globals.logger.warn(
+                `AUDIT API: Dropped audit event - constraint violations: ${constraintReasons.join('; ')} [eventId=${envelope?.eventId ?? 'n/a'} type=${envelope?.type ?? 'n/a'}]`
+            );
+            return reply
+                .code(202)
+                .send({ status: 'accepted', receivedAt: new Date().toISOString() });
+        }
 
         // Validate payload structure using per-type AJV schema (envelope is validated by Fastify schema).
         // If payload validation fails, accept-and-drop.
@@ -1028,6 +1248,17 @@ export async function setupAuditEventsApiServer() {
             )}`
         );
 
+        if (httpsOptions) {
+            const secureTlsVersions = ['TLSv1.2', 'TLSv1.3'];
+            const effectiveMinVersion = httpsOptions.minVersion || tls.DEFAULT_MIN_VERSION;
+            globals.logger.info(`AUDIT API: TLS minimum version: ${effectiveMinVersion}`);
+            if (!secureTlsVersions.includes(effectiveMinVersion)) {
+                globals.logger.warn(
+                    `AUDIT API: TLS minVersion "${effectiveMinVersion}" is below TLS 1.2 — consider upgrading to TLSv1.2 or TLSv1.3.`
+                );
+            }
+        }
+
         const auditServer = Fastify({
             logger: true,
             ...(httpsOptions ? { https: httpsOptions } : {}),
@@ -1052,6 +1283,26 @@ export async function setupAuditEventsApiServer() {
         );
 
         await registerAuditEventRoutes(auditServer, { apiToken, corsOrigins });
+
+        // Add security headers to every response from the audit events API server.
+        // HSTS is only meaningful (and correct) when TLS is active.
+        auditServer.addHook('onSend', async (_request, reply, payload) => {
+            reply.header('X-Content-Type-Options', 'nosniff');
+            reply.header('X-Frame-Options', 'DENY');
+            reply.header('Cache-Control', 'no-store');
+            // Pure JSON API — no resources should ever be loaded from responses.
+            reply.header('Content-Security-Policy', "default-src 'none'");
+            // API endpoint — suppress referrer leakage entirely.
+            reply.header('Referrer-Policy', 'no-referrer');
+            // API endpoint — deny all browser feature access.
+            reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+            reply.header('Cross-Origin-Resource-Policy', 'same-origin');
+            reply.header('Cross-Origin-Opener-Policy', 'same-origin');
+            if (httpsOptions) {
+                reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+            }
+            return payload;
+        });
 
         const host = globals.config.get('Butler-SOS.auditEvents.host');
         const port = globals.config.get('Butler-SOS.auditEvents.port');

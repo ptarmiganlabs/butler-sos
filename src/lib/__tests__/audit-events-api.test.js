@@ -4,6 +4,7 @@ import Fastify from 'fastify';
 const mockGlobals = {
     logger: {
         debug: jest.fn(),
+        verbose: jest.fn(),
         info: jest.fn(),
         warn: jest.fn(),
         error: jest.fn(),
@@ -46,7 +47,10 @@ describe('audit-events-api CORS + auth', () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
 
         const fastify = Fastify({ logger: false });
-        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+        await registerAuditEventRoutes(fastify, {
+            apiToken: 'secret',
+            corsOrigins: ['https://qliksense.company.com'],
+        });
 
         const res = await fastify.inject({
             method: 'OPTIONS',
@@ -81,7 +85,7 @@ describe('audit-events-api CORS + auth', () => {
             },
             payload: {
                 schemaVersion: 1,
-                eventId: 'evt-1',
+                eventId: 'a0000000-0000-4000-8000-000000000001',
                 timestamp: '2025-01-01T00:00:00.000Z',
                 type: 'selection.state.changed',
                 payload: {},
@@ -114,18 +118,18 @@ describe('audit-events-api event types', () => {
             },
             payload: {
                 schemaVersion: 1,
-                eventId: 'evt-visibility-1',
+                eventId: 'a0000000-0000-4000-8000-000000000002',
                 correlationId: 'txn-1',
                 timestamp: '2025-12-27T05:46:40.337Z',
                 type: 'object.view.duration',
                 source: {
                     kind: 'qlik-sense-extension',
-                    name: 'butler-sos-audit',
+                    name: 'audit-qs',
                 },
                 payload: {
                     timestamp: '2025-12-27T05:46:40.337Z',
                     context: {
-                        appId: 'app-1',
+                        appId: 'b0000000-0000-4000-8000-000000000001',
                         appName: 'My App',
                         user: 'user-1',
                         sheetId: 'sheet-1',
@@ -139,7 +143,7 @@ describe('audit-events-api event types', () => {
                         leftAt: '2025-12-27T05:46:40.337Z',
                         duration: 20000,
                         visible: false,
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                         enterSelectionTxnId: 'txn-0',
                         leaveSelectionTxnId: 'txn-1',
                         dataStateId: 123,
@@ -174,7 +178,7 @@ describe('audit-events-api event types', () => {
             },
             payload: {
                 schemaVersion: 1,
-                eventId: 'evt-1',
+                eventId: 'a0000000-0000-4000-8000-000000000001',
                 timestamp: '2025-01-01T00:00:00.000Z',
                 type: 'selection.state.changed',
                 payload: {
@@ -193,12 +197,14 @@ describe('audit-events-api event types', () => {
         downloadScreenshot.mockResolvedValue({ savedPaths: ['/path/to/screenshot.png'] });
 
         mockGlobals.config.has.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts') return true;
             return false;
         });
         mockGlobals.config.get.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.screenshots.storageTargets') return ['local'];
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts') return ['example.com'];
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.storageTargets') return ['local'];
             return null;
         });
 
@@ -215,13 +221,13 @@ describe('audit-events-api event types', () => {
             },
             payload: {
                 schemaVersion: 1,
-                eventId: 'evt-screenshot-1',
+                eventId: 'a0000000-0000-4000-8000-000000000003',
                 timestamp: '2025-01-01T00:00:00.000Z',
                 type: 'screenshot.url.received',
                 payload: {
                     event: {
                         screenshotUrl: 'https://example.com/screenshot.png',
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                     },
                 },
             },
@@ -237,12 +243,14 @@ describe('audit-events-api event types', () => {
         downloadScreenshot.mockResolvedValue({ savedPaths: ['/path/to/screenshot.png'] });
 
         mockGlobals.config.has.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts') return true;
             return false;
         });
         mockGlobals.config.get.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.screenshots.storageTargets') return ['local'];
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts') return ['example.com'];
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.storageTargets') return ['local'];
             return null;
         });
 
@@ -267,13 +275,13 @@ describe('audit-events-api event types', () => {
             },
             payload: {
                 schemaVersion: 1,
-                eventId: 'evt-dim-debug-1',
+                eventId: 'a0000000-0000-4000-8000-000000000004',
                 timestamp: '2025-01-01T00:00:00.000Z',
                 type: 'screenshot.url.received',
                 payload: {
                     event: {
                         screenshotUrl: 'https://example.com/screenshot.png',
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                         objectData,
                     },
                 },
@@ -286,7 +294,7 @@ describe('audit-events-api event types', () => {
         const debugCalls = mockGlobals.logger.debug.mock.calls.map((c) => c[0]);
         expect(debugCalls).toEqual(
             expect.arrayContaining([
-                expect.stringContaining('objectData for eventId=evt-dim-debug-1'),
+                expect.stringContaining('objectData for eventId=a0000000-0000-4000-8000-000000000004'),
                 expect.stringContaining('objectType=barchart'),
             ])
         );
@@ -301,12 +309,12 @@ describe('audit-events-api event types', () => {
 
         const payload = {
             schemaVersion: 1,
-            eventId: 'evt-selection-1',
+            eventId: 'a0000000-0000-4000-8000-000000000005',
             timestamp: '2025-01-01T00:00:00.000Z',
             type: 'selection.state.changed',
             payload: {
                 event: {
-                    selectionTxnId: 'txn-123',
+                    selectionTxnId: 'c0000000-0000-4000-8000-000000000002',
                     details: [
                         { qField: 'Dim1', qSelectedCount: 1, qSelected: 'A', extra: 'ignored' },
                     ],
@@ -327,7 +335,7 @@ describe('audit-events-api event types', () => {
 
         expect(res.statusCode).toBe(202);
         expect(writeAuditEventToDestinations).toHaveBeenCalledWith(
-            expect.objectContaining({ eventId: 'evt-selection-1' }),
+            expect.objectContaining({ eventId: 'a0000000-0000-4000-8000-000000000005' }),
             expect.objectContaining({
                 selectionDetails: [{ qField: 'Dim1', qSelectedCount: 1, qSelected: 'A' }],
             })
@@ -343,12 +351,12 @@ describe('audit-events-api event types', () => {
 
         const payload = {
             schemaVersion: 1,
-            eventId: 'evt-validated-1',
+            eventId: 'a0000000-0000-4000-8000-000000000006',
             timestamp: '2025-01-01T00:00:00.000Z',
             type: 'app.model.validated',
             payload: {
                 event: {
-                    selectionTxnId: 'txn-123',
+                    selectionTxnId: 'c0000000-0000-4000-8000-000000000002',
                     dataStateId: 1766865955336,
                 },
             },
@@ -367,7 +375,7 @@ describe('audit-events-api event types', () => {
 
         expect(res.statusCode).toBe(202);
         expect(writeAuditEventToDestinations).toHaveBeenCalledWith(
-            expect.objectContaining({ eventId: 'evt-validated-1' }),
+            expect.objectContaining({ eventId: 'a0000000-0000-4000-8000-000000000006' }),
             expect.objectContaining({
                 dataStateId: 1766865955336,
             })
@@ -409,13 +417,13 @@ describe('audit-events-api queue manager', () => {
             },
             payload: {
                 schemaVersion: 1,
-                eventId: 'evt-1',
+                eventId: 'a0000000-0000-4000-8000-000000000001',
                 timestamp: '2025-01-01T00:00:00.000Z',
                 type: 'selection.state.changed',
                 payload: {
                     timestamp: '2025-01-01T00:00:00.000Z',
                     context: {
-                        appId: 'app-1',
+                        appId: 'b0000000-0000-4000-8000-000000000001',
                         appName: 'My App',
                         user: 'user-1',
                         sheetId: 'sheet-1',
@@ -423,7 +431,7 @@ describe('audit-events-api queue manager', () => {
                         userAgent: 'UA',
                     },
                     event: {
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                         details: [],
                     },
                 },
@@ -452,13 +460,13 @@ describe('audit-events-api queue manager', () => {
             },
             payload: {
                 schemaVersion: 1,
-                eventId: 'evt-1',
+                eventId: 'a0000000-0000-4000-8000-000000000001',
                 timestamp: '2025-01-01T00:00:00.000Z',
                 type: 'selection.state.changed',
                 payload: {
                     timestamp: '2025-01-01T00:00:00.000Z',
                     context: {
-                        appId: 'app-1',
+                        appId: 'b0000000-0000-4000-8000-000000000001',
                         appName: 'My App',
                         user: 'user-1',
                         sheetId: 'sheet-1',
@@ -466,7 +474,7 @@ describe('audit-events-api queue manager', () => {
                         userAgent: 'UA',
                     },
                     event: {
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                         details: [],
                     },
                 },
@@ -497,13 +505,13 @@ describe('audit-events-api queue manager', () => {
             },
             payload: {
                 schemaVersion: 1,
-                eventId: 'evt-1',
+                eventId: 'a0000000-0000-4000-8000-000000000001',
                 timestamp: '2025-01-01T00:00:00.000Z',
                 type: 'selection.state.changed',
                 payload: {
                     timestamp: '2025-01-01T00:00:00.000Z',
                     context: {
-                        appId: 'app-1',
+                        appId: 'b0000000-0000-4000-8000-000000000001',
                         appName: 'My App',
                         user: 'user-1',
                         sheetId: 'sheet-1',
@@ -511,7 +519,7 @@ describe('audit-events-api queue manager', () => {
                         userAgent: 'UA',
                     },
                     event: {
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                         details: [],
                     },
                 },
@@ -541,13 +549,13 @@ describe('audit-events-api queue manager', () => {
             },
             payload: {
                 schemaVersion: 1,
-                eventId: 'evt-1',
+                eventId: 'a0000000-0000-4000-8000-000000000001',
                 timestamp: '2025-01-01T00:00:00.000Z',
                 type: 'selection.state.changed',
                 payload: {
                     timestamp: '2025-01-01T00:00:00.000Z',
                     context: {
-                        appId: 'app-1',
+                        appId: 'b0000000-0000-4000-8000-000000000001',
                         appName: 'My App',
                         user: 'user-1',
                         sheetId: 'sheet-1',
@@ -555,7 +563,7 @@ describe('audit-events-api queue manager', () => {
                         userAgent: 'UA',
                     },
                     event: {
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                         details: [],
                     },
                 },
@@ -588,13 +596,13 @@ describe('audit-events-api queue manager', () => {
             },
             payload: {
                 schemaVersion: 1,
-                eventId: 'evt-1',
+                eventId: 'a0000000-0000-4000-8000-000000000001',
                 timestamp: '2025-01-01T00:00:00.000Z',
                 type: 'selection.state.changed',
                 payload: {
                     timestamp: '2025-01-01T00:00:00.000Z',
                     context: {
-                        appId: 'app-1',
+                        appId: 'b0000000-0000-4000-8000-000000000001',
                         appName: 'My App',
                         user: 'user-1',
                         sheetId: 'sheet-1',
@@ -602,7 +610,7 @@ describe('audit-events-api queue manager', () => {
                         userAgent: 'UA',
                     },
                     event: {
-                        selectionTxnId: 'txn-1',
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
                         details: [],
                     },
                 },
@@ -644,6 +652,866 @@ describe('setupAuditEventsApiServer', () => {
         await expect(setupAuditEventsApiServer()).rejects.toThrow('Config error');
         expect(mockGlobals.logger.error).toHaveBeenCalledWith(
             expect.stringContaining('AUDIT API: Error setting up audit events API: Config error')
+        );
+    });
+});
+
+describe('audit-events-api token comparison security', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('rejects request with wrong token', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'correct-secret', corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                authorization: 'Bearer wrong-secret',
+            },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'a0000000-0000-4000-8000-000000000001',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.state.changed',
+                payload: {},
+            },
+        });
+
+        expect(res.statusCode).toBe(401);
+    });
+
+    test('rejects request with empty bearer token', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'correct-secret', corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                authorization: 'Bearer ',
+            },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'a0000000-0000-4000-8000-000000000001',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.state.changed',
+                payload: {},
+            },
+        });
+
+        expect(res.statusCode).toBe(401);
+    });
+
+    test('accepts request with correct token using timing-safe comparison', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, {
+            apiToken: 'correct-secret',
+            corsOrigins: ['*'],
+        });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                authorization: 'Bearer correct-secret',
+            },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'a0000000-0000-4000-8000-000000000007',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.state.changed',
+                payload: {},
+            },
+        });
+
+        expect(res.statusCode).toBe(202);
+    });
+});
+
+describe('audit-events-api envelope constraint validation', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+        mockGlobals.auditEventsQueueManager = null;
+    });
+
+    function validEnvelope(overrides = {}) {
+        return {
+            schemaVersion: 1,
+            eventId: 'a0000000-0000-4000-8000-000000000001',
+            timestamp: '2025-01-01T00:00:00.000Z',
+            type: 'selection.state.changed',
+            payload: {},
+            ...overrides,
+        };
+    }
+
+    async function postEnvelope(fastify, payload) {
+        return fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                authorization: 'Bearer secret',
+            },
+            payload,
+        });
+    }
+
+    test('accepts a valid UUID eventId', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postEnvelope(fastify, validEnvelope());
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).not.toHaveBeenCalledWith(
+            expect.stringContaining('constraint violations')
+        );
+    });
+
+    test('drops event and warns when eventId is not a UUID', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postEnvelope(fastify, validEnvelope({ eventId: 'not-a-uuid' }));
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('eventId is not a valid UUID')
+        );
+    });
+
+    test('drops event and warns when correlationId exceeds 64 characters', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postEnvelope(fastify, validEnvelope({ correlationId: 'x'.repeat(65) }));
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('correlationId exceeds 64 characters')
+        );
+    });
+
+    test('accepts a short non-UUID correlationId (numeric fallback from audit.qs)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postEnvelope(fastify, validEnvelope({ correlationId: '1777868693436' }));
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).not.toHaveBeenCalledWith(
+            expect.stringContaining('constraint violations')
+        );
+    });
+
+    test('drops event and warns when payload.context.appId is not a UUID', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postEnvelope(
+            fastify,
+            validEnvelope({ payload: { context: { appId: 'not-a-uuid' } } })
+        );
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('payload.context.appId is not a valid UUID')
+        );
+    });
+
+    test('accepts payload.context.appId when it is a valid UUID', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postEnvelope(
+            fastify,
+            validEnvelope({ payload: { context: { appId: 'b0000000-0000-4000-8000-000000000001' } } })
+        );
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).not.toHaveBeenCalledWith(
+            expect.stringContaining('constraint violations')
+        );
+    });
+
+    test('accumulates all failures: both bad eventId and bad type produce a single warning listing both', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postEnvelope(
+            fastify,
+            validEnvelope({ eventId: 'bad-id', type: 'unknown.type' })
+        );
+
+        expect(res.statusCode).toBe(202);
+        const warnCalls = mockGlobals.logger.warn.mock.calls.map((c) => String(c[0]));
+        const constraintWarn = warnCalls.find((m) => m.includes('constraint violations'));
+        expect(constraintWarn).toBeDefined();
+        expect(constraintWarn).toContain('eventId is not a valid UUID');
+        expect(constraintWarn).toContain('type is not a recognised event type');
+        // Only one warn call for constraint violations (not one per failure)
+        expect(warnCalls.filter((m) => m.includes('constraint violations'))).toHaveLength(1);
+    });
+
+    test.each([
+        'selection.state.changed',
+        'object.visibility.changed',
+        'object.view.duration',
+        'navigation.sheet.loaded',
+        'app.model.validated',
+        'screenshot.url.received',
+        'event.bookmark',
+        'event.unsupported.visualization',
+        'audit.event',
+    ])('accepts known event type "%s"', async (type) => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postEnvelope(fastify, validEnvelope({ type }));
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).not.toHaveBeenCalledWith(
+            expect.stringContaining('constraint violations')
+        );
+    });
+
+    test('accepts wildcard event type "event.custom"', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postEnvelope(fastify, validEnvelope({ type: 'event.custom' }));
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).not.toHaveBeenCalledWith(
+            expect.stringContaining('constraint violations')
+        );
+    });
+
+    test('drops event when type is "event." with empty suffix', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postEnvelope(fastify, validEnvelope({ type: 'event.' }));
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('type is not a recognised event type')
+        );
+    });
+
+    test('drops event when type is unknown', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postEnvelope(fastify, validEnvelope({ type: 'unknown.type' }));
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('type is not a recognised event type')
+        );
+    });
+});
+
+describe('audit-events-api field-length and source constraints', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+        mockGlobals.auditEventsQueueManager = null;
+    });
+
+    function baseEnvelope(payloadOverrides = {}) {
+        return {
+            schemaVersion: 1,
+            eventId: 'a0000000-0000-4000-8000-000000000001',
+            timestamp: '2025-01-01T00:00:00.000Z',
+            type: 'selection.state.changed',
+            payload: {
+                context: {
+                    appId: 'b0000000-0000-4000-8000-000000000001',
+                    appName: 'My App',
+                    sheetId: 'sheet-1',
+                    sheetName: 'Sheet 1',
+                    userId: 'UserDirectory=LAB; UserId=user1',
+                    userAgent: 'Mozilla/5.0',
+                },
+                event: {
+                    selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                    details: [],
+                },
+                ...payloadOverrides,
+            },
+        };
+    }
+
+    async function post(fastify, payload) {
+        return fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                authorization: 'Bearer secret',
+            },
+            payload,
+        });
+    }
+
+    // --- source object ---
+
+    test('accepts valid source with kind and name', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const envelope = {
+            ...baseEnvelope(),
+            source: { kind: 'qlik-sense-extension', name: 'audit-qs' },
+        };
+        const res = await post(fastify, envelope);
+
+        expect(res.statusCode).toBe(202);
+    });
+
+    test('rejects source with unknown kind (Fastify schema → 400)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const envelope = {
+            ...baseEnvelope(),
+            source: { kind: 'unknown-tool', name: 'audit-qs' },
+        };
+        const res = await post(fastify, envelope);
+
+        expect(res.statusCode).toBe(400);
+    });
+
+    test('accepts source with extra properties (enum guards kind/name; Fastify strips unknown fields)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const envelope = {
+            ...baseEnvelope(),
+            source: { kind: 'qlik-sense-extension', name: 'audit-qs', extra: 'injected' },
+        };
+        const res = await post(fastify, envelope);
+
+        // Fastify passes nested additionalProperties through; enum constraints on kind/name are the real gate
+        expect(res.statusCode).toBe(202);
+    });
+
+    // --- payload.context field lengths ---
+
+    test('drops event when appName exceeds 64 chars (AJV → 202 warn)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await post(
+            fastify,
+            baseEnvelope({ context: { appName: 'A'.repeat(65), sheetId: 's', sheetName: 's', userId: 'u', userAgent: 'ua' } })
+        );
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+
+    test('drops event when userAgent exceeds 512 chars (AJV → 202 warn)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await post(
+            fastify,
+            baseEnvelope({ context: { appName: 'App', sheetId: 's', sheetName: 's', userId: 'u', userAgent: 'x'.repeat(513) } })
+        );
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+
+    test('drops event when userId exceeds 128 chars (AJV → 202 warn)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await post(
+            fastify,
+            baseEnvelope({ context: { appName: 'App', sheetId: 's', sheetName: 's', userId: 'u'.repeat(129), userAgent: 'ua' } })
+        );
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+
+    // --- event.selectionTxnId UUID ---
+
+    test('drops event when selectionTxnId is not a UUID (AJV → 202 warn)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await post(
+            fastify,
+            baseEnvelope({ event: { selectionTxnId: 'not-a-uuid', details: [] } })
+        );
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+
+    test('accepts selectionTxnId as valid UUID', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await post(fastify, baseEnvelope());
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).not.toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+
+    // --- event.unsupported.visualization string lengths ---
+
+    test('drops event.unsupported.visualization when vizType exceeds 64 chars', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const envelope = {
+            ...baseEnvelope(),
+            type: 'event.unsupported.visualization',
+            payload: {
+                event: {
+                    vizType: 'v'.repeat(65),
+                    selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                },
+            },
+        };
+        const res = await post(fastify, envelope);
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+
+    // --- object.view.duration objectId length ---
+
+    test('drops object.view.duration when objectId exceeds 64 chars', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const envelope = {
+            ...baseEnvelope(),
+            type: 'object.view.duration',
+            payload: {
+                event: {
+                    objectId: 'o'.repeat(65),
+                    duration: 1000,
+                    leftAt: '2025-01-01T00:01:00.000Z',
+                },
+            },
+        };
+        const res = await post(fastify, envelope);
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+});
+
+describe('audit-events-api SSRF protection', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+        mockGlobals.auditEventsQueueManager = null;
+    });
+
+    const SCREENSHOT_ENVELOPE = {
+        schemaVersion: 1,
+        eventId: 'a0000000-0000-4000-8000-000000000003',
+        timestamp: '2025-01-01T00:00:00.000Z',
+        type: 'screenshot.url.received',
+        payload: {
+            event: {
+                screenshotUrl: 'https://example.com/screenshot.png',
+                selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+            },
+        },
+    };
+
+    function screenshotConfigMock(allowedImageDownloadHosts) {
+        return {
+            has: jest.fn((key) => {
+                if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
+                if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts')
+                    return allowedImageDownloadHosts !== undefined;
+                return false;
+            }),
+            get: jest.fn((key) => {
+                if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
+                if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts') return allowedImageDownloadHosts;
+                if (key === 'Butler-SOS.auditEvents.destination.screenshots.storageTargets') return ['local'];
+                return null;
+            }),
+        };
+    }
+
+    async function postScreenshot(fastify, envelopeOverride = {}) {
+        return fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                authorization: 'Bearer secret',
+            },
+            payload: { ...SCREENSHOT_ENVELOPE, ...envelopeOverride },
+        });
+    }
+
+    test('blocks download when allowedImageDownloadHosts key is absent in config (fail-closed)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+        // allowedImageDownloadHosts key absent: has() returns false
+        const mock = screenshotConfigMock(undefined);
+        mockGlobals.config.has.mockImplementation(mock.has);
+        mockGlobals.config.get.mockImplementation(mock.get);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postScreenshot(fastify);
+
+        expect(res.statusCode).toBe(202);
+        expect(downloadScreenshot).not.toHaveBeenCalled();
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('no allowedImageDownloadHosts configured')
+        );
+    });
+
+    test('blocks download when allowedImageDownloadHosts is an empty array (fail-closed)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+        const mock = screenshotConfigMock([]);
+        mockGlobals.config.has.mockImplementation(mock.has);
+        mockGlobals.config.get.mockImplementation(mock.get);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postScreenshot(fastify);
+
+        expect(res.statusCode).toBe(202);
+        expect(downloadScreenshot).not.toHaveBeenCalled();
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('no allowedImageDownloadHosts configured')
+        );
+    });
+
+    test('allows download when URL hostname is in allowedImageDownloadHosts', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+        downloadScreenshot.mockResolvedValue({ savedPaths: ['/tmp/shot.png'] });
+        const mock = screenshotConfigMock(['example.com']);
+        mockGlobals.config.has.mockImplementation(mock.has);
+        mockGlobals.config.get.mockImplementation(mock.get);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postScreenshot(fastify);
+
+        expect(res.statusCode).toBe(202);
+        expect(downloadScreenshot).toHaveBeenCalled();
+    });
+
+    test('blocks download when URL hostname is not in allowedImageDownloadHosts', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+        const mock = screenshotConfigMock(['example.com']);
+        mockGlobals.config.has.mockImplementation(mock.has);
+        mockGlobals.config.get.mockImplementation(mock.get);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        // Use a different hostname not in the allow-list
+        const envelope = {
+            ...SCREENSHOT_ENVELOPE,
+            payload: {
+                event: {
+                    screenshotUrl: 'https://evil.internal/screenshot.png',
+                    selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                },
+            },
+        };
+        const res = await postScreenshot(fastify, { payload: envelope.payload });
+
+        expect(res.statusCode).toBe(202);
+        expect(downloadScreenshot).not.toHaveBeenCalled();
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('is not in allowedImageDownloadHosts')
+        );
+    });
+
+    test('allowedImageDownloadHosts matching is case-insensitive', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+        downloadScreenshot.mockResolvedValue({ savedPaths: ['/tmp/shot.png'] });
+        // Configured with uppercase; URL uses lowercase
+        const mock = screenshotConfigMock(['EXAMPLE.COM']);
+        mockGlobals.config.has.mockImplementation(mock.has);
+        mockGlobals.config.get.mockImplementation(mock.get);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        // URL hostname is lowercase example.com
+        const res = await postScreenshot(fastify);
+
+        expect(res.statusCode).toBe(202);
+        expect(downloadScreenshot).toHaveBeenCalled();
+    });
+});
+
+describe('audit-events-api GET /api/v1/test-connection', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('returns 200 with status ok when no apiToken is configured', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = res.json();
+        expect(body.status).toBe('ok');
+        expect(body.message).toBe('Butler SOS Audit API is reachable');
+        expect(typeof body.timestamp).toBe('string');
+    });
+
+    test('returns 200 with valid bearer token', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            headers: { authorization: 'Bearer secret' },
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = res.json();
+        expect(body.status).toBe('ok');
+    });
+
+    test('returns 401 when apiToken is configured and no token is provided', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+        });
+
+        expect(res.statusCode).toBe(401);
+        expect(res.json().error).toBe('Unauthorized');
+    });
+
+    test('returns 401 when apiToken is configured and wrong token is provided', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            headers: { authorization: 'Bearer wrong' },
+        });
+
+        expect(res.statusCode).toBe(401);
+        expect(res.json().error).toBe('Unauthorized');
+    });
+
+    test('timestamp in response is a valid ISO 8601 string', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const before = Date.now();
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+        });
+        const after = Date.now();
+
+        const body = res.json();
+        const ts = new Date(body.timestamp).getTime();
+        expect(ts).toBeGreaterThanOrEqual(before);
+        expect(ts).toBeLessThanOrEqual(after);
+    });
+});
+
+describe('audit-events-api array maxItems constraints', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+        mockGlobals.auditEventsQueueManager = null;
+    });
+
+    test('drops selection.transaction.finalized with oversized beforeSelections array', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: { 'content-type': 'application/json' },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'a0000000-0000-4000-8000-000000000001',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.transaction.finalized',
+                payload: {
+                    event: {
+                        selectionTxnId: 'b1000000-0000-4000-8000-000000000001',
+                        beforeSelections: Array.from({ length: 501 }, (_, i) => ({ field: i })),
+                        afterSelections: [],
+                    },
+                },
+            },
+        });
+
+        // accept-and-drop behaviour: 202 but warn about validation failure
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+    });
+
+    test('accepts selection.transaction.finalized with arrays at the limit', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { writeAuditEventToDestinations } = await import('../audit-destinations/index.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: { 'content-type': 'application/json' },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'a0000000-0000-4000-8000-000000000002',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.transaction.finalized',
+                payload: {
+                    event: {
+                        selectionTxnId: 'b1000000-0000-4000-8000-000000000002',
+                        beforeSelections: Array.from({ length: 500 }, (_, i) => ({ field: i })),
+                        afterSelections: Array.from({ length: 500 }, (_, i) => ({ field: i })),
+                    },
+                },
+            },
+        });
+
+        expect(res.statusCode).toBe(202);
+        expect(writeAuditEventToDestinations).toHaveBeenCalled();
+    });
+
+    test('drops selection.state.changed with oversized details array', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: { 'content-type': 'application/json' },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'a0000000-0000-4000-8000-000000000003',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.state.changed',
+                payload: {
+                    event: {
+                        selectionTxnId: 'b1000000-0000-4000-8000-000000000003',
+                        details: Array.from({ length: 501 }, (_, i) => ({ field: i })),
+                    },
+                },
+            },
+        });
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
         );
     });
 });

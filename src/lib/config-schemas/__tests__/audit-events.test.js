@@ -65,6 +65,17 @@ describe('auditEvents schema', () => {
                             },
                         },
                     },
+                    screenshots: {
+                        enable: false,
+                        downloadTimeoutMs: 15000,
+                        auth: {
+                            mode: 'none',
+                        },
+                        storageTargets: null,
+                    },
+                },
+                tls: {
+                    enable: false,
                 },
                 queue: {
                     messageQueue: {
@@ -84,14 +95,6 @@ describe('auditEvents schema', () => {
                             tags: [],
                         },
                     },
-                },
-                screenshots: {
-                    enable: false,
-                    downloadTimeoutMs: 15000,
-                    auth: {
-                        mode: 'none',
-                    },
-                    storageTargets: null,
                 },
                 cors: {
                     allowedOrigins: ['https://qliksense.company.com'],
@@ -167,6 +170,24 @@ describe('auditEvents schema', () => {
                             },
                         },
                     },
+                    screenshots: {
+                        enable: true,
+                        downloadTimeoutMs: 15000,
+                        auth: {
+                            mode: 'qpsTicket',
+                            qps: {
+                                host: 'qlik.example.com',
+                                port: 4243,
+                                userDirectory: 'LAB',
+                                userId: 'butler-sos',
+                                ticketTimeoutMs: 5000,
+                            },
+                        },
+                        storageTargets: null,
+                    },
+                },
+                tls: {
+                    enable: false,
                 },
                 queue: {
                     messageQueue: {
@@ -186,21 +207,6 @@ describe('auditEvents schema', () => {
                             tags: [],
                         },
                     },
-                },
-                screenshots: {
-                    enable: true,
-                    downloadTimeoutMs: 15000,
-                    auth: {
-                        mode: 'qpsTicket',
-                        qps: {
-                            host: 'qlik.example.com',
-                            port: 4243,
-                            userDirectory: 'LAB',
-                            userId: 'butler-sos',
-                            ticketTimeoutMs: 5000,
-                        },
-                    },
-                    storageTargets: null,
                 },
                 cors: {
                     allowedOrigins: ['https://qliksense.company.com'],
@@ -703,6 +709,17 @@ describe('auditEvents schema', () => {
                             staticTags: [],
                         },
                     },
+                    screenshots: {
+                        enable: false,
+                        downloadTimeoutMs: 15000,
+                        auth: {
+                            mode: 'none',
+                        },
+                        storageTargets: null,
+                    },
+                },
+                tls: {
+                    enable: false,
                 },
                 queue: {
                     messageQueue: {
@@ -722,14 +739,6 @@ describe('auditEvents schema', () => {
                             tags: [],
                         },
                     },
-                },
-                screenshots: {
-                    enable: false,
-                    downloadTimeoutMs: 15000,
-                    auth: {
-                        mode: 'none',
-                    },
-                    storageTargets: null,
                 },
                 cors: {
                     allowedOrigins: ['https://qliksense.company.com'],
