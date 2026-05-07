@@ -623,7 +623,7 @@ export const auditEventsSchema = {
                 additionalProperties: false,
             },
         },
-        required: ['enable', 'host', 'port', 'apiToken', 'queue', 'cors'],
+        required: ['enable', 'host', 'port', 'apiToken', 'destination', 'tls', 'queue', 'cors'],
         additionalProperties: false,
     },
 };

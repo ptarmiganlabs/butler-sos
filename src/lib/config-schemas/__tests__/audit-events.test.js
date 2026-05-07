@@ -74,6 +74,9 @@ describe('auditEvents schema', () => {
                         storageTargets: null,
                     },
                 },
+                tls: {
+                    enable: false,
+                },
                 queue: {
                     messageQueue: {
                         maxConcurrent: 10,
@@ -182,6 +185,9 @@ describe('auditEvents schema', () => {
                         },
                         storageTargets: null,
                     },
+                },
+                tls: {
+                    enable: false,
                 },
                 queue: {
                     messageQueue: {
@@ -711,6 +717,9 @@ describe('auditEvents schema', () => {
                         },
                         storageTargets: null,
                     },
+                },
+                tls: {
+                    enable: false,
                 },
                 queue: {
                     messageQueue: {
