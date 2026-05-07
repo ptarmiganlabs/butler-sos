@@ -82,6 +82,46 @@ Butler-SOS:
                     - name: qs_env
                       value: docker-v2
 
+            # Optional: download screenshots referenced by screenshot.url.received events.
+            # Requires allowedImageDownloadHosts to be configured for SSRF protection (fail-closed).
+            screenshots:
+                enable: false
+                downloadTimeoutMs: 15000
+                # Optional: add a metadata header above downloaded PNG screenshots.
+                # Enabled fields are rendered as text into the image itself.
+                # When date is enabled, both UTC and server-local time are shown.
+                addInImageMetadata:
+                    enable: false
+                    fields:
+                        date: false # Date and time when the screenshot was taken.
+                        eventId: false # Unique event identifier.
+                        correlationId: false # Correlation ID to link related events.
+                        selectionTxnId: false # Selection transaction ID.
+                        userId: false # Full user identifier as provided by the audit event (often DOMAIN\\user).
+                        appId: false # App ID (GUID).
+                        appName: false # App name.
+                        sheetName: false # Sheet name.
+                        viewingDuration: false # Duration the object was in view before the screenshot was taken (seconds).
+                # Optional: authenticate screenshot downloads against Qlik Sense using a QPS ticket (mutual TLS).
+                # Certificates are reused from Butler-SOS.cert.*
+                # TLS server certificate verification is controlled via Butler-SOS.serversToMonitor.rejectUnauthorized.
+                auth:
+                    mode: none # none | qpsTicket
+                    qps:
+                        host: localhost
+                        port: 4243
+                        userDirectory: ''
+                        userId: ''
+                        ticketTimeoutMs: 5000
+                # Security: only download screenshots from these hostnames (SSRF protection, fail-closed).
+                # An absent or empty list blocks all screenshot downloads.
+                allowedImageDownloadHosts:
+                    - qliksense.example.com
+                storageTargets:
+                    - enable: true
+                      type: flat
+                      directory: screenshots/audit
+
         # Optional: serve the audit events API over HTTPS.
         # This is required if the Qlik Sense client is served over HTTPS, otherwise browsers will block calls to an HTTP endpoint (mixed content).
         # Note: if you use a self-signed certificate, the browser must trust it (import into OS/browser trust store).
@@ -111,39 +151,8 @@ Butler-SOS:
                     tags: # Optional tags added to queue metrics
                         - name: qs_env
                           value: docker-v2
-        # Optional: download screenshots referenced by screenshot.url.received events.
-        # Multiple storage targets can be enabled at the same time.
-        screenshots:
-            enable: false
-            downloadTimeoutMs: 15000
-            # Optional: add a metadata header above downloaded PNG screenshots.
-            # Enabled fields are rendered as text into the image itself.
-            # When date is enabled, both UTC and server-local time are shown.
-            addInImageMetadata:
-                date: false # Date and time when the screenshot was taken.
-                eventId: false # Unique event identifier.
-                correlationId: false # Correlation ID to link related events.
-                selectionTxnId: false # Selection transaction ID.
-                userId: false # Full user identifier as provided by the audit event (often DOMAIN\\user).
-                appId: false # App ID (GUID).
-                appName: false # App name.
-                sheetName: false # Sheet name.
-                viewingDuration: false # Duration the object was in view before the screenshot was taken (seconds).
-            # Optional: authenticate screenshot downloads against Qlik Sense using a QPS ticket (mutual TLS).
-            # Certificates are reused from Butler-SOS.cert.*
-            # TLS server certificate verification is controlled via Butler-SOS.serversToMonitor.rejectUnauthorized.
-            auth:
-                mode: none # none | qpsTicket
-                qps:
-                    host: localhost
-                    port: 4243
-                    userDirectory: ''
-                    userId: ''
-                    ticketTimeoutMs: 5000
-            storageTargets:
-                - enable: true
-                  type: flat
-                  directory: screenshots/audit
+        # Note: using '*' for allowedOrigins allows any origin to call this API.
+        # In production, specify exact origins (e.g. https://qliksense.example.com).
         cors:
             allowedOrigins:
                 - '*'

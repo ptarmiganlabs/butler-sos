@@ -512,7 +512,9 @@ function createTypeHandlers(logger) {
         const rawAllowedHosts = globals.config.has(
             'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts'
         )
-            ? globals.config.get('Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts')
+            ? globals.config.get(
+                  'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts'
+              )
             : null;
         const allowedImageDownloadHosts =
             Array.isArray(rawAllowedHosts) && rawAllowedHosts.length > 0 ? rawAllowedHosts : null;
@@ -550,12 +552,16 @@ function createTypeHandlers(logger) {
             addInImageMetadata: globals.config.has(
                 'Butler-SOS.auditEvents.destination.screenshots.addInImageMetadata'
             )
-                ? globals.config.get('Butler-SOS.auditEvents.destination.screenshots.addInImageMetadata')
+                ? globals.config.get(
+                      'Butler-SOS.auditEvents.destination.screenshots.addInImageMetadata'
+                  )
                 : undefined,
             auth: globals.config.has('Butler-SOS.auditEvents.destination.screenshots.auth')
                 ? globals.config.get('Butler-SOS.auditEvents.destination.screenshots.auth')
                 : undefined,
-            storageTargets: globals.config.get('Butler-SOS.auditEvents.destination.screenshots.storageTargets'),
+            storageTargets: globals.config.get(
+                'Butler-SOS.auditEvents.destination.screenshots.storageTargets'
+            ),
         };
 
         debugLog(

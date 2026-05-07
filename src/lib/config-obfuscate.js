@@ -207,6 +207,17 @@ function configObfuscate(config) {
             obfuscatedConfig['Butler-SOS'].auditEvents.apiToken = '*'.repeat(10);
         }
 
+        // Obfuscate InfluxDB tokens inside auditEvents.destination.influxdb.metadata
+        // (v2Config.token and v3Config.token are API credentials and must not be shown).
+        const auditInfluxMeta =
+            obfuscatedConfig['Butler-SOS']?.auditEvents?.destination?.influxdb?.metadata;
+        if (auditInfluxMeta?.v2Config?.token) {
+            auditInfluxMeta.v2Config.token = '*'.repeat(10);
+        }
+        if (auditInfluxMeta?.v3Config?.token) {
+            auditInfluxMeta.v3Config.token = '*'.repeat(10);
+        }
+
         return obfuscatedConfig;
     } catch (err) {
         globals.logger.error(
