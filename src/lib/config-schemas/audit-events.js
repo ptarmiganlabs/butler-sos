@@ -319,6 +319,109 @@ export const auditEventsSchema = {
                         required: ['objectdata'],
                         additionalProperties: false,
                     },
+
+                    // --- Screenshots destination ---
+                    screenshots: {
+                        type: 'object',
+                        properties: {
+                            enable: { type: 'boolean', default: false },
+                            downloadTimeoutMs: { type: 'number', default: 15000 },
+                            addInImageMetadata: {
+                                type: 'object',
+                                properties: {
+                                    enable: { type: 'boolean', default: false },
+                                    fields: {
+                                        type: 'object',
+                                        properties: {
+                                            date: { type: 'boolean', default: false },
+                                            eventId: { type: 'boolean', default: false },
+                                            correlationId: { type: 'boolean', default: false },
+                                            selectionTxnId: { type: 'boolean', default: false },
+                                            userId: { type: 'boolean', default: false },
+                                            appId: { type: 'boolean', default: false },
+                                            appName: { type: 'boolean', default: false },
+                                            sheetName: { type: 'boolean', default: false },
+                                            viewingDuration: { type: 'boolean', default: false },
+                                        },
+                                        additionalProperties: false,
+                                    },
+                                },
+                                additionalProperties: false,
+                            },
+                            auth: {
+                                type: 'object',
+                                properties: {
+                                    mode: {
+                                        type: 'string',
+                                        enum: ['none', 'qpsTicket'],
+                                        default: 'none',
+                                    },
+                                    qps: {
+                                        type: 'object',
+                                        properties: {
+                                            host: { type: 'string', minLength: 1 },
+                                            port: { type: 'number', default: 4243 },
+                                            userDirectory: { type: 'string', minLength: 1 },
+                                            userId: { type: 'string', minLength: 1 },
+                                            ticketTimeoutMs: { type: 'number', default: 5000 },
+                                        },
+                                        required: [
+                                            'host',
+                                            'port',
+                                            'userDirectory',
+                                            'userId',
+                                            'ticketTimeoutMs',
+                                        ],
+                                        additionalProperties: false,
+                                    },
+                                },
+                                required: ['mode'],
+                                additionalProperties: false,
+                                allOf: [
+                                    {
+                                        if: {
+                                            type: 'object',
+                                            properties: {
+                                                mode: { const: 'qpsTicket' },
+                                            },
+                                            required: ['mode'],
+                                        },
+                                        then: {
+                                            type: 'object',
+                                            properties: {
+                                                qps: { type: 'object' },
+                                            },
+                                            required: ['qps'],
+                                        },
+                                    },
+                                ],
+                            },
+                            storageTargets: {
+                                type: ['array', 'null'],
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        enable: { type: 'boolean', default: false },
+                                        type: {
+                                            type: 'string',
+                                            enum: ['flat'],
+                                            default: 'flat',
+                                        },
+                                        directory: { type: 'string' },
+                                    },
+                                    required: ['enable', 'type', 'directory'],
+                                    additionalProperties: false,
+                                },
+                            },
+                            allowedImageDownloadHosts: {
+                                type: ['array', 'null'],
+                                items: { type: 'string', minLength: 1 },
+                                default: null,
+                            },
+                        },
+                        required: ['enable', 'downloadTimeoutMs', 'storageTargets'],
+                        additionalProperties: false,
+                    },
                 },
                 required: ['enable', 'type'],
                 additionalProperties: false,
@@ -506,107 +609,6 @@ export const auditEventsSchema = {
                     },
                 },
                 required: ['messageQueue', 'rateLimit', 'queueMetrics'],
-                additionalProperties: false,
-            },
-            screenshots: {
-                type: 'object',
-                properties: {
-                    enable: { type: 'boolean', default: false },
-                    downloadTimeoutMs: { type: 'number', default: 15000 },
-                    addInImageMetadata: {
-                        type: 'object',
-                        properties: {
-                            enable: { type: 'boolean', default: false },
-                            fields: {
-                                type: 'object',
-                                properties: {
-                                    date: { type: 'boolean', default: false },
-                                    eventId: { type: 'boolean', default: false },
-                                    correlationId: { type: 'boolean', default: false },
-                                    selectionTxnId: { type: 'boolean', default: false },
-                                    userId: { type: 'boolean', default: false },
-                                    appId: { type: 'boolean', default: false },
-                                    appName: { type: 'boolean', default: false },
-                                    sheetName: { type: 'boolean', default: false },
-                                    viewingDuration: { type: 'boolean', default: false },
-                                },
-                                additionalProperties: false,
-                            },
-                        },
-                        additionalProperties: false,
-                    },
-                    auth: {
-                        type: 'object',
-                        properties: {
-                            mode: {
-                                type: 'string',
-                                enum: ['none', 'qpsTicket'],
-                                default: 'none',
-                            },
-                            qps: {
-                                type: 'object',
-                                properties: {
-                                    host: { type: 'string', minLength: 1 },
-                                    port: { type: 'number', default: 4243 },
-                                    userDirectory: { type: 'string', minLength: 1 },
-                                    userId: { type: 'string', minLength: 1 },
-                                    ticketTimeoutMs: { type: 'number', default: 5000 },
-                                },
-                                required: [
-                                    'host',
-                                    'port',
-                                    'userDirectory',
-                                    'userId',
-                                    'ticketTimeoutMs',
-                                ],
-                                additionalProperties: false,
-                            },
-                        },
-                        required: ['mode'],
-                        additionalProperties: false,
-                        allOf: [
-                            {
-                                if: {
-                                    type: 'object',
-                                    properties: {
-                                        mode: { const: 'qpsTicket' },
-                                    },
-                                    required: ['mode'],
-                                },
-                                then: {
-                                    type: 'object',
-                                    properties: {
-                                        qps: { type: 'object' },
-                                    },
-                                    required: ['qps'],
-                                },
-                            },
-                        ],
-                    },
-                    storageTargets: {
-                        type: ['array', 'null'],
-                        items: {
-                            type: 'object',
-                            properties: {
-                                enable: { type: 'boolean', default: false },
-                                type: {
-                                    type: 'string',
-                                    enum: ['flat'],
-                                    default: 'flat',
-                                },
-                                directory: { type: 'string' },
-                            },
-                            required: ['enable', 'type', 'directory'],
-                            additionalProperties: false,
-                        },
-                    },
-                    allowedImageDownloadHosts: {
-                        type: ['array', 'null'],
-                        items: { type: 'string', minLength: 1 },
-                        default: null,
-                    },
-                },
-                required: ['enable', 'downloadTimeoutMs', 'storageTargets'],
                 additionalProperties: false,
             },
             cors: {

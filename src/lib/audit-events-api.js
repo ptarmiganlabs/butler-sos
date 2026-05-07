@@ -482,11 +482,11 @@ function createTypeHandlers(logger) {
         }
 
         const screenshotsEnableConfigExists = globals.config.has(
-            'Butler-SOS.auditEvents.screenshots.enable'
+            'Butler-SOS.auditEvents.destination.screenshots.enable'
         );
         const screenshotsEnabled =
             screenshotsEnableConfigExists &&
-            globals.config.get('Butler-SOS.auditEvents.screenshots.enable') === true;
+            globals.config.get('Butler-SOS.auditEvents.destination.screenshots.enable') === true;
 
         debugLog(
             logger,
@@ -510,9 +510,9 @@ function createTypeHandlers(logger) {
         // SSRF protection: enforce an explicit hostname allow-list (fail-closed).
         // Absent, null, or empty allowedImageDownloadHosts → block all downloads.
         const rawAllowedHosts = globals.config.has(
-            'Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts'
+            'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts'
         )
-            ? globals.config.get('Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts')
+            ? globals.config.get('Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts')
             : null;
         const allowedImageDownloadHosts =
             Array.isArray(rawAllowedHosts) && rawAllowedHosts.length > 0 ? rawAllowedHosts : null;
@@ -545,17 +545,17 @@ function createTypeHandlers(logger) {
         const screenshotDownloadConfig = {
             enable: true,
             downloadTimeoutMs: globals.config.get(
-                'Butler-SOS.auditEvents.screenshots.downloadTimeoutMs'
+                'Butler-SOS.auditEvents.destination.screenshots.downloadTimeoutMs'
             ),
             addInImageMetadata: globals.config.has(
-                'Butler-SOS.auditEvents.screenshots.addInImageMetadata'
+                'Butler-SOS.auditEvents.destination.screenshots.addInImageMetadata'
             )
-                ? globals.config.get('Butler-SOS.auditEvents.screenshots.addInImageMetadata')
+                ? globals.config.get('Butler-SOS.auditEvents.destination.screenshots.addInImageMetadata')
                 : undefined,
-            auth: globals.config.has('Butler-SOS.auditEvents.screenshots.auth')
-                ? globals.config.get('Butler-SOS.auditEvents.screenshots.auth')
+            auth: globals.config.has('Butler-SOS.auditEvents.destination.screenshots.auth')
+                ? globals.config.get('Butler-SOS.auditEvents.destination.screenshots.auth')
                 : undefined,
-            storageTargets: globals.config.get('Butler-SOS.auditEvents.screenshots.storageTargets'),
+            storageTargets: globals.config.get('Butler-SOS.auditEvents.destination.screenshots.storageTargets'),
         };
 
         debugLog(

@@ -197,14 +197,14 @@ describe('audit-events-api event types', () => {
         downloadScreenshot.mockResolvedValue({ savedPaths: ['/path/to/screenshot.png'] });
 
         mockGlobals.config.has.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts') return true;
             return false;
         });
         mockGlobals.config.get.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts') return ['example.com'];
-            if (key === 'Butler-SOS.auditEvents.screenshots.storageTargets') return ['local'];
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts') return ['example.com'];
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.storageTargets') return ['local'];
             return null;
         });
 
@@ -243,14 +243,14 @@ describe('audit-events-api event types', () => {
         downloadScreenshot.mockResolvedValue({ savedPaths: ['/path/to/screenshot.png'] });
 
         mockGlobals.config.has.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts') return true;
             return false;
         });
         mockGlobals.config.get.mockImplementation((key) => {
-            if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts') return ['example.com'];
-            if (key === 'Butler-SOS.auditEvents.screenshots.storageTargets') return ['local'];
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts') return ['example.com'];
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.storageTargets') return ['local'];
             return null;
         });
 
@@ -1192,15 +1192,15 @@ describe('audit-events-api SSRF protection', () => {
     function screenshotConfigMock(allowedImageDownloadHosts) {
         return {
             has: jest.fn((key) => {
-                if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
-                if (key === 'Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts')
+                if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
+                if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts')
                     return allowedImageDownloadHosts !== undefined;
                 return false;
             }),
             get: jest.fn((key) => {
-                if (key === 'Butler-SOS.auditEvents.screenshots.enable') return true;
-                if (key === 'Butler-SOS.auditEvents.screenshots.allowedImageDownloadHosts') return allowedImageDownloadHosts;
-                if (key === 'Butler-SOS.auditEvents.screenshots.storageTargets') return ['local'];
+                if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
+                if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts') return allowedImageDownloadHosts;
+                if (key === 'Butler-SOS.auditEvents.destination.screenshots.storageTargets') return ['local'];
                 return null;
             }),
         };
