@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **butler-sos** (2650 symbols, 4892 relationships, 224 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **butler-sos** (2800 symbols, 5103 relationships, 237 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -41,3 +41,40 @@ This project is indexed by GitNexus as **butler-sos** (2650 symbols, 4892 relati
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+# Butler SOS — Agent Guide
+
+## Commands
+
+- `npm ci` — install deps
+- `npm run lint:fix` then `npm run test:unit` — required quality gates before commit
+- `npm run test:unit` — Jest with ESM (uses `node --experimental-vm-modules`)
+- Single test: `node --experimental-vm-modules node_modules/jest/bin/jest.js src/path/to/file.test.js`
+- `npm run format` — Prettier (100 printWidth, 4 tabWidth, single quotes)
+
+## Architecture
+
+- **Runtime entrypoint**: `src/butler-sos.js` — requires YAML config via `-c/--configfile`
+- **Global singleton**: `src/globals.js` (Settings class) — many modules depend on it; prefer existing patterns
+- **Config**: YAML file loaded via `config` package; template at `src/config/production_template.yaml`
+- **Plugins**: Fastify plugins in `src/plugins/`; use `fastify-plugin` patterns
+- **Tests**: `__tests__/` folders next to code, `*.test.js` naming, ESM imports from `@jest/globals`
+
+## Conventions
+
+- **ESM only** (`"type": "module"`) — use `import`/`export`, avoid `require`
+- **JSDoc enforced** — ESLint with `eslint-plugin-jsdoc`; document all params, returns, and Promise types
+- **Logging** — use `globals.logger` (winston-based), never `console.log`; use `src/lib/log-error.js` helpers for SEA compatibility
+- **Config-driven** — prefer YAML config + `config` package over env vars or hard-coded values
+- **Dependencies** — Docker/SEA builds use `--omit=dev`; runtime deps must be in `dependencies`, not `devDependencies`
+
+## SEA (Single Executable App)
+
+- `src/lib/sea-wrapper.js` provides `isSea()` and path helpers
+- In SEA binaries, `__dirname`/`__filename` are unavailable; use the sea wrapper
+- Suppression of `DEP0169` warnings from `@influxdata/influxdb3-client` is in `src/butler-sos.js:34-48`
+
+## Security
+
+- No real secrets/keys/certs in repo — config templates/examples only
+- `systeminformation` package may execute privileged OS commands on Windows — respect `Butler-SOS.systemInfo.enable` config option
