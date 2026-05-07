@@ -12,6 +12,28 @@ import globals from '../globals.js';
 import { downloadScreenshot } from './audit-screenshots.js';
 import { writeAuditEventToDestinations } from './audit-destinations/index.js';
 
+/** Regex matching a UUID in 8-4-4-4-12 hex format (case-insensitive). */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Exact set of event type strings accepted by this API.
+ * Any type not in this set must match EVENT_WILDCARD_REGEX to be valid.
+ */
+const VALID_EVENT_TYPES = new Set([
+    'selection.state.changed',
+    'object.visibility.changed',
+    'object.view.duration',
+    'navigation.sheet.loaded',
+    'app.model.validated',
+    'screenshot.url.received',
+    'event.bookmark',
+    'event.unsupported.visualization',
+    'audit.event',
+]);
+
+/** Matches dynamic `event.{value}` types; requires at least one character after the dot. */
+const EVENT_WILDCARD_REGEX = /^event\..+$/;
+
 /**
  * Compares two strings using a constant-time algorithm to prevent timing attacks.
  *
@@ -52,6 +74,38 @@ function safeStringEqual(a, b) {
  * @typedef {object} AuditRequestContext
  * @property {string} ip - Client IP address.
  */
+
+/**
+ * Validates semantic constraints on a parsed audit event envelope.
+ *
+ * All checks run unconditionally (no short-circuit) so that all violations
+ * are surfaced in a single warning rather than requiring multiple retries.
+ *
+ * @param {AuditEventEnvelope} envelope - Parsed request body (already passed Fastify schema validation).
+ * @returns {{ valid: boolean, reasons: string[] }} Result with every failure reason collected.
+ */
+function validateEnvelopeConstraints(envelope) {
+    const reasons = [];
+
+    if (envelope.eventId !== undefined && !UUID_REGEX.test(envelope.eventId)) {
+        reasons.push(`eventId is not a valid UUID ("${envelope.eventId}")`);
+    }
+
+    if (envelope.correlationId !== undefined && envelope.correlationId.length > 64) {
+        reasons.push(`correlationId exceeds 64 characters (length=${envelope.correlationId.length})`);
+    }
+
+    const appId = envelope.payload?.context?.appId;
+    if (appId !== undefined && !UUID_REGEX.test(appId)) {
+        reasons.push(`payload.context.appId is not a valid UUID ("${appId}")`);
+    }
+
+    if (!VALID_EVENT_TYPES.has(envelope.type) && !EVENT_WILDCARD_REGEX.test(envelope.type)) {
+        reasons.push(`type is not a recognised event type ("${envelope.type}")`);
+    }
+
+    return { valid: reasons.length === 0, reasons };
+}
 
 /**
  * Returns the Fastify route schema for the audit events endpoint.
@@ -920,6 +974,18 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
             } payloadKeys=${summarizeKeysForDebug(envelope?.payload)}`
         );
 
+        // Validate envelope-level semantic constraints (UUID formats, event type allow-list).
+        // All checks run unconditionally so every violation is surfaced in a single warning.
+        const { valid: constraintsValid, reasons: constraintReasons } = validateEnvelopeConstraints(envelope);
+        if (!constraintsValid) {
+            globals.logger.warn(
+                `AUDIT API: Dropped audit event - constraint violations: ${constraintReasons.join('; ')} [eventId=${envelope?.eventId ?? 'n/a'} type=${envelope?.type ?? 'n/a'}]`
+            );
+            return reply
+                .code(202)
+                .send({ status: 'accepted', receivedAt: new Date().toISOString() });
+        }
+
         // Validate payload structure using per-type AJV schema (envelope is validated by Fastify schema).
         // If payload validation fails, accept-and-drop.
         if (!validatePayload(envelope)) {
@@ -1063,9 +1129,7 @@ export async function setupAuditEventsApiServer() {
         if (httpsOptions) {
             const secureTlsVersions = ['TLSv1.2', 'TLSv1.3'];
             const effectiveMinVersion = httpsOptions.minVersion || tls.DEFAULT_MIN_VERSION;
-            globals.logger.info(
-                `AUDIT API: TLS minimum version: ${effectiveMinVersion}`
-            );
+            globals.logger.info(`AUDIT API: TLS minimum version: ${effectiveMinVersion}`);
             if (!secureTlsVersions.includes(effectiveMinVersion)) {
                 globals.logger.warn(
                     `AUDIT API: TLS minVersion "${effectiveMinVersion}" is below TLS 1.2 — consider upgrading to TLSv1.2 or TLSv1.3.`
@@ -1110,6 +1174,8 @@ export async function setupAuditEventsApiServer() {
             reply.header('Referrer-Policy', 'no-referrer');
             // API endpoint — deny all browser feature access.
             reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+            reply.header('Cross-Origin-Resource-Policy', 'same-origin');
+            reply.header('Cross-Origin-Opener-Policy', 'same-origin');
             if (httpsOptions) {
                 reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
             }
