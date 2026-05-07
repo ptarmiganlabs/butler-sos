@@ -2,11 +2,10 @@
 import globals from '../globals.js';
 import { listeningEventHandler, messageEventHandler } from './udp_handlers/log_events/index.js';
 import { logError } from './log-error.js';
-import { parseAllowedSources, isIpAllowed } from './udp-ip-validator.js';
+import { parseAllowedSources, isIpAllowed, createRejectThrottle } from './udp-ip-validator.js';
 
-// Per-source throttle state for reject warnings (avoids log flooding)
-const logEventRejectWarnState = new Map(); // ip -> last warn timestamp (ms)
-const REJECT_WARN_INTERVAL_MS = 60_000; // warn at most once per minute per source
+// Per-source throttle for reject warnings (avoids log flooding from spamming hosts)
+const rejectThrottle = createRejectThrottle();
 
 // --------------------------------------------------------
 // Set up UDP server for acting on Sense log events
@@ -82,18 +81,12 @@ export async function udpInitLogEventServer() {
                         globals.udpServerLogEvents.enableSourceValidation
                     )
                 ) {
-                    const now = Date.now();
-                    const lastWarn = logEventRejectWarnState.get(remote.address) ?? 0;
-                    if (now - lastWarn >= REJECT_WARN_INTERVAL_MS) {
-                        globals.logger.warn(
-                            `[UDP Log Events] SOURCE VALIDATION: Rejected message from unauthorized source ${remote.address}:${remote.port}`
-                        );
-                        logEventRejectWarnState.set(remote.address, now);
-                    } else {
-                        globals.logger.debug(
-                            `[UDP Log Events] SOURCE VALIDATION: Silently dropping repeated message from ${remote.address}:${remote.port}`
-                        );
-                    }
+                    rejectThrottle.logRejection(
+                        remote.address,
+                        remote.port,
+                        globals.logger,
+                        '[UDP Log Events] SOURCE VALIDATION:'
+                    );
                     return;
                 }
             }

@@ -2,11 +2,10 @@
 import globals from '../globals.js';
 import { listeningEventHandler, messageEventHandler } from './udp_handlers/user_events/index.js';
 import { logError } from './log-error.js';
-import { parseAllowedSources, isIpAllowed } from './udp-ip-validator.js';
+import { parseAllowedSources, isIpAllowed, createRejectThrottle } from './udp-ip-validator.js';
 
-// Per-source throttle state for reject warnings (avoids log flooding)
-const userActivityRejectWarnState = new Map(); // ip -> last warn timestamp (ms)
-const REJECT_WARN_INTERVAL_MS = 60_000; // warn at most once per minute per source
+// Per-source throttle for reject warnings (avoids log flooding from spamming hosts)
+const rejectThrottle = createRejectThrottle();
 
 // --------------------------------------------------------
 // Set up UDP server for acting on Sense user activity events
@@ -82,18 +81,12 @@ export async function udpInitUserActivityServer() {
                         globals.udpServerUserActivity.enableSourceValidation
                     )
                 ) {
-                    const now = Date.now();
-                    const lastWarn = userActivityRejectWarnState.get(remote.address) ?? 0;
-                    if (now - lastWarn >= REJECT_WARN_INTERVAL_MS) {
-                        globals.logger.warn(
-                            `[UDP User Activity] SOURCE VALIDATION: Rejected message from unauthorized source ${remote.address}:${remote.port}`
-                        );
-                        userActivityRejectWarnState.set(remote.address, now);
-                    } else {
-                        globals.logger.debug(
-                            `[UDP User Activity] SOURCE VALIDATION: Silently dropping repeated message from ${remote.address}:${remote.port}`
-                        );
-                    }
+                    rejectThrottle.logRejection(
+                        remote.address,
+                        remote.port,
+                        globals.logger,
+                        '[UDP User Activity] SOURCE VALIDATION:'
+                    );
                     return;
                 }
             }

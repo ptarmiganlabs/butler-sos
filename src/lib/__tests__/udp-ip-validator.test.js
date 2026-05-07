@@ -14,7 +14,9 @@ jest.unstable_mockModule('util', () => ({
     promisify: jest.fn().mockImplementation(() => mockResolve4),
 }));
 
-const { isIPv4, parseAllowedSources, isIpAllowed } = await import('../udp-ip-validator.js');
+const { isIPv4, parseAllowedSources, isIpAllowed, createRejectThrottle } = await import(
+    '../udp-ip-validator.js'
+);
 
 describe('udp-ip-validator', () => {
     beforeEach(() => {
@@ -149,6 +151,86 @@ describe('udp-ip-validator', () => {
 
             expect(allowedIPs).toHaveLength(0);
             expect(errors).toHaveLength(0);
+        });
+    });
+
+    // -------------------------------------------------------
+    describe('createRejectThrottle', () => {
+        test('should log warn on first rejection from a new source', () => {
+            const throttle = createRejectThrottle(60_000);
+            const logger = { warn: jest.fn(), debug: jest.fn() };
+
+            throttle.logRejection('1.2.3.4', 1234, logger, '[TEST]:');
+
+            expect(logger.warn).toHaveBeenCalledTimes(1);
+            expect(logger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('Rejected message from unauthorized source 1.2.3.4:1234')
+            );
+            expect(logger.debug).not.toHaveBeenCalled();
+        });
+
+        test('should log debug for repeated rejections within the interval', () => {
+            const throttle = createRejectThrottle(60_000);
+            const logger = { warn: jest.fn(), debug: jest.fn() };
+
+            throttle.logRejection('1.2.3.4', 1234, logger, '[TEST]:');
+            throttle.logRejection('1.2.3.4', 1234, logger, '[TEST]:');
+            throttle.logRejection('1.2.3.4', 1234, logger, '[TEST]:');
+
+            expect(logger.warn).toHaveBeenCalledTimes(1);
+            expect(logger.debug).toHaveBeenCalledTimes(2);
+        });
+
+        test('should log warn again after the interval expires', () => {
+            const throttle = createRejectThrottle(1); // 1 ms interval for testing
+            const logger = { warn: jest.fn(), debug: jest.fn() };
+
+            throttle.logRejection('1.2.3.4', 1234, logger, '[TEST]:');
+
+            // Wait longer than 1 ms so the interval has elapsed
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    throttle.logRejection('1.2.3.4', 1234, logger, '[TEST]:');
+                    expect(logger.warn).toHaveBeenCalledTimes(2);
+                    expect(logger.debug).not.toHaveBeenCalled();
+                    resolve(undefined);
+                }, 10);
+            });
+        });
+
+        test('should throttle each source IP independently', () => {
+            const throttle = createRejectThrottle(60_000);
+            const logger = { warn: jest.fn(), debug: jest.fn() };
+
+            throttle.logRejection('1.2.3.4', 100, logger, '[TEST]:');
+            throttle.logRejection('5.6.7.8', 200, logger, '[TEST]:');
+            throttle.logRejection('1.2.3.4', 100, logger, '[TEST]:'); // throttled
+            throttle.logRejection('5.6.7.8', 200, logger, '[TEST]:'); // throttled
+
+            expect(logger.warn).toHaveBeenCalledTimes(2);
+            expect(logger.debug).toHaveBeenCalledTimes(2);
+        });
+
+        test('should prune stale entries from the state map', () => {
+            const throttle = createRejectThrottle(1); // 1 ms interval for testing
+            const logger = { warn: jest.fn(), debug: jest.fn() };
+
+            // First warn from ip A — populates the map
+            throttle.logRejection('10.0.0.1', 100, logger, '[TEST]:');
+
+            // Wait long enough for the entry to age out, then warn from ip B
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // ip B warn triggers pruning of the stale ip A entry
+                    throttle.logRejection('10.0.0.2', 200, logger, '[TEST]:');
+                    // ip A should now be gone from the map, so next call warns again
+                    throttle.logRejection('10.0.0.1', 100, logger, '[TEST]:');
+
+                    expect(logger.warn).toHaveBeenCalledTimes(3);
+                    expect(logger.debug).not.toHaveBeenCalled();
+                    resolve(undefined);
+                }, 10);
+            });
         });
     });
 });

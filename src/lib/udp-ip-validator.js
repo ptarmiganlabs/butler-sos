@@ -97,3 +97,48 @@ export function isIpAllowed(ip, allowedIPs, validationEnabled = false) {
 
     return allowedIPs.includes(ip);
 }
+
+/**
+ * Create a per-source rejection throttle for UDP source-validation logging.
+ *
+ * The first rejection from each source IP within a rolling window is logged at
+ * warn level; subsequent rejections within the same window are logged at debug
+ * level to avoid log flooding. Stale map entries (IPs older than the window)
+ * are pruned on each warn emission so the map stays bounded.
+ *
+ * @param {number} [intervalMs] - Milliseconds between warn-level logs per source IP
+ * @returns {{ logRejection: (ip: string, port: number, logger: object, prefix: string) => void }} Throttle handle
+ */
+export function createRejectThrottle(intervalMs = 60_000) {
+    const warnState = new Map(); // ip -> last warn timestamp (ms)
+
+    return {
+        /**
+         * Log a source-validation rejection, throttling repeated warn messages.
+         *
+         * @param {string} ip - The rejected source IP address
+         * @param {number} port - The rejected source port
+         * @param {object} logger - Logger instance with `warn` and `debug` methods
+         * @param {string} prefix - Log prefix string, e.g. "[UDP Log Events] SOURCE VALIDATION:"
+         * @returns {void}
+         */
+        logRejection(ip, port, logger, prefix) {
+            const now = Date.now();
+            const lastWarn = warnState.get(ip) ?? 0;
+
+            if (now - lastWarn >= intervalMs) {
+                logger.warn(`${prefix} Rejected message from unauthorized source ${ip}:${port}`);
+                warnState.set(ip, now);
+
+                // Prune entries that have aged out of the window to bound memory usage
+                for (const [key, ts] of warnState) {
+                    if (now - ts > intervalMs) {
+                        warnState.delete(key);
+                    }
+                }
+            } else {
+                logger.debug(`${prefix} Silently dropping repeated message from ${ip}:${port}`);
+            }
+        },
+    };
+}
