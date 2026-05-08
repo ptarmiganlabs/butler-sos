@@ -14,6 +14,10 @@ const udpIpValidatorPath = path.resolve(__dirname, '../udp-ip-validator.js');
 // Hoist mocks outside factories for stable references (Jest ESM pattern)
 const parseAllowedSourcesMock = jest.fn();
 const isIpAllowedMock = jest.fn();
+const logRejectionMock = jest.fn();
+const createRejectThrottleMock = jest.fn().mockReturnValue({
+    logRejection: logRejectionMock,
+});
 
 // Mock dependencies
 jest.unstable_mockModule(globalsPath, () => ({
@@ -108,6 +112,7 @@ jest.unstable_mockModule(userEventsPath, () => ({
 jest.unstable_mockModule(udpIpValidatorPath, () => ({
     parseAllowedSources: parseAllowedSourcesMock,
     isIpAllowed: isIpAllowedMock,
+    createRejectThrottle: createRejectThrottleMock,
 }));
 
 const globals = (await import(globalsPath)).default;
@@ -289,6 +294,10 @@ describe('UDP Handlers', () => {
                 expect(globals.logger.warn).toHaveBeenCalledWith(
                     expect.stringContaining('no allowed sources configured')
                 );
+                expect(globals.logger.warn).toHaveBeenCalledWith(
+                    expect.stringContaining('disabling source validation')
+                );
+                expect(globals.udpServerLogEvents.enableSourceValidation).toBe(false);
                 expect(parseAllowedSourcesMock).not.toHaveBeenCalled();
             });
 
@@ -308,8 +317,11 @@ describe('UDP Handlers', () => {
                 const mockRemote = { address: '10.0.0.99', port: 1234 };
                 await handlers['message'](mockMsg, mockRemote);
 
-                expect(globals.logger.warn).toHaveBeenCalledWith(
-                    expect.stringContaining('Rejected message from unauthorized source')
+                expect(logRejectionMock).toHaveBeenCalledWith(
+                    '10.0.0.99',
+                    1234,
+                    globals.logger,
+                    expect.stringContaining('SOURCE VALIDATION:')
                 );
                 expect(messageEventHandler).not.toHaveBeenCalled();
             });
@@ -503,6 +515,10 @@ describe('UDP Handlers', () => {
                 expect(globals.logger.warn).toHaveBeenCalledWith(
                     expect.stringContaining('no allowed sources configured')
                 );
+                expect(globals.logger.warn).toHaveBeenCalledWith(
+                    expect.stringContaining('disabling source validation')
+                );
+                expect(globals.udpServerUserActivity.enableSourceValidation).toBe(false);
                 expect(parseAllowedSourcesMock).not.toHaveBeenCalled();
             });
 
@@ -522,8 +538,11 @@ describe('UDP Handlers', () => {
                 const mockRemote = { address: '10.0.0.99', port: 1234 };
                 await handlers['message'](mockMsg, mockRemote);
 
-                expect(globals.logger.warn).toHaveBeenCalledWith(
-                    expect.stringContaining('Rejected message from unauthorized source')
+                expect(logRejectionMock).toHaveBeenCalledWith(
+                    '10.0.0.99',
+                    1234,
+                    globals.logger,
+                    expect.stringContaining('SOURCE VALIDATION:')
                 );
                 expect(messageEventHandlerUser).not.toHaveBeenCalled();
             });

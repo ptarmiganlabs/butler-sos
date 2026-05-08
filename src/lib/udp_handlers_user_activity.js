@@ -62,8 +62,9 @@ export async function udpInitUserActivityServer() {
         }
     } else if (globals.udpServerUserActivity.enableSourceValidation) {
         globals.logger.warn(
-            '[UDP User Activity] SOURCE VALIDATION: Enabled but no allowed sources configured - all messages will be rejected'
+            '[UDP User Activity] SOURCE VALIDATION: Enabled but no allowed sources configured - disabling source validation'
         );
+        globals.udpServerUserActivity.enableSourceValidation = false;
     }
 
     // Handler for UDP server startup event
