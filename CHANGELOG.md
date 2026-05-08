@@ -2,7 +2,6 @@
 
 ## [14.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v13.0.0...butler-sos-v14.0.0) (2025-12-09)
 
-
 ### ⚠ BREAKING CHANGES
 
 * **events:** Add proper queue for incoming log and user events
