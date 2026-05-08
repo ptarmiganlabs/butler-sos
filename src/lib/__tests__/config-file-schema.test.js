@@ -113,6 +113,8 @@ describe('config-file-schema', () => {
                             maxMessagesPerMinute: 600,
                         },
                         maxMessageSize: 65507,
+                        enableSourceValidation: false,
+                        allowedSources: [],
                         queueMetrics: {
                             influxdb: {
                                 enable: false,
@@ -171,6 +173,8 @@ describe('config-file-schema', () => {
                             maxMessagesPerMinute: 600,
                         },
                         maxMessageSize: 65507,
+                        enableSourceValidation: false,
+                        allowedSources: [],
                         queueMetrics: {
                             influxdb: {
                                 enable: false,
@@ -468,6 +472,8 @@ describe('config-file-schema', () => {
                             },
                             rateLimit: { enable: false, maxMessagesPerMinute: 600 },
                             maxMessageSize: 65507,
+                            enableSourceValidation: false,
+                            allowedSources: [],
                             queueMetrics: {
                                 influxdb: {
                                     enable: false,
@@ -520,6 +526,8 @@ describe('config-file-schema', () => {
                             },
                             rateLimit: { enable: false, maxMessagesPerMinute: 600 },
                             maxMessageSize: 65507,
+                            enableSourceValidation: false,
+                            allowedSources: [],
                             queueMetrics: {
                                 influxdb: {
                                     enable: false,
@@ -738,6 +746,8 @@ describe('config-file-schema', () => {
                         },
                         rateLimit: { enable: false, maxMessagesPerMinute: 600 },
                         maxMessageSize: 65507,
+                        enableSourceValidation: false,
+                        allowedSources: [],
                         queueMetrics: {
                             influxdb: {
                                 enable: false,
@@ -784,6 +794,8 @@ describe('config-file-schema', () => {
                         },
                         rateLimit: { enable: false, maxMessagesPerMinute: 600 },
                         maxMessageSize: 65507,
+                        enableSourceValidation: false,
+                        allowedSources: [],
                         queueMetrics: {
                             influxdb: {
                                 enable: false,

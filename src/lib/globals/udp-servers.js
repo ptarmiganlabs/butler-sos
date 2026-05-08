@@ -27,6 +27,19 @@ export function initUdp(settings) {
         settings.udpServerUserActivity.portUserActivity = settings.config.get(
             'Butler-SOS.userEvents.udpServerConfig.portUserActivityEvents'
         );
+
+        // Source validation settings (optional, defaulting for backward compatibility)
+        settings.udpServerUserActivity.enableSourceValidation = settings.config.has(
+            'Butler-SOS.userEvents.udpServerConfig.enableSourceValidation'
+        )
+            ? settings.config.get('Butler-SOS.userEvents.udpServerConfig.enableSourceValidation')
+            : false;
+        settings.udpServerUserActivity.allowedSourcesConfig = settings.config.has(
+            'Butler-SOS.userEvents.udpServerConfig.allowedSources'
+        )
+            ? settings.config.get('Butler-SOS.userEvents.udpServerConfig.allowedSources') || []
+            : [];
+        settings.udpServerUserActivity.allowedIPs = []; // Populated after DNS resolution at startup
     } catch (err) {
         settings.logger.error(
             `CONFIG: Setting up UDP user activity listener: ${settings.getErrorMessage(err)}`
@@ -51,6 +64,19 @@ export function initUdp(settings) {
         settings.udpServerLogEvents.port = settings.config.get(
             'Butler-SOS.logEvents.udpServerConfig.portLogEvents'
         );
+
+        // Source validation settings (optional, defaulting for backward compatibility)
+        settings.udpServerLogEvents.enableSourceValidation = settings.config.has(
+            'Butler-SOS.logEvents.udpServerConfig.enableSourceValidation'
+        )
+            ? settings.config.get('Butler-SOS.logEvents.udpServerConfig.enableSourceValidation')
+            : false;
+        settings.udpServerLogEvents.allowedSourcesConfig = settings.config.has(
+            'Butler-SOS.logEvents.udpServerConfig.allowedSources'
+        )
+            ? settings.config.get('Butler-SOS.logEvents.udpServerConfig.allowedSources') || []
+            : [];
+        settings.udpServerLogEvents.allowedIPs = []; // Populated after DNS resolution at startup
     } catch (err) {
         settings.logger.error(
             `CONFIG: Setting up UDP log events listener: ${settings.getErrorMessage(err)}`
