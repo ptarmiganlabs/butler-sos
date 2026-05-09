@@ -55,24 +55,30 @@ Butler-SOS:
 
 ### Examples
 
+The snippets below show just the `crashFile` key.  In a real config file these
+must be placed **under the top-level `Butler-SOS` key** (see the full example
+in the Configuration Reference block above).
+
 **Minimal — only plain-text files:**
 
 ```yaml
-crashFile:
-  enable: true
-  crashFileDirectory: ./crash_dumps
-  crashFileCreateJson: false
-  crashFileCreateText: true
+Butler-SOS:
+  crashFile:
+    enable: true
+    crashFileDirectory: ./crash_dumps
+    crashFileCreateJson: false
+    crashFileCreateText: true
 ```
 
 **Disabled:**
 
 ```yaml
-crashFile:
-  enable: false
-  crashFileDirectory: ./crash_dumps
-  crashFileCreateJson: true
-  crashFileCreateText: true
+Butler-SOS:
+  crashFile:
+    enable: false
+    crashFileDirectory: ./crash_dumps
+    crashFileCreateJson: true
+    crashFileCreateText: true
 ```
 
 ---
@@ -81,19 +87,25 @@ crashFile:
 
 ### Filename pattern
 
-Both file types use the same timestamp-based naming convention:
+Both file types use the same naming convention, which includes a timestamp, the
+process ID, and a per-process incrementing counter to guarantee uniqueness even
+when multiple crashes occur within the same millisecond:
 
 ```
-crash_dump_<YYYYMMDD>_<HHMMSS>_<mmm>.<ext>
+crash_dump_<YYYYMMDD>_<HHMMSS>_<mmm>_<PID>_<counter>.<ext>
 ```
 
 - Timestamp is local time
 - `mmm` is milliseconds (3 digits, zero-padded)
+- `PID` is the operating system process ID
+- `counter` is a per-process integer starting at 1
 - Extension is `.json` or `.txt`
 
-**Example:** `crash_dump_20260509_143045_123.json`
+**Example:** `crash_dump_20260509_143045_123_12345_1.json`
 
-Files are never overwritten — each crash produces uniquely-named files.
+Files are never overwritten — each crash produces uniquely-named files, and
+`flag: 'wx'` (exclusive create) prevents any silent overwrites if a filename
+were somehow reused.
 
 ---
 

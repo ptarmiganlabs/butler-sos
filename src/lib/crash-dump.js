@@ -361,7 +361,13 @@ export async function writeCrashDump(error, source) {
 
         // ----------------------------------------------------------------
         // Write files
+        // Track per-file success so the log message is only emitted when
+        // the file was actually written (write errors and timeout are both
+        // treated as non-success).
         // ----------------------------------------------------------------
+        let jsonWritten = false;
+        let txtWritten = false;
+
         const writePromises = [];
 
         if (createJson) {
@@ -371,6 +377,9 @@ export async function writeCrashDump(error, source) {
                         encoding: 'utf8',
                         mode: 0o600,
                         flag: 'wx',
+                    })
+                    .then(() => {
+                        jsonWritten = true;
                     })
                     .catch(() => {})
             );
@@ -383,6 +392,9 @@ export async function writeCrashDump(error, source) {
                         encoding: 'utf8',
                         mode: 0o600,
                         flag: 'wx',
+                    })
+                    .then(() => {
+                        txtWritten = true;
                     })
                     .catch(() => {})
             );
@@ -400,8 +412,10 @@ export async function writeCrashDump(error, source) {
 
         await Promise.race([Promise.all(writePromises), writeTimeout]);
 
-        // Log paths to console as a last-resort notification (logger may be down)
-        if (createJson) {
+        // Log the actual path only when the file was confirmed written.
+        // Silently skip if the write failed, timed out, or was prevented
+        // by an exclusive-create (wx) conflict.
+        if (jsonWritten) {
             try {
                 if (globals.logger) {
                     globals.logger.error(`CRASH DUMP: Written to ${jsonFilePath}`);
@@ -412,7 +426,7 @@ export async function writeCrashDump(error, source) {
                 console.error(`CRASH DUMP: Written to ${jsonFilePath}`);
             }
         }
-        if (createText) {
+        if (txtWritten) {
             try {
                 if (globals.logger) {
                     globals.logger.error(`CRASH DUMP: Written to ${txtFilePath}`);
