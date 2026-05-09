@@ -141,8 +141,7 @@ Butler-SOS:
             # Source IP validation for incoming UDP messages
             enableSourceValidation: false # Enable validation of source IP for incoming UDP messages (default: false)
             allowedSources: # List of allowed source hosts/IPs. Only used if enableSourceValidation is true.
-                # - 192.168.1.100
-                # - sense-server-01.mydomain.com
+                - sense-server-01.mydomain.com
             # Queue metrics storage in InfluxDB
             queueMetrics:
                 influxdb:
