@@ -110,10 +110,7 @@ export function extractAuditEventFields(envelope, extras = {}, staticTagsKey) {
 
     // Static tags from config
     const tags = {};
-    if (
-        globals.config.has(staticTagsKey) &&
-        Array.isArray(globals.config.get(staticTagsKey))
-    ) {
+    if (globals.config.has(staticTagsKey) && Array.isArray(globals.config.get(staticTagsKey))) {
         const staticTags = globals.config.get(staticTagsKey);
         for (const item of staticTags) {
             if (item?.name && item?.value) {

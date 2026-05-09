@@ -41,7 +41,11 @@ jest.unstable_mockModule('../influxdb/shared/utils.js', () => ({
 const mockPointV2Tag = jest.fn();
 const mockPointV2IntField = jest.fn();
 const mockPointV2StringField = jest.fn();
-const mockPointV2 = { tag: mockPointV2Tag, intField: mockPointV2IntField, stringField: mockPointV2StringField };
+const mockPointV2 = {
+    tag: mockPointV2Tag,
+    intField: mockPointV2IntField,
+    stringField: mockPointV2StringField,
+};
 const MockPointV2 = jest.fn(() => mockPointV2);
 
 jest.unstable_mockModule('@influxdata/influxdb-client', () => ({
@@ -52,7 +56,11 @@ jest.unstable_mockModule('@influxdata/influxdb-client', () => ({
 const mockPointV3SetTag = jest.fn();
 const mockPointV3SetIntegerField = jest.fn();
 const mockPointV3SetStringField = jest.fn();
-const mockPointV3 = { setTag: mockPointV3SetTag, setIntegerField: mockPointV3SetIntegerField, setStringField: mockPointV3SetStringField };
+const mockPointV3 = {
+    setTag: mockPointV3SetTag,
+    setIntegerField: mockPointV3SetIntegerField,
+    setStringField: mockPointV3SetStringField,
+};
 const MockPointV3 = jest.fn(() => mockPointV3);
 
 jest.unstable_mockModule('@influxdata/influxdb3-client', () => ({
@@ -139,7 +147,9 @@ describe('ErrorTracker', () => {
     });
 
     test('does not log summary when logSummary.enable is false', async () => {
-        mockConfigHas.mockImplementation((key) => key === 'Butler-SOS.errorTracking.logSummary.enable');
+        mockConfigHas.mockImplementation(
+            (key) => key === 'Butler-SOS.errorTracking.logSummary.enable'
+        );
         mockConfigGet.mockImplementation((key) => {
             if (key === 'Butler-SOS.errorTracking.logSummary.enable') return false;
             return undefined;
@@ -151,7 +161,9 @@ describe('ErrorTracker', () => {
     });
 
     test('logs summary when logSummary.enable is true', async () => {
-        mockConfigHas.mockImplementation((key) => key === 'Butler-SOS.errorTracking.logSummary.enable');
+        mockConfigHas.mockImplementation(
+            (key) => key === 'Butler-SOS.errorTracking.logSummary.enable'
+        );
         mockConfigGet.mockImplementation((key) => {
             if (key === 'Butler-SOS.errorTracking.logSummary.enable') return true;
             return undefined;

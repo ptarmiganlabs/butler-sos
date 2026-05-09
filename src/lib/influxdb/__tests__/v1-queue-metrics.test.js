@@ -87,17 +87,29 @@ describe('v1/queue-metrics', () => {
         mockBuilder.prepareQueueMetricData.mockImplementation(async (queueType) => {
             if (queueType === 'user_events') {
                 return {
-                    config: { queueTypeTag: 'user_events', description: 'User event queue metrics', bucketKey: 'user-events-queue' },
+                    config: {
+                        queueTypeTag: 'user_events',
+                        description: 'User event queue metrics',
+                        bucketKey: 'user-events-queue',
+                    },
                     queueManager: globals.udpQueueManagerUserActivity,
                 };
             } else if (queueType === 'log_events') {
                 return {
-                    config: { queueTypeTag: 'log_events', description: 'Log event queue metrics', bucketKey: 'log-events-queue' },
+                    config: {
+                        queueTypeTag: 'log_events',
+                        description: 'Log event queue metrics',
+                        bucketKey: 'log-events-queue',
+                    },
                     queueManager: globals.udpQueueManagerLogEvents,
                 };
             } else if (queueType === 'audit_events') {
                 return {
-                    config: { queueTypeTag: 'audit_events', description: 'Audit event queue metrics', bucketKey: 'audit-events-queue' },
+                    config: {
+                        queueTypeTag: 'audit_events',
+                        description: 'Audit event queue metrics',
+                        bucketKey: 'audit-events-queue',
+                    },
                     queueManager: globals.auditEventsQueueManager,
                 };
             }

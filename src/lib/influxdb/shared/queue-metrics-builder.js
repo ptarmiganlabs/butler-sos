@@ -75,8 +75,7 @@ export const QUEUE_TYPE_CONFIGS = {
     },
     audit_events: {
         enableConfigPath: 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable',
-        measurementConfigPath:
-            'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.measurementName',
+        measurementConfigPath: 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.measurementName',
         tagsConfigPath: 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.tags',
         queueManagerKey: 'auditEventsQueueManager',
         queueTypeTag: 'audit_events',

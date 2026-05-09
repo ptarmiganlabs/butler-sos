@@ -156,15 +156,9 @@ describe('shared/health-metrics-builder', () => {
 
         await buildHealthMetricDatapoints(body, 'MY PREFIX');
 
-        expect(globals.logger.debug).toHaveBeenCalledWith(
-            'MY PREFIX: Number of apps active: 2'
-        );
-        expect(globals.logger.debug).toHaveBeenCalledWith(
-            'MY PREFIX: Number of apps loaded: 1'
-        );
-        expect(globals.logger.debug).toHaveBeenCalledWith(
-            'MY PREFIX: Number of apps in memory: 2'
-        );
+        expect(globals.logger.debug).toHaveBeenCalledWith('MY PREFIX: Number of apps active: 2');
+        expect(globals.logger.debug).toHaveBeenCalledWith('MY PREFIX: Number of apps loaded: 1');
+        expect(globals.logger.debug).toHaveBeenCalledWith('MY PREFIX: Number of apps in memory: 2');
     });
 
     test('should read correct config keys', async () => {
@@ -181,8 +175,6 @@ describe('shared/health-metrics-builder', () => {
         expect(globals.config.get).toHaveBeenCalledWith(
             'Butler-SOS.influxdbConfig.includeFields.inMemoryDocs'
         );
-        expect(globals.config.get).toHaveBeenCalledWith(
-            'Butler-SOS.appNames.enableAppNameExtract'
-        );
+        expect(globals.config.get).toHaveBeenCalledWith('Butler-SOS.appNames.enableAppNameExtract');
     });
 });

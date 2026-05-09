@@ -176,7 +176,11 @@ describe('InfluxDB v3 Queue Metrics', () => {
             };
 
             builder.prepareQueueMetricData.mockResolvedValue({
-                config: { queueTypeTag: 'user_events', description: 'User event queue metrics', bucketKey: 'user-events-queue' },
+                config: {
+                    queueTypeTag: 'user_events',
+                    description: 'User event queue metrics',
+                    bucketKey: 'user-events-queue',
+                },
                 queueManager: globals.udpQueueManagerUserActivity,
                 metrics: mockMetrics,
                 measurementName: 'user_events_queue',
@@ -297,7 +301,11 @@ describe('InfluxDB v3 Queue Metrics', () => {
             };
 
             builder.prepareQueueMetricData.mockResolvedValue({
-                config: { queueTypeTag: 'log_events', description: 'Log event queue metrics', bucketKey: 'log-events-queue' },
+                config: {
+                    queueTypeTag: 'log_events',
+                    description: 'Log event queue metrics',
+                    bucketKey: 'log-events-queue',
+                },
                 queueManager: globals.udpQueueManagerLogEvents,
                 metrics: mockMetrics,
                 measurementName: 'log_events_queue',
@@ -450,7 +458,11 @@ describe('InfluxDB v3 Queue Metrics', () => {
             };
 
             builder.prepareQueueMetricData.mockResolvedValue({
-                config: { queueTypeTag: 'audit_events', description: 'Audit event queue metrics', bucketKey: 'audit-events-queue' },
+                config: {
+                    queueTypeTag: 'audit_events',
+                    description: 'Audit event queue metrics',
+                    bucketKey: 'audit-events-queue',
+                },
                 queueManager: globals.auditEventsQueueManager,
                 metrics: mockMetrics,
                 measurementName: 'audit_events_queue',
@@ -516,7 +528,9 @@ describe('InfluxDB v3 Queue Metrics', () => {
             await queueMetrics.postAuditEventQueueMetricsToInfluxdbV3();
 
             expect(globals.logger.error).toHaveBeenCalledWith(
-                expect.stringContaining('AUDIT EVENT QUEUE METRICS INFLUXDB V3: Error posting queue metrics')
+                expect.stringContaining(
+                    'AUDIT EVENT QUEUE METRICS INFLUXDB V3: Error posting queue metrics'
+                )
             );
             expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
                 'INFLUXDB_V3_WRITE',
@@ -526,4 +540,4 @@ describe('InfluxDB v3 Queue Metrics', () => {
             );
         });
     });
-});;
+});

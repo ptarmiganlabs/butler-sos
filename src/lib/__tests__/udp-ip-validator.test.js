@@ -14,9 +14,8 @@ jest.unstable_mockModule('util', () => ({
     promisify: jest.fn().mockImplementation(() => mockResolve4),
 }));
 
-const { isIPv4, parseAllowedSources, isIpAllowed, createRejectThrottle } = await import(
-    '../udp-ip-validator.js'
-);
+const { isIPv4, parseAllowedSources, isIpAllowed, createRejectThrottle } =
+    await import('../udp-ip-validator.js');
 
 describe('udp-ip-validator', () => {
     beforeEach(() => {

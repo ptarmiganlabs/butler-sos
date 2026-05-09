@@ -173,9 +173,7 @@ describe('v3/user-events', () => {
             };
 
             globals.config.has.mockReturnValue(true);
-            globals.config.get.mockReturnValue([
-                { name: 'tag<1>', value: 'val\\ue' },
-            ]);
+            globals.config.get.mockReturnValue([{ name: 'tag<1>', value: 'val\\ue' }]);
 
             await postUserEventToInfluxdbV3(msg);
 

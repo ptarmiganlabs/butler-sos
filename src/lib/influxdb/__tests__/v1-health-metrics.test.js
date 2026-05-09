@@ -146,10 +146,7 @@ describe('v1/health-metrics', () => {
             started: '2024-01-01T00:00:00Z',
         };
         await storeHealthMetricsV1({ server_name: 'server1' }, body);
-        expect(builder.buildHealthMetricDatapoints).toHaveBeenCalledWith(
-            body,
-            'HEALTH METRICS V1'
-        );
+        expect(builder.buildHealthMetricDatapoints).toHaveBeenCalledWith(body, 'HEALTH METRICS V1');
     });
 
     test('should handle config with activeDocs enabled', async () => {

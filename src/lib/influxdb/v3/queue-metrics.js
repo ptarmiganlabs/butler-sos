@@ -1,10 +1,7 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
 import { writeBatchToInfluxV3 } from '../shared/utils.js';
-import {
-    QUEUE_METRIC_FIELDS,
-    prepareQueueMetricData,
-} from '../shared/queue-metrics-builder.js';
+import { QUEUE_METRIC_FIELDS, prepareQueueMetricData } from '../shared/queue-metrics-builder.js';
 
 /**
  * Build an InfluxDB v3 Point from prepared queue metric data.
@@ -95,10 +92,7 @@ async function postQueueMetricsToInfluxdbV3(queueType, logPrefix) {
  * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
  */
 export async function postUserEventQueueMetricsToInfluxdbV3() {
-    return postQueueMetricsToInfluxdbV3(
-        'user_events',
-        'USER EVENT QUEUE METRICS INFLUXDB V3'
-    );
+    return postQueueMetricsToInfluxdbV3('user_events', 'USER EVENT QUEUE METRICS INFLUXDB V3');
 }
 
 /**
@@ -112,10 +106,7 @@ export async function postUserEventQueueMetricsToInfluxdbV3() {
  * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
  */
 export async function postLogEventQueueMetricsToInfluxdbV3() {
-    return postQueueMetricsToInfluxdbV3(
-        'log_events',
-        'LOG EVENT QUEUE METRICS INFLUXDB V3'
-    );
+    return postQueueMetricsToInfluxdbV3('log_events', 'LOG EVENT QUEUE METRICS INFLUXDB V3');
 }
 
 /**
@@ -129,8 +120,5 @@ export async function postLogEventQueueMetricsToInfluxdbV3() {
  * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
  */
 export async function postAuditEventQueueMetricsToInfluxdbV3() {
-    return postQueueMetricsToInfluxdbV3(
-        'audit_events',
-        'AUDIT EVENT QUEUE METRICS INFLUXDB V3'
-    );
+    return postQueueMetricsToInfluxdbV3('audit_events', 'AUDIT EVENT QUEUE METRICS INFLUXDB V3');
 }
