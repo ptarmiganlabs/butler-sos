@@ -160,7 +160,7 @@ export async function logFatal(message, error) {
     // Log at error level first so the message appears in the log file
     logErrorWithLevel('error', message, error);
 
-    // Write crash dump (non-blocking, swallows its own errors)
+    // Write crash dump (awaited for best-effort persistence before exit; swallows its own errors)
     await writeCrashDump(error, 'logFatal');
 
     process.exit(1);

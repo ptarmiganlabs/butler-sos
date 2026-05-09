@@ -309,7 +309,7 @@ describe('writeCrashDump', () => {
                 case 'Butler-SOS.cert.clientCert':
                     return '/secret/path/client.pem';
                 case 'Butler-SOS.mqttConfig.brokerHost':
-                    return '192.168.1.100';
+                    return 'broker.internal.example.com';
                 case 'Butler-SOS.influxdbConfig.token':
                     return 'secret-influx-token';
                 default:
@@ -323,7 +323,7 @@ describe('writeCrashDump', () => {
         const content = fs.readFileSync(path.join(tempDir, files[0]), 'utf8');
 
         expect(content).not.toContain('secret');
-        expect(content).not.toContain('192.168.1.100');
+        expect(content).not.toContain('broker.internal.example.com');
         expect(content).not.toContain('/secret/path');
     });
 
@@ -340,7 +340,7 @@ describe('writeCrashDump', () => {
                 case 'Butler-SOS.crashFile.crashFileCreateText':
                     return true;
                 case 'Butler-SOS.mqttConfig.brokerHost':
-                    return '10.0.0.1';
+                    return 'mqtt.internal.example.com';
                 case 'Butler-SOS.influxdbConfig.token':
                     return 'top-secret';
                 default:
@@ -354,7 +354,7 @@ describe('writeCrashDump', () => {
         const content = fs.readFileSync(path.join(tempDir, files[0]), 'utf8');
 
         expect(content).not.toContain('top-secret');
-        expect(content).not.toContain('10.0.0.1');
+        expect(content).not.toContain('mqtt.internal.example.com');
     });
 
     // -----------------------------------------------------------------------
@@ -402,6 +402,65 @@ describe('writeCrashDump', () => {
 
         expect(content).not.toContain('/home/runner/work/butler-sos');
         expect(content).toContain('src/butler-sos.js:100:3');
+    });
+
+    // -----------------------------------------------------------------------
+    // Best-effort redaction of sensitive patterns in error content
+    // -----------------------------------------------------------------------
+
+    test('redacts URLs with embedded credentials from error message', async () => {
+        const err = new Error('connect ECONNREFUSED mqtts://admin:hunter2@broker.example.com:8883');
+
+        await writeCrashDump(err, 'uncaughtException');
+
+        const files = fs.readdirSync(tempDir);
+        const jsonFile = files.find((f) => f.endsWith('.json'));
+        const content = JSON.parse(fs.readFileSync(path.join(tempDir, jsonFile), 'utf8'));
+
+        expect(content.error.message).not.toContain('hunter2');
+        expect(content.error.message).toContain('[REDACTED]');
+    });
+
+    test('redacts Bearer tokens from error message', async () => {
+        const err = new Error('Request failed: Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.abc');
+
+        await writeCrashDump(err, 'uncaughtException');
+
+        const files = fs.readdirSync(tempDir);
+        const jsonFile = files.find((f) => f.endsWith('.json'));
+        const content = JSON.parse(fs.readFileSync(path.join(tempDir, jsonFile), 'utf8'));
+
+        expect(content.error.message).not.toContain('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9');
+        expect(content.error.message).toContain('[REDACTED]');
+    });
+
+    test('redacts key=value secret patterns from error message', async () => {
+        const err = new Error('DB connect failed: password=SuperSecretP@ss token=abc123xyz');
+
+        await writeCrashDump(err, 'uncaughtException');
+
+        const files = fs.readdirSync(tempDir);
+        const jsonFile = files.find((f) => f.endsWith('.json'));
+        const content = JSON.parse(fs.readFileSync(path.join(tempDir, jsonFile), 'utf8'));
+
+        expect(content.error.message).not.toContain('SuperSecretP@ss');
+        expect(content.error.message).not.toContain('abc123xyz');
+        expect(content.error.message).toContain('[REDACTED]');
+    });
+
+    test('redacts sensitive patterns from stack traces', async () => {
+        const err = new Error('api_key=my-very-secret-key in stack');
+        err.stack =
+            'Error: api_key=my-very-secret-key in stack\n    at src/lib/foo.js:10:5';
+
+        await writeCrashDump(err, 'uncaughtException');
+
+        const files = fs.readdirSync(tempDir);
+        const jsonFile = files.find((f) => f.endsWith('.json'));
+        const content = JSON.parse(fs.readFileSync(path.join(tempDir, jsonFile), 'utf8'));
+
+        expect(content.error.message).not.toContain('my-very-secret-key');
+        expect(content.error.stack).not.toContain('my-very-secret-key');
     });
 
     // -----------------------------------------------------------------------

@@ -10,7 +10,10 @@ Butler-SOS:
     # Crash dump configuration
     # When Butler SOS encounters an unrecoverable error (uncaught exception, unhandled promise rejection,
     # or explicit fatal error), it can write a crash dump file to help with debugging.
-    # Crash dump files never contain sensitive data (passwords, IPs, API keys, etc.).
+    # Sensitive config fields (passwords, IPs, tokens, etc.) are never written.
+    # Error messages and stack traces are included with best-effort redaction of common secret patterns,
+    # but may still contain sensitive data depending on what the error captured.
+    # Treat crash dump files as potentially sensitive and restrict access accordingly.
     crashFile:
         enable: true # Should crash dump files be created? Default: true
         crashFileDirectory: ./crash_dumps # Directory where crash files are stored.

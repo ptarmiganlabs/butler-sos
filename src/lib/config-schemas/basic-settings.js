@@ -25,7 +25,9 @@ export const basicSettingsSchema = {
      * when it encounters an unrecoverable error such as an uncaught exception,
      * unhandled promise rejection, or an explicit fatal error.
      *
-     * Crash dump files never contain sensitive data (passwords, tokens, IPs, etc.).
+     * Sensitive config fields (passwords, tokens, IPs, etc.) are never written.
+     * Error messages and stack traces are included with best-effort redaction
+     * of common secret patterns, but may still contain sensitive data.
      */
     crashFile: {
         type: 'object',

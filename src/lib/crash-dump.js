@@ -6,10 +6,15 @@
  * rejection, or an explicit fatal error logged via logFatal().
  *
  * Key design goals:
- * - No sensitive data (IPs, passwords, tokens, certificates) in crash dumps
+ * - Sensitive config data (IPs, passwords, tokens, certificates) is never written
+ * - Best-effort redaction of common sensitive patterns in error messages/stacks
  * - Non-blocking: file write failures must never throw or block process exit
  * - SEA-compatible: works correctly in packaged Single Executable Applications
  * - Machine-readable (JSON) and human-readable (TXT) output
+ *
+ * NOTE: Error messages and stack traces are included for debugging purposes.
+ * While best-effort redaction is applied, error content may still contain
+ * sensitive data depending on what the upstream error captured.
  */
 
 import fs from 'fs';
@@ -42,15 +47,68 @@ function buildTimestampForFilename() {
 
 /**
  * Sanitizes a stack trace by removing absolute path prefixes.
- * Keeps only "src/…" relative paths and line/column numbers.
+ * Handles both POSIX and Windows path separators.
+ * Frames containing "src/" keep only the relative portion; other
+ * standalone absolute path tokens are replaced with "[path]".
  *
  * @param {string|undefined} stack - The raw stack trace string
  * @returns {string} Sanitized stack trace
  */
 function sanitizeStackTrace(stack) {
     if (!stack) return '';
-    // Replace any absolute path that ends before "src/" with just "src/"
-    return stack.replace(/[^\s\n(]+(src\/)/g, '$1');
+
+    // 1. Strip absolute prefixes from frames that include "src/" (handles both POSIX and Windows)
+    let result = stack.replace(/[^\s\n(]*[/\\]src[/\\]/g, 'src/');
+
+    // 2. Redact remaining standalone absolute POSIX paths (start with /).
+    //    Use lookbehind to match only paths that follow whitespace or '(' so we
+    //    don't accidentally match within already-reduced 'src/...' paths.
+    result = result.replace(/(?<=[\s(])\/[^\s\n()]+/g, '[path]');
+
+    // 3. Redact remaining absolute Windows paths (e.g. C:\...)
+    result = result.replace(/[A-Za-z]:\\[^\s\n()]+/g, '[path]');
+
+    return result;
+}
+
+/**
+ * Applies best-effort redaction of common sensitive patterns from a string.
+ * This covers URLs with embedded credentials, bearer tokens, and common
+ * key=value secret patterns found in error messages.
+ *
+ * This is best-effort only: it cannot guarantee that all sensitive data is
+ * removed, especially when errors embed unusual secret formats.
+ *
+ * @param {string|undefined} text - The text to redact
+ * @returns {string} Text with common sensitive patterns replaced
+ */
+function redactSensitivePatterns(text) {
+    if (!text) return '';
+
+    let result = text;
+
+    // 1. URLs with embedded credentials: protocol://user:pass@host
+    result = result.replace(/([\w+.-]+:\/\/)[^@\s]+@/g, '$1[REDACTED]@');
+
+    // 2. Bearer / Basic / Token authorization headers
+    result = result.replace(/\b(Bearer|Basic|Token)\s+[A-Za-z0-9+/=._-]{8,}/gi, '$1 [REDACTED]');
+
+    // 3. Common key=value secret patterns (query strings, connection strings, etc.)
+    //    Matches: password=, passwd=, pwd=, secret=, token=, api_key=, apiKey=, apitoken=,
+    //             access_key=, accessKey=, auth=, passphrase=, clientSecret=, client_secret=
+    result = result.replace(
+        /\b(password|passwd|pwd|secret|token|api[_-]?key|api[_-]?token|access[_-]?key|auth|passphrase|client[_-]?secret)\s*[=:]\s*[^\s&,;"'\]}{)]+/gi,
+        '$1=[REDACTED]'
+    );
+
+    // 4. JSON-style quoted key/value pairs for the same patterns
+    //    e.g. "password": "mysecret" or 'token': 'abc123'
+    result = result.replace(
+        /["'](password|passwd|pwd|secret|token|api[_-]?key|api[_-]?token|access[_-]?key|auth|passphrase|client[_-]?secret)["']\s*:\s*["'][^"']+["']/gi,
+        '"$1": "[REDACTED]"'
+    );
+
+    return result;
 }
 
 /**
@@ -143,11 +201,17 @@ function resolveCrashDir(configuredDir) {
 /**
  * Writes crash dump files (JSON and/or plain text) for a fatal error.
  *
- * The function is intentionally fire-and-forget: it never throws and
- * never blocks the caller.  All I/O errors are silently swallowed so
- * that crash dump failures cannot prevent process.exit() from working.
+ * The function swallows its own errors and all I/O failures so that crash dump
+ * issues cannot prevent process.exit() from working.  Callers that await this
+ * function should be aware that writes may block briefly on slow storage.
  *
- * @param {Error} error - The error object that caused the crash
+ * Sensitive config data is excluded entirely.  Error messages and stack traces
+ * are included for debugging, with best-effort redaction of common secret
+ * patterns (URLs with credentials, bearer tokens, key=value secrets).
+ * Redaction cannot guarantee removal of all sensitive data from error content;
+ * treat crash dump files as potentially sensitive.
+ *
+ * @param {Error|unknown} error - The error object (or any value) that caused the crash
  * @param {string} source - Where the crash originated:
  *   "uncaughtException" | "unhandledRejection" | "logFatal"
  * @returns {Promise<void>} Resolves when writing is complete (or has been skipped)
@@ -197,8 +261,8 @@ export async function writeCrashDump(error, source) {
         const isSea = globals.isSea !== undefined ? globals.isSea : sea.isSea();
 
         const errorType = error?.constructor?.name ?? 'Error';
-        const errorMessage = error?.message ?? String(error);
-        const errorStack = sanitizeStackTrace(error?.stack);
+        const errorMessage = redactSensitivePatterns(error?.message ?? String(error));
+        const errorStack = redactSensitivePatterns(sanitizeStackTrace(error?.stack));
 
         const crashData = {
             version: '1.0',
