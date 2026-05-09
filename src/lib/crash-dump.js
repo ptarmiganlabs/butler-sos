@@ -97,7 +97,7 @@ function redactSensitivePatterns(text) {
     //    Matches: password=, passwd=, pwd=, secret=, token=, api_key=, apiKey=, apitoken=,
     //             access_key=, accessKey=, auth=, passphrase=, clientSecret=, client_secret=
     result = result.replace(
-        /\b(password|passwd|pwd|secret|token|api[_-]?key|api[_-]?token|access[_-]?key|auth|passphrase|client[_-]?secret)\s*[=:]\s*[^\s&,;"'\]}{)]+/gi,
+        /\b(password|passwd|pwd|secret|token|api[_-]?key|api[_-]?token|access[_-]?key|auth|passphrase|client[_-]?secret)\s*[=:]\s*[^\s&,;"'[\]{}()]+/gi,
         '$1=[REDACTED]'
     );
 
