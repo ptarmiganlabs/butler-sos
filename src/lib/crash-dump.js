@@ -8,7 +8,8 @@
  * Key design goals:
  * - Sensitive config data (IPs, passwords, tokens, certificates) is never written
  * - Best-effort redaction of common sensitive patterns in error messages/stacks
- * - Non-blocking: file write failures must never throw or block process exit
+ * - Times out after CRASH_DUMP_WRITE_TIMEOUT_MS so it can never block process exit
+ * - File write failures are silently swallowed so they cannot prevent process.exit()
  * - SEA-compatible: works correctly in packaged Single Executable Applications
  * - Machine-readable (JSON) and human-readable (TXT) output
  *
@@ -22,6 +23,23 @@ import path from 'path';
 
 import globals from '../globals.js';
 import sea from './sea-wrapper.js';
+
+// ---------------------------------------------------------------------------
+// Module-level constants and state
+// ---------------------------------------------------------------------------
+
+/**
+ * Maximum time (ms) to wait for crash dump files to be written.
+ * If writes take longer than this, writeCrashDump() resolves anyway so that
+ * the calling code can proceed to process.exit() without being blocked.
+ */
+const CRASH_DUMP_WRITE_TIMEOUT_MS = 5000;
+
+/**
+ * Per-process counter to ensure filename uniqueness when multiple crashes occur
+ * within the same millisecond (e.g. multiple fatal handlers firing simultaneously).
+ */
+let crashDumpCounter = 0;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -201,9 +219,9 @@ function resolveCrashDir(configuredDir) {
 /**
  * Writes crash dump files (JSON and/or plain text) for a fatal error.
  *
- * The function swallows its own errors and all I/O failures so that crash dump
- * issues cannot prevent process.exit() from working.  Callers that await this
- * function should be aware that writes may block briefly on slow storage.
+ * The function times out after {@link CRASH_DUMP_WRITE_TIMEOUT_MS} milliseconds so it
+ * can never block process exit indefinitely on slow or hung storage. It also
+ * swallows all its own errors so I/O failures can never prevent process.exit().
  *
  * Sensitive config data is excluded entirely.  Error messages and stack traces
  * are included for debugging, with best-effort redaction of common secret
@@ -215,7 +233,7 @@ function resolveCrashDir(configuredDir) {
  * @param {string} source - Where the crash originated:
  *   "uncaughtException" | "unhandledRejection" | "logFatal"
  *
- * @returns {Promise<void>} Resolves when writing is complete (or has been skipped)
+ * @returns {Promise<void>} Resolves when writing is complete or the timeout fires
  */
 export async function writeCrashDump(error, source) {
     try {
@@ -294,14 +312,16 @@ export async function writeCrashDump(error, source) {
         // ----------------------------------------------------------------
         const resolvedDir = resolveCrashDir(crashDir);
         const ts = buildTimestampForFilename();
-        const jsonFilePath = path.join(resolvedDir, `crash_dump_${ts}.json`);
-        const txtFilePath = path.join(resolvedDir, `crash_dump_${ts}.txt`);
+        // Include PID and an incrementing counter to guarantee uniqueness even
+        // when two fatal handlers fire within the same millisecond.
+        const uniqueSuffix = `${process.pid}_${++crashDumpCounter}`;
+        const jsonFilePath = path.join(resolvedDir, `crash_dump_${ts}_${uniqueSuffix}.json`);
+        const txtFilePath = path.join(resolvedDir, `crash_dump_${ts}_${uniqueSuffix}.txt`);
 
-        // Create directory (non-blocking, synchronous is fine here since we
-        // are about to exit anyway and a synchronous mkdir avoids the need for
-        // an extra await before the actual file writes)
+        // Create directory (synchronous is fine here since we are about to exit
+        // anyway; mode 0o700 keeps the directory owner-only accessible).
         try {
-            fs.mkdirSync(resolvedDir, { recursive: true });
+            fs.mkdirSync(resolvedDir, { recursive: true, mode: 0o700 });
         } catch {
             // Directory creation failed – attempt to write anyway in case it
             // already exists
@@ -347,18 +367,38 @@ export async function writeCrashDump(error, source) {
         if (createJson) {
             writePromises.push(
                 fs.promises
-                    .writeFile(jsonFilePath, JSON.stringify(crashData, null, 2), 'utf8')
+                    .writeFile(jsonFilePath, JSON.stringify(crashData, null, 2), {
+                        encoding: 'utf8',
+                        mode: 0o600,
+                        flag: 'wx',
+                    })
                     .catch(() => {})
             );
         }
 
         if (createText) {
             writePromises.push(
-                fs.promises.writeFile(txtFilePath, textReport, 'utf8').catch(() => {})
+                fs.promises
+                    .writeFile(txtFilePath, textReport, {
+                        encoding: 'utf8',
+                        mode: 0o600,
+                        flag: 'wx',
+                    })
+                    .catch(() => {})
             );
         }
 
-        await Promise.all(writePromises);
+        // Race the writes against a timeout so crash dump writes can never
+        // block process exit indefinitely (e.g. on slow or hung storage).
+        const writeTimeout = new Promise((resolve) => {
+            const timer = setTimeout(resolve, CRASH_DUMP_WRITE_TIMEOUT_MS);
+            // Allow the event loop to exit naturally even if the timer is
+            // still pending (belt-and-suspenders in addition to the caller's
+            // process.exit()).
+            if (typeof timer.unref === 'function') timer.unref();
+        });
+
+        await Promise.race([Promise.all(writePromises), writeTimeout]);
 
         // Log paths to console as a last-resort notification (logger may be down)
         if (createJson) {

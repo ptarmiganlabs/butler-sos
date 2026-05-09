@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-09T09:55:15.887Z",
+  "app": {
+    "name": "butler-sos",
+    "version": "14.0.0"
+  },
+  "runtime": {
+    "nodeVersion": "24.14.1",
+    "platform": "linux/x64",
+    "isSea": false
+  },
+  "error": {
+    "type": "Error",
+    "message": "no config",
+    "stack": "Error: no config\n    at Object.<anonymous> (src/lib/__tests__/crash-dump.test.js:614:32)\n    at Promise.finally.completed ([path])\n    at new Promise (<anonymous>)\n    at callAsyncCircusFn ([path])\n    at _callCircusTest ([path])\n    at _runTest ([path])\n    at [path]\n    at _runTestsForDescribeBlock ([path])\n    at _runTestsForDescribeBlock ([path])\n    at run ([path])\n    at runAndTransformResultsToJestFormat ([path])\n    at jestAdapter ([path])\n    at runTestInternal ([path])\n    at runTest ([path])"
+  },
+  "context": {
+    "exitCode": 1,
+    "source": "uncaughtException"
+  },
+  "config": {}
+}

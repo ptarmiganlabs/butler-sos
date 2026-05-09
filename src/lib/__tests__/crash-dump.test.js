@@ -22,16 +22,21 @@ const mockLogger = {
 const mockConfigGet = jest.fn();
 const mockConfigHas = jest.fn();
 
-jest.unstable_mockModule(path.resolve('src/globals.js'), () => ({
-    default: {
-        logger: mockLogger,
-        config: {
-            get: mockConfigGet,
-            has: mockConfigHas,
-        },
-        appVersion: '14.0.0',
-        isSea: false,
+// Keep a stable reference to the globals default object so tests can mutate
+// individual properties (e.g. set config to null) and have crash-dump.js
+// see the change through its already-imported 'globals' reference.
+const mockGlobalsDefault = {
+    logger: mockLogger,
+    config: {
+        get: mockConfigGet,
+        has: mockConfigHas,
     },
+    appVersion: '14.0.0',
+    isSea: false,
+};
+
+jest.unstable_mockModule(path.resolve('src/globals.js'), () => ({
+    default: mockGlobalsDefault,
 }));
 
 const mockIsSea = jest.fn(() => false);
@@ -285,7 +290,8 @@ describe('writeCrashDump', () => {
 
         const files = fs.readdirSync(tempDir);
         const jsonFile = files.find((f) => f.endsWith('.json'));
-        expect(jsonFile).toMatch(/^crash_dump_\d{8}_\d{6}_\d{3}\.json$/);
+        // Format: crash_dump_YYYYMMDD_HHMMSS_mmm_PID_COUNTER.json
+        expect(jsonFile).toMatch(/^crash_dump_\d{8}_\d{6}_\d{3}_\d+_\d+\.json$/);
     });
 
     // -----------------------------------------------------------------------
@@ -597,19 +603,20 @@ describe('writeCrashDump', () => {
     // -----------------------------------------------------------------------
 
     test('does not throw when globals.config is null', async () => {
-        // Re-mock globals without config
-        jest.unstable_mockModule(path.resolve('src/globals.js'), () => ({
-            default: {
-                logger: mockLogger,
-                config: null,
-                appVersion: '14.0.0',
-                isSea: false,
-            },
-        }));
+        // Temporarily set config to null on the shared mock object so that
+        // crash-dump.js (which already holds a reference to mockGlobalsDefault)
+        // sees the null value through its imported 'globals' binding.
+        const originalConfig = mockGlobalsDefault.config;
+        mockGlobalsDefault.config = null;
 
-        // writeCrashDump was already imported at module load; the internal
-        // try/catch handles config being null
-        await expect(writeCrashDump(new Error('no config'), 'uncaughtException')).resolves.toBeUndefined();
+        try {
+            await expect(
+                writeCrashDump(new Error('no config'), 'uncaughtException')
+            ).resolves.toBeUndefined();
+        } finally {
+            // Always restore, even if the assertion throws
+            mockGlobalsDefault.config = originalConfig;
+        }
     });
 
     // -----------------------------------------------------------------------

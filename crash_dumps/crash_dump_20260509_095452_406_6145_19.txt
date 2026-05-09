@@ -1,0 +1,40 @@
+====================================
+BUTLER SOS CRASH REPORT
+====================================
+Generated: 2026-05-09T09:54:52.405Z
+
+=== APPLICATION INFO ===
+Butler SOS Version: 14.0.0
+Node.js Version: 24.14.1
+Platform: linux/x64
+Executable: Node.js
+
+=== CRASH INFO ===
+Error Type: Error
+Source: uncaughtException
+Exit Code: 1
+
+=== ERROR MESSAGE ===
+no config
+
+=== STACK TRACE ===
+Error: no config
+    at Object.<anonymous> (src/lib/__tests__/crash-dump.test.js:614:32)
+    at Promise.finally.completed ([path])
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn ([path])
+    at _callCircusTest ([path])
+    at _runTest ([path])
+    at [path]
+    at _runTestsForDescribeBlock ([path])
+    at _runTestsForDescribeBlock ([path])
+    at run ([path])
+    at runAndTransformResultsToJestFormat ([path])
+    at jestAdapter ([path])
+    at runTestInternal ([path])
+    at runTest ([path])
+    at Object.worker ([path])
+
+====================================
+END OF CRASH REPORT
+====================================
