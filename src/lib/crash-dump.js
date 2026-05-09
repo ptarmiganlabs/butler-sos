@@ -214,6 +214,7 @@ function resolveCrashDir(configuredDir) {
  * @param {Error|unknown} error - The error object (or any value) that caused the crash
  * @param {string} source - Where the crash originated:
  *   "uncaughtException" | "unhandledRejection" | "logFatal"
+ *
  * @returns {Promise<void>} Resolves when writing is complete (or has been skipped)
  */
 export async function writeCrashDump(error, source) {
