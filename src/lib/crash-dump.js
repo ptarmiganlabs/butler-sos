@@ -233,7 +233,8 @@ export async function writeCrashDump(error, source) {
         const txtFilePath = path.join(resolvedDir, `crash_dump_${ts}.txt`);
 
         // Create directory (non-blocking, synchronous is fine here since we
-        // are about to exit anyway)
+        // are about to exit anyway and a synchronous mkdir avoids the need for
+        // an extra await before the actual file writes)
         try {
             fs.mkdirSync(resolvedDir, { recursive: true });
         } catch {
