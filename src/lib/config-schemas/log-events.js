@@ -43,11 +43,10 @@ export const logEventsSchema = {
                         additionalProperties: false,
                     },
                     maxMessageSize: { type: 'number', default: 65507 },
-                    enableSourceValidation: { type: 'boolean', default: false },
+                    enableSourceValidation: { type: 'boolean' },
                     allowedSources: {
                         type: ['array', 'null'],
                         items: { type: 'string' },
-                        default: [],
                     },
                     queueMetrics: {
                         type: 'object',
@@ -88,6 +87,8 @@ export const logEventsSchema = {
                     'messageQueue',
                     'rateLimit',
                     'maxMessageSize',
+                    'enableSourceValidation',
+                    'allowedSources',
                     'queueMetrics',
                 ],
                 additionalProperties: false,
