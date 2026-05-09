@@ -32,6 +32,12 @@ describe('config-file-schema', () => {
                 fileLogging: true,
                 logDirectory: './log',
                 anonTelemetry: false,
+                crashFile: {
+                    enable: true,
+                    crashFileDirectory: './crash_dumps',
+                    crashFileCreateJson: true,
+                    crashFileCreateText: true,
+                },
                 systemInfo: {
                     enable: true,
                 },

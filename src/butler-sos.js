@@ -28,6 +28,7 @@ import { initAuditInfluxDestination } from './lib/audit-destinations/influxdb/in
 import { setupUdpEventsStorage } from './lib/udp-event.js';
 import { setupUdpQueueMetricsStorage } from './lib/influxdb/index.js';
 import { logError } from './lib/log-error.js';
+import { writeCrashDump } from './lib/crash-dump.js';
 
 // Suppress experimental warnings
 // https://stackoverflow.com/questions/55778283/how-to-disable-warnings-when-node-is-launched-via-a-global-shell-script
@@ -348,3 +349,42 @@ async function mainScript() {
 }
 
 mainScript();
+
+// ---------------------------------------------------------------------------
+// Process-level safety net: catch any error that escapes all try/catch blocks
+// ---------------------------------------------------------------------------
+
+/**
+ * Handler for synchronous uncaught exceptions.
+ * Writes a crash dump and exits with code 1.
+ *
+ * @param {Error} err - The uncaught error
+ */
+process.on('uncaughtException', async (err) => {
+    try {
+        console.error('FATAL: Uncaught exception – writing crash dump…');
+        await writeCrashDump(err, 'uncaughtException');
+    } catch {
+        // Must not throw
+    } finally {
+        process.exit(1);
+    }
+});
+
+/**
+ * Handler for unhandled promise rejections.
+ * Writes a crash dump and exits with code 1.
+ *
+ * @param {Error|*} reason - The rejection reason (usually an Error)
+ */
+process.on('unhandledRejection', async (reason) => {
+    try {
+        const err = reason instanceof Error ? reason : new Error(String(reason));
+        console.error('FATAL: Unhandled promise rejection – writing crash dump…');
+        await writeCrashDump(err, 'unhandledRejection');
+    } catch {
+        // Must not throw
+    } finally {
+        process.exit(1);
+    }
+});

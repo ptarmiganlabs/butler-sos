@@ -54,6 +54,7 @@ const configFileSchema = {
                 'fileLogging',
                 'logDirectory',
                 'anonTelemetry',
+                'crashFile',
                 'systemInfo',
                 'configVisualisation',
                 'heartbeat',

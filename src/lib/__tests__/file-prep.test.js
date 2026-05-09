@@ -1,14 +1,18 @@
 import { jest, describe, test, beforeEach, afterEach } from '@jest/globals';
 
 // Mock dependencies
-jest.unstable_mockModule('fs', () => ({
-    existsSync: jest.fn(),
-    readFileSync: jest.fn(),
-}));
+jest.unstable_mockModule('fs', () => {
+    const mockFs = {
+        existsSync: jest.fn(),
+        readFileSync: jest.fn(),
+    };
+    return { ...mockFs, default: mockFs };
+});
 
-jest.unstable_mockModule('path', () => ({
-    extname: jest.fn(),
-}));
+jest.unstable_mockModule('path', () => {
+    const mockPath = { extname: jest.fn() };
+    return { ...mockPath, default: mockPath };
+});
 
 jest.unstable_mockModule('../sea-wrapper.js', () => ({
     default: {

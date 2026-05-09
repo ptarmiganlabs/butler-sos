@@ -11,6 +11,7 @@
 
 import globals from '../globals.js';
 import sea from './sea-wrapper.js';
+import { writeCrashDump } from './crash-dump.js';
 
 /**
  * Log an error with appropriate formatting based on execution environment
@@ -132,4 +133,37 @@ export function logVerbose(message, error, ...args) {
  */
 export function logDebug(message, error, ...args) {
     logErrorWithLevel('debug', message, error, ...args);
+}
+
+/**
+ * Logs a fatal error, writes a crash dump file, and exits the process.
+ *
+ * Use this function for unrecoverable errors that require Butler SOS to
+ * terminate.  It logs the error at the 'error' level, writes a crash dump
+ * (if enabled in config), and then calls process.exit(1).
+ *
+ * The crash dump write is awaited before exiting so that files are flushed
+ * to disk when possible.  writeCrashDump() enforces its own internal timeout
+ * so this call can never block process exit indefinitely.
+ *
+ * @param {string} message - The log message describing the fatal condition
+ * @param {Error} error - The error object to log and include in the crash dump
+ * @returns {Promise<void>} Does not resolve — process.exit(1) is called
+ *
+ * @example
+ * try {
+ *   // some critical initialisation
+ * } catch (err) {
+ *   await logFatal('FATAL: Cannot start Butler SOS', err);
+ * }
+ */
+export async function logFatal(message, error) {
+    // Log at error level first so the message appears in the log file
+    logErrorWithLevel('error', message, error);
+
+    // Write crash dump (awaited; writeCrashDump has an internal timeout so
+    // this can never block indefinitely before process.exit())
+    await writeCrashDump(error, 'logFatal');
+
+    process.exit(1);
 }
