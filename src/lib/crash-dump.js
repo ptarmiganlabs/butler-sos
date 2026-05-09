@@ -147,9 +147,10 @@ function resolveCrashDir(configuredDir) {
  * never blocks the caller.  All I/O errors are silently swallowed so
  * that crash dump failures cannot prevent process.exit() from working.
  *
- * @param {Error} error - The error object that caused the crash
+ * @param {unknown} error - The error or thrown/rejected value that caused the crash
  * @param {string} source - Where the crash originated:
  *   "uncaughtException" | "unhandledRejection" | "logFatal"
+ *
  * @returns {Promise<void>} Resolves when writing is complete (or has been skipped)
  */
 export async function writeCrashDump(error, source) {
