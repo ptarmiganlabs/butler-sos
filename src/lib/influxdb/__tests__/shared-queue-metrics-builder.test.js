@@ -128,9 +128,9 @@ describe('shared/queue-metrics-builder', () => {
 
     describe('prepareQueueMetricData', () => {
         test('throws when queue type is unknown', async () => {
-            await expect(
-                prepareQueueMetricData('unknown_queue', 'TEST PREFIX')
-            ).rejects.toThrow('Unknown queue type: unknown_queue');
+            await expect(prepareQueueMetricData('unknown_queue', 'TEST PREFIX')).rejects.toThrow(
+                'Unknown queue type: unknown_queue'
+            );
         });
 
         test('returns null when feature is disabled', async () => {

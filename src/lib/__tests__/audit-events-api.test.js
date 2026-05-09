@@ -198,13 +198,16 @@ describe('audit-events-api event types', () => {
 
         mockGlobals.config.has.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts')
+                return true;
             return false;
         });
         mockGlobals.config.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts') return ['example.com'];
-            if (key === 'Butler-SOS.auditEvents.destination.screenshots.storageTargets') return ['local'];
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts')
+                return ['example.com'];
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.storageTargets')
+                return ['local'];
             return null;
         });
 
@@ -244,13 +247,16 @@ describe('audit-events-api event types', () => {
 
         mockGlobals.config.has.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts')
+                return true;
             return false;
         });
         mockGlobals.config.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts') return ['example.com'];
-            if (key === 'Butler-SOS.auditEvents.destination.screenshots.storageTargets') return ['local'];
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts')
+                return ['example.com'];
+            if (key === 'Butler-SOS.auditEvents.destination.screenshots.storageTargets')
+                return ['local'];
             return null;
         });
 
@@ -294,7 +300,9 @@ describe('audit-events-api event types', () => {
         const debugCalls = mockGlobals.logger.debug.mock.calls.map((c) => c[0]);
         expect(debugCalls).toEqual(
             expect.arrayContaining([
-                expect.stringContaining('objectData for eventId=a0000000-0000-4000-8000-000000000004'),
+                expect.stringContaining(
+                    'objectData for eventId=a0000000-0000-4000-8000-000000000004'
+                ),
                 expect.stringContaining('objectType=barchart'),
             ])
         );
@@ -853,7 +861,9 @@ describe('audit-events-api envelope constraint validation', () => {
 
         const res = await postEnvelope(
             fastify,
-            validEnvelope({ payload: { context: { appId: 'b0000000-0000-4000-8000-000000000001' } } })
+            validEnvelope({
+                payload: { context: { appId: 'b0000000-0000-4000-8000-000000000001' } },
+            })
         );
 
         expect(res.statusCode).toBe(202);
@@ -1044,7 +1054,15 @@ describe('audit-events-api field-length and source constraints', () => {
 
         const res = await post(
             fastify,
-            baseEnvelope({ context: { appName: 'A'.repeat(65), sheetId: 's', sheetName: 's', userId: 'u', userAgent: 'ua' } })
+            baseEnvelope({
+                context: {
+                    appName: 'A'.repeat(65),
+                    sheetId: 's',
+                    sheetName: 's',
+                    userId: 'u',
+                    userAgent: 'ua',
+                },
+            })
         );
 
         expect(res.statusCode).toBe(202);
@@ -1060,7 +1078,15 @@ describe('audit-events-api field-length and source constraints', () => {
 
         const res = await post(
             fastify,
-            baseEnvelope({ context: { appName: 'App', sheetId: 's', sheetName: 's', userId: 'u', userAgent: 'x'.repeat(513) } })
+            baseEnvelope({
+                context: {
+                    appName: 'App',
+                    sheetId: 's',
+                    sheetName: 's',
+                    userId: 'u',
+                    userAgent: 'x'.repeat(513),
+                },
+            })
         );
 
         expect(res.statusCode).toBe(202);
@@ -1076,7 +1102,15 @@ describe('audit-events-api field-length and source constraints', () => {
 
         const res = await post(
             fastify,
-            baseEnvelope({ context: { appName: 'App', sheetId: 's', sheetName: 's', userId: 'u'.repeat(129), userAgent: 'ua' } })
+            baseEnvelope({
+                context: {
+                    appName: 'App',
+                    sheetId: 's',
+                    sheetName: 's',
+                    userId: 'u'.repeat(129),
+                    userAgent: 'ua',
+                },
+            })
         );
 
         expect(res.statusCode).toBe(202);
@@ -1193,14 +1227,22 @@ describe('audit-events-api SSRF protection', () => {
         return {
             has: jest.fn((key) => {
                 if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
-                if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts')
+                if (
+                    key ===
+                    'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts'
+                )
                     return allowedImageDownloadHosts !== undefined;
                 return false;
             }),
             get: jest.fn((key) => {
                 if (key === 'Butler-SOS.auditEvents.destination.screenshots.enable') return true;
-                if (key === 'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts') return allowedImageDownloadHosts;
-                if (key === 'Butler-SOS.auditEvents.destination.screenshots.storageTargets') return ['local'];
+                if (
+                    key ===
+                    'Butler-SOS.auditEvents.destination.screenshots.allowedImageDownloadHosts'
+                )
+                    return allowedImageDownloadHosts;
+                if (key === 'Butler-SOS.auditEvents.destination.screenshots.storageTargets')
+                    return ['local'];
                 return null;
             }),
         };

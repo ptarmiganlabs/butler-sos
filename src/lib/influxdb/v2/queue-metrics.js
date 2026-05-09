@@ -1,10 +1,7 @@
 import { Point } from '@influxdata/influxdb-client';
 import globals from '../../../globals.js';
 import { writeBatchToInfluxV2 } from '../shared/utils.js';
-import {
-    QUEUE_METRIC_FIELDS,
-    prepareQueueMetricData,
-} from '../shared/queue-metrics-builder.js';
+import { QUEUE_METRIC_FIELDS, prepareQueueMetricData } from '../shared/queue-metrics-builder.js';
 import { applyInfluxTags } from './utils.js';
 
 /**

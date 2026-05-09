@@ -111,9 +111,10 @@ export function processGenericLogEvent(msg) {
             isoDateRegex.test(msg[2]) || isoDateCompactRegex.test(msg[2])
                 ? sanitizeField(msg[2], 50)
                 : '',
-        ts_local: isoDateRegex.test(msg[3]) || localTimestampRegex.test(msg[3])
-            ? sanitizeField(msg[3], 50)
-            : '',
+        ts_local:
+            isoDateRegex.test(msg[3]) || localTimestampRegex.test(msg[3])
+                ? sanitizeField(msg[3], 50)
+                : '',
         level: sanitizeField(msg[4], 20),
         host: sanitizeField(msg[5], 100),
         subsystem: sanitizeField(msg[6], 200),

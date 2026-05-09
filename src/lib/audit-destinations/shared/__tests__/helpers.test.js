@@ -14,9 +14,8 @@ jest.unstable_mockModule(globalsPath, () => ({
     },
 }));
 
-const { readString, readNumber, readBoolean, asObject, getAuditDestinationEnabled } = await import(
-    '../helpers.js'
-);
+const { readString, readNumber, readBoolean, asObject, getAuditDestinationEnabled } =
+    await import('../helpers.js');
 
 describe('shared/helpers – readString', () => {
     test('returns the value for a non-empty string', () => {

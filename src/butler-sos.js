@@ -265,9 +265,8 @@ async function mainScript() {
             globals.logger.error(
                 `MAIN: Error while starting Docker healthcheck server on port ${globals.config.get(
                     'Butler-SOS.dockerHealthCheck.port'
-                )}.`
+                )}. ${err.message}`
             );
-            dockerHealthCheckServer.log.error(err);
             process.exit(1);
         }
     }
@@ -288,9 +287,8 @@ async function mainScript() {
             setupPromClient(promServer, promPort, promHost);
         } catch (err) {
             globals.logger.error(
-                `MAIN: Error while starting Prometheus Butler SOS endpoint on ${promHost}:${promPort}.`
+                `MAIN: Error while starting Prometheus Butler SOS endpoint on ${promHost}:${promPort}. ${err.message}`
             );
-            promServer.log.error(err);
             process.exit(1);
         }
 
@@ -302,9 +300,8 @@ async function mainScript() {
             );
         } catch (err) {
             globals.logger.error(
-                `MAIN: Error while starting Prometheus Node.js endpoint on ${promNodeHost}:${promNodePort}.`
+                `MAIN: Error while starting Prometheus Node.js endpoint on ${promNodeHost}:${promNodePort}. ${err.message}`
             );
-            promFastifyMetricsServer.log.error(err);
             process.exit(1);
         }
     }
@@ -335,7 +332,9 @@ async function mainScript() {
         await initAuditInfluxDestination();
         await setupAuditEventsApiServer();
     } else {
-        globals.logger.info('AUDIT API: Audit events section not found or disabled in config, skipping.');
+        globals.logger.info(
+            'AUDIT API: Audit events section not found or disabled in config, skipping.'
+        );
     }
 
     // Set up rejected user/log events storage, if enabled

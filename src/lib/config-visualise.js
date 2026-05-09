@@ -268,10 +268,8 @@ export async function setupConfigVisServer(logger, config) {
             (err, address) => {
                 if (err) {
                     globals.logger.error(
-                        `CONFIG VIS: Could not set up config visualisation server on ${address}`
+                        `CONFIG VIS: Could not set up config visualisation server on ${address}. ${err.message}`
                     );
-                    logError('CONFIG VIS', err);
-                    configVisServer.log.error(err);
                     process.exit(1);
                 }
                 globals.logger.info(

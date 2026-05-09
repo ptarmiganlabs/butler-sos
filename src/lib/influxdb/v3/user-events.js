@@ -62,10 +62,13 @@ export async function postUserEventToInfluxdbV3(msg) {
     }
 
     // Add user agent info to tags if available
-    if (msg?.ua?.browser?.name) point.setTag('uaBrowserName', sanitizeInfluxTagValue(msg?.ua?.browser?.name));
-    if (msg?.ua?.browser?.major) point.setTag('uaBrowserMajorVersion', sanitizeInfluxTagValue(msg?.ua?.browser?.major));
+    if (msg?.ua?.browser?.name)
+        point.setTag('uaBrowserName', sanitizeInfluxTagValue(msg?.ua?.browser?.name));
+    if (msg?.ua?.browser?.major)
+        point.setTag('uaBrowserMajorVersion', sanitizeInfluxTagValue(msg?.ua?.browser?.major));
     if (msg?.ua?.os?.name) point.setTag('uaOsName', sanitizeInfluxTagValue(msg?.ua?.os?.name));
-    if (msg?.ua?.os?.version) point.setTag('uaOsVersion', sanitizeInfluxTagValue(msg?.ua?.os?.version));
+    if (msg?.ua?.os?.version)
+        point.setTag('uaOsVersion', sanitizeInfluxTagValue(msg?.ua?.os?.version));
 
     // Add custom tags from config file to payload
     if (

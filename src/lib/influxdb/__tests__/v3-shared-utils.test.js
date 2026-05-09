@@ -106,10 +106,17 @@ describe('InfluxDB v3 Shared Utils', () => {
 
             const writeFn = jest.fn().mockRejectedValueOnce(timeoutError).mockResolvedValueOnce();
 
-            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {}, {
-                maxRetries: 3,
-                initialDelayMs: 10,
-            });
+            await utils.writeToInfluxWithRetry(
+                writeFn,
+                'Test context',
+                'v3',
+                '',
+                {},
+                {
+                    maxRetries: 3,
+                    initialDelayMs: 10,
+                }
+            );
 
             expect(writeFn).toHaveBeenCalledTimes(2);
             expect(globals.logger.warn).toHaveBeenCalledWith(
@@ -127,10 +134,17 @@ describe('InfluxDB v3 Shared Utils', () => {
                 .mockRejectedValueOnce(timeoutError)
                 .mockResolvedValueOnce();
 
-            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {}, {
-                maxRetries: 3,
-                initialDelayMs: 10,
-            });
+            await utils.writeToInfluxWithRetry(
+                writeFn,
+                'Test context',
+                'v3',
+                '',
+                {},
+                {
+                    maxRetries: 3,
+                    initialDelayMs: 10,
+                }
+            );
 
             expect(writeFn).toHaveBeenCalledTimes(3);
             expect(globals.logger.warn).toHaveBeenCalledTimes(2);
@@ -144,10 +158,17 @@ describe('InfluxDB v3 Shared Utils', () => {
             globals.errorTracker = { incrementError: jest.fn().mockResolvedValue() };
 
             await expect(
-                utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {}, {
-                    maxRetries: 2,
-                    initialDelayMs: 10,
-                })
+                utils.writeToInfluxWithRetry(
+                    writeFn,
+                    'Test context',
+                    'v3',
+                    '',
+                    {},
+                    {
+                        maxRetries: 2,
+                        initialDelayMs: 10,
+                    }
+                )
             ).rejects.toThrow('Request timed out');
 
             expect(writeFn).toHaveBeenCalledTimes(3); // 1 initial + 2 retries
@@ -168,10 +189,17 @@ describe('InfluxDB v3 Shared Utils', () => {
             globals.errorTracker = { incrementError: jest.fn().mockResolvedValue() };
 
             await expect(
-                utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {}, {
-                    maxRetries: 3,
-                    initialDelayMs: 10,
-                })
+                utils.writeToInfluxWithRetry(
+                    writeFn,
+                    'Test context',
+                    'v3',
+                    '',
+                    {},
+                    {
+                        maxRetries: 3,
+                        initialDelayMs: 10,
+                    }
+                )
             ).rejects.toThrow('Connection refused');
 
             expect(writeFn).toHaveBeenCalledTimes(1);
@@ -185,10 +213,17 @@ describe('InfluxDB v3 Shared Utils', () => {
 
             const writeFn = jest.fn().mockRejectedValueOnce(timeoutError).mockResolvedValueOnce();
 
-            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {}, {
-                maxRetries: 3,
-                initialDelayMs: 10,
-            });
+            await utils.writeToInfluxWithRetry(
+                writeFn,
+                'Test context',
+                'v3',
+                '',
+                {},
+                {
+                    maxRetries: 3,
+                    initialDelayMs: 10,
+                }
+            );
 
             expect(writeFn).toHaveBeenCalledTimes(2);
         });
@@ -201,10 +236,17 @@ describe('InfluxDB v3 Shared Utils', () => {
 
             const writeFn = jest.fn().mockRejectedValueOnce(timeoutError).mockResolvedValueOnce();
 
-            await utils.writeToInfluxWithRetry(writeFn, 'Test context', 'v3', '', {}, {
-                maxRetries: 3,
-                initialDelayMs: 10,
-            });
+            await utils.writeToInfluxWithRetry(
+                writeFn,
+                'Test context',
+                'v3',
+                '',
+                {},
+                {
+                    maxRetries: 3,
+                    initialDelayMs: 10,
+                }
+            );
 
             expect(writeFn).toHaveBeenCalledTimes(2);
         });

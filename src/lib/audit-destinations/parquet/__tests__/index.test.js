@@ -59,7 +59,8 @@ describe('Parquet Audit Destination', () => {
         mockConfig.has.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
             if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata.staticTags') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata.staticTags')
+                return true;
             return false;
         });
 
@@ -410,7 +411,8 @@ describe('Parquet Audit Destination', () => {
         mockConfig.has.mockImplementation((key) => {
             if (key === 'Butler-SOS.auditEvents.destination.enable') return true;
             if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata') return true;
-            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata.staticTags') return true;
+            if (key === 'Butler-SOS.auditEvents.destination.parquet.metadata.staticTags')
+                return true;
             return false;
         });
 

@@ -1,6 +1,10 @@
 import { Point } from '@influxdata/influxdb-client';
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeToInfluxWithRetry, writePointsToInfluxV2 } from '../shared/utils.js';
+import {
+    isInfluxDbEnabled,
+    writeToInfluxWithRetry,
+    writePointsToInfluxV2,
+} from '../shared/utils.js';
 import { buildHealthMetricDatapoints } from '../shared/health-metrics-builder.js';
 
 /**

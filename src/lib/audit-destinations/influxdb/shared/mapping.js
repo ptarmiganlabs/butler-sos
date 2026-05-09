@@ -88,7 +88,9 @@ export function buildAuditInfluxPointModel(envelope, extras = {}) {
     // Optional static tags from config
     if (
         globals.config.has('Butler-SOS.auditEvents.destination.influxdb.metadata.staticTags') &&
-        Array.isArray(globals.config.get('Butler-SOS.auditEvents.destination.influxdb.metadata.staticTags'))
+        Array.isArray(
+            globals.config.get('Butler-SOS.auditEvents.destination.influxdb.metadata.staticTags')
+        )
     ) {
         const staticTags = globals.config.get(
             'Butler-SOS.auditEvents.destination.influxdb.metadata.staticTags'

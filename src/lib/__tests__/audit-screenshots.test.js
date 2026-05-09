@@ -624,9 +624,7 @@ describe('audit-screenshots SSRF protection', () => {
         );
 
         expect(mockAxios.request).toHaveBeenCalled();
-        expect(logger.warn).not.toHaveBeenCalledWith(
-            expect.stringContaining('URL scheme')
-        );
+        expect(logger.warn).not.toHaveBeenCalledWith(expect.stringContaining('URL scheme'));
     });
 
     test('allows http:// URLs', async () => {
@@ -646,9 +644,7 @@ describe('audit-screenshots SSRF protection', () => {
         );
 
         expect(mockAxios.request).toHaveBeenCalled();
-        expect(logger.warn).not.toHaveBeenCalledWith(
-            expect.stringContaining('URL scheme')
-        );
+        expect(logger.warn).not.toHaveBeenCalledWith(expect.stringContaining('URL scheme'));
     });
 
     test('passes maxRedirects: 0 to axios to prevent redirect-induced SSRF', async () => {

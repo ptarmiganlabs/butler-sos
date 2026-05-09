@@ -1,9 +1,6 @@
 import globals from '../../../globals.js';
 import { writeBatchToInfluxV1 } from '../shared/utils.js';
-import {
-    QUEUE_METRIC_FIELDS,
-    prepareQueueMetricData,
-} from '../shared/queue-metrics-builder.js';
+import { QUEUE_METRIC_FIELDS, prepareQueueMetricData } from '../shared/queue-metrics-builder.js';
 
 /**
  * Build an InfluxDB v1 point object from prepared queue metric data.
@@ -82,9 +79,7 @@ async function storeQueueMetricsV1(queueType, logPrefix, errorTrackerCode) {
                 err
             );
         }
-        globals.logger.error(
-            `${logPrefix}: Error saving data: ${globals.getErrorMessage(err)}`
-        );
+        globals.logger.error(`${logPrefix}: Error saving data: ${globals.getErrorMessage(err)}`);
         throw err;
     }
 }
@@ -131,9 +126,5 @@ export async function storeLogEventQueueMetricsV1() {
  * @throws {Error} Error if unable to write data to InfluxDB
  */
 export async function storeAuditEventQueueMetricsV1() {
-    return storeQueueMetricsV1(
-        'audit_events',
-        'AUDIT EVENT QUEUE METRICS V1',
-        'INFLUXDB_V1_WRITE'
-    );
+    return storeQueueMetricsV1('audit_events', 'AUDIT EVENT QUEUE METRICS V1', 'INFLUXDB_V1_WRITE');
 }

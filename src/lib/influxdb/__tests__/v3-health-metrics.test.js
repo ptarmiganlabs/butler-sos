@@ -271,12 +271,12 @@ describe('v3/health-metrics', () => {
 
         await postHealthMetricsToInfluxdbV3('test-server', 'test-host', body, {});
 
-            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
-                'INFLUXDB_V3_WRITE',
-                'test-server',
-                { module: 'HEALTH_METRICS' },
-                expect.any(Error)
-            );
+        expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+            'INFLUXDB_V3_WRITE',
+            'test-server',
+            { module: 'HEALTH_METRICS' },
+            expect.any(Error)
+        );
         expect(globals.logger.error).toHaveBeenCalledWith(
             expect.stringContaining('Error saving health data to InfluxDB v3')
         );
