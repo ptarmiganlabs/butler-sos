@@ -5,6 +5,7 @@
  * - Log level and file logging settings
  * - Anonymous telemetry settings
  * - System information gathering settings
+ * - Crash dump file settings
  *
  * @type {object} JSON Schema object for basic settings validation
  */
@@ -17,6 +18,26 @@ export const basicSettingsSchema = {
     fileLogging: { type: 'boolean' },
     logDirectory: { type: 'string' },
     anonTelemetry: { type: 'boolean' },
+    /**
+     * Crash dump file configuration.
+     *
+     * When enabled, Butler SOS writes a crash dump file (JSON and/or plain text)
+     * when it encounters an unrecoverable error such as an uncaught exception,
+     * unhandled promise rejection, or an explicit fatal error.
+     *
+     * Crash dump files never contain sensitive data (passwords, tokens, IPs, etc.).
+     */
+    crashFile: {
+        type: 'object',
+        properties: {
+            enable: { type: 'boolean' },
+            crashFileDirectory: { type: 'string' },
+            crashFileCreateJson: { type: 'boolean' },
+            crashFileCreateText: { type: 'boolean' },
+        },
+        required: ['enable', 'crashFileDirectory', 'crashFileCreateJson', 'crashFileCreateText'],
+        additionalProperties: false,
+    },
     /**
      * System information gathering configuration.
      *

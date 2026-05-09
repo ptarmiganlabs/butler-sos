@@ -62,6 +62,7 @@ function createConditionalSchema(parsedConfig, baseSchema) {
     };
 
     // Apply conditional validation to features with enable flags
+    makeFeatureConditional('crashFile');
     makeFeatureConditional('errorTracking');
     makeFeatureConditional('mqttConfig');
     makeFeatureConditional('newRelic');

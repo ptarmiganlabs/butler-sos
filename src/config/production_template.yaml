@@ -7,6 +7,18 @@ Butler-SOS:
     fileLogging: true # true/false to enable/disable logging to disk file
     logDirectory: log # Subdirectory where log files are stored
 
+    # Crash dump configuration
+    # When Butler SOS encounters an unrecoverable error (uncaught exception, unhandled promise rejection,
+    # or explicit fatal error), it can write a crash dump file to help with debugging.
+    # Crash dump files never contain sensitive data (passwords, IPs, API keys, etc.).
+    crashFile:
+        enable: true # Should crash dump files be created? Default: true
+        crashFileDirectory: ./crash_dumps # Directory where crash files are stored.
+                                          # Relative to working directory; absolute paths also supported.
+                                          # Use empty string to write to the working directory.
+        crashFileCreateJson: true # Should a JSON crash dump file be created? Default: true
+        crashFileCreateText: true # Should a plain-text crash dump file be created? Default: true
+
     # System information gathering
     # Butler SOS collects system information for monitoring and diagnostic purposes.
     # On Windows, this may trigger security alerts in enterprise monitoring tools as it executes various OS commands:
