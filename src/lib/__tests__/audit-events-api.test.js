@@ -1045,6 +1045,87 @@ describe('audit-events-api field-length and source constraints', () => {
         expect(res.statusCode).toBe(202);
     });
 
+    // --- validation logging (warn + debug) ---
+
+    test('logs warning and debug on Fastify schema validation failure (400)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        fastify.setErrorHandler((error, request, reply) => {
+            if (error.statusCode === 400 && error.validation) {
+                const validationErrors = error.validation.map((v) => ({
+                    instancePath: v.instancePath,
+                    message: v.message,
+                    params: v.params,
+                }));
+                mockGlobals.logger.warn(
+                    `AUDIT API: Fastify schema validation failed for ip=${request.ip} errors=${JSON.stringify(validationErrors)}`
+                );
+                mockGlobals.logger.debug(
+                    `AUDIT API: Full invalid envelope: ${JSON.stringify(request.body)}`
+                );
+            }
+            reply.send(error);
+        });
+
+        const res = await post(fastify, { ...baseEnvelope(), source: { kind: 'unknown-tool', name: 'audit-qs' } });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Fastify schema validation failed')
+        );
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('instancePath')
+        );
+        expect(mockGlobals.logger.debug).toHaveBeenCalledWith(
+            expect.stringContaining('Full invalid envelope')
+        );
+    });
+
+    test('logs warning and debug on envelope constraint violation (202)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await post(fastify, { ...baseEnvelope(), eventId: 'not-a-uuid' });
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('eventId is not a valid UUID')
+        );
+        expect(mockGlobals.logger.debug).toHaveBeenCalledWith(
+            expect.stringContaining('Full invalid envelope')
+        );
+    });
+
+    test('logs warning and debug on payload validation failure (202)', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await post(
+            fastify,
+            baseEnvelope({
+                context: {
+                    appName: 'A'.repeat(65),
+                    sheetId: 's',
+                    sheetName: 's',
+                    userId: 'u',
+                    userAgent: 'ua',
+                },
+            })
+        );
+
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Payload validation failed')
+        );
+        expect(mockGlobals.logger.debug).toHaveBeenCalledWith(
+            expect.stringContaining('Full invalid payload')
+        );
+    });
+
     // --- payload.context field lengths ---
 
     test('drops event when appName exceeds 64 chars (AJV → 202 warn)', async () => {

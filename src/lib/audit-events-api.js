@@ -996,6 +996,9 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
                     validator.errors
                 )}`
             );
+            globals.logger.debug(
+                `AUDIT API: Full invalid payload: ${JSON.stringify(envelope?.payload)}`
+            );
         } else {
             debugLog(
                 globals.logger,
@@ -1103,6 +1106,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
             globals.logger.warn(
                 `AUDIT API: Dropped audit event - constraint violations: ${constraintReasons.join('; ')} [eventId=${envelope?.eventId ?? 'n/a'} type=${envelope?.type ?? 'n/a'}]`
             );
+            globals.logger.debug(`AUDIT API: Full invalid envelope: ${JSON.stringify(envelope)}`);
             return reply
                 .code(202)
                 .send({ status: 'accepted', receivedAt: new Date().toISOString() });
@@ -1283,6 +1287,24 @@ export async function setupAuditEventsApiServer() {
         );
 
         await registerAuditEventRoutes(auditServer, { apiToken, corsOrigins });
+
+        // Log schema validation failures (400) with offending field details
+        auditServer.setErrorHandler((error, request, reply) => {
+            if (error.statusCode === 400 && error.validation) {
+                const validationErrors = error.validation.map((v) => ({
+                    instancePath: v.instancePath,
+                    message: v.message,
+                    params: v.params,
+                }));
+                globals.logger.warn(
+                    `AUDIT API: Fastify schema validation failed for ip=${request.ip} errors=${JSON.stringify(validationErrors)}`
+                );
+                globals.logger.debug(
+                    `AUDIT API: Full invalid envelope: ${JSON.stringify(request.body)}`
+                );
+            }
+            reply.send(error);
+        });
 
         // Add security headers to every response from the audit events API server.
         // HSTS is only meaningful (and correct) when TLS is active.
