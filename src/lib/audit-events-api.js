@@ -1140,7 +1140,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
         if (!payloadResult.valid) {
             debugLog(
                 globals.logger,
-                `AUDIT API: Accepted and dropped audit event after payload validation failure type=${envelope?.type} eventId=${envelope?.eventId}`
+                `AUDIT API: Rejected audit event due to payload validation failure type=${envelope?.type} eventId=${envelope?.eventId}`
             );
             return buildAuditResponse(reply, 422, 'dropped', 'Payload validation failed', {
                 errors: payloadResult.errors,
