@@ -1632,6 +1632,9 @@ describe('audit-events-api GET /api/v1/test-connection', () => {
         expect(body.status).toBe('ok');
         expect(body.message).toBe('Butler SOS Audit API is reachable');
         expect(typeof body.timestamp).toBe('string');
+        expect(mockGlobals.logger.info).toHaveBeenCalledWith(
+            expect.stringContaining('Connection test successful')
+        );
     });
 
     test('returns 200 with valid bearer token', async () => {
@@ -1649,6 +1652,9 @@ describe('audit-events-api GET /api/v1/test-connection', () => {
         expect(res.statusCode).toBe(200);
         const body = res.json();
         expect(body.status).toBe('ok');
+        expect(mockGlobals.logger.info).toHaveBeenCalledWith(
+            expect.stringContaining('Connection test successful')
+        );
     });
 
     test('returns 401 when apiToken is configured and no token is provided', async () => {
@@ -1667,6 +1673,9 @@ describe('audit-events-api GET /api/v1/test-connection', () => {
         expect(body.status).toBe('error');
         expect(body.outcome).toBe('dropped');
         expect(body.reason).toBe('Unauthorized');
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Unauthorized request')
+        );
     });
 
     test('returns 401 when apiToken is configured and wrong token is provided', async () => {
@@ -1686,6 +1695,9 @@ describe('audit-events-api GET /api/v1/test-connection', () => {
         expect(body.status).toBe('error');
         expect(body.outcome).toBe('dropped');
         expect(body.reason).toBe('Unauthorized');
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Unauthorized request')
+        );
     });
 
     test('timestamp in response is a valid ISO 8601 string', async () => {
@@ -1705,6 +1717,9 @@ describe('audit-events-api GET /api/v1/test-connection', () => {
         const ts = new Date(body.timestamp).getTime();
         expect(ts).toBeGreaterThanOrEqual(before);
         expect(ts).toBeLessThanOrEqual(after);
+        expect(mockGlobals.logger.info).toHaveBeenCalledWith(
+            expect.stringContaining('Connection test successful')
+        );
     });
 });
 

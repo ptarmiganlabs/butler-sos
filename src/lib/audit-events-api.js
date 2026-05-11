@@ -1229,6 +1229,9 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
             globals.logger,
             `AUDIT API: test-connection request ip=${request.ip} origin=${request.headers.origin || 'n/a'}`
         );
+        globals.logger.info(
+            `AUDIT API: Connection test successful ip=${request.ip} origin=${request.headers.origin || 'n/a'}`
+        );
         reply.code(200).send({
             status: 'ok',
             message: 'Butler SOS Audit API is reachable',
