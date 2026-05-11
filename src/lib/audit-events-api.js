@@ -1339,7 +1339,7 @@ export async function setupAuditEventsApiServer() {
                 });
             }
             globals.logger.error(
-                `AUDIT API: Unexpected error for ip=${request.ip} method=${request.method} url=${request.url} statusCode=${error.statusCode} message=${error.message}`
+                `AUDIT API: Unexpected error for ip=${request.ip} method=${request.method} url=${request.url} statusCode=${error.statusCode} message=${globals.getErrorMessage(error)}`
             );
             return buildAuditResponse(
                 reply,
