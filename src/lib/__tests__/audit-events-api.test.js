@@ -1137,7 +1137,6 @@ describe('audit-events-api field-length and source constraints', () => {
         const res = await post(fastify, envelope);
 
         expect(res.statusCode).toBe(202);
-        console.log('DEBUG body:', res.payload);
         const body = JSON.parse(res.payload);
         expect(body.outcome).toBe('processed');
     });
