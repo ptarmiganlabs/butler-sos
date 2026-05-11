@@ -8,6 +8,7 @@ const mockGlobals = {
         info: jest.fn(),
         warn: jest.fn(),
         error: jest.fn(),
+        isLevelEnabled: jest.fn().mockReturnValue(false),
     },
     config: {
         has: jest.fn(),
@@ -1240,6 +1241,7 @@ describe('audit-events-api field-length and source constraints', () => {
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
 
+        mockGlobals.logger.isLevelEnabled.mockReturnValueOnce(true);
         const res = await post(fastify, { ...baseEnvelope(), eventId: 'not-a-uuid' });
 
         expect(res.statusCode).toBe(422);
@@ -1260,6 +1262,7 @@ describe('audit-events-api field-length and source constraints', () => {
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
 
+        mockGlobals.logger.isLevelEnabled.mockReturnValueOnce(true);
         const res = await post(
             fastify,
             baseEnvelope({

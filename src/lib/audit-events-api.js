@@ -1032,9 +1032,11 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
                     validator.errors
                 )}`
             );
-            globals.logger.debug(
-                `AUDIT API: Full invalid payload: ${JSON.stringify(envelope?.payload)}`
-            );
+            if (globals.logger.isLevelEnabled('debug')) {
+                globals.logger.debug(
+                    `AUDIT API: Full invalid payload: ${JSON.stringify(envelope?.payload)}`
+                );
+            }
             return { valid: false, errors: validator.errors };
         }
         debugLog(
@@ -1142,7 +1144,11 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
             globals.logger.warn(
                 `AUDIT API: Dropped audit event - constraint violations: ${constraintReasons.join('; ')} [eventId=${envelope?.eventId ?? 'n/a'} type=${envelope?.type ?? 'n/a'}]`
             );
-            globals.logger.debug(`AUDIT API: Full invalid envelope: ${JSON.stringify(envelope)}`);
+            if (globals.logger.isLevelEnabled('debug')) {
+                globals.logger.debug(
+                    `AUDIT API: Full invalid envelope: ${JSON.stringify(envelope)}`
+                );
+            }
             return buildAuditResponse(reply, 422, 'dropped', 'One or more constraint violations', {
                 errors: constraintReasons.map((r) => ({ message: r })),
             });
@@ -1346,9 +1352,11 @@ export async function setupAuditEventsApiServer() {
                 globals.logger.warn(
                     `AUDIT API: Fastify schema validation failed for ip=${request.ip} errors=${JSON.stringify(validationErrors)}`
                 );
-                globals.logger.debug(
-                    `AUDIT API: Full invalid envelope: ${JSON.stringify(request.body)}`
-                );
+                if (globals.logger.isLevelEnabled('debug')) {
+                    globals.logger.debug(
+                        `AUDIT API: Full invalid envelope: ${JSON.stringify(request.body)}`
+                    );
+                }
                 return buildAuditResponse(reply, 400, 'dropped', 'Schema validation failed', {
                     errors: validationErrors,
                 });
