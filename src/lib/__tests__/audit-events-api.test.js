@@ -40,7 +40,11 @@ jest.unstable_mockModule('../audit-destinations/index.js', () => ({
 
 describe('audit-events-api CORS + auth', () => {
     beforeEach(() => {
+        jest.resetModules();
         jest.clearAllMocks();
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+        mockGlobals.auditEventsQueueManager = null;
     });
 
     test('allows CORS preflight (OPTIONS) even when apiToken is configured', async () => {
@@ -98,7 +102,11 @@ describe('audit-events-api CORS + auth', () => {
 
 describe('audit-events-api event types', () => {
     beforeEach(() => {
+        jest.resetModules();
         jest.clearAllMocks();
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+        mockGlobals.auditEventsQueueManager = null;
     });
 
     test('accepts object.view.duration and logs concise info (no full envelope log)', async () => {
@@ -162,7 +170,7 @@ describe('audit-events-api event types', () => {
         expect(writeAuditEventToDestinations).toHaveBeenCalled();
     });
 
-    test('returns 202 and drops event when payload validation fails', async () => {
+    test('returns 422 and drops event when payload validation fails', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
 
         const fastify = Fastify({ logger: false });
@@ -187,8 +195,11 @@ describe('audit-events-api event types', () => {
             },
         });
 
-        expect(res.statusCode).toBe(202);
-        expect(res.json().status).toBe('accepted');
+        expect(res.statusCode).toBe(422);
+        const body = res.json();
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('Payload validation failed');
     });
 
     test('handles screenshot.url.received and downloads screenshot', async () => {
@@ -393,6 +404,7 @@ describe('audit-events-api event types', () => {
 
 describe('audit-events-api queue manager', () => {
     beforeEach(() => {
+        jest.resetModules();
         jest.clearAllMocks();
         mockGlobals.auditEventsQueueManager = {
             checkRateLimit: jest.fn().mockReturnValue(true),
@@ -489,7 +501,12 @@ describe('audit-events-api queue manager', () => {
             },
         });
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(429);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('Rate limit exceeded');
+        expect(body.details.retryAfter).toBe(60);
         expect(mockGlobals.auditEventsQueueManager.handleRateLimitDrop).toHaveBeenCalled();
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Dropped audit event due to queue rate limit')
@@ -534,7 +551,11 @@ describe('audit-events-api queue manager', () => {
             },
         });
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(503);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('Event queue is full');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Dropped audit event due to full queue')
         );
@@ -578,7 +599,11 @@ describe('audit-events-api queue manager', () => {
             },
         });
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(500);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('error');
+        expect(body.reason).toBe('Internal error while processing event');
         expect(mockGlobals.logger.error).toHaveBeenCalledWith(
             expect.stringContaining('Error while enqueueing audit event: Queue error')
         );
@@ -625,7 +650,11 @@ describe('audit-events-api queue manager', () => {
             },
         });
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(500);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('error');
+        expect(body.reason).toBe('Internal error while processing event');
         expect(mockGlobals.logger.error).toHaveBeenCalledWith(
             expect.stringContaining('Error while handling audit event: Processing error')
         );
@@ -634,7 +663,11 @@ describe('audit-events-api queue manager', () => {
 
 describe('setupAuditEventsApiServer', () => {
     beforeEach(() => {
+        jest.resetModules();
         jest.clearAllMocks();
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+        mockGlobals.auditEventsQueueManager = null;
     });
 
     test('does nothing if auditEvents.enable is false', async () => {
@@ -666,7 +699,11 @@ describe('setupAuditEventsApiServer', () => {
 
 describe('audit-events-api token comparison security', () => {
     beforeEach(() => {
+        jest.resetModules();
         jest.clearAllMocks();
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+        mockGlobals.auditEventsQueueManager = null;
     });
 
     test('rejects request with wrong token', async () => {
@@ -746,16 +783,24 @@ describe('audit-events-api token comparison security', () => {
                 eventId: 'a0000000-0000-4000-8000-000000000007',
                 timestamp: '2025-01-01T00:00:00.000Z',
                 type: 'selection.state.changed',
-                payload: {},
+                payload: {
+                    event: {
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000007',
+                        details: [],
+                    },
+                },
             },
         });
 
         expect(res.statusCode).toBe(202);
+        const body = JSON.parse(res.payload);
+        expect(body.outcome).toBe('processed');
     });
 });
 
 describe('audit-events-api envelope constraint validation', () => {
     beforeEach(() => {
+        jest.resetModules();
         jest.clearAllMocks();
         mockGlobals.config.has.mockReturnValue(false);
         mockGlobals.config.get.mockReturnValue(undefined);
@@ -763,14 +808,67 @@ describe('audit-events-api envelope constraint validation', () => {
     });
 
     function validEnvelope(overrides = {}) {
-        return {
+        const type = overrides.type || 'selection.state.changed';
+
+        // Type-specific base payloads for known event types with validators
+        const payloadsByType = {
+            'selection.state.changed': {
+                event: {
+                    selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                    details: [],
+                },
+            },
+            'selection.transaction.finalized': {
+                event: {
+                    selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                    beforeSelections: [],
+                    afterSelections: [],
+                },
+            },
+            'app.model.validated': {
+                event: {
+                    selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                },
+            },
+            'screenshot.url.received': {
+                event: {
+                    screenshotUrl: 'https://example.com/screenshot.png',
+                    selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                },
+            },
+            'event.unsupported.visualization': {
+                event: {
+                    vizType: 'unsupported',
+                    selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                },
+            },
+            'object.view.duration': {
+                event: {
+                    objectId: 'obj-1',
+                    duration: 1000,
+                    leftAt: '2025-01-01T00:00:00.000Z',
+                },
+            },
+        };
+
+        // Types without a validator use a generic payload that satisfies most schemas
+        const basePayload = payloadsByType[type] || {
+            event: {
+                selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+            },
+        };
+
+        const base = {
             schemaVersion: 1,
             eventId: 'a0000000-0000-4000-8000-000000000001',
             timestamp: '2025-01-01T00:00:00.000Z',
-            type: 'selection.state.changed',
-            payload: {},
-            ...overrides,
+            type,
+            payload: basePayload,
         };
+        if (overrides.payload) {
+            return { ...base, ...overrides, payload: { ...base.payload, ...overrides.payload } };
+        }
+        return { ...base, ...overrides };
     }
 
     async function postEnvelope(fastify, payload) {
@@ -806,7 +904,11 @@ describe('audit-events-api envelope constraint validation', () => {
 
         const res = await postEnvelope(fastify, validEnvelope({ eventId: 'not-a-uuid' }));
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('One or more constraint violations');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('eventId is not a valid UUID')
         );
@@ -819,7 +921,11 @@ describe('audit-events-api envelope constraint validation', () => {
 
         const res = await postEnvelope(fastify, validEnvelope({ correlationId: 'x'.repeat(65) }));
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('One or more constraint violations');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('correlationId exceeds 64 characters')
         );
@@ -848,7 +954,11 @@ describe('audit-events-api envelope constraint validation', () => {
             validEnvelope({ payload: { context: { appId: 'not-a-uuid' } } })
         );
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('One or more constraint violations');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('payload.context.appId is not a valid UUID')
         );
@@ -882,7 +992,11 @@ describe('audit-events-api envelope constraint validation', () => {
             validEnvelope({ eventId: 'bad-id', type: 'unknown.type' })
         );
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('One or more constraint violations');
         const warnCalls = mockGlobals.logger.warn.mock.calls.map((c) => String(c[0]));
         const constraintWarn = warnCalls.find((m) => m.includes('constraint violations'));
         expect(constraintWarn).toBeDefined();
@@ -935,7 +1049,11 @@ describe('audit-events-api envelope constraint validation', () => {
 
         const res = await postEnvelope(fastify, validEnvelope({ type: 'event.' }));
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('One or more constraint violations');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('type is not a recognised event type')
         );
@@ -948,7 +1066,11 @@ describe('audit-events-api envelope constraint validation', () => {
 
         const res = await postEnvelope(fastify, validEnvelope({ type: 'unknown.type' }));
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('One or more constraint violations');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('type is not a recognised event type')
         );
@@ -957,6 +1079,7 @@ describe('audit-events-api envelope constraint validation', () => {
 
 describe('audit-events-api field-length and source constraints', () => {
     beforeEach(() => {
+        jest.resetModules();
         jest.clearAllMocks();
         mockGlobals.config.has.mockReturnValue(false);
         mockGlobals.config.get.mockReturnValue(undefined);
@@ -1014,6 +1137,9 @@ describe('audit-events-api field-length and source constraints', () => {
         const res = await post(fastify, envelope);
 
         expect(res.statusCode).toBe(202);
+        console.log('DEBUG body:', res.payload);
+        const body = JSON.parse(res.payload);
+        expect(body.outcome).toBe('processed');
     });
 
     test('rejects source with unknown kind (Fastify schema → 400)', async () => {
@@ -1043,6 +1169,8 @@ describe('audit-events-api field-length and source constraints', () => {
 
         // Fastify passes nested additionalProperties through; enum constraints on kind/name are the real gate
         expect(res.statusCode).toBe(202);
+        const body = JSON.parse(res.payload);
+        expect(body.outcome).toBe('processed');
     });
 
     // --- validation logging (warn + debug) ---
@@ -1083,14 +1211,18 @@ describe('audit-events-api field-length and source constraints', () => {
         );
     });
 
-    test('logs warning and debug on envelope constraint violation (202)', async () => {
+    test('logs warning and debug on envelope constraint violation (422)', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
 
         const res = await post(fastify, { ...baseEnvelope(), eventId: 'not-a-uuid' });
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('One or more constraint violations');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('eventId is not a valid UUID')
         );
@@ -1099,7 +1231,7 @@ describe('audit-events-api field-length and source constraints', () => {
         );
     });
 
-    test('logs warning and debug on payload validation failure (202)', async () => {
+    test('logs warning and debug on payload validation failure (422)', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
@@ -1117,7 +1249,11 @@ describe('audit-events-api field-length and source constraints', () => {
             })
         );
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('Payload validation failed');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Payload validation failed')
         );
@@ -1128,7 +1264,7 @@ describe('audit-events-api field-length and source constraints', () => {
 
     // --- payload.context field lengths ---
 
-    test('drops event when appName exceeds 64 chars (AJV → 202 warn)', async () => {
+    test('drops event when appName exceeds 64 chars (AJV → 422 warn)', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
@@ -1146,13 +1282,17 @@ describe('audit-events-api field-length and source constraints', () => {
             })
         );
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('Payload validation failed');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Payload validation failed')
         );
     });
 
-    test('drops event when userAgent exceeds 512 chars (AJV → 202 warn)', async () => {
+    test('drops event when userAgent exceeds 512 chars (AJV → 422 warn)', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
@@ -1170,13 +1310,17 @@ describe('audit-events-api field-length and source constraints', () => {
             })
         );
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('Payload validation failed');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Payload validation failed')
         );
     });
 
-    test('drops event when userId exceeds 128 chars (AJV → 202 warn)', async () => {
+    test('drops event when userId exceeds 128 chars (AJV → 422 warn)', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
@@ -1194,7 +1338,11 @@ describe('audit-events-api field-length and source constraints', () => {
             })
         );
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('Payload validation failed');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Payload validation failed')
         );
@@ -1202,7 +1350,7 @@ describe('audit-events-api field-length and source constraints', () => {
 
     // --- event.selectionTxnId UUID ---
 
-    test('drops event when selectionTxnId is not a UUID (AJV → 202 warn)', async () => {
+    test('drops event when selectionTxnId is not a UUID (AJV → 422 warn)', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
@@ -1212,7 +1360,11 @@ describe('audit-events-api field-length and source constraints', () => {
             baseEnvelope({ event: { selectionTxnId: 'not-a-uuid', details: [] } })
         );
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('Payload validation failed');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Payload validation failed')
         );
@@ -1226,6 +1378,8 @@ describe('audit-events-api field-length and source constraints', () => {
         const res = await post(fastify, baseEnvelope());
 
         expect(res.statusCode).toBe(202);
+        const body = JSON.parse(res.payload);
+        expect(body.outcome).toBe('processed');
         expect(mockGlobals.logger.warn).not.toHaveBeenCalledWith(
             expect.stringContaining('Payload validation failed')
         );
@@ -1250,7 +1404,11 @@ describe('audit-events-api field-length and source constraints', () => {
         };
         const res = await post(fastify, envelope);
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('Payload validation failed');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Payload validation failed')
         );
@@ -1276,7 +1434,11 @@ describe('audit-events-api field-length and source constraints', () => {
         };
         const res = await post(fastify, envelope);
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('Payload validation failed');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Payload validation failed')
         );
@@ -1285,6 +1447,7 @@ describe('audit-events-api field-length and source constraints', () => {
 
 describe('audit-events-api SSRF protection', () => {
     beforeEach(() => {
+        jest.resetModules();
         jest.clearAllMocks();
         mockGlobals.config.has.mockReturnValue(false);
         mockGlobals.config.get.mockReturnValue(undefined);
@@ -1449,6 +1612,7 @@ describe('audit-events-api SSRF protection', () => {
 
 describe('audit-events-api GET /api/v1/test-connection', () => {
     beforeEach(() => {
+        jest.resetModules();
         jest.clearAllMocks();
     });
 
@@ -1499,7 +1663,10 @@ describe('audit-events-api GET /api/v1/test-connection', () => {
         });
 
         expect(res.statusCode).toBe(401);
-        expect(res.json().error).toBe('Unauthorized');
+        const body = res.json();
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('Unauthorized');
     });
 
     test('returns 401 when apiToken is configured and wrong token is provided', async () => {
@@ -1515,7 +1682,10 @@ describe('audit-events-api GET /api/v1/test-connection', () => {
         });
 
         expect(res.statusCode).toBe(401);
-        expect(res.json().error).toBe('Unauthorized');
+        const body = res.json();
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('Unauthorized');
     });
 
     test('timestamp in response is a valid ISO 8601 string', async () => {
@@ -1540,6 +1710,7 @@ describe('audit-events-api GET /api/v1/test-connection', () => {
 
 describe('audit-events-api array maxItems constraints', () => {
     beforeEach(() => {
+        jest.resetModules();
         jest.clearAllMocks();
         mockGlobals.config.has.mockReturnValue(false);
         mockGlobals.config.get.mockReturnValue(undefined);
@@ -1571,8 +1742,11 @@ describe('audit-events-api array maxItems constraints', () => {
             },
         });
 
-        // accept-and-drop behaviour: 202 but warn about validation failure
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('Payload validation failed');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Payload validation failed')
         );
@@ -1632,7 +1806,11 @@ describe('audit-events-api array maxItems constraints', () => {
             },
         });
 
-        expect(res.statusCode).toBe(202);
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('Payload validation failed');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Payload validation failed')
         );

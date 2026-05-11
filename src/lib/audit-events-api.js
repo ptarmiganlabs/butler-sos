@@ -72,6 +72,27 @@ function safeStringEqual(a, b) {
  */
 
 /**
+ * Builds a consistent audit API response.
+ *
+ * @param {import('fastify').FastifyReply} reply - Fastify reply object.
+ * @param {number} statusCode - HTTP status code.
+ * @param {string} outcome - One of 'processed', 'dropped', 'error'.
+ * @param {string} [reason] - Human-readable explanation.
+ * @param {object} [details] - Optional additional data.
+ * @returns {import('fastify').FastifyReply} The reply with the response sent.
+ */
+function buildAuditResponse(reply, statusCode, outcome, reason, details) {
+    const body = {
+        status: statusCode >= 400 ? 'error' : 'accepted',
+        receivedAt: new Date().toISOString(),
+        outcome,
+    };
+    if (reason) body.reason = reason;
+    if (details) body.details = details;
+    return reply.code(statusCode).send(body);
+}
+
+/**
  * @typedef {object} AuditRequestContext
  * @property {string} ip - Client IP address.
  */
@@ -154,8 +175,9 @@ function getAuditEventSchema() {
                 properties: {
                     status: { type: 'string' },
                     receivedAt: { type: 'string', format: 'date-time' },
+                    outcome: { type: 'string' },
                 },
-                required: ['status', 'receivedAt'],
+                required: ['status', 'receivedAt', 'outcome'],
             },
         },
     };
@@ -959,7 +981,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
             globals.logger.warn(
                 `AUDIT API: Unauthorized request ip=${request.ip} method=${request.method} url=${request.url}`
             );
-            return reply.code(401).send({ error: 'Unauthorized' });
+            return buildAuditResponse(reply, 401, 'dropped', 'Unauthorized');
         }
     }
 
@@ -975,7 +997,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
      * If a schema is not registered for the given type, validation is skipped.
      *
      * @param {AuditEventEnvelope} envelope - The received audit event envelope
-     * @returns {boolean} True if payload is valid (or validation skipped), false otherwise
+     * @returns {{ valid: boolean, errors?: object[] }} Result with validity and errors if any.
      */
     function validatePayload(envelope) {
         const validator = Object.hasOwn(validatePayloadByType, envelope?.type)
@@ -986,7 +1008,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
                 globals.logger,
                 `AUDIT API: Payload validation skipped type=${envelope?.type} eventId=${envelope?.eventId} reason=no-validator`
             );
-            return true;
+            return { valid: true };
         }
 
         const ok = validator(envelope?.payload);
@@ -999,13 +1021,13 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
             globals.logger.debug(
                 `AUDIT API: Full invalid payload: ${JSON.stringify(envelope?.payload)}`
             );
-        } else {
-            debugLog(
-                globals.logger,
-                `AUDIT API: Payload validation passed type=${envelope?.type} eventId=${envelope?.eventId}`
-            );
+            return { valid: false, errors: validator.errors };
         }
-        return ok;
+        debugLog(
+            globals.logger,
+            `AUDIT API: Payload validation passed type=${envelope?.type} eventId=${envelope?.eventId}`
+        );
+        return { valid: true };
     }
 
     /**
@@ -1107,21 +1129,22 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
                 `AUDIT API: Dropped audit event - constraint violations: ${constraintReasons.join('; ')} [eventId=${envelope?.eventId ?? 'n/a'} type=${envelope?.type ?? 'n/a'}]`
             );
             globals.logger.debug(`AUDIT API: Full invalid envelope: ${JSON.stringify(envelope)}`);
-            return reply
-                .code(202)
-                .send({ status: 'accepted', receivedAt: new Date().toISOString() });
+            return buildAuditResponse(reply, 422, 'dropped', 'One or more constraint violations', {
+                errors: constraintReasons.map((r) => ({ message: r })),
+            });
         }
 
         // Validate payload structure using per-type AJV schema (envelope is validated by Fastify schema).
         // If payload validation fails, accept-and-drop.
-        if (!validatePayload(envelope)) {
+        const payloadResult = validatePayload(envelope);
+        if (!payloadResult.valid) {
             debugLog(
                 globals.logger,
                 `AUDIT API: Accepted and dropped audit event after payload validation failure type=${envelope?.type} eventId=${envelope?.eventId}`
             );
-            return reply
-                .code(202)
-                .send({ status: 'accepted', receivedAt: new Date().toISOString() });
+            return buildAuditResponse(reply, 422, 'dropped', 'Payload validation failed', {
+                errors: payloadResult.errors,
+            });
         }
 
         // If queue manager is available, enqueue processing and return quickly.
@@ -1139,9 +1162,9 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
                     globals.logger.warn(
                         `AUDIT API: Dropped audit event due to queue rate limit type=${envelope.type} eventId=${envelope.eventId} ip=${request.ip}`
                     );
-                    return reply
-                        .code(202)
-                        .send({ status: 'accepted', receivedAt: new Date().toISOString() });
+                    return buildAuditResponse(reply, 429, 'dropped', 'Rate limit exceeded', {
+                        retryAfter: 60,
+                    });
                 }
 
                 const queued = await queueManager.addToQueue(async () => {
@@ -1157,16 +1180,21 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
                     globals.logger.warn(
                         `AUDIT API: Dropped audit event due to full queue type=${envelope.type} eventId=${envelope.eventId} ip=${request.ip}`
                     );
+                    return buildAuditResponse(reply, 503, 'dropped', 'Event queue is full');
                 }
             } catch (err) {
                 globals.logger.error(
                     `AUDIT API: Error while enqueueing audit event: ${globals.getErrorMessage(err)}`
                 );
+                return buildAuditResponse(
+                    reply,
+                    500,
+                    'error',
+                    'Internal error while processing event'
+                );
             }
 
-            return reply
-                .code(202)
-                .send({ status: 'accepted', receivedAt: new Date().toISOString() });
+            return buildAuditResponse(reply, 202, 'processed');
         }
 
         try {
@@ -1179,9 +1207,10 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
             globals.logger.error(
                 `AUDIT API: Error while handling audit event: ${globals.getErrorMessage(err)}`
             );
+            return buildAuditResponse(reply, 500, 'error', 'Internal error while processing event');
         }
 
-        reply.code(202).send({ status: 'accepted', receivedAt: new Date().toISOString() });
+        return buildAuditResponse(reply, 202, 'processed');
     }
 
     /**
@@ -1302,8 +1331,19 @@ export async function setupAuditEventsApiServer() {
                 globals.logger.debug(
                     `AUDIT API: Full invalid envelope: ${JSON.stringify(request.body)}`
                 );
+                return buildAuditResponse(reply, 400, 'dropped', 'Schema validation failed', {
+                    errors: validationErrors,
+                });
             }
-            reply.send(error);
+            globals.logger.error(
+                `AUDIT API: Unexpected error for ip=${request.ip} method=${request.method} url=${request.url} statusCode=${error.statusCode} message=${error.message}`
+            );
+            return buildAuditResponse(
+                reply,
+                error.statusCode || 500,
+                'error',
+                'An unexpected error occurred'
+            );
         });
 
         // Add security headers to every response from the audit events API server.
