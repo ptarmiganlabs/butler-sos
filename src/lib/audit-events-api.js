@@ -1135,7 +1135,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
         }
 
         // Validate payload structure using per-type AJV schema (envelope is validated by Fastify schema).
-        // If payload validation fails, accept-and-drop.
+        // If payload validation fails, return HTTP 422 with validation errors and do not enqueue the event.
         const payloadResult = validatePayload(envelope);
         if (!payloadResult.valid) {
             debugLog(
