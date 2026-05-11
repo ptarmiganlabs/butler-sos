@@ -33,23 +33,13 @@ Butler-SOS:
 
 ## What happens when the limit is exceeded
 
-When a client exceeds their rate limit, the API returns HTTP `429 Too Many Requests`:
+When a client exceeds their rate limit, the API returns HTTP `429 Too Many Requests`.
 
-```json
-{
-  "status": "error",
-  "receivedAt": "2025-01-15T10:30:00.000Z",
-  "outcome": "dropped",
-  "reason": "Rate limit exceeded",
-  "details": {
-    "retryAfter": 60
-  }
-}
-```
+The exact JSON response body is implementation-dependent and should not be relied on unless the server has been explicitly configured to return a custom rate-limit payload. Clients should instead use the HTTP status code together with the response headers to detect rate limiting and determine when to retry.
 
-The `retryAfter` field indicates how many seconds the client should wait before retrying (always 60 seconds, matching the 1-minute time window).
+In particular, clients should look for the `Retry-After` header, which indicates how many seconds to wait before retrying. With the current 1-minute window, this is typically `60`.
 
-The response also includes rate limit headers on all responses while the window is active:
+The response also includes rate limit headers on responses while the window is active:
 
 | Header | Description |
 |--------|-------------|
