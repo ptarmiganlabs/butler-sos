@@ -807,6 +807,11 @@ describe('audit-events-api envelope constraint validation', () => {
         mockGlobals.auditEventsQueueManager = null;
     });
 
+    /**
+     * Builds a valid audit event envelope with optional field overrides.
+     * @param {object} [overrides] - Fields to override in the default envelope.
+     * @returns {object} A valid audit event envelope.
+     */
     function validEnvelope(overrides = {}) {
         const type = overrides.type || 'selection.state.changed';
 
@@ -871,6 +876,12 @@ describe('audit-events-api envelope constraint validation', () => {
         return { ...base, ...overrides };
     }
 
+    /**
+     * Posts an audit event envelope to the audit API.
+     * @param {object} fastify - Fastify instance with registered audit routes.
+     * @param {object} payload - Audit event envelope to post.
+     * @returns {Promise<object>} Fastify inject response.
+     */
     async function postEnvelope(fastify, payload) {
         return fastify.inject({
             method: 'POST',
@@ -1086,6 +1097,11 @@ describe('audit-events-api field-length and source constraints', () => {
         mockGlobals.auditEventsQueueManager = null;
     });
 
+    /**
+     * Creates a base audit event envelope with default values for testing.
+     * @param {object} [payloadOverrides] - Fields to override in the payload.
+     * @returns {object} Base audit event envelope.
+     */
     function baseEnvelope(payloadOverrides = {}) {
         return {
             schemaVersion: 1,
@@ -1110,6 +1126,12 @@ describe('audit-events-api field-length and source constraints', () => {
         };
     }
 
+    /**
+     * Posts an audit event to the audit API with default headers.
+     * @param {object} fastify - Fastify instance with registered audit routes.
+     * @param {object} payload - Audit event payload to post.
+     * @returns {Promise<object>} Fastify inject response.
+     */
     async function post(fastify, payload) {
         return fastify.inject({
             method: 'POST',
@@ -1196,7 +1218,10 @@ describe('audit-events-api field-length and source constraints', () => {
             reply.send(error);
         });
 
-        const res = await post(fastify, { ...baseEnvelope(), source: { kind: 'unknown-tool', name: 'audit-qs' } });
+        const res = await post(fastify, {
+            ...baseEnvelope(),
+            source: { kind: 'unknown-tool', name: 'audit-qs' },
+        });
 
         expect(res.statusCode).toBe(400);
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
@@ -1466,6 +1491,11 @@ describe('audit-events-api SSRF protection', () => {
         },
     };
 
+    /**
+     * Creates a mock config object for screenshot destination testing.
+     * @param {string[]|undefined} allowedImageDownloadHosts - Allowed hosts for screenshot downloads.
+     * @returns {object} Mock config object with get/has methods.
+     */
     function screenshotConfigMock(allowedImageDownloadHosts) {
         return {
             has: jest.fn((key) => {
@@ -1491,6 +1521,12 @@ describe('audit-events-api SSRF protection', () => {
         };
     }
 
+    /**
+     * Posts a screenshot audit event to the audit API with a screenshot envelope.
+     * @param {object} fastify - Fastify instance with registered audit routes.
+     * @param {object} [envelopeOverride] - Fields to override in the screenshot envelope.
+     * @returns {Promise<object>} Fastify inject response.
+     */
     async function postScreenshot(fastify, envelopeOverride = {}) {
         return fastify.inject({
             method: 'POST',
@@ -1718,6 +1754,121 @@ describe('audit-events-api GET /api/v1/test-connection', () => {
         expect(ts).toBeLessThanOrEqual(after);
         expect(mockGlobals.logger.info).toHaveBeenCalledWith(
             expect.stringContaining('Connection test successful')
+        );
+    });
+});
+
+describe('audit-events-api HTTP rate limit (Fastify)', () => {
+    beforeEach(() => {
+        jest.resetModules();
+        jest.clearAllMocks();
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+        mockGlobals.auditEventsQueueManager = null;
+    });
+
+    test('rate limit active by default - x-ratelimit-limit header present', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+        });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.headers['x-ratelimit-limit']).toBeDefined();
+        expect(res.headers['x-ratelimit-limit']).toBe('300');
+    });
+
+    test('rate limit disabled when enable: false - no rate limit header', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, {
+            apiToken: null,
+            corsOrigins: ['*'],
+            rateLimitOpts: { enable: false },
+        });
+
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+        });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.headers['x-ratelimit-limit']).toBeUndefined();
+    });
+
+    test('per-IP isolation - one IP rate limited, another IP allowed', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, {
+            apiToken: null,
+            corsOrigins: ['*'],
+            rateLimitOpts: { enable: true, maxPerMinute: 2 },
+        });
+
+        const resA1 = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            remoteAddress: '10.0.0.1',
+        });
+        expect(resA1.statusCode).toBe(200);
+
+        const resA2 = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            remoteAddress: '10.0.0.1',
+        });
+        expect(resA2.statusCode).toBe(200);
+
+        const resA3 = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            remoteAddress: '10.0.0.1',
+        });
+        expect(resA3.statusCode).toBe(429);
+
+        const resB = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            remoteAddress: '10.0.0.2',
+        });
+        expect(resB.statusCode).toBe(200);
+    });
+
+    test('logs WARN when HTTP rate limit exceeded', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, {
+            apiToken: null,
+            corsOrigins: ['*'],
+            rateLimitOpts: { enable: true, maxPerMinute: 2 },
+        });
+
+        await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            remoteAddress: '10.0.0.1',
+        });
+        await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            remoteAddress: '10.0.0.1',
+        });
+        await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            remoteAddress: '10.0.0.1',
+        });
+
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('HTTP rate limit exceeded')
         );
     });
 });

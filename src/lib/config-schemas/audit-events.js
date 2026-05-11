@@ -622,8 +622,21 @@ export const auditEventsSchema = {
                 required: ['allowedOrigins'],
                 additionalProperties: false,
             },
+            rateLimit: {
+                type: 'object',
+                properties: {
+                    enable: { type: 'boolean', default: true },
+                    maxPerMinute: {
+                        type: 'integer',
+                        default: 300,
+                        minimum: 1,
+                    },
+                },
+                required: ['enable', 'maxPerMinute'],
+                additionalProperties: false,
+            },
         },
-        required: ['enable', 'host', 'port', 'apiToken', 'destination', 'tls', 'queue', 'cors'],
+        required: ['enable', 'host', 'port', 'apiToken', 'destination', 'tls', 'queue', 'cors', 'rateLimit'],
         additionalProperties: false,
     },
 };

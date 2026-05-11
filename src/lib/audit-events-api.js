@@ -946,18 +946,32 @@ function createPayloadValidators() {
  * @param {object} [options] - Registration options.
  * @param {string} [options.apiToken] - Bearer token expected in `Authorization` header.
  * @param {string[]} [options.corsOrigins] - Allowed CORS origins.
+ * @param {object} [options.rateLimitOpts] - Rate limit configuration options.
  *
  * @returns {Promise<void>} Resolves when registration is complete.
  */
-async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {}) {
+async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLimitOpts } = {}) {
     // CORS (browser calls)
     await fastify.register(FastifyCors, buildCorsOptions(corsOrigins));
 
     // Rate limit (simple abuse protection)
-    await fastify.register(FastifyRateLimit, {
-        max: 300,
-        timeWindow: '1 minute',
-    });
+    if (rateLimitOpts?.enable !== false) {
+        await fastify.register(FastifyRateLimit, {
+            max: rateLimitOpts?.maxPerMinute ?? 300,
+            timeWindow: '1 minute',
+            /**
+             * Called when a client exceeds the rate limit. Logs a WARN with request details.
+             *
+             * @param {import('fastify').FastifyRequest} req - The Fastify request object.
+             * @param {string} key - The rate limit key (defaults to client IP address).
+             */
+            onExceeded: (req, key) => {
+                globals.logger.warn(
+                    `AUDIT API: HTTP rate limit exceeded ip=${req.ip} url=${req.url} key=${key}`
+                );
+            },
+        });
+    }
 
     /**
      * Fastify `preHandler` hook that enforces simple bearer-token authentication.
@@ -1310,15 +1324,16 @@ export async function setupAuditEventsApiServer() {
 
         const apiToken = globals.config.get('Butler-SOS.auditEvents.apiToken');
         const corsOrigins = globals.config.get('Butler-SOS.auditEvents.cors.allowedOrigins');
+        const rateLimitOpts = globals.config.get('Butler-SOS.auditEvents.rateLimit');
 
         debugLog(
             globals.logger,
             `AUDIT API: setup route config apiTokenConfigured=${Boolean(apiToken)} corsOrigins=${
                 Array.isArray(corsOrigins) ? corsOrigins.length : 'n/a'
-            } fastifyLogLevel=${auditServer.log.level}`
+            } rateLimit=${JSON.stringify(rateLimitOpts)} fastifyLogLevel=${auditServer.log.level}`
         );
 
-        await registerAuditEventRoutes(auditServer, { apiToken, corsOrigins });
+        await registerAuditEventRoutes(auditServer, { apiToken, corsOrigins, rateLimitOpts });
 
         // Log schema validation failures (400) with offending field details
         auditServer.setErrorHandler((error, request, reply) => {

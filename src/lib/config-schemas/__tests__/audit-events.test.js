@@ -99,6 +99,10 @@ describe('auditEvents schema', () => {
                 cors: {
                     allowedOrigins: ['https://qliksense.company.com'],
                 },
+                rateLimit: {
+                    enable: true,
+                    maxPerMinute: 300,
+                },
             },
         };
 
@@ -210,6 +214,10 @@ describe('auditEvents schema', () => {
                 },
                 cors: {
                     allowedOrigins: ['https://qliksense.company.com'],
+                },
+                rateLimit: {
+                    enable: true,
+                    maxPerMinute: 300,
                 },
             },
         };
@@ -742,6 +750,10 @@ describe('auditEvents schema', () => {
                 },
                 cors: {
                     allowedOrigins: ['https://qliksense.company.com'],
+                },
+                rateLimit: {
+                    enable: true,
+                    maxPerMinute: 300,
                 },
             },
         };
