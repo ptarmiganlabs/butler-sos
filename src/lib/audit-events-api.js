@@ -72,6 +72,27 @@ function safeStringEqual(a, b) {
  */
 
 /**
+ * Builds a consistent audit API response.
+ *
+ * @param {import('fastify').FastifyReply} reply - Fastify reply object.
+ * @param {number} statusCode - HTTP status code.
+ * @param {string} outcome - One of 'processed', 'dropped', 'error'.
+ * @param {string} [reason] - Human-readable explanation.
+ * @param {object} [details] - Optional additional data.
+ * @returns {import('fastify').FastifyReply} The reply with the response sent.
+ */
+function buildAuditResponse(reply, statusCode, outcome, reason, details) {
+    const body = {
+        status: statusCode >= 400 ? 'error' : 'accepted',
+        receivedAt: new Date().toISOString(),
+        outcome,
+    };
+    if (reason) body.reason = reason;
+    if (details) body.details = details;
+    return reply.code(statusCode).send(body);
+}
+
+/**
  * @typedef {object} AuditRequestContext
  * @property {string} ip - Client IP address.
  */
@@ -154,8 +175,9 @@ function getAuditEventSchema() {
                 properties: {
                     status: { type: 'string' },
                     receivedAt: { type: 'string', format: 'date-time' },
+                    outcome: { type: 'string' },
                 },
-                required: ['status', 'receivedAt'],
+                required: ['status', 'receivedAt', 'outcome'],
             },
         },
     };
@@ -924,18 +946,32 @@ function createPayloadValidators() {
  * @param {object} [options] - Registration options.
  * @param {string} [options.apiToken] - Bearer token expected in `Authorization` header.
  * @param {string[]} [options.corsOrigins] - Allowed CORS origins.
+ * @param {object} [options.rateLimitOpts] - Rate limit configuration options.
  *
  * @returns {Promise<void>} Resolves when registration is complete.
  */
-async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {}) {
+async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLimitOpts } = {}) {
     // CORS (browser calls)
     await fastify.register(FastifyCors, buildCorsOptions(corsOrigins));
 
     // Rate limit (simple abuse protection)
-    await fastify.register(FastifyRateLimit, {
-        max: 300,
-        timeWindow: '1 minute',
-    });
+    if (rateLimitOpts?.enable !== false) {
+        await fastify.register(FastifyRateLimit, {
+            max: rateLimitOpts?.maxPerMinute ?? 300,
+            timeWindow: '1 minute',
+            /**
+             * Called when a client exceeds the rate limit. Logs a WARN with request details.
+             *
+             * @param {import('fastify').FastifyRequest} req - The Fastify request object.
+             * @param {string} key - The rate limit key (defaults to client IP address).
+             */
+            onExceeded: (req, key) => {
+                globals.logger.warn(
+                    `AUDIT API: HTTP rate limit exceeded ip=${req.ip} url=${req.url} key=${key}`
+                );
+            },
+        });
+    }
 
     /**
      * Fastify `preHandler` hook that enforces simple bearer-token authentication.
@@ -959,7 +995,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
             globals.logger.warn(
                 `AUDIT API: Unauthorized request ip=${request.ip} method=${request.method} url=${request.url}`
             );
-            return reply.code(401).send({ error: 'Unauthorized' });
+            return buildAuditResponse(reply, 401, 'dropped', 'Unauthorized');
         }
     }
 
@@ -975,7 +1011,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
      * If a schema is not registered for the given type, validation is skipped.
      *
      * @param {AuditEventEnvelope} envelope - The received audit event envelope
-     * @returns {boolean} True if payload is valid (or validation skipped), false otherwise
+     * @returns {{ valid: boolean, errors?: object[] }} Result with validity and errors if any.
      */
     function validatePayload(envelope) {
         const validator = Object.hasOwn(validatePayloadByType, envelope?.type)
@@ -986,7 +1022,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
                 globals.logger,
                 `AUDIT API: Payload validation skipped type=${envelope?.type} eventId=${envelope?.eventId} reason=no-validator`
             );
-            return true;
+            return { valid: true };
         }
 
         const ok = validator(envelope?.payload);
@@ -996,13 +1032,18 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
                     validator.errors
                 )}`
             );
-        } else {
-            debugLog(
-                globals.logger,
-                `AUDIT API: Payload validation passed type=${envelope?.type} eventId=${envelope?.eventId}`
-            );
+            if (globals.logger.isLevelEnabled('debug')) {
+                globals.logger.debug(
+                    `AUDIT API: Full invalid payload: ${JSON.stringify(envelope?.payload)}`
+                );
+            }
+            return { valid: false, errors: validator.errors };
         }
-        return ok;
+        debugLog(
+            globals.logger,
+            `AUDIT API: Payload validation passed type=${envelope?.type} eventId=${envelope?.eventId}`
+        );
+        return { valid: true };
     }
 
     /**
@@ -1103,21 +1144,27 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
             globals.logger.warn(
                 `AUDIT API: Dropped audit event - constraint violations: ${constraintReasons.join('; ')} [eventId=${envelope?.eventId ?? 'n/a'} type=${envelope?.type ?? 'n/a'}]`
             );
-            return reply
-                .code(202)
-                .send({ status: 'accepted', receivedAt: new Date().toISOString() });
+            if (globals.logger.isLevelEnabled('debug')) {
+                globals.logger.debug(
+                    `AUDIT API: Full invalid envelope: ${JSON.stringify(envelope)}`
+                );
+            }
+            return buildAuditResponse(reply, 422, 'dropped', 'One or more constraint violations', {
+                errors: constraintReasons.map((r) => ({ message: r })),
+            });
         }
 
         // Validate payload structure using per-type AJV schema (envelope is validated by Fastify schema).
-        // If payload validation fails, accept-and-drop.
-        if (!validatePayload(envelope)) {
+        // If payload validation fails, return HTTP 422 with validation errors and do not enqueue the event.
+        const payloadResult = validatePayload(envelope);
+        if (!payloadResult.valid) {
             debugLog(
                 globals.logger,
-                `AUDIT API: Accepted and dropped audit event after payload validation failure type=${envelope?.type} eventId=${envelope?.eventId}`
+                `AUDIT API: Rejected audit event due to payload validation failure type=${envelope?.type} eventId=${envelope?.eventId}`
             );
-            return reply
-                .code(202)
-                .send({ status: 'accepted', receivedAt: new Date().toISOString() });
+            return buildAuditResponse(reply, 422, 'dropped', 'Payload validation failed', {
+                errors: payloadResult.errors,
+            });
         }
 
         // If queue manager is available, enqueue processing and return quickly.
@@ -1135,9 +1182,9 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
                     globals.logger.warn(
                         `AUDIT API: Dropped audit event due to queue rate limit type=${envelope.type} eventId=${envelope.eventId} ip=${request.ip}`
                     );
-                    return reply
-                        .code(202)
-                        .send({ status: 'accepted', receivedAt: new Date().toISOString() });
+                    return buildAuditResponse(reply, 429, 'dropped', 'Rate limit exceeded', {
+                        retryAfter: 60,
+                    });
                 }
 
                 const queued = await queueManager.addToQueue(async () => {
@@ -1153,16 +1200,21 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
                     globals.logger.warn(
                         `AUDIT API: Dropped audit event due to full queue type=${envelope.type} eventId=${envelope.eventId} ip=${request.ip}`
                     );
+                    return buildAuditResponse(reply, 503, 'dropped', 'Event queue is full');
                 }
             } catch (err) {
                 globals.logger.error(
                     `AUDIT API: Error while enqueueing audit event: ${globals.getErrorMessage(err)}`
                 );
+                return buildAuditResponse(
+                    reply,
+                    500,
+                    'error',
+                    'Internal error while processing event'
+                );
             }
 
-            return reply
-                .code(202)
-                .send({ status: 'accepted', receivedAt: new Date().toISOString() });
+            return buildAuditResponse(reply, 202, 'processed');
         }
 
         try {
@@ -1175,9 +1227,10 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
             globals.logger.error(
                 `AUDIT API: Error while handling audit event: ${globals.getErrorMessage(err)}`
             );
+            return buildAuditResponse(reply, 500, 'error', 'Internal error while processing event');
         }
 
-        reply.code(202).send({ status: 'accepted', receivedAt: new Date().toISOString() });
+        return buildAuditResponse(reply, 202, 'processed');
     }
 
     /**
@@ -1195,6 +1248,9 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins } = {})
         debugLog(
             globals.logger,
             `AUDIT API: test-connection request ip=${request.ip} origin=${request.headers.origin || 'n/a'}`
+        );
+        globals.logger.info(
+            `AUDIT API: Connection test successful ip=${request.ip} origin=${request.headers.origin || 'n/a'}`
         );
         reply.code(200).send({
             status: 'ok',
@@ -1274,15 +1330,47 @@ export async function setupAuditEventsApiServer() {
 
         const apiToken = globals.config.get('Butler-SOS.auditEvents.apiToken');
         const corsOrigins = globals.config.get('Butler-SOS.auditEvents.cors.allowedOrigins');
+        const rateLimitOpts = globals.config.get('Butler-SOS.auditEvents.rateLimit');
 
         debugLog(
             globals.logger,
             `AUDIT API: setup route config apiTokenConfigured=${Boolean(apiToken)} corsOrigins=${
                 Array.isArray(corsOrigins) ? corsOrigins.length : 'n/a'
-            } fastifyLogLevel=${auditServer.log.level}`
+            } rateLimit=${JSON.stringify(rateLimitOpts)} fastifyLogLevel=${auditServer.log.level}`
         );
 
-        await registerAuditEventRoutes(auditServer, { apiToken, corsOrigins });
+        await registerAuditEventRoutes(auditServer, { apiToken, corsOrigins, rateLimitOpts });
+
+        // Log schema validation failures (400) with offending field details
+        auditServer.setErrorHandler((error, request, reply) => {
+            if (error.statusCode === 400 && error.validation) {
+                const validationErrors = error.validation.map((v) => ({
+                    instancePath: v.instancePath,
+                    message: v.message,
+                    params: v.params,
+                }));
+                globals.logger.warn(
+                    `AUDIT API: Fastify schema validation failed for ip=${request.ip} errors=${JSON.stringify(validationErrors)}`
+                );
+                if (globals.logger.isLevelEnabled('debug')) {
+                    globals.logger.debug(
+                        `AUDIT API: Full invalid envelope: ${JSON.stringify(request.body)}`
+                    );
+                }
+                return buildAuditResponse(reply, 400, 'dropped', 'Schema validation failed', {
+                    errors: validationErrors,
+                });
+            }
+            globals.logger.error(
+                `AUDIT API: Unexpected error for ip=${request.ip} method=${request.method} url=${request.url} statusCode=${error.statusCode} message=${globals.getErrorMessage(error)}`
+            );
+            return buildAuditResponse(
+                reply,
+                error.statusCode || 500,
+                'error',
+                'An unexpected error occurred'
+            );
+        });
 
         // Add security headers to every response from the audit events API server.
         // HSTS is only meaningful (and correct) when TLS is active.
