@@ -115,11 +115,13 @@ describe('Parquet Audit Destination', () => {
         expect(mockHyparquet.parquetWriteBuffer).toHaveBeenCalled();
 
         const callArgs = mockHyparquet.parquetWriteBuffer.mock.calls[0][0];
-        expect(callArgs.columnData).toHaveLength(23);
-        expect(callArgs.columnData.find((c) => c.name === 'userId').data).toEqual([
-            'user1',
-            'user1',
+        expect(callArgs.columnData).toHaveLength(25);
+        expect(callArgs.columnData.find((c) => c.name === 'user').data).toEqual(['user1', 'user1']);
+        expect(callArgs.columnData.find((c) => c.name === 'userDirectory').data).toEqual([
+            null,
+            null,
         ]);
+        expect(callArgs.columnData.find((c) => c.name === 'userId').data).toEqual([null, null]);
     });
 
     test('Flushes when writeFrequency is reached', async () => {
@@ -216,6 +218,12 @@ describe('Parquet Audit Destination', () => {
         });
         mockHyparquet.parquetWriteBuffer.mockImplementationOnce(() => firstFlush);
 
+        /**
+         * Creates a minimal audit event fixture.
+         *
+         * @param {string} eventId Event id to include in the fixture.
+         * @returns {object} Audit event fixture.
+         */
         const makeEvent = (eventId) => ({
             eventId,
             timestamp: '2023-10-27T10:00:00Z',

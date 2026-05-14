@@ -120,6 +120,8 @@ describe('audit-destinations/influxdb/shared/mapping', () => {
         });
 
         expect(model.tags.correlationId).toBeUndefined();
+        expect(model.tags.user).toBeUndefined();
+        expect(model.tags.userDirectory).toBeUndefined();
         expect(model.tags.userId).toBeUndefined();
         expect(model.tags.appName).toBeUndefined();
         expect(model.tags.selectionTxnId).toBeUndefined();
@@ -175,7 +177,9 @@ describe('audit-destinations/influxdb/shared/mapping', () => {
             eventId: 'evt-1',
             correlationId: 'corr-1',
             selectionTxnId: 'txn-1',
-            userId: 'LAB\\test-user',
+            user: 'LAB\\test-user',
+            userDirectory: 'LAB',
+            userId: 'test-user',
             appId: 'app-1',
             appName: 'Test App',
             auditEventSchemaVersion: '1',

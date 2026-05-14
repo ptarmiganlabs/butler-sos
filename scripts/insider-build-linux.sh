@@ -21,8 +21,10 @@ npx postject "${DIST_FILE_NAME}" NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NOD
 # Include following directories & files in the created archive file.
 # - ./src/config/log_appender_xml
 # - ./src/config/production_template.yaml
+# - ./THIRD-PARTY-NOTICES.md
 ls -la
 zip -9 -r ./${DIST_FILE_NAME}--linux-x64--$SHA.zip ${DIST_FILE_NAME}
+zip -9 -u ./${DIST_FILE_NAME}--linux-x64--$SHA.zip THIRD-PARTY-NOTICES.md
 
 cd src
 zip -9 -u -r "../${DIST_FILE_NAME}--linux-x64--$SHA.zip" "./config/production_template.yaml" "./config/log_appender_xml"

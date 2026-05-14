@@ -1,4 +1,5 @@
 import globals from '../../../../globals.js';
+import { parseQlikUserIdentity } from '../../../util/user-identity.js';
 
 /**
  * Convert unknown input into a non-empty string.
@@ -52,6 +53,7 @@ export function buildAuditInfluxPointModel(envelope, extras = {}) {
     const payload = asObject(env.payload) || {};
     const context = asObject(payload.context) || {};
     const event = asObject(payload.event) || {};
+    const userIdentity = parseQlikUserIdentity(context.user);
 
     const measurementName = globals.config.get(
         'Butler-SOS.auditEvents.destination.influxdb.metadata.measurementName'
@@ -76,8 +78,9 @@ export function buildAuditInfluxPointModel(envelope, extras = {}) {
     const selectionTxnId = readString(event.selectionTxnId);
     if (selectionTxnId) tags.selectionTxnId = selectionTxnId;
 
-    const userId = readString(context.user);
-    if (userId) tags.userId = userId;
+    if (userIdentity.user) tags.user = userIdentity.user;
+    if (userIdentity.userDirectory) tags.userDirectory = userIdentity.userDirectory;
+    if (userIdentity.userId) tags.userId = userIdentity.userId;
 
     const appId = readString(context.appId);
     if (appId) tags.appId = appId;

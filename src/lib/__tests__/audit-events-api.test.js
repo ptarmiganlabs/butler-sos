@@ -810,6 +810,7 @@ describe('audit-events-api envelope constraint validation', () => {
 
     /**
      * Builds a valid audit event envelope with optional field overrides.
+     *
      * @param {object} [overrides] - Fields to override in the default envelope.
      * @returns {object} A valid audit event envelope.
      */
@@ -879,6 +880,7 @@ describe('audit-events-api envelope constraint validation', () => {
 
     /**
      * Posts an audit event envelope to the audit API.
+     *
      * @param {object} fastify - Fastify instance with registered audit routes.
      * @param {object} payload - Audit event envelope to post.
      * @returns {Promise<object>} Fastify inject response.
@@ -1100,6 +1102,7 @@ describe('audit-events-api field-length and source constraints', () => {
 
     /**
      * Creates a base audit event envelope with default values for testing.
+     *
      * @param {object} [payloadOverrides] - Fields to override in the payload.
      * @returns {object} Base audit event envelope.
      */
@@ -1115,7 +1118,7 @@ describe('audit-events-api field-length and source constraints', () => {
                     appName: 'My App',
                     sheetId: 'sheet-1',
                     sheetName: 'Sheet 1',
-                    userId: 'UserDirectory=LAB; UserId=user1',
+                    user: 'UserDirectory=LAB; UserId=user1',
                     userAgent: 'Mozilla/5.0',
                 },
                 event: {
@@ -1129,6 +1132,7 @@ describe('audit-events-api field-length and source constraints', () => {
 
     /**
      * Posts an audit event to the audit API with default headers.
+     *
      * @param {object} fastify - Fastify instance with registered audit routes.
      * @param {object} payload - Audit event payload to post.
      * @returns {Promise<object>} Fastify inject response.
@@ -1270,7 +1274,7 @@ describe('audit-events-api field-length and source constraints', () => {
                     appName: 'A'.repeat(65),
                     sheetId: 's',
                     sheetName: 's',
-                    userId: 'u',
+                    user: 'u',
                     userAgent: 'ua',
                 },
             })
@@ -1303,7 +1307,7 @@ describe('audit-events-api field-length and source constraints', () => {
                     appName: 'A'.repeat(65),
                     sheetId: 's',
                     sheetName: 's',
-                    userId: 'u',
+                    user: 'u',
                     userAgent: 'ua',
                 },
             })
@@ -1331,7 +1335,7 @@ describe('audit-events-api field-length and source constraints', () => {
                     appName: 'App',
                     sheetId: 's',
                     sheetName: 's',
-                    userId: 'u',
+                    user: 'u',
                     userAgent: 'x'.repeat(513),
                 },
             })
@@ -1347,7 +1351,7 @@ describe('audit-events-api field-length and source constraints', () => {
         );
     });
 
-    test('drops event when userId exceeds 128 chars (AJV → 422 warn)', async () => {
+    test('drops event when user exceeds 256 chars (AJV → 422 warn)', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
@@ -1359,7 +1363,7 @@ describe('audit-events-api field-length and source constraints', () => {
                     appName: 'App',
                     sheetId: 's',
                     sheetName: 's',
-                    userId: 'u'.repeat(129),
+                    user: 'u'.repeat(257),
                     userAgent: 'ua',
                 },
             })
@@ -1496,6 +1500,7 @@ describe('audit-events-api SSRF protection', () => {
 
     /**
      * Creates a mock config object for screenshot destination testing.
+     *
      * @param {string[]|undefined} allowedImageDownloadHosts - Allowed hosts for screenshot downloads.
      * @returns {object} Mock config object with get/has methods.
      */
@@ -1526,6 +1531,7 @@ describe('audit-events-api SSRF protection', () => {
 
     /**
      * Posts a screenshot audit event to the audit API with a screenshot envelope.
+     *
      * @param {object} fastify - Fastify instance with registered audit routes.
      * @param {object} [envelopeOverride] - Fields to override in the screenshot envelope.
      * @returns {Promise<object>} Fastify inject response.

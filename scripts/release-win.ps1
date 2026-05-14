@@ -74,11 +74,13 @@ Compress-Archive @compress
 # Add following directories & files to the created zip file, in the ./config directory.
 # - ./src/config/production_template.yaml
 # - ./src/config/log_appender_xml
+# Also add THIRD-PARTY-NOTICES.md at the archive root.
 mkdir config 2>$null
 Copy-Item -Path ./src/config/log_appender_xml -Destination ./config/ -Recurse
 Copy-Item -Path ./src/config/production_template.yaml -Destination ./config/
 
 Compress-Archive -Path "./config" -Update -DestinationPath "./${env:DIST_FILE_NAME}-${env:RELEASE_VERSION}-win.zip"
+Compress-Archive -Path "./THIRD-PARTY-NOTICES.md" -Update -DestinationPath "./${env:DIST_FILE_NAME}-${env:RELEASE_VERSION}-win.zip"
 
 
 # -------------------

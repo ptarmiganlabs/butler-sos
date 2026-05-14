@@ -8,6 +8,7 @@
 
 import globals from '../../../globals.js';
 import { readString, readBoolean, asObject } from './helpers.js';
+import { parseQlikUserIdentity } from '../../util/user-identity.js';
 
 /**
  * Convert unknown input into an integer BigInt value.
@@ -48,13 +49,16 @@ export function extractAuditEventFields(envelope, extras = {}, staticTagsKey) {
     const payload = asObject(env.payload) || {};
     const context = asObject(payload.context) || {};
     const event = asObject(payload.event) || {};
+    const userIdentity = parseQlikUserIdentity(context.user);
 
     // Map to schema
     const row = {
         eventId: readString(env.eventId) ?? null,
         correlationId: readString(env.correlationId) ?? null,
         eventType: readString(env.type) || 'unknown',
-        userId: readString(context.user) ?? null,
+        user: userIdentity.user,
+        userDirectory: userIdentity.userDirectory,
+        userId: userIdentity.userId,
         appId: readString(context.appId) ?? null,
         appName: readString(context.appName) ?? null,
         sheetId: readString(context.sheetId) ?? null,

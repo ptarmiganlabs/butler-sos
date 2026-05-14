@@ -5,6 +5,62 @@ import addKeywords from 'ajv-keywords';
 
 import { auditEventsSchema } from '../audit-events.js';
 
+function createAuditEventsValidator() {
+    const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
+    addKeywords(ajv);
+
+    return ajv.compile({
+        type: 'object',
+        properties: { auditEvents: auditEventsSchema.auditEvents },
+        required: ['auditEvents'],
+        additionalProperties: false,
+    });
+}
+
+function createConfigWithScreenshotAuth(auth) {
+    return {
+        auditEvents: {
+            enable: true,
+            host: '0.0.0.0',
+            port: 8181,
+            apiToken: 'test-token',
+            destination: {
+                enable: false,
+                type: 'influxdb',
+                screenshots: {
+                    enable: true,
+                    downloadTimeoutMs: 15000,
+                    auth,
+                    storageTargets: null,
+                },
+            },
+            tls: { enable: false },
+            queue: {
+                messageQueue: {
+                    maxConcurrent: 10,
+                    maxSize: 200,
+                    backpressureThreshold: 80,
+                },
+                rateLimit: {
+                    enable: false,
+                    maxMessagesPerMinute: 600,
+                },
+                queueMetrics: {
+                    influxdb: {
+                        enable: false,
+                        writeFrequency: 20000,
+                        measurementName: 'audit_events_queue',
+                        tags: [],
+                    },
+                },
+            },
+            cors: { allowedOrigins: ['https://qliksense.company.com'] },
+            rateLimit: { enable: true, maxPerMinute: 300 },
+        },
+    };
+}
+
 describe('auditEvents schema', () => {
     test('should accept valid auditEvents configuration', () => {
         const ajv = new Ajv({ allErrors: true });
@@ -109,7 +165,7 @@ describe('auditEvents schema', () => {
         const ok = validate(validConfig);
         if (!ok) {
             // Helpful during failures
-            // eslint-disable-next-line no-console
+
             console.error(validate.errors);
         }
         expect(ok).toBe(true);
@@ -224,10 +280,154 @@ describe('auditEvents schema', () => {
 
         const ok = validate(validConfig);
         if (!ok) {
-            // eslint-disable-next-line no-console
             console.error(validate.errors);
         }
         expect(ok).toBe(true);
+    });
+
+    test('should accept userTicket screenshot auth configuration', () => {
+        const ajv = new Ajv({ allErrors: true });
+        addFormats(ajv);
+        addKeywords(ajv);
+
+        const schema = {
+            type: 'object',
+            properties: { auditEvents: auditEventsSchema.auditEvents },
+            required: ['auditEvents'],
+            additionalProperties: false,
+        };
+
+        const validate = ajv.compile(schema);
+
+        const validConfig = {
+            auditEvents: {
+                enable: true,
+                host: '0.0.0.0',
+                port: 8181,
+                apiToken: 'test-token',
+                destination: {
+                    enable: true,
+                    type: 'influxdb',
+                    influxdb: {
+                        metadata: {
+                            host: 'localhost',
+                            port: 8086,
+                            version: 2,
+                            maxBatchSize: 1000,
+                            writeFrequency: 20000,
+                            measurementName: 'audit_event',
+                            auditEventSchemaVersion: '1',
+                            staticTags: [],
+                            v2Config: {
+                                org: 'test-org',
+                                bucket: 'test-bucket',
+                                description: 'Audit events bucket',
+                                token: 'test-token',
+                                retentionDuration: '0s',
+                            },
+                        },
+                    },
+                    screenshots: {
+                        enable: true,
+                        downloadTimeoutMs: 15000,
+                        auth: {
+                            mode: 'userTicket',
+                            qps: {
+                                host: 'qlik.example.com',
+                                port: 4243,
+                                defaultVirtualProxy: 'analytics',
+                                userDirectoryMappings: [
+                                    {
+                                        userDirectory: 'LAB',
+                                        virtualProxy: 'analytics',
+                                    },
+                                ],
+                                ticketTimeoutMs: 5000,
+                            },
+                        },
+                        storageTargets: null,
+                    },
+                },
+                tls: { enable: false },
+                queue: {
+                    messageQueue: {
+                        maxConcurrent: 10,
+                        maxSize: 200,
+                        backpressureThreshold: 80,
+                    },
+                    rateLimit: {
+                        enable: false,
+                        maxMessagesPerMinute: 600,
+                    },
+                    queueMetrics: {
+                        influxdb: {
+                            enable: false,
+                            writeFrequency: 20000,
+                            measurementName: 'audit_events_queue',
+                            tags: [],
+                        },
+                    },
+                },
+                cors: { allowedOrigins: ['https://qliksense.company.com'] },
+                rateLimit: { enable: true, maxPerMinute: 300 },
+            },
+        };
+
+        const ok = validate(validConfig);
+        if (!ok) {
+            console.error(validate.errors);
+        }
+        expect(ok).toBe(true);
+    });
+
+    test('should accept screenshot auth session cache configuration', () => {
+        const validate = createAuditEventsValidator();
+
+        const validConfig = createConfigWithScreenshotAuth({
+            mode: 'qpsTicket',
+            qps: {
+                host: 'qlik.example.com',
+                port: 4243,
+                userDirectory: 'LAB',
+                userId: 'butler-sos',
+                ticketTimeoutMs: 5000,
+            },
+            sessionCache: {
+                enable: true,
+                ttlSeconds: 120,
+                maxEntries: 100,
+            },
+        });
+
+        const ok = validate(validConfig);
+        if (!ok) {
+            console.error(validate.errors);
+        }
+        expect(ok).toBe(true);
+    });
+
+    test.each([
+        ['ttlSeconds below one', { enable: true, ttlSeconds: 0, maxEntries: 100 }],
+        ['maxEntries below one', { enable: true, ttlSeconds: 120, maxEntries: 0 }],
+        ['maxEntries not integer', { enable: true, ttlSeconds: 120, maxEntries: 1.5 }],
+        [
+            'unknown setting',
+            { enable: true, ttlSeconds: 120, maxEntries: 100, staleSessions: true },
+        ],
+    ])('should reject invalid session cache configuration: %s', (_name, sessionCache) => {
+        const validate = createAuditEventsValidator();
+
+        const invalidConfig = createConfigWithScreenshotAuth({
+            mode: 'userTicket',
+            qps: {
+                host: 'qlik.example.com',
+                port: 4243,
+                ticketTimeoutMs: 5000,
+            },
+            sessionCache,
+        });
+
+        expect(validate(invalidConfig)).toBe(false);
     });
 
     test('should reject audit v3 queryTimeout (not supported)', () => {
@@ -760,7 +960,6 @@ describe('auditEvents schema', () => {
 
         const ok = validate(validConfig);
         if (!ok) {
-            // eslint-disable-next-line no-console
             console.error(validate.errors);
         }
         expect(ok).toBe(true);

@@ -93,7 +93,9 @@ The QVD files use the following schema. All fields are optional (nullable).
 | `eventId` | `String` | Unique identifier for the event. |
 | `correlationId` | `String` | ID linking related events. |
 | `eventType` | `String` | Type of audit event (e.g., `screenshot.url.received`, `object.view.duration`). |
-| `userId` | `String` | Qlik Sense user ID. |
+| `user` | `String` | Full Qlik Sense user identity from `payload.context.user`. |
+| `userDirectory` | `String` | Parsed Qlik Sense user directory when available. |
+| `userId` | `String` | Parsed Qlik Sense user ID when available. |
 | `appId` | `String` | Qlik Sense App GUID. |
 | `appName` | `String` | Qlik Sense App Name. |
 | `sheetId` | `String` | Qlik Sense Sheet GUID. |

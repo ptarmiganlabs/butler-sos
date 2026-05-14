@@ -337,7 +337,7 @@ export const auditEventsSchema = {
                                             eventId: { type: 'boolean', default: false },
                                             correlationId: { type: 'boolean', default: false },
                                             selectionTxnId: { type: 'boolean', default: false },
-                                            userId: { type: 'boolean', default: false },
+                                            user: { type: 'boolean', default: false },
                                             appId: { type: 'boolean', default: false },
                                             appName: { type: 'boolean', default: false },
                                             sheetName: { type: 'boolean', default: false },
@@ -353,7 +353,7 @@ export const auditEventsSchema = {
                                 properties: {
                                     mode: {
                                         type: 'string',
-                                        enum: ['none', 'qpsTicket'],
+                                        enum: ['none', 'qpsTicket', 'userTicket'],
                                         default: 'none',
                                     },
                                     qps: {
@@ -363,15 +363,45 @@ export const auditEventsSchema = {
                                             port: { type: 'number', default: 4243 },
                                             userDirectory: { type: 'string', minLength: 1 },
                                             userId: { type: 'string', minLength: 1 },
+                                            virtualProxy: { type: 'string' },
+                                            defaultVirtualProxy: { type: 'string' },
+                                            userDirectoryMappings: {
+                                                type: 'array',
+                                                items: {
+                                                    type: 'object',
+                                                    properties: {
+                                                        userDirectory: {
+                                                            type: 'string',
+                                                            minLength: 1,
+                                                        },
+                                                        virtualProxy: { type: 'string' },
+                                                    },
+                                                    required: ['userDirectory', 'virtualProxy'],
+                                                    additionalProperties: false,
+                                                },
+                                                default: [],
+                                            },
                                             ticketTimeoutMs: { type: 'number', default: 5000 },
                                         },
-                                        required: [
-                                            'host',
-                                            'port',
-                                            'userDirectory',
-                                            'userId',
-                                            'ticketTimeoutMs',
-                                        ],
+                                        required: ['host', 'port', 'ticketTimeoutMs'],
+                                        additionalProperties: false,
+                                    },
+                                    sessionCache: {
+                                        type: 'object',
+                                        properties: {
+                                            enable: { type: 'boolean', default: false },
+                                            ttlSeconds: {
+                                                type: 'number',
+                                                default: 120,
+                                                minimum: 1,
+                                            },
+                                            maxEntries: {
+                                                type: 'integer',
+                                                default: 100,
+                                                minimum: 1,
+                                            },
+                                        },
+                                        required: ['enable', 'ttlSeconds', 'maxEntries'],
                                         additionalProperties: false,
                                     },
                                 },
@@ -383,6 +413,32 @@ export const auditEventsSchema = {
                                             type: 'object',
                                             properties: {
                                                 mode: { const: 'qpsTicket' },
+                                            },
+                                            required: ['mode'],
+                                        },
+                                        then: {
+                                            type: 'object',
+                                            properties: {
+                                                qps: {
+                                                    type: 'object',
+                                                    properties: {
+                                                        userDirectory: {
+                                                            type: 'string',
+                                                            minLength: 1,
+                                                        },
+                                                        userId: { type: 'string', minLength: 1 },
+                                                    },
+                                                    required: ['userDirectory', 'userId'],
+                                                },
+                                            },
+                                            required: ['qps'],
+                                        },
+                                    },
+                                    {
+                                        if: {
+                                            type: 'object',
+                                            properties: {
+                                                mode: { const: 'userTicket' },
                                             },
                                             required: ['mode'],
                                         },
@@ -636,7 +692,17 @@ export const auditEventsSchema = {
                 additionalProperties: false,
             },
         },
-        required: ['enable', 'host', 'port', 'apiToken', 'destination', 'tls', 'queue', 'cors', 'rateLimit'],
+        required: [
+            'enable',
+            'host',
+            'port',
+            'apiToken',
+            'destination',
+            'tls',
+            'queue',
+            'cors',
+            'rateLimit',
+        ],
         additionalProperties: false,
     },
 };

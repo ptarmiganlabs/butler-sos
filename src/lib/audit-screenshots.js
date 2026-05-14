@@ -10,9 +10,16 @@ import setCookieParser from 'set-cookie-parser';
 import pngjs from 'pngjs';
 
 import globals from '../globals.js';
+import {
+    deleteCachedScreenshotSession,
+    getCachedScreenshotSession,
+    isScreenshotSessionCacheEnabled,
+    setCachedScreenshotSession,
+} from './audit-screenshot-session-cache.js';
 import { createCertificateOptions, getCertificates } from './cert-utils.js';
 import { addTextHeaderToPng } from './audit-screenshot-metadata-image.js';
 import { extractVirtualProxyFromSessionCookieName } from './util/qlik-session-utils.js';
+import { parseQlikUserIdentity } from './util/user-identity.js';
 
 const { PNG } = pngjs;
 
@@ -54,6 +61,7 @@ const { PNG } = pngjs;
  * @property {number} port QPS port.
  * @property {string} userDirectory Qlik user directory (e.g. "LAB").
  * @property {string} userId Qlik user id (e.g. "butler-sos").
+ * @property {string} [virtualProxy] Optional virtual proxy prefix/name for the QPS ticket endpoint.
  * @property {number} [ticketTimeoutMs] Request timeout for the QPS ticket call in milliseconds.
  */
 
@@ -62,10 +70,12 @@ const { PNG } = pngjs;
  *
  * - `none`: fetch the screenshot URL as-is.
  * - `qpsTicket`: obtain a QPS ticket using mutual TLS and add `qlikTicket=<ticket>` to the URL.
+ * - `userTicket`: obtain a QPS ticket for the user from the audit event context.
  *
  * @typedef {object} ScreenshotAuthConfig
- * @property {'none'|'qpsTicket'} [mode] Authentication mode (defaults to `none`).
- * @property {QpsTicketConfig} [qps] QPS ticket settings (required when mode is `qpsTicket`).
+ * @property {'none'|'qpsTicket'|'userTicket'} [mode] Authentication mode (defaults to `none`).
+ * @property {QpsTicketConfig} [qps] QPS ticket settings (required for ticket modes).
+ * @property {{ enable?: boolean, ttlSeconds?: number, maxEntries?: number }} [sessionCache] Optional session cookie cache settings.
  */
 
 /**
@@ -87,7 +97,7 @@ const { PNG } = pngjs;
  * @property {boolean} [eventId] Render envelope event id.
  * @property {boolean} [correlationId] Render envelope correlation id.
  * @property {boolean} [selectionTxnId] Render selection transaction id (payload.event.selectionTxnId).
- * @property {boolean} [userId] Render the full user identifier string (often `DOMAIN\\user`).
+ * @property {boolean} [user] Render the full user identity string (often `DOMAIN\\user`).
  * @property {boolean} [appId] Render app id.
  * @property {boolean} [appName] Render app name.
  * @property {boolean} [sheetName] Render sheet name.
@@ -139,12 +149,18 @@ async function requestQpsTicket(qps, logger) {
         typeof qps.ticketTimeoutMs === 'number' && qps.ticketTimeoutMs > 0
             ? qps.ticketTimeoutMs
             : 5000;
+    const virtualProxy = normalizeVirtualProxyName(qps.virtualProxy);
+    if (virtualProxy === null) {
+        throw new Error(`Invalid QPS virtual proxy value: ${qps.virtualProxy}`);
+    }
 
-    const url = `https://${qps.host}:${qps.port}/qps/ticket?Xrfkey=${xrfkey}`;
+    const qpsPath = virtualProxy ? `/qps/${virtualProxy}/ticket` : '/qps/ticket';
+
+    const url = `https://${qps.host}:${qps.port}${qpsPath}?Xrfkey=${xrfkey}`;
 
     debugLog(
         logger,
-        `AUDIT API: Requesting QPS ticket qpsHost=${qps.host} qpsPort=${qps.port} qpsPath=/qps/ticket userDirectory=${qps.userDirectory} userId=${qps.userId} timeoutMs=${timeoutMs}`
+        `AUDIT API: Requesting QPS ticket qpsHost=${qps.host} qpsPort=${qps.port} qpsPath=${qpsPath} userDirectory=${qps.userDirectory} userId=${qps.userId} timeoutMs=${timeoutMs}`
     );
 
     const requestSettings = {
@@ -221,9 +237,16 @@ async function deleteQpsSession(qps, cookieName, sessionId, logger) {
             timeout: 5000,
         });
 
-        logger.verbose(
-            `AUDIT API: Successfully deleted QPS session ${sessionId} for virtual proxy "${vp}"`
-        );
+        if (typeof logger.verbose === 'function') {
+            logger.verbose(
+                `AUDIT API: Successfully deleted QPS session ${sessionId} for virtual proxy "${vp}"`
+            );
+        } else {
+            debugLog(
+                logger,
+                `AUDIT API: Successfully deleted QPS session ${sessionId} for virtual proxy "${vp}"`
+            );
+        }
     } catch (err) {
         logger.warn(`AUDIT API: Failed to delete QPS session ${sessionId}: ${err.message}`);
     }
@@ -240,6 +263,115 @@ function withQlikTicket(rawUrl, ticket) {
     const u = new URL(rawUrl);
     u.searchParams.set('qlikTicket', ticket);
     return u.toString();
+}
+
+/**
+ * Normalizes a virtual proxy name/prefix for QPS endpoint construction.
+ *
+ * @param {unknown} value Candidate virtual proxy value.
+ * @returns {string | null} Empty string for default proxy, normalized name, or null for invalid input.
+ */
+function normalizeVirtualProxyName(value) {
+    if (value === undefined || value === null) return '';
+    if (typeof value !== 'string') return null;
+
+    const trimmed = value.trim();
+    if (trimmed.length === 0 || trimmed === '/') return '';
+
+    const normalized = trimmed.replace(/^\/+|\/+$/g, '');
+    if (normalized.length === 0) return '';
+
+    return /^[A-Za-z0-9._~-]+$/.test(normalized) ? normalized : null;
+}
+
+/**
+ * Extracts a virtual proxy prefix from a Qlik Sense URL path when present.
+ *
+ * @param {string} rawUrl Candidate screenshot URL.
+ * @returns {string} Virtual proxy name, or empty string for default/unknown.
+ */
+function extractVirtualProxyFromQlikUrl(rawUrl) {
+    try {
+        const parsedUrl = new URL(rawUrl);
+        const segments = parsedUrl.pathname
+            .split('/')
+            .map((segment) => segment.trim())
+            .filter((segment) => segment.length > 0);
+
+        if (segments.length === 0) return '';
+
+        const first = segments[0].toLowerCase();
+        if (first === 'qps') {
+            const qpsSecondSegment = normalizeVirtualProxyName(segments[1]);
+            if (!qpsSecondSegment || ['ticket', 'session'].includes(qpsSecondSegment)) return '';
+            return qpsSecondSegment;
+        }
+
+        const defaultProxySegments = new Set([
+            'api',
+            'hub',
+            'printing',
+            'resources',
+            'sense',
+            'tempcontent',
+        ]);
+
+        if (defaultProxySegments.has(first)) return '';
+
+        const virtualProxy = normalizeVirtualProxyName(segments[0]);
+        return virtualProxy || '';
+    } catch {
+        return '';
+    }
+}
+
+/**
+ * Looks up a configured virtual proxy mapping for a user directory.
+ *
+ * @param {string | null} userDirectory User directory from the parsed identity.
+ * @param {unknown} mappings Configured mappings.
+ * @returns {string | null} Virtual proxy from the matching mapping, or null.
+ */
+function lookupVirtualProxyForUserDirectory(userDirectory, mappings) {
+    if (!userDirectory || !Array.isArray(mappings)) return null;
+
+    const match = mappings.find(
+        (mapping) =>
+            mapping &&
+            typeof mapping.userDirectory === 'string' &&
+            mapping.userDirectory.toLowerCase() === userDirectory.toLowerCase()
+    );
+
+    return typeof match?.virtualProxy === 'string' ? match.virtualProxy : null;
+}
+
+/**
+ * Resolves which virtual proxy should be used for a user-ticket request.
+ *
+ * @param {object} params Resolution parameters.
+ * @param {AuditEventEnvelope | null | undefined} params.envelope Audit envelope.
+ * @param {string} params.screenshotUrl Original screenshot URL.
+ * @param {object} params.qps QPS auth config.
+ * @param {string | null} params.userDirectory Parsed user directory.
+ * @returns {string | null} Normalized virtual proxy name, empty string for default, or null when invalid.
+ */
+function resolveUserTicketVirtualProxy({ envelope, screenshotUrl, qps, userDirectory }) {
+    const context = envelope?.payload?.context;
+    const candidates = [
+        context?.virtualProxyPrefix,
+        context?.virtualProxy,
+        extractVirtualProxyFromQlikUrl(screenshotUrl),
+        lookupVirtualProxyForUserDirectory(userDirectory, qps?.userDirectoryMappings),
+        qps?.defaultVirtualProxy,
+    ];
+
+    for (const candidate of candidates) {
+        if (candidate === undefined || candidate === null) continue;
+        const normalized = normalizeVirtualProxyName(candidate);
+        if (normalized !== null) return normalized;
+    }
+
+    return null;
 }
 
 /**
@@ -355,6 +487,16 @@ function formatContextForLog(context) {
  */
 function isRetryableHttpStatus(status) {
     return [404, 408, 425, 429, 500, 502, 503, 504].includes(status);
+}
+
+/**
+ * Returns true when a cached session likely became invalid or unauthorized.
+ *
+ * @param {number} status HTTP status code.
+ * @returns {boolean} True when the cached session should be evicted.
+ */
+function isCachedSessionAuthFailure(status) {
+    return status === 401 || status === 403;
 }
 
 /**
@@ -595,8 +737,8 @@ function buildScreenshotMetadataLines(envelope, auditCtx, flags) {
             value: safeMetadataValue(envelope?.payload?.event?.selectionTxnId),
         });
 
-    if (fields.userId === true) {
-        lines.push({ key: 'USER ID', value: safeMetadataValue(auditCtx?.user) });
+    if (fields.user === true) {
+        lines.push({ key: 'USER', value: safeMetadataValue(auditCtx?.user) });
     }
 
     if (fields.appId === true)
@@ -1045,7 +1187,12 @@ export async function downloadScreenshot(url, envelope, config, logger) {
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         let downloadUrl = url;
         let httpsAgent;
-        let sessionCookieHeader = null;
+        let requestCookieHeader = null;
+        let responseSessionCookieHeader = null;
+        let responseSessionCached = false;
+        let ticketQpsForAttempt = null;
+        let cacheEnabledForAttempt = false;
+        let usedCachedSession = false;
 
         try {
             debugLog(
@@ -1055,42 +1202,112 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 )}"`
             );
 
-            if (authMode === 'qpsTicket') {
+            if (authMode === 'qpsTicket' || authMode === 'userTicket') {
                 const qps = config?.auth?.qps;
-                if (!qps?.host || !qps?.port || !qps?.userDirectory || !qps?.userId) {
+                if (!qps?.host || !qps?.port) {
                     logger.warn(
-                        `AUDIT API: Screenshot auth mode is qpsTicket, but QPS settings are missing. selectionTxnId=${selectionTxnId} ${auditCtxStr}`
+                        `AUDIT API: Screenshot auth mode is ${authMode}, but QPS host/port settings are missing. selectionTxnId=${selectionTxnId} ${auditCtxStr}`
                     );
-                    return;
+                    return null;
                 }
 
-                debugLog(
-                    logger,
-                    `AUDIT API: Screenshot download requesting QPS ticket attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} qpsHost=${qps.host} qpsPort=${qps.port}`
-                );
+                let ticketQps = qps;
+                if (authMode === 'qpsTicket') {
+                    if (!qps.userDirectory || !qps.userId) {
+                        logger.warn(
+                            `AUDIT API: Screenshot auth mode is qpsTicket, but fixed QPS user settings are missing. selectionTxnId=${selectionTxnId} ${auditCtxStr}`
+                        );
+                        return null;
+                    }
+                } else {
+                    const userIdentity = parseQlikUserIdentity(envelope?.payload?.context?.user);
+                    if (!userIdentity.canRequestQpsTicket) {
+                        logger.warn(
+                            `AUDIT API: Screenshot auth mode is userTicket, but payload context user could not be parsed into a Qlik user directory and user id. selectionTxnId=${selectionTxnId} user=${
+                                userIdentity.user || '(missing)'
+                            } ${auditCtxStr}`
+                        );
+                        return null;
+                    }
 
-                const ticket = await requestQpsTicket(qps, logger);
-                downloadUrl = withQlikTicket(url, ticket);
-                httpsAgent = createQlikMutualTlsAgent();
+                    const virtualProxy = resolveUserTicketVirtualProxy({
+                        envelope,
+                        screenshotUrl: url,
+                        qps,
+                        userDirectory: userIdentity.userDirectory,
+                    });
+                    if (virtualProxy === null) {
+                        logger.warn(
+                            `AUDIT API: Screenshot auth mode is userTicket, but the resolved virtual proxy value is invalid. selectionTxnId=${selectionTxnId} ${auditCtxStr}`
+                        );
+                        return null;
+                    }
 
-                debugLog(
-                    logger,
-                    `AUDIT API: Screenshot download received QPS ticket attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} ticketLength=${ticket.length} downloadUrlSummary="${summarizeUrlForDebug(
-                        downloadUrl
-                    )}"`
-                );
+                    ticketQps = {
+                        ...qps,
+                        userDirectory: userIdentity.userDirectory,
+                        userId: userIdentity.userId,
+                        virtualProxy,
+                    };
+                }
+
+                ticketQpsForAttempt = ticketQps;
+                cacheEnabledForAttempt = isScreenshotSessionCacheEnabled(config.auth);
+
+                if (cacheEnabledForAttempt) {
+                    const cachedSession = getCachedScreenshotSession(
+                        config.auth,
+                        ticketQps,
+                        logger
+                    );
+                    if (cachedSession) {
+                        usedCachedSession = true;
+                        requestCookieHeader = cachedSession.cookieHeader;
+                        httpsAgent = createQlikMutualTlsAgent();
+
+                        debugLog(
+                            logger,
+                            `AUDIT API: Screenshot download using cached Qlik session attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} authMode=${authMode} qpsHost=${ticketQps.host} qpsPort=${ticketQps.port} virtualProxy=${
+                                ticketQps.virtualProxy || '(default)'
+                            } cookieName=${cachedSession.cookieName} sessionIdLength=${cachedSession.cookieValue.length}`
+                        );
+                    }
+                }
+
+                if (!usedCachedSession) {
+                    debugLog(
+                        logger,
+                        `AUDIT API: Screenshot download requesting QPS ticket attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} authMode=${authMode} qpsHost=${ticketQps.host} qpsPort=${ticketQps.port} virtualProxy=${
+                            ticketQps.virtualProxy || '(default)'
+                        } cacheEnabled=${cacheEnabledForAttempt}`
+                    );
+
+                    const ticket = await requestQpsTicket(ticketQps, logger);
+                    downloadUrl = withQlikTicket(url, ticket);
+                    httpsAgent = createQlikMutualTlsAgent();
+
+                    debugLog(
+                        logger,
+                        `AUDIT API: Screenshot download received QPS ticket attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} ticketLength=${ticket.length} downloadUrlSummary="${summarizeUrlForDebug(
+                            downloadUrl
+                        )}"`
+                    );
+                }
             }
 
             debugLog(
                 logger,
                 `AUDIT API: Screenshot download HTTP GET attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} url=${redactQlikTicketInUrl(
                     downloadUrl
-                )} httpsAgent=${httpsAgent ? 'mutualTls' : 'default'} timeoutMs=${timeoutMs}`
+                )} httpsAgent=${httpsAgent ? 'mutualTls' : 'default'} cookieHeader=${
+                    requestCookieHeader ? 'present' : 'none'
+                } timeoutMs=${timeoutMs}`
             );
 
             const response = await axios.request({
                 url: downloadUrl,
                 method: 'get',
+                headers: requestCookieHeader ? { Cookie: requestCookieHeader } : undefined,
                 responseType: 'arraybuffer',
                 httpsAgent,
                 timeout: timeoutMs,
@@ -1136,10 +1353,25 @@ export async function downloadScreenshot(url, envelope, config, logger) {
             );
 
             if (sessionCookie) {
-                sessionCookieHeader = {
+                responseSessionCookieHeader = {
                     name: sessionCookie.name,
                     value: sessionCookie.value,
                 };
+            }
+
+            if (usedCachedSession && isCachedSessionAuthFailure(response.status)) {
+                deleteCachedScreenshotSession(config.auth, ticketQpsForAttempt, logger);
+
+                if (attempt < maxAttempts) {
+                    logger.info(
+                        `AUDIT API: Screenshot download cached Qlik session rejected; evicted cache entry and retrying attempt=${
+                            attempt + 1
+                        }/${maxAttempts} httpStatus=${response.status} selectionTxnId=${selectionTxnId} url=${redactQlikTicketInUrl(
+                            downloadUrl
+                        )} (original=${url}) ${auditCtxStr}`
+                    );
+                    continue;
+                }
             }
 
             // Non-2xx
@@ -1196,6 +1428,36 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     )} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} preview='${preview}' ${auditCtxStr}`
                 );
                 return;
+            }
+
+            if (cacheEnabledForAttempt && !usedCachedSession && responseSessionCookieHeader) {
+                setCachedScreenshotSession(
+                    config.auth,
+                    ticketQpsForAttempt,
+                    responseSessionCookieHeader,
+                    async (entry, reason) => {
+                        debugLog(
+                            logger,
+                            `AUDIT API: Screenshot session cache cleanup reason=${reason} cookieName=${entry.cookieName} virtualProxy=${
+                                extractVirtualProxyFromSessionCookieName(entry.cookieName) ||
+                                '(default)'
+                            } sessionIdLength=${entry.cookieValue.length}`
+                        );
+                        await deleteQpsSession(
+                            entry.qps,
+                            entry.cookieName,
+                            entry.cookieValue,
+                            logger
+                        );
+                    },
+                    logger
+                );
+                responseSessionCached = true;
+            } else if (cacheEnabledForAttempt && !usedCachedSession) {
+                debugLog(
+                    logger,
+                    `AUDIT API: Screenshot session cache skipped store selectionTxnId=${selectionTxnId} reason=no-session-cookie attempt=${attempt}/${maxAttempts}`
+                );
             }
 
             // Crop PNG to visible area if the extension provided crop dimensions.
@@ -1306,21 +1568,45 @@ export async function downloadScreenshot(url, envelope, config, logger) {
             );
             return null;
         } finally {
-            if (sessionCookieHeader && authMode === 'qpsTicket') {
+            if (
+                responseSessionCookieHeader &&
+                !responseSessionCached &&
+                !usedCachedSession &&
+                (authMode === 'qpsTicket' || authMode === 'userTicket')
+            ) {
                 debugLog(
                     logger,
-                    `AUDIT API: Screenshot download cleanup deleting QPS session selectionTxnId=${selectionTxnId} cookieName=${sessionCookieHeader.name} virtualProxy=${
-                        extractVirtualProxyFromSessionCookieName(sessionCookieHeader.name) ||
-                        '(default)'
-                    } sessionIdLength=${sessionCookieHeader.value.length}`
+                    `AUDIT API: Screenshot download cleanup deleting QPS session selectionTxnId=${selectionTxnId} cookieName=${responseSessionCookieHeader.name} virtualProxy=${
+                        extractVirtualProxyFromSessionCookieName(
+                            responseSessionCookieHeader.name
+                        ) || '(default)'
+                    } sessionIdLength=${responseSessionCookieHeader.value.length}`
                 );
                 await deleteQpsSession(
-                    config.auth.qps,
-                    sessionCookieHeader.name,
-                    sessionCookieHeader.value,
+                    ticketQpsForAttempt || config.auth.qps,
+                    responseSessionCookieHeader.name,
+                    responseSessionCookieHeader.value,
                     logger
                 );
-            } else if (authMode === 'qpsTicket') {
+            } else if (
+                responseSessionCookieHeader &&
+                responseSessionCached &&
+                (authMode === 'qpsTicket' || authMode === 'userTicket')
+            ) {
+                debugLog(
+                    logger,
+                    `AUDIT API: Screenshot download cleanup skipped QPS session delete selectionTxnId=${selectionTxnId} reason=session-cached attempt=${attempt}/${maxAttempts}`
+                );
+            } else if (
+                responseSessionCookieHeader &&
+                usedCachedSession &&
+                (authMode === 'qpsTicket' || authMode === 'userTicket')
+            ) {
+                debugLog(
+                    logger,
+                    `AUDIT API: Screenshot download cleanup skipped QPS session delete selectionTxnId=${selectionTxnId} reason=cache-hit attempt=${attempt}/${maxAttempts}`
+                );
+            } else if (authMode === 'qpsTicket' || authMode === 'userTicket') {
                 debugLog(
                     logger,
                     `AUDIT API: Screenshot download cleanup skipped QPS session delete selectionTxnId=${selectionTxnId} reason=no-session-cookie attempt=${attempt}/${maxAttempts}`
