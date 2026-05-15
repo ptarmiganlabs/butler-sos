@@ -9,6 +9,7 @@ import path from 'node:path';
 import tls from 'node:tls';
 
 import globals from '../globals.js';
+import { checkCompatibility } from './audit-qs-compatibility.js';
 import { downloadScreenshot } from './audit-screenshots.js';
 import { writeAuditEventToDestinations } from './audit-destinations/index.js';
 
@@ -158,6 +159,7 @@ function getAuditEventSchema() {
                     properties: {
                         kind: { type: 'string', enum: ['qlik-sense-extension'] },
                         name: { type: 'string', enum: ['audit-qs'] },
+                        version: { type: 'string', minLength: 1 },
                     },
                     additionalProperties: false,
                 },
@@ -212,14 +214,14 @@ function buildCorsOptions(corsOriginList) {
         return {
             origin: '*',
             credentials: false,
-            methods: ['POST', 'OPTIONS'],
+            methods: ['GET', 'POST', 'OPTIONS'],
         };
     }
 
     return {
         origin: origins,
         credentials: false,
-        methods: ['POST', 'OPTIONS'],
+        methods: ['GET', 'POST', 'OPTIONS'],
     };
 }
 
@@ -1155,6 +1157,31 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
             });
         }
 
+        // Verify Audit.qs version compatibility.
+        // If a version is provided and is incompatible, drop the event with a 422 response.
+        // If no version is provided, log a warning for observability but still accept the event
+        // (backward compatibility with older Audit.qs clients that do not send version info).
+        const auditQsVersion = request.headers['x-audit-qs-version'] || envelope?.source?.version;
+        const butlerSosVersion = globals.appVersion;
+        const compatResult = checkCompatibility(butlerSosVersion, auditQsVersion);
+
+        if (auditQsVersion && !compatResult.compatible) {
+            globals.logger.warn(
+                `AUDIT API: Dropped audit event from incompatible Audit.qs version type=${envelope?.type} eventId=${envelope?.eventId} ip=${request.ip} butlerSosVersion=${butlerSosVersion} auditQsVersion=${auditQsVersion} message=${compatResult.message}`
+            );
+            return buildAuditResponse(reply, 422, 'dropped', 'Incompatible Audit.qs version', {
+                butlerSosVersion,
+                auditQsVersion,
+                compatible: false,
+            });
+        }
+
+        if (!auditQsVersion) {
+            globals.logger.warn(
+                `AUDIT API: Received audit event without version info type=${envelope?.type} eventId=${envelope?.eventId} ip=${request.ip} butlerSosVersion=${butlerSosVersion}. Consider upgrading Audit.qs to a version that sends the X-Audit-QS-Version header.`
+            );
+        }
+
         // Validate payload structure using per-type AJV schema (envelope is validated by Fastify schema).
         // If payload validation fails, return HTTP 422 with validation errors and do not enqueue the event.
         const payloadResult = validatePayload(envelope);
@@ -1246,17 +1273,37 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
      * @returns {Promise<void>} Resolves when the response is sent.
      */
     async function handleTestConnectionGet(request, reply) {
+        const auditQsVersion = request.headers['x-audit-qs-version'];
+        const butlerSosVersion = globals.appVersion;
+
         debugLog(
             globals.logger,
-            `AUDIT API: test-connection request ip=${request.ip} origin=${request.headers.origin || 'n/a'}`
+            `AUDIT API: test-connection request ip=${request.ip} origin=${request.headers.origin || 'n/a'} auditQsVersion=${auditQsVersion || 'n/a'}`
         );
-        globals.logger.info(
-            `AUDIT API: Connection test successful ip=${request.ip} origin=${request.headers.origin || 'n/a'}`
-        );
+
+        const compatResult = checkCompatibility(butlerSosVersion, auditQsVersion);
+
+        if (compatResult.compatible) {
+            globals.logger.info(
+                `AUDIT API: Connection test successful ip=${request.ip} origin=${request.headers.origin || 'n/a'} butlerSosVersion=${butlerSosVersion} auditQsVersion=${auditQsVersion || 'n/a'}`
+            );
+        } else if (auditQsVersion) {
+            globals.logger.warn(
+                `AUDIT API: Connection test from incompatible Audit.qs version ip=${request.ip} origin=${request.headers.origin || 'n/a'} butlerSosVersion=${butlerSosVersion} auditQsVersion=${auditQsVersion} message=${compatResult.message}`
+            );
+        } else {
+            globals.logger.warn(
+                `AUDIT API: Connection test without Audit.qs version info ip=${request.ip} origin=${request.headers.origin || 'n/a'} butlerSosVersion=${butlerSosVersion}. Consider upgrading Audit.qs to a version that sends the X-Audit-QS-Version header.`
+            );
+        }
+
         reply.code(200).send({
             status: 'ok',
             message: 'Butler SOS Audit API is reachable',
             timestamp: new Date().toISOString(),
+            butlerSosVersion,
+            auditQsVersion: auditQsVersion || null,
+            compatible: compatResult.compatible,
         });
     }
 
