@@ -28,6 +28,48 @@ If any check fails, fix the issues and run checks again.
 - Primary runtime entrypoint is `src/butler-sos.js`. A **YAML config file is required** at runtime (passed via `-c/--configfile`).
 - Many modules depend on the global singleton in `src/globals.js`. Prefer using existing patterns instead of creating new global singletons.
 
+## GitNexus Code Intelligence
+
+This repo is indexed in GitNexus as `butler-sos`. In this multi-repo workspace, always include `-r butler-sos` on GitNexus CLI commands. GitNexus MCP tools may not be available in VS Code/Copilot chats, so use the CLI unless a `gitnexus_*` tool is actually exposed.
+
+Start by checking index freshness:
+
+```bash
+npx gitnexus status
+```
+
+If the index is stale, rebuild it before relying on impact analysis:
+
+```bash
+npx gitnexus analyze
+```
+
+Before modifying a function, class, or method, run upstream impact analysis and report the blast radius to the user:
+
+```bash
+npx gitnexus impact -r butler-sos <symbolName>
+```
+
+If the symbol name is ambiguous, inspect context with a file hint:
+
+```bash
+npx gitnexus context -r butler-sos <symbolName> -f src/path/file.js
+```
+
+For unfamiliar flows, query the graph before broad grepping:
+
+```bash
+npx gitnexus query -r butler-sos "concept or behavior"
+```
+
+Before committing or finalizing a broad refactor, verify the affected scope:
+
+```bash
+npx gitnexus detect-changes -r butler-sos --scope all
+```
+
+Warn the user before editing if impact analysis reports HIGH or CRITICAL risk. Do not rename symbols with blind find-and-replace; use a language-server rename or GitNexus-aware rename support if available, then verify with detect-changes.
+
 ## ▶️ How to Run (local dev)
 
 - Install deps: `npm ci`

@@ -101,7 +101,9 @@ The Parquet files use the following schema. All fields are optional (nullable).
 | `eventId` | `UTF8` | Unique identifier for the event. |
 | `correlationId` | `UTF8` | ID linking related events. |
 | `eventType` | `UTF8` | Type of audit event (e.g., `screenshot.url.received`, `object.view.duration`). |
-| `userId` | `UTF8` | Qlik Sense user ID. |
+| `user` | `UTF8` | Full Qlik Sense user identity from `payload.context.user`. |
+| `userDirectory` | `UTF8` | Parsed Qlik Sense user directory when available. |
+| `userId` | `UTF8` | Parsed Qlik Sense user ID when available. |
 | `appId` | `UTF8` | Qlik Sense App GUID. |
 | `appName` | `UTF8` | Qlik Sense App Name. |
 | `sheetId` | `UTF8` | Qlik Sense Sheet GUID. |

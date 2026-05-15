@@ -15,9 +15,11 @@ chmod +x ./${DIST_FILE_NAME}
 # Include following directories & files in the created archive file.
 # - ./src/config/log_appender_xml
 # - ./src/config/production_template.yaml
+# - ./THIRD-PARTY-NOTICES.md
 ls -la
 echo "Creating zip file"
 zip -9 -r ./${DIST_FILE_NAME}-${RELEASE_VERSION}-linux-x64.zip ${DIST_FILE_NAME}
+zip -9 -u ./${DIST_FILE_NAME}-${RELEASE_VERSION}-linux-x64.zip THIRD-PARTY-NOTICES.md
 
 # Add additional files to the zip file
 cd src

@@ -584,6 +584,7 @@ function createTypeHandlers(logger) {
             storageTargets: globals.config.get(
                 'Butler-SOS.auditEvents.destination.screenshots.storageTargets'
             ),
+            allowedImageDownloadHosts,
         };
 
         debugLog(
@@ -716,7 +717,7 @@ function createPayloadValidators() {
                     appName: { type: 'string', maxLength: 64 },
                     sheetId: { type: 'string', maxLength: 64 },
                     sheetName: { type: 'string', maxLength: 64 },
-                    userId: { type: 'string', maxLength: 128 },
+                    user: { type: 'string', maxLength: 256 },
                     userAgent: { type: 'string', maxLength: 512 },
                 },
                 additionalProperties: true,
@@ -751,7 +752,7 @@ function createPayloadValidators() {
                     appName: { type: 'string', maxLength: 64 },
                     sheetId: { type: 'string', maxLength: 64 },
                     sheetName: { type: 'string', maxLength: 64 },
-                    userId: { type: 'string', maxLength: 128 },
+                    user: { type: 'string', maxLength: 256 },
                     userAgent: { type: 'string', maxLength: 512 },
                 },
                 additionalProperties: true,
@@ -789,7 +790,7 @@ function createPayloadValidators() {
                     appName: { type: 'string', maxLength: 64 },
                     sheetId: { type: 'string', maxLength: 64 },
                     sheetName: { type: 'string', maxLength: 64 },
-                    userId: { type: 'string', maxLength: 128 },
+                    user: { type: 'string', maxLength: 256 },
                     userAgent: { type: 'string', maxLength: 512 },
                 },
                 additionalProperties: true,
@@ -824,7 +825,7 @@ function createPayloadValidators() {
                     appName: { type: 'string', maxLength: 64 },
                     sheetId: { type: 'string', maxLength: 64 },
                     sheetName: { type: 'string', maxLength: 64 },
-                    userId: { type: 'string', maxLength: 128 },
+                    user: { type: 'string', maxLength: 256 },
                     userAgent: { type: 'string', maxLength: 512 },
                 },
                 additionalProperties: true,
@@ -858,7 +859,7 @@ function createPayloadValidators() {
                     appName: { type: 'string', maxLength: 64 },
                     sheetId: { type: 'string', maxLength: 64 },
                     sheetName: { type: 'string', maxLength: 64 },
-                    userId: { type: 'string', maxLength: 128 },
+                    user: { type: 'string', maxLength: 256 },
                     userAgent: { type: 'string', maxLength: 512 },
                 },
                 additionalProperties: true,
@@ -893,7 +894,7 @@ function createPayloadValidators() {
                     appName: { type: 'string', maxLength: 64 },
                     sheetId: { type: 'string', maxLength: 64 },
                     sheetName: { type: 'string', maxLength: 64 },
-                    userId: { type: 'string', maxLength: 128 },
+                    user: { type: 'string', maxLength: 256 },
                     userAgent: { type: 'string', maxLength: 512 },
                 },
                 additionalProperties: true,

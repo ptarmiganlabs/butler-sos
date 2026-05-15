@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import globals from '../../../globals.js';
+import { parseQlikUserIdentity } from '../../util/user-identity.js';
 
 /**
  * Convert unknown input into a non-empty string.
@@ -65,6 +66,13 @@ function formatTimestampForFilename(timestamp) {
     const date = timestamp ? new Date(timestamp) : new Date();
     if (Number.isNaN(date.getTime())) return 'invalid_timestamp';
 
+    /**
+     * Pads a date part with leading zeroes.
+     *
+     * @param {number} n Numeric date part.
+     * @param {number} width Minimum output width.
+     * @returns {string} Padded string.
+     */
     const pad = (n, width = 2) => String(n).padStart(width, '0');
 
     const yyyy = date.getUTCFullYear();
@@ -111,6 +119,7 @@ export async function writeAuditEventToJson(envelope, extras = {}) {
     const payload = asObject(env.payload) || {};
     const context = asObject(payload.context) || {};
     const event = asObject(payload.event) || {};
+    const userIdentity = parseQlikUserIdentity(context.user);
 
     const objectData = asObject(event.objectData);
     if (!objectData) {
@@ -151,7 +160,9 @@ export async function writeAuditEventToJson(envelope, extras = {}) {
             correlationId: readString(env.correlationId) ?? null,
             timestamp: readString(env.timestamp) ?? null,
             eventType: readString(env.type) || 'unknown',
-            userId: readString(context.user) ?? null,
+            user: userIdentity.user,
+            userDirectory: userIdentity.userDirectory,
+            userId: userIdentity.userId,
             appId: readString(context.appId) ?? null,
             appName: readString(context.appName) ?? null,
             sheetId: readString(context.sheetId) ?? null,

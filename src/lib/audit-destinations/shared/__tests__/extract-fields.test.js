@@ -57,7 +57,9 @@ describe('shared/extract-fields – extractAuditEventFields', () => {
         expect(row.eventId).toBe('evt-001');
         expect(row.correlationId).toBe('corr-001');
         expect(row.eventType).toBe('selection');
-        expect(row.userId).toBe('user@domain.com');
+        expect(row.user).toBe('user@domain.com');
+        expect(row.userDirectory).toBeNull();
+        expect(row.userId).toBeNull();
         expect(row.appId).toBe('app-123');
         expect(row.appName).toBe('My App');
         expect(row.sheetId).toBe('sheet-1');
@@ -70,6 +72,23 @@ describe('shared/extract-fields – extractAuditEventFields', () => {
         expect(row.leftAt).toBe('2024-01-15T10:30:01.000Z');
         expect(row.dataStateId).toBe(5n);
         expect(row.screenshotUrl).toBe('http://example.com/screenshot.png');
+    });
+
+    test('splits Qlik user identity into userDirectory and userId', () => {
+        const envelope = {
+            payload: {
+                context: {
+                    user: 'UserDirectory=LAB; UserId=goran',
+                },
+                event: {},
+            },
+        };
+
+        const row = extractAuditEventFields(envelope, {}, STATIC_TAGS_KEY);
+
+        expect(row.user).toBe('UserDirectory=LAB; UserId=goran');
+        expect(row.userDirectory).toBe('LAB');
+        expect(row.userId).toBe('goran');
     });
 
     test('sets eventType to "unknown" when type is missing', () => {

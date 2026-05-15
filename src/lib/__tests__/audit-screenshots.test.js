@@ -43,9 +43,12 @@ jest.unstable_mockModule('../cert-utils.js', () => ({
 }));
 
 describe('audit-screenshots', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         jest.clearAllMocks();
         jest.useRealTimers();
+
+        const { clearScreenshotSessionCache } = await import('../audit-screenshot-session-cache.js');
+        clearScreenshotSessionCache({ cleanup: false });
 
         mockGlobals.config.get.mockImplementation((key) => {
             if (key === 'Butler-SOS.serversToMonitor.rejectUnauthorized') return false;
@@ -269,6 +272,193 @@ describe('audit-screenshots', () => {
         expect(logger.warn).not.toHaveBeenCalled();
     });
 
+    test('reuses cached qpsTicket session cookie when session cache is enabled', async () => {
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const logger = {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+        };
+
+        mockAxios.request.mockImplementation(async (req) => {
+            if (req.method === 'post') {
+                return {
+                    status: 201,
+                    data: {
+                        Ticket: 'TICKET123',
+                    },
+                };
+            }
+
+            return {
+                status: 200,
+                headers: {
+                    'content-type': 'image/png',
+                    'set-cookie': ['X-Qlik-Session-qlik=SESSION123; Path=/; HttpOnly'],
+                },
+                data: Buffer.from('png-bytes'),
+            };
+        });
+
+        const config = {
+            enable: true,
+            downloadTimeoutMs: 15000,
+            auth: {
+                mode: 'qpsTicket',
+                qps: {
+                    host: 'qlik.example.com',
+                    port: 4243,
+                    userDirectory: 'LAB',
+                    userId: 'butler-sos',
+                    ticketTimeoutMs: 5000,
+                },
+                sessionCache: {
+                    enable: true,
+                    ttlSeconds: 120,
+                    maxEntries: 10,
+                },
+            },
+            storageTargets: [
+                {
+                    enable: true,
+                    type: 'flat',
+                    directory: 'screenshots/audit',
+                },
+            ],
+        };
+
+        await downloadScreenshot(
+            'https://qlik.example.com/sense/app/screenshot.png?foo=bar',
+            { timestamp: '2025-01-01T00:00:00.000Z', eventId: 'evt-cache-1' },
+            config,
+            logger
+        );
+        await downloadScreenshot(
+            'https://qlik.example.com/sense/app/screenshot.png?foo=bar',
+            { timestamp: '2025-01-01T00:00:01.000Z', eventId: 'evt-cache-2' },
+            config,
+            logger
+        );
+
+        const postCalls = mockAxios.request.mock.calls.filter(([req]) => req.method === 'post');
+        const getCalls = mockAxios.request.mock.calls.filter(([req]) => req.method === 'get');
+        const deleteCalls = mockAxios.request.mock.calls.filter(([req]) => req.method === 'delete');
+
+        expect(postCalls).toHaveLength(1);
+        expect(getCalls).toHaveLength(2);
+        expect(deleteCalls).toHaveLength(0);
+        expect(getCalls[0][0].url).toContain('qlikTicket=TICKET123');
+        expect(getCalls[1][0].url).toBe('https://qlik.example.com/sense/app/screenshot.png?foo=bar');
+        expect(getCalls[1][0].headers).toEqual({ Cookie: 'X-Qlik-Session-qlik=SESSION123' });
+        expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(2);
+        expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('evicts stale cached session and retries with a fresh QPS ticket', async () => {
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const logger = {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+        };
+
+        let ticketCounter = 0;
+        mockAxios.request.mockImplementation(async (req) => {
+            if (req.method === 'post') {
+                ticketCounter += 1;
+                return {
+                    status: 201,
+                    data: {
+                        Ticket: `TICKET${ticketCounter}`,
+                    },
+                };
+            }
+
+            if (req.method === 'delete') {
+                return {
+                    status: 204,
+                    headers: {},
+                    data: null,
+                };
+            }
+
+            if (req.headers?.Cookie === 'X-Qlik-Session-qlik=SESSION123') {
+                return {
+                    status: 401,
+                    headers: { 'content-type': 'text/plain' },
+                    data: Buffer.from('unauthorized'),
+                };
+            }
+
+            return {
+                status: 200,
+                headers: {
+                    'content-type': 'image/png',
+                    'set-cookie': [`X-Qlik-Session-qlik=SESSION${ticketCounter}23; Path=/; HttpOnly`],
+                },
+                data: Buffer.from('png-bytes'),
+            };
+        });
+
+        const config = {
+            enable: true,
+            downloadTimeoutMs: 15000,
+            auth: {
+                mode: 'qpsTicket',
+                qps: {
+                    host: 'qlik.example.com',
+                    port: 4243,
+                    userDirectory: 'LAB',
+                    userId: 'butler-sos',
+                    ticketTimeoutMs: 5000,
+                },
+                sessionCache: {
+                    enable: true,
+                    ttlSeconds: 120,
+                    maxEntries: 10,
+                },
+            },
+            storageTargets: [
+                {
+                    enable: true,
+                    type: 'flat',
+                    directory: 'screenshots/audit',
+                },
+            ],
+        };
+
+        await downloadScreenshot(
+            'https://qlik.example.com/sense/app/screenshot.png',
+            { timestamp: '2025-01-01T00:00:00.000Z', eventId: 'evt-stale-1' },
+            config,
+            logger
+        );
+        await downloadScreenshot(
+            'https://qlik.example.com/sense/app/screenshot.png',
+            { timestamp: '2025-01-01T00:00:01.000Z', eventId: 'evt-stale-2' },
+            config,
+            logger
+        );
+
+        const postCalls = mockAxios.request.mock.calls.filter(([req]) => req.method === 'post');
+        const deleteCalls = mockAxios.request.mock.calls.filter(([req]) => req.method === 'delete');
+        const freshTicketGet = mockAxios.request.mock.calls.find(
+            ([req]) => req.method === 'get' && req.url.includes('qlikTicket=TICKET2')
+        );
+
+        expect(postCalls).toHaveLength(2);
+        expect(deleteCalls).toHaveLength(1);
+        expect(freshTicketGet).toBeDefined();
+        expect(logger.info).toHaveBeenCalledWith(
+            expect.stringContaining('cached Qlik session rejected')
+        );
+        expect(logger.warn).not.toHaveBeenCalled();
+    });
+
     test('adds metadata header to PNG screenshot when enabled', async () => {
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 
@@ -330,7 +520,7 @@ describe('audit-screenshots', () => {
                         date: true,
                         eventId: true,
                         correlationId: true,
-                        userId: true,
+                        user: true,
                         appId: true,
                         appName: true,
                         sheetName: true,
@@ -386,6 +576,223 @@ describe('audit-screenshots', () => {
         expect(blackPixels).toBeGreaterThan(10);
 
         expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    test('downloads screenshot with userTicket auth using payload user and URL-derived virtual proxy', async () => {
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const logger = {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+        };
+
+        mockAxios.request.mockImplementation(async (req) => {
+            if (typeof req.url === 'string' && req.url.includes('/qps/analytics/ticket?Xrfkey=')) {
+                return {
+                    status: 201,
+                    data: {
+                        Ticket: 'USER_TICKET_123',
+                    },
+                };
+            }
+
+            return {
+                status: 200,
+                headers: { 'content-type': 'image/png' },
+                data: Buffer.from('png-bytes'),
+            };
+        });
+
+        await downloadScreenshot(
+            'https://qlik.example.com/analytics/tempcontent/screenshot.png?foo=bar',
+            {
+                timestamp: '2025-01-01T00:00:00.000Z',
+                eventId: 'evt-user-ticket',
+                correlationId: 'corr-user-ticket',
+                payload: {
+                    context: {
+                        user: 'UserDirectory=LAB; UserId=goran',
+                    },
+                    event: {
+                        objectId: 'obj-1',
+                        screenshotUrl:
+                            'https://qlik.example.com/analytics/tempcontent/screenshot.png?foo=bar',
+                    },
+                },
+            },
+            {
+                enable: true,
+                downloadTimeoutMs: 15000,
+                auth: {
+                    mode: 'userTicket',
+                    qps: {
+                        host: 'qlik.example.com',
+                        port: 4243,
+                        ticketTimeoutMs: 5000,
+                    },
+                },
+                storageTargets: [
+                    {
+                        enable: true,
+                        type: 'flat',
+                        directory: 'screenshots/audit',
+                    },
+                ],
+            },
+            logger
+        );
+
+        expect(mockAxios.request).toHaveBeenCalledTimes(2);
+
+        const ticketReq = mockAxios.request.mock.calls[0][0];
+        expect(ticketReq.method).toBe('post');
+        expect(ticketReq.url).toContain('https://qlik.example.com:4243/qps/analytics/ticket');
+        expect(ticketReq.data).toMatchObject({
+            UserDirectory: 'LAB',
+            UserId: 'goran',
+        });
+
+        const screenshotReq = mockAxios.request.mock.calls[1][0];
+        expect(screenshotReq.url).toContain('qlikTicket=USER_TICKET_123');
+        expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(1);
+        expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('uses default QPS endpoint for userTicket when screenshot URL has no virtual proxy prefix', async () => {
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const logger = {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+        };
+
+        mockAxios.request.mockImplementation(async (req) => {
+            if (typeof req.url === 'string' && req.url.includes('/qps/ticket?Xrfkey=')) {
+                return {
+                    status: 201,
+                    data: {
+                        Ticket: 'DEFAULT_PROXY_TICKET',
+                    },
+                };
+            }
+
+            return {
+                status: 200,
+                headers: { 'content-type': 'image/png' },
+                data: Buffer.from('png-bytes'),
+            };
+        });
+
+        await downloadScreenshot(
+            'https://qlik.example.com/tempcontent/screenshot.png?foo=bar',
+            {
+                timestamp: '2025-01-01T00:00:00.000Z',
+                eventId: 'evt-user-ticket-default-proxy',
+                correlationId: 'corr-user-ticket-default-proxy',
+                payload: {
+                    context: {
+                        user: 'UserDirectory=LAB; UserId=goran',
+                    },
+                    event: {
+                        objectId: 'obj-1',
+                        screenshotUrl: 'https://qlik.example.com/tempcontent/screenshot.png?foo=bar',
+                    },
+                },
+            },
+            {
+                enable: true,
+                downloadTimeoutMs: 15000,
+                auth: {
+                    mode: 'userTicket',
+                    qps: {
+                        host: 'qlik.example.com',
+                        port: 4243,
+                        ticketTimeoutMs: 5000,
+                        defaultVirtualProxy: 'analytics',
+                        userDirectoryMappings: [
+                            {
+                                userDirectory: 'LAB',
+                                virtualProxy: 'analytics',
+                            },
+                        ],
+                    },
+                },
+                storageTargets: [
+                    {
+                        enable: true,
+                        type: 'flat',
+                        directory: 'screenshots/audit',
+                    },
+                ],
+            },
+            logger
+        );
+
+        expect(mockAxios.request).toHaveBeenCalledTimes(2);
+
+        const ticketReq = mockAxios.request.mock.calls[0][0];
+        expect(ticketReq.method).toBe('post');
+        expect(ticketReq.url).toContain('https://qlik.example.com:4243/qps/ticket?Xrfkey=');
+        expect(ticketReq.url).not.toContain('/qps/analytics/ticket');
+        expect(ticketReq.data).toMatchObject({
+            UserDirectory: 'LAB',
+            UserId: 'goran',
+        });
+        expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('skips userTicket auth when payload user cannot be parsed for QPS', async () => {
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const logger = {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+        };
+
+        const result = await downloadScreenshot(
+            'https://qlik.example.com/tempcontent/screenshot.png',
+            {
+                timestamp: '2025-01-01T00:00:00.000Z',
+                eventId: 'evt-unparseable-user',
+                payload: {
+                    context: {
+                        user: 'user@example.com',
+                    },
+                    event: {},
+                },
+            },
+            {
+                enable: true,
+                auth: {
+                    mode: 'userTicket',
+                    qps: {
+                        host: 'qlik.example.com',
+                        port: 4243,
+                        ticketTimeoutMs: 5000,
+                    },
+                },
+                storageTargets: [
+                    {
+                        enable: true,
+                        type: 'flat',
+                        directory: 'screenshots/audit',
+                    },
+                ],
+            },
+            logger
+        );
+
+        expect(result).toBeNull();
+        expect(mockAxios.request).not.toHaveBeenCalled();
+        expect(logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('payload context user could not be parsed')
+        );
     });
 
     test('adds viewing duration to metadata header when enabled', async () => {
@@ -537,8 +944,11 @@ describe('audit-screenshots', () => {
 });
 
 describe('audit-screenshots SSRF protection', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         jest.clearAllMocks();
+
+        const { clearScreenshotSessionCache } = await import('../audit-screenshot-session-cache.js');
+        clearScreenshotSessionCache({ cleanup: false });
     });
 
     const logger = {
@@ -666,6 +1076,101 @@ describe('audit-screenshots SSRF protection', () => {
         expect(mockAxios.request).toHaveBeenCalled();
         const callArgs = mockAxios.request.mock.calls[0][0];
         expect(callArgs.maxRedirects).toBe(0);
+    });
+
+    test('follows allowed screenshot redirects manually and carries Qlik session cookie', async () => {
+        let callCount = 0;
+        mockAxios.request.mockImplementation(async () => {
+            callCount += 1;
+
+            if (callCount === 1) {
+                return {
+                    status: 302,
+                    headers: {
+                        location: '/redirected/screenshot.png',
+                        'set-cookie': ['X-Qlik-Session-qlik=SESSION123; Path=/; HttpOnly'],
+                    },
+                    data: Buffer.alloc(0),
+                };
+            }
+
+            return {
+                status: 200,
+                headers: { 'content-type': 'image/png' },
+                data: Buffer.from('png-bytes'),
+            };
+        });
+
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        await downloadScreenshot(
+            'https://qliksense.example.com/screenshot.png?foo=bar',
+            { eventId: 'evt-redirect', correlationId: 'corr-redirect', payload: { event: {} } },
+            { ...baseConfig, allowedImageDownloadHosts: ['qliksense.example.com'] },
+            logger
+        );
+
+        expect(mockAxios.request).toHaveBeenCalledTimes(2);
+        expect(mockAxios.request.mock.calls[0][0].maxRedirects).toBe(0);
+        expect(mockAxios.request.mock.calls[1][0].url).toBe(
+            'https://qliksense.example.com/redirected/screenshot.png'
+        );
+        expect(mockAxios.request.mock.calls[1][0].headers).toEqual({
+            Cookie: 'X-Qlik-Session-qlik=SESSION123',
+        });
+        expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(1);
+        expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('following redirect'));
+        expect(logger.warn).not.toHaveBeenCalledWith(expect.stringContaining('redirect blocked'));
+    });
+
+    test('blocks screenshot redirects to hosts outside allowedImageDownloadHosts', async () => {
+        mockAxios.request.mockResolvedValue({
+            status: 302,
+            headers: { location: 'https://internal.example.local/screenshot.png' },
+            data: Buffer.alloc(0),
+        });
+
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const result = await downloadScreenshot(
+            'https://qliksense.example.com/screenshot.png',
+            { eventId: 'evt-redirect-blocked', correlationId: 'corr-redirect-blocked', payload: { event: {} } },
+            { ...baseConfig, allowedImageDownloadHosts: ['qliksense.example.com'] },
+            logger
+        );
+
+        expect(result).toBeNull();
+        expect(mockAxios.request).toHaveBeenCalledTimes(1);
+        expect(logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('redirect blocked reason=host-not-allowed')
+        );
+    });
+
+    test('blocks screenshot redirects when allowedImageDownloadHosts is explicitly empty', async () => {
+        mockAxios.request.mockResolvedValue({
+            status: 302,
+            headers: { location: '/redirected/screenshot.png' },
+            data: Buffer.alloc(0),
+        });
+
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const result = await downloadScreenshot(
+            'https://qliksense.example.com/screenshot.png',
+            {
+                eventId: 'evt-empty-redirect-list',
+                correlationId: 'corr-empty-redirect-list',
+                payload: { event: {} },
+            },
+            { ...baseConfig, allowedImageDownloadHosts: [] },
+            logger
+        );
+
+        expect(result).toBeNull();
+        expect(mockAxios.request).toHaveBeenCalledTimes(1);
+        expect(logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('redirect blocked reason=host-not-allowed')
+        );
     });
 
     test('passes maxContentLength to axios to bound downloaded image size', async () => {

@@ -102,6 +102,7 @@ xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_
 # Notarize insider binary
 echo "Creating temp notarization archive for insider build"
 zip -r "./${DIST_FILE_NAME}--macos-arm64--$SHA.zip" "./${DIST_FILE_NAME}" -x "*.DS_Store"
+zip -u "./${DIST_FILE_NAME}--macos-arm64--$SHA.zip" "./THIRD-PARTY-NOTICES.md" -x "*.DS_Store"
 
 # Add additional files to the zip file
 cd src

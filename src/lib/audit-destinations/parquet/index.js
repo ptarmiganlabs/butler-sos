@@ -37,6 +37,12 @@ const destination = createAuditDestination({
                 data: rowsToWrite.map((r) => r.correlationId),
             },
             { name: 'eventType', type: 'STRING', data: rowsToWrite.map((r) => r.eventType) },
+            { name: 'user', type: 'STRING', data: rowsToWrite.map((r) => r.user) },
+            {
+                name: 'userDirectory',
+                type: 'STRING',
+                data: rowsToWrite.map((r) => r.userDirectory),
+            },
             { name: 'userId', type: 'STRING', data: rowsToWrite.map((r) => r.userId) },
             { name: 'appId', type: 'STRING', data: rowsToWrite.map((r) => r.appId) },
             { name: 'appName', type: 'STRING', data: rowsToWrite.map((r) => r.appName) },

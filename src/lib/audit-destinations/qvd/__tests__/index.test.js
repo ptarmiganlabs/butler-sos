@@ -268,13 +268,13 @@ describe('QVD Audit Destination', () => {
         expect(typeof row[0]).toBe('number');
         expect(row[0]).toBe(Date.parse('2023-10-27T10:00:00Z'));
 
-        // durationMs is at index 13 (after objectType at index 11)
-        expect(typeof row[13]).toBe('number');
-        expect(row[13]).toBe(1234);
+        const durationIndex = callArgs.columns.indexOf('durationMs');
+        expect(typeof row[durationIndex]).toBe('number');
+        expect(row[durationIndex]).toBe(1234);
 
-        // dataStateId is at index 17
-        expect(typeof row[17]).toBe('number');
-        expect(row[17]).toBe(5678);
+        const dataStateIndex = callArgs.columns.indexOf('dataStateId');
+        expect(typeof row[dataStateIndex]).toBe('number');
+        expect(row[dataStateIndex]).toBe(5678);
     });
 
     test('Stores objectData and objectType when present', async () => {
