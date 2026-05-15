@@ -2,19 +2,11 @@
 
 This directory contains Docker Compose configurations for running Butler SOS with different versions of InfluxDB, as well as a Prometheus/Grafana stack.
 
-## Two Separate InfluxDB Config Sections (Metrics vs Audit)
+## Scope of These Examples
 
-Butler SOS can write **two different kinds of data**, and each has its **own** InfluxDB configuration section:
+The Docker Compose stacks in this folder are focused on running Butler SOS with metrics storage and the surrounding time-series stack.
 
-- **Metrics storage** (regular Butler SOS metrics): `Butler-SOS.influxdbConfig`
-- **Audit events storage** (events from the Butler SOS audit extension): `Butler-SOS.auditEvents.destination`
-
-These are intentionally independent so you can store metrics and audit events in different InfluxDB instances/versions/buckets/databases if you want.
-
-Key toggles:
-
-- `Butler-SOS.auditEvents.enable` controls whether the audit events API is enabled.
-- `Butler-SOS.auditEvents.destination.enable` controls whether audit events are written to a destination (e.g. InfluxDB).
+The sample YAML files under `config/` intentionally do **not** include `Butler-SOS.auditEvents` sections. They are metrics-oriented starter configs for the Compose stacks, not complete audit-events examples. This keeps the Docker samples small and avoids mixing browser audit API settings, screenshot storage paths, QPS ticket authentication, and deployment-specific certificate choices into the generic Compose templates.
 
 ## Available Configurations
 
@@ -41,7 +33,6 @@ This folder also contains a Prometheus/Grafana stack:
 - **InfluxDB Image**: `influxdb:1.12.2`
 - **Features**: First generation InfluxDB with SQL-like query language (but not strictly SQL)
 - **Configuration (metrics)**: Set `Butler-SOS.influxdbConfig.version: 1` in your config file
-- **Configuration (audit events, optional)**: Set `Butler-SOS.auditEvents.destination.influxdb.version: 1` if you want to store audit events in InfluxDB v1
 
 ### InfluxDB v2.x
 
@@ -49,13 +40,7 @@ This folder also contains a Prometheus/Grafana stack:
 - **InfluxDB Image**: `influxdb:2.7-alpine`
 - **Features**: Modern InfluxDB with Flux query language, unified time series platform
 - **Configuration (metrics)**: Set `Butler-SOS.influxdbConfig.version: 2` in your config file
-- **Configuration (audit events, optional)**: Set `Butler-SOS.auditEvents.destination.influxdb.version: 2` if you want to store audit events in InfluxDB v2
-- **Default Credentials**:
-    - Username: `admin`
-    - Password: `butlersos123`
-    - Organization: `butler-sos`
-    - Bucket: `butler-sos`
-    - Token: `butlersos-token`
+- **Default Credentials**: username `admin`, password `butlersos123`, organization `butler-sos`, bucket `butler-sos`, token `butlersos-token`
 
 ### InfluxDB v3.x
 
@@ -63,7 +48,6 @@ This folder also contains a Prometheus/Grafana stack:
 - **InfluxDB Image**: `influxdb:3-core`
 - **Features**: InfluxDB v3 Core (Community Edition)
 - **Configuration (metrics)**: Set `Butler-SOS.influxdbConfig.version: 3` in your config file
-- **Configuration (audit events, optional)**: Set `Butler-SOS.auditEvents.destination.influxdb.version: 3` if you want to store audit events in InfluxDB v3
 - **Environment**: Uses `.env` in this folder (for example `INFLUXDB_HTTP_PORT`, `INFLUXDB_TOKEN`, `INFLUXDB_DATABASE`, `BUTLER_SOS_CONFIG_FILE`, `GRAFANA_PORT`)
 
 ## Usage
@@ -100,14 +84,9 @@ docker compose -f docker-compose_fullstack_prometheus.yml up -d
 
 The docker-compose stacks in this folder include sample YAML config files under `config/`.
 
-The examples below are version-specific, and show both:
+These examples are version-specific metrics snippets for `Butler-SOS.influxdbConfig`. The sample config files intentionally omit audit-events settings. If you need audit events in a Docker Compose deployment, start from one of these metrics configs, then copy the relevant `Butler-SOS.auditEvents` block from the main config template into your deployment-specific config file.
 
-- **Metrics**: `Butler-SOS.influxdbConfig`
-- **Audit events**: `Butler-SOS.auditEvents.destination`
-
-### InfluxDB v1.x
-
-**Metrics storage (InfluxDB v1)**
+### Metrics Config: InfluxDB v1.x
 
 ```yaml
 Butler-SOS:
@@ -125,31 +104,7 @@ Butler-SOS:
                 duration: 10d
 ```
 
-**Audit events storage (InfluxDB v1)**
-
-```yaml
-Butler-SOS:
-    auditEvents:
-        enable: false
-        destination:
-            enable: false
-            type: influxdb
-            influxdb:
-                host: influxdb-v1
-                port: 8086
-                version: 1
-                v1Config:
-                    auth:
-                        enable: false
-                    dbName: SenseOpsAudit
-                    retentionPolicy:
-                        name: 10d
-                        duration: 10d
-```
-
-### InfluxDB v2.x
-
-**Metrics storage (InfluxDB v2)**
+### Metrics Config: InfluxDB v2.x
 
 ```yaml
 Butler-SOS:
@@ -166,28 +121,7 @@ Butler-SOS:
             retentionDuration: 10d
 ```
 
-**Audit events storage (InfluxDB v2)**
-
-```yaml
-Butler-SOS:
-    auditEvents:
-        enable: false
-        destination:
-            enable: false
-            type: influxdb
-            influxdb:
-                host: influxdb-v2
-                port: 8086
-                version: 2
-                v2Config:
-                    org: butler-sos
-                    bucket: butler-sos-audit
-                    token: butlersos-token
-```
-
-### InfluxDB v3.x
-
-**Metrics storage (InfluxDB v3)**
+### Metrics Config: InfluxDB v3.x
 
 ```yaml
 Butler-SOS:
@@ -201,24 +135,6 @@ Butler-SOS:
             token: butlersos-token
             description: Butler SOS metrics
             retentionDuration: 10d
-```
-
-**Audit events storage (InfluxDB v3)**
-
-```yaml
-Butler-SOS:
-    auditEvents:
-        enable: false
-        destination:
-            enable: false
-            type: influxdb
-            influxdb:
-                host: influxdb-v3-core
-                port: 8181
-                version: 3
-                v3Config:
-                    database: butler-sos-audit
-                    token: butlersos-token
 ```
 
 For detailed configuration options, refer to the main [Butler SOS documentation](https://butler-sos.ptarmiganlabs.com).
