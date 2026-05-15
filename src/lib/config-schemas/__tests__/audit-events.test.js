@@ -5,6 +5,11 @@ import addKeywords from 'ajv-keywords';
 
 import { auditEventsSchema } from '../audit-events.js';
 
+/**
+ * Create an Ajv validator for the auditEvents root config section.
+ *
+ * @returns {(data: unknown) => boolean} Compiled validator function.
+ */
 function createAuditEventsValidator() {
     const ajv = new Ajv({ allErrors: true });
     addFormats(ajv);
@@ -18,6 +23,13 @@ function createAuditEventsValidator() {
     });
 }
 
+/**
+ * Create a minimal valid config object with a specific screenshots auth mode.
+ *
+ * @param {Record<string, unknown>} auth - Screenshot auth config object.
+ *
+ * @returns {{auditEvents: Record<string, unknown>}} Config object for schema validation tests.
+ */
 function createConfigWithScreenshotAuth(auth) {
     return {
         auditEvents: {
