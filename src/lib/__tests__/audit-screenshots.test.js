@@ -994,6 +994,101 @@ describe('audit-screenshots SSRF protection', () => {
         expect(callArgs.maxRedirects).toBe(0);
     });
 
+    test('follows allowed screenshot redirects manually and carries Qlik session cookie', async () => {
+        let callCount = 0;
+        mockAxios.request.mockImplementation(async () => {
+            callCount += 1;
+
+            if (callCount === 1) {
+                return {
+                    status: 302,
+                    headers: {
+                        location: '/redirected/screenshot.png',
+                        'set-cookie': ['X-Qlik-Session-qlik=SESSION123; Path=/; HttpOnly'],
+                    },
+                    data: Buffer.alloc(0),
+                };
+            }
+
+            return {
+                status: 200,
+                headers: { 'content-type': 'image/png' },
+                data: Buffer.from('png-bytes'),
+            };
+        });
+
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        await downloadScreenshot(
+            'https://qliksense.example.com/screenshot.png?foo=bar',
+            { eventId: 'evt-redirect', correlationId: 'corr-redirect', payload: { event: {} } },
+            { ...baseConfig, allowedImageDownloadHosts: ['qliksense.example.com'] },
+            logger
+        );
+
+        expect(mockAxios.request).toHaveBeenCalledTimes(2);
+        expect(mockAxios.request.mock.calls[0][0].maxRedirects).toBe(0);
+        expect(mockAxios.request.mock.calls[1][0].url).toBe(
+            'https://qliksense.example.com/redirected/screenshot.png'
+        );
+        expect(mockAxios.request.mock.calls[1][0].headers).toEqual({
+            Cookie: 'X-Qlik-Session-qlik=SESSION123',
+        });
+        expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(1);
+        expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('following redirect'));
+        expect(logger.warn).not.toHaveBeenCalledWith(expect.stringContaining('redirect blocked'));
+    });
+
+    test('blocks screenshot redirects to hosts outside allowedImageDownloadHosts', async () => {
+        mockAxios.request.mockResolvedValue({
+            status: 302,
+            headers: { location: 'https://internal.example.local/screenshot.png' },
+            data: Buffer.alloc(0),
+        });
+
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const result = await downloadScreenshot(
+            'https://qliksense.example.com/screenshot.png',
+            { eventId: 'evt-redirect-blocked', correlationId: 'corr-redirect-blocked', payload: { event: {} } },
+            { ...baseConfig, allowedImageDownloadHosts: ['qliksense.example.com'] },
+            logger
+        );
+
+        expect(result).toBeNull();
+        expect(mockAxios.request).toHaveBeenCalledTimes(1);
+        expect(logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('redirect blocked reason=host-not-allowed')
+        );
+    });
+
+    test('blocks screenshot redirects when allowedImageDownloadHosts is explicitly empty', async () => {
+        mockAxios.request.mockResolvedValue({
+            status: 302,
+            headers: { location: '/redirected/screenshot.png' },
+            data: Buffer.alloc(0),
+        });
+
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const result = await downloadScreenshot(
+            'https://qliksense.example.com/screenshot.png',
+            {
+                eventId: 'evt-empty-redirect-list',
+                correlationId: 'corr-empty-redirect-list',
+                payload: { event: {} },
+            },
+            { ...baseConfig, allowedImageDownloadHosts: [] },
+            logger
+        );
+
+        expect(result).toBeNull();
+        expect(mockAxios.request).toHaveBeenCalledTimes(1);
+        expect(logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('redirect blocked reason=host-not-allowed')
+        );
+    });
+
     test('passes maxContentLength to axios to bound downloaded image size', async () => {
         mockAxios.request.mockResolvedValue({
             status: 200,

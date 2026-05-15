@@ -584,6 +584,7 @@ function createTypeHandlers(logger) {
             storageTargets: globals.config.get(
                 'Butler-SOS.auditEvents.destination.screenshots.storageTargets'
             ),
+            allowedImageDownloadHosts,
         };
 
         debugLog(

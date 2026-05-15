@@ -22,6 +22,7 @@ import { extractVirtualProxyFromSessionCookieName } from './util/qlik-session-ut
 import { parseQlikUserIdentity } from './util/user-identity.js';
 
 const { PNG } = pngjs;
+const MAX_SCREENSHOT_REDIRECTS = 5;
 
 /**
  * Minimal logger interface used by this module.
@@ -85,6 +86,7 @@ const { PNG } = pngjs;
  * @property {ScreenshotAuthConfig} [auth] Screenshot authentication options.
  * @property {ScreenshotImageMetadataConfig} [addInImageMetadata] Optional metadata header rendered into PNG screenshots.
  * @property {ScreenshotStorageTarget[] | null} [storageTargets] Where to store downloaded screenshots.
+ * @property {string[] | null} [allowedImageDownloadHosts] Hostnames allowed for screenshot downloads and redirects.
  */
 
 /**
@@ -590,6 +592,110 @@ function countSetCookieHeaders(setCookieHeader) {
     if (Array.isArray(setCookieHeader)) return setCookieHeader.length;
     if (typeof setCookieHeader === 'string' && setCookieHeader.length > 0) return 1;
     return 0;
+}
+
+/**
+ * Returns a response header value using case-insensitive lookup.
+ *
+ * @param {Record<string, unknown> | null | undefined} headers Response headers.
+ * @param {string} name Header name.
+ * @returns {string | null} Header value, or null when absent.
+ */
+function getHeaderValue(headers, name) {
+    if (!headers || typeof headers !== 'object') return null;
+
+    const expectedName = name.toLowerCase();
+    for (const [headerName, value] of Object.entries(headers)) {
+        if (headerName.toLowerCase() !== expectedName) continue;
+        if (Array.isArray(value)) return value.length > 0 ? String(value[0]) : null;
+        if (value === undefined || value === null) return null;
+        return String(value);
+    }
+
+    return null;
+}
+
+/**
+ * Normalizes configured screenshot download hosts for comparison.
+ *
+ * @param {unknown} hosts Hostname allow-list.
+ * @returns {string[]} Lowercase hostnames.
+ */
+function normalizeAllowedScreenshotHosts(hosts) {
+    if (!Array.isArray(hosts)) return [];
+    return hosts
+        .filter((host) => typeof host === 'string' && host.trim().length > 0)
+        .map((host) => host.trim().toLowerCase());
+}
+
+/**
+ * Returns whether a screenshot download host is allowed.
+ *
+ * If an explicit host allow-list is supplied, redirects must stay inside that
+ * allow-list. Direct calls without an allow-list fall back to same-host only.
+ *
+ * @param {string} hostname Candidate hostname.
+ * @param {string[]} allowedHosts Explicit allowed hostnames.
+ * @param {string} fallbackHostname Hostname allowed when no explicit list exists.
+ * @param {boolean} hasExplicitAllowedHosts Whether an explicit allow-list was supplied.
+ * @returns {boolean} True when the hostname is allowed.
+ */
+function isScreenshotDownloadHostAllowed(
+    hostname,
+    allowedHosts,
+    fallbackHostname,
+    hasExplicitAllowedHosts
+) {
+    const normalizedHostname = hostname.toLowerCase();
+    if (hasExplicitAllowedHosts) return allowedHosts.includes(normalizedHostname);
+    return normalizedHostname === fallbackHostname.toLowerCase();
+}
+
+/**
+ * Returns true when an HTTP response is a redirect handled manually by the downloader.
+ *
+ * @param {number} status HTTP status code.
+ * @returns {boolean} True when the status is a redirect.
+ */
+function isRedirectHttpStatus(status) {
+    return [301, 302, 303, 307, 308].includes(status);
+}
+
+/**
+ * Resolves a redirect Location value against the current download URL.
+ *
+ * @param {string} location Redirect Location header value.
+ * @param {string} currentUrl Current download URL.
+ * @returns {URL} Resolved redirect URL.
+ */
+function resolveRedirectUrl(location, currentUrl) {
+    return new URL(location, currentUrl);
+}
+
+/**
+ * Adds or replaces a cookie in a Cookie header value.
+ *
+ * @param {string | null} existingHeader Existing Cookie header value.
+ * @param {string} cookieName Cookie name.
+ * @param {string} cookieValue Cookie value.
+ * @returns {string} Updated Cookie header value.
+ */
+function mergeCookieHeader(existingHeader, cookieName, cookieValue) {
+    const replacement = `${cookieName}=${cookieValue}`;
+    if (!existingHeader) return replacement;
+
+    const filteredCookies = existingHeader
+        .split(';')
+        .map((cookie) => cookie.trim())
+        .filter((cookie) => cookie.length > 0)
+        .filter((cookie) => {
+            const equalsIndex = cookie.indexOf('=');
+            const name = equalsIndex >= 0 ? cookie.slice(0, equalsIndex) : cookie;
+            return name.toLowerCase() !== cookieName.toLowerCase();
+        });
+
+    filteredCookies.push(replacement);
+    return filteredCookies.join('; ');
 }
 
 /**
@@ -1139,11 +1245,12 @@ export async function downloadScreenshot(url, envelope, config, logger) {
 
     // Validate the URL scheme to prevent Server-Side Request Forgery (SSRF).
     // Only http: and https: schemes are permitted; file://, ftp://, data:, etc. are rejected.
+    let parsedInitialUrl;
     try {
-        const parsedUrl = new URL(url);
-        if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
+        parsedInitialUrl = new URL(url);
+        if (parsedInitialUrl.protocol !== 'https:' && parsedInitialUrl.protocol !== 'http:') {
             logger.warn(
-                `AUDIT API: Screenshot download rejected — URL scheme '${parsedUrl.protocol}' is not allowed. Only http: and https: are permitted. selectionTxnId=${selectionTxnId}`
+                `AUDIT API: Screenshot download rejected — URL scheme '${parsedInitialUrl.protocol}' is not allowed. Only http: and https: are permitted. selectionTxnId=${selectionTxnId}`
             );
             return null;
         }
@@ -1176,6 +1283,8 @@ export async function downloadScreenshot(url, envelope, config, logger) {
     const authMode = config?.auth?.mode || 'none';
     const maxAttempts = 3;
     const baseDelayMs = 500;
+    const hasExplicitRedirectHosts = Array.isArray(config.allowedImageDownloadHosts);
+    const allowedRedirectHosts = normalizeAllowedScreenshotHosts(config.allowedImageDownloadHosts);
 
     debugLog(
         logger,
@@ -1295,68 +1404,152 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                 }
             }
 
-            debugLog(
-                logger,
-                `AUDIT API: Screenshot download HTTP GET attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} url=${redactQlikTicketInUrl(
-                    downloadUrl
-                )} httpsAgent=${httpsAgent ? 'mutualTls' : 'default'} cookieHeader=${
-                    requestCookieHeader ? 'present' : 'none'
-                } timeoutMs=${timeoutMs}`
-            );
+            let response;
+            let contentType = null;
+            let buffer = Buffer.alloc(0);
+            let redirectCount = 0;
 
-            const response = await axios.request({
-                url: downloadUrl,
-                method: 'get',
-                headers: requestCookieHeader ? { Cookie: requestCookieHeader } : undefined,
-                responseType: 'arraybuffer',
-                httpsAgent,
-                timeout: timeoutMs,
-                // Disable redirects to prevent redirect-based SSRF bypasses.
-                // The hostname allow-list is validated on the original URL; following
-                // redirects could allow an allow-listed host to redirect to an
-                // internal/private endpoint (e.g. 169.254.169.254 or 127.0.0.1).
-                maxRedirects: 0,
-                // Limit downloaded content to 50 MB to prevent memory exhaustion.
-                maxContentLength: 50 * 1024 * 1024,
-                validateStatus: acceptAllHttpStatuses,
-            });
+            while (true) {
+                debugLog(
+                    logger,
+                    `AUDIT API: Screenshot download HTTP GET attempt=${attempt}/${maxAttempts} redirect=${redirectCount}/${MAX_SCREENSHOT_REDIRECTS} selectionTxnId=${selectionTxnId} url=${redactQlikTicketInUrl(
+                        downloadUrl
+                    )} httpsAgent=${httpsAgent ? 'mutualTls' : 'default'} cookieHeader=${
+                        requestCookieHeader ? 'present' : 'none'
+                    } timeoutMs=${timeoutMs}`
+                );
 
-            const contentType = response.headers?.['content-type'] || null;
-            let buffer = Buffer.from(response.data);
+                response = await axios.request({
+                    url: downloadUrl,
+                    method: 'get',
+                    headers: requestCookieHeader ? { Cookie: requestCookieHeader } : undefined,
+                    responseType: 'arraybuffer',
+                    httpsAgent,
+                    timeout: timeoutMs,
+                    // Keep Axios redirect following disabled so Butler SOS can validate
+                    // each Location header against the screenshot host allow-list.
+                    maxRedirects: 0,
+                    // Limit downloaded content to 50 MB to prevent memory exhaustion.
+                    maxContentLength: 50 * 1024 * 1024,
+                    validateStatus: acceptAllHttpStatuses,
+                });
 
-            debugLog(
-                logger,
-                `AUDIT API: Screenshot download HTTP response attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} status=${response.status} contentType=${
-                    contentType || 'n/a'
-                } bytes=${buffer.length} setCookieCount=${countSetCookieHeaders(
-                    response.headers?.['set-cookie']
-                )} url=${redactQlikTicketInUrl(downloadUrl)}`
-            );
+                contentType = response.headers?.['content-type'] || null;
+                buffer = response.data ? Buffer.from(response.data) : Buffer.alloc(0);
 
-            // Extract session cookie immediately using set-cookie-parser for reliability.
-            // set-cookie-parser handles joined header strings and complex attributes.
-            const cookies = setCookieParser.parse(response, { decodeValues: false });
-            const sessionCookie = cookies.find((c) =>
-                c.name.toLowerCase().startsWith('x-qlik-session-')
-            );
+                debugLog(
+                    logger,
+                    `AUDIT API: Screenshot download HTTP response attempt=${attempt}/${maxAttempts} redirect=${redirectCount}/${MAX_SCREENSHOT_REDIRECTS} selectionTxnId=${selectionTxnId} status=${response.status} contentType=${
+                        contentType || 'n/a'
+                    } bytes=${buffer.length} setCookieCount=${countSetCookieHeaders(
+                        response.headers?.['set-cookie']
+                    )} url=${redactQlikTicketInUrl(downloadUrl)}`
+                );
 
-            debugLog(
-                logger,
-                `AUDIT API: Screenshot download parsed cookies attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} cookieCount=${cookies.length} sessionCookieName=${
-                    sessionCookie?.name || 'none'
-                } sessionCookieVirtualProxy=${
-                    sessionCookie
-                        ? extractVirtualProxyFromSessionCookieName(sessionCookie.name) ||
-                          '(default)'
-                        : 'n/a'
-                } sessionCookieValueLength=${sessionCookie?.value?.length || 0}`
-            );
+                // Extract session cookie immediately using set-cookie-parser for reliability.
+                // set-cookie-parser handles joined header strings and complex attributes.
+                const cookies = setCookieParser.parse(response, { decodeValues: false });
+                const sessionCookie = cookies.find((c) =>
+                    c.name.toLowerCase().startsWith('x-qlik-session-')
+                );
 
-            if (sessionCookie) {
-                responseSessionCookieHeader = {
-                    name: sessionCookie.name,
-                    value: sessionCookie.value,
-                };
+                debugLog(
+                    logger,
+                    `AUDIT API: Screenshot download parsed cookies attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} cookieCount=${cookies.length} sessionCookieName=${
+                        sessionCookie?.name || 'none'
+                    } sessionCookieVirtualProxy=${
+                        sessionCookie
+                            ? extractVirtualProxyFromSessionCookieName(sessionCookie.name) ||
+                              '(default)'
+                            : 'n/a'
+                    } sessionCookieValueLength=${sessionCookie?.value?.length || 0}`
+                );
+
+                if (sessionCookie) {
+                    responseSessionCookieHeader = {
+                        name: sessionCookie.name,
+                        value: sessionCookie.value,
+                    };
+                    requestCookieHeader = mergeCookieHeader(
+                        requestCookieHeader,
+                        sessionCookie.name,
+                        sessionCookie.value
+                    );
+                }
+
+                if (!isRedirectHttpStatus(response.status)) break;
+
+                const location = getHeaderValue(response.headers, 'location');
+                if (!location) {
+                    logger.warn(
+                        `AUDIT API: Screenshot download redirect blocked reason=missing-location httpStatus=${response.status} url=${redactQlikTicketInUrl(
+                            downloadUrl
+                        )} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} ${auditCtxStr}`
+                    );
+                    return null;
+                }
+
+                if (redirectCount >= MAX_SCREENSHOT_REDIRECTS) {
+                    logger.warn(
+                        `AUDIT API: Screenshot download redirect blocked reason=max-redirects httpStatus=${response.status} maxRedirects=${MAX_SCREENSHOT_REDIRECTS} location=${redactQlikTicketInUrl(
+                            location
+                        )} url=${redactQlikTicketInUrl(
+                            downloadUrl
+                        )} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} ${auditCtxStr}`
+                    );
+                    return null;
+                }
+
+                let redirectedUrl;
+                try {
+                    redirectedUrl = resolveRedirectUrl(location, downloadUrl);
+                } catch {
+                    logger.warn(
+                        `AUDIT API: Screenshot download redirect blocked reason=invalid-location httpStatus=${response.status} location=${redactQlikTicketInUrl(
+                            location
+                        )} url=${redactQlikTicketInUrl(
+                            downloadUrl
+                        )} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} ${auditCtxStr}`
+                    );
+                    return null;
+                }
+
+                if (redirectedUrl.protocol !== 'https:' && redirectedUrl.protocol !== 'http:') {
+                    logger.warn(
+                        `AUDIT API: Screenshot download redirect blocked reason=invalid-scheme scheme=${redirectedUrl.protocol} httpStatus=${response.status} location=${redactQlikTicketInUrl(
+                            location
+                        )} url=${redactQlikTicketInUrl(
+                            downloadUrl
+                        )} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} ${auditCtxStr}`
+                    );
+                    return null;
+                }
+
+                if (
+                    !isScreenshotDownloadHostAllowed(
+                        redirectedUrl.hostname,
+                        allowedRedirectHosts,
+                        parsedInitialUrl.hostname,
+                        hasExplicitRedirectHosts
+                    )
+                ) {
+                    logger.warn(
+                        `AUDIT API: Screenshot download redirect blocked reason=host-not-allowed hostname=${redirectedUrl.hostname.toLowerCase()} httpStatus=${response.status} location=${redactQlikTicketInUrl(
+                            location
+                        )} url=${redactQlikTicketInUrl(
+                            downloadUrl
+                        )} (original=${url}) attempt=${attempt}/${maxAttempts} selectionTxnId=${selectionTxnId} ${auditCtxStr}`
+                    );
+                    return null;
+                }
+
+                redirectCount += 1;
+                logger.info(
+                    `AUDIT API: Screenshot download following redirect redirect=${redirectCount}/${MAX_SCREENSHOT_REDIRECTS} httpStatus=${response.status} selectionTxnId=${selectionTxnId} from=${redactQlikTicketInUrl(
+                        downloadUrl
+                    )} to=${redactQlikTicketInUrl(redirectedUrl.toString())} ${auditCtxStr}`
+                );
+                downloadUrl = redirectedUrl.toString();
             }
 
             if (usedCachedSession && isCachedSessionAuthFailure(response.status)) {

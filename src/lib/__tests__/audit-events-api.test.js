@@ -250,6 +250,9 @@ describe('audit-events-api event types', () => {
 
         expect(res.statusCode).toBe(202);
         expect(downloadScreenshot).toHaveBeenCalled();
+        expect(downloadScreenshot.mock.calls[0][2]).toMatchObject({
+            allowedImageDownloadHosts: ['example.com'],
+        });
     });
 
     test('logs objectData at debug level for screenshot.url.received', async () => {
