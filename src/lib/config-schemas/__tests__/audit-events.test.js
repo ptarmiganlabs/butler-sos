@@ -335,13 +335,6 @@ describe('auditEvents schema', () => {
                             qps: {
                                 host: 'qlik.example.com',
                                 port: 4243,
-                                defaultVirtualProxy: 'analytics',
-                                userDirectoryMappings: [
-                                    {
-                                        userDirectory: 'LAB',
-                                        virtualProxy: 'analytics',
-                                    },
-                                ],
                                 ticketTimeoutMs: 5000,
                             },
                         },
@@ -378,6 +371,35 @@ describe('auditEvents schema', () => {
             console.error(validate.errors);
         }
         expect(ok).toBe(true);
+    });
+
+    test.each([
+        ['defaultVirtualProxy', { defaultVirtualProxy: 'analytics' }],
+        [
+            'userDirectoryMappings',
+            {
+                userDirectoryMappings: [
+                    {
+                        userDirectory: 'LAB',
+                        virtualProxy: 'analytics',
+                    },
+                ],
+            },
+        ],
+    ])('should reject obsolete userTicket QPS virtual proxy fallback: %s', (_name, qpsFallback) => {
+        const validate = createAuditEventsValidator();
+
+        const invalidConfig = createConfigWithScreenshotAuth({
+            mode: 'userTicket',
+            qps: {
+                host: 'qlik.example.com',
+                port: 4243,
+                ticketTimeoutMs: 5000,
+                ...qpsFallback,
+            },
+        });
+
+        expect(validate(invalidConfig)).toBe(false);
     });
 
     test('should accept screenshot auth session cache configuration', () => {

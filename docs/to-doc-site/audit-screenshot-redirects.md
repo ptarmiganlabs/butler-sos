@@ -67,6 +67,8 @@ If that happens during a redirect response, Butler SOS carries the session cooki
 
 When session caching is enabled, the cached Qlik session cookie is sent from the first request and is also carried across allowed redirects.
 
+For `userTicket`, the QPS virtual proxy is derived from the original screenshot URL. Redirect targets are checked for allowed hosts, but they are not used to choose a different QPS ticket endpoint.
+
 ## Common Configuration Pattern
 
 For environments with a reverse proxy in front of Qlik Sense, include every hostname that can appear in the screenshot redirect chain:

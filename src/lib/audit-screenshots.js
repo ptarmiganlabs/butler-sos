@@ -290,7 +290,7 @@ function normalizeVirtualProxyName(value) {
  * Extracts a virtual proxy prefix from a Qlik Sense URL path when present.
  *
  * @param {string} rawUrl Candidate screenshot URL.
- * @returns {string} Virtual proxy name, or empty string for default/unknown.
+ * @returns {string | null} Virtual proxy name, empty string for the default proxy, or null for invalid input.
  */
 function extractVirtualProxyFromQlikUrl(rawUrl) {
     try {
@@ -321,59 +321,21 @@ function extractVirtualProxyFromQlikUrl(rawUrl) {
         if (defaultProxySegments.has(first)) return '';
 
         const virtualProxy = normalizeVirtualProxyName(segments[0]);
-        return virtualProxy || '';
+        return virtualProxy;
     } catch {
-        return '';
+        return null;
     }
 }
 
 /**
- * Looks up a configured virtual proxy mapping for a user directory.
- *
- * @param {string | null} userDirectory User directory from the parsed identity.
- * @param {unknown} mappings Configured mappings.
- * @returns {string | null} Virtual proxy from the matching mapping, or null.
- */
-function lookupVirtualProxyForUserDirectory(userDirectory, mappings) {
-    if (!userDirectory || !Array.isArray(mappings)) return null;
-
-    const match = mappings.find(
-        (mapping) =>
-            mapping &&
-            typeof mapping.userDirectory === 'string' &&
-            mapping.userDirectory.toLowerCase() === userDirectory.toLowerCase()
-    );
-
-    return typeof match?.virtualProxy === 'string' ? match.virtualProxy : null;
-}
-
-/**
- * Resolves which virtual proxy should be used for a user-ticket request.
+ * Resolves the virtual proxy for a user-ticket request from the screenshot URL.
  *
  * @param {object} params Resolution parameters.
- * @param {AuditEventEnvelope | null | undefined} params.envelope Audit envelope.
  * @param {string} params.screenshotUrl Original screenshot URL.
- * @param {object} params.qps QPS auth config.
- * @param {string | null} params.userDirectory Parsed user directory.
  * @returns {string | null} Normalized virtual proxy name, empty string for default, or null when invalid.
  */
-function resolveUserTicketVirtualProxy({ envelope, screenshotUrl, qps, userDirectory }) {
-    const context = envelope?.payload?.context;
-    const candidates = [
-        context?.virtualProxyPrefix,
-        context?.virtualProxy,
-        extractVirtualProxyFromQlikUrl(screenshotUrl),
-        lookupVirtualProxyForUserDirectory(userDirectory, qps?.userDirectoryMappings),
-        qps?.defaultVirtualProxy,
-    ];
-
-    for (const candidate of candidates) {
-        if (candidate === undefined || candidate === null) continue;
-        const normalized = normalizeVirtualProxyName(candidate);
-        if (normalized !== null) return normalized;
-    }
-
-    return null;
+function resolveUserTicketVirtualProxy({ screenshotUrl }) {
+    return extractVirtualProxyFromQlikUrl(screenshotUrl);
 }
 
 /**
@@ -1339,12 +1301,7 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                         return null;
                     }
 
-                    const virtualProxy = resolveUserTicketVirtualProxy({
-                        envelope,
-                        screenshotUrl: url,
-                        qps,
-                        userDirectory: userIdentity.userDirectory,
-                    });
+                    const virtualProxy = resolveUserTicketVirtualProxy({ screenshotUrl: url });
                     if (virtualProxy === null) {
                         logger.warn(
                             `AUDIT API: Screenshot auth mode is userTicket, but the resolved virtual proxy value is invalid. selectionTxnId=${selectionTxnId} ${auditCtxStr}`

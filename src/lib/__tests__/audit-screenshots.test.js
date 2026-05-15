@@ -578,7 +578,7 @@ describe('audit-screenshots', () => {
         expect(logger.error).not.toHaveBeenCalled();
     });
 
-    test('downloads screenshot with userTicket auth using payload user and virtual proxy', async () => {
+    test('downloads screenshot with userTicket auth using payload user and URL-derived virtual proxy', async () => {
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 
         const logger = {
@@ -614,7 +614,6 @@ describe('audit-screenshots', () => {
                 payload: {
                     context: {
                         user: 'UserDirectory=LAB; UserId=goran',
-                        virtualProxyPrefix: '/analytics',
                     },
                     event: {
                         objectId: 'obj-1',
@@ -658,6 +657,91 @@ describe('audit-screenshots', () => {
         const screenshotReq = mockAxios.request.mock.calls[1][0];
         expect(screenshotReq.url).toContain('qlikTicket=USER_TICKET_123');
         expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(1);
+        expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('uses default QPS endpoint for userTicket when screenshot URL has no virtual proxy prefix', async () => {
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+        const logger = {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+        };
+
+        mockAxios.request.mockImplementation(async (req) => {
+            if (typeof req.url === 'string' && req.url.includes('/qps/ticket?Xrfkey=')) {
+                return {
+                    status: 201,
+                    data: {
+                        Ticket: 'DEFAULT_PROXY_TICKET',
+                    },
+                };
+            }
+
+            return {
+                status: 200,
+                headers: { 'content-type': 'image/png' },
+                data: Buffer.from('png-bytes'),
+            };
+        });
+
+        await downloadScreenshot(
+            'https://qlik.example.com/tempcontent/screenshot.png?foo=bar',
+            {
+                timestamp: '2025-01-01T00:00:00.000Z',
+                eventId: 'evt-user-ticket-default-proxy',
+                correlationId: 'corr-user-ticket-default-proxy',
+                payload: {
+                    context: {
+                        user: 'UserDirectory=LAB; UserId=goran',
+                    },
+                    event: {
+                        objectId: 'obj-1',
+                        screenshotUrl: 'https://qlik.example.com/tempcontent/screenshot.png?foo=bar',
+                    },
+                },
+            },
+            {
+                enable: true,
+                downloadTimeoutMs: 15000,
+                auth: {
+                    mode: 'userTicket',
+                    qps: {
+                        host: 'qlik.example.com',
+                        port: 4243,
+                        ticketTimeoutMs: 5000,
+                        defaultVirtualProxy: 'analytics',
+                        userDirectoryMappings: [
+                            {
+                                userDirectory: 'LAB',
+                                virtualProxy: 'analytics',
+                            },
+                        ],
+                    },
+                },
+                storageTargets: [
+                    {
+                        enable: true,
+                        type: 'flat',
+                        directory: 'screenshots/audit',
+                    },
+                ],
+            },
+            logger
+        );
+
+        expect(mockAxios.request).toHaveBeenCalledTimes(2);
+
+        const ticketReq = mockAxios.request.mock.calls[0][0];
+        expect(ticketReq.method).toBe('post');
+        expect(ticketReq.url).toContain('https://qlik.example.com:4243/qps/ticket?Xrfkey=');
+        expect(ticketReq.url).not.toContain('/qps/analytics/ticket');
+        expect(ticketReq.data).toMatchObject({
+            UserDirectory: 'LAB',
+            UserId: 'goran',
+        });
         expect(logger.warn).not.toHaveBeenCalled();
     });
 

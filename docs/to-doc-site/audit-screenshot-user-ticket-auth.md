@@ -9,7 +9,7 @@ Use `auth.mode: userTicket` when:
 - Audit.qs runs in Qlik Sense Enterprise on Windows/client-managed.
 - `payload.context.user` contains a parseable Qlik identity such as `UserDirectory=LAB; UserId=john.doe`, `LAB; UserId=john.doe`, or `LAB\john.doe`.
 - Butler SOS has the Qlik certificates needed for mutual TLS to QPS.
-- Butler SOS can resolve the correct virtual proxy for the user/session.
+- The screenshot URL contains the same Qlik Sense route the browser used for the image.
 
 Do not use this mode for Qlik Cloud identities that only resolve to email addresses. Butler SOS preserves those identities as `user`, but cannot create a QPS ticket without both `userDirectory` and `userId`.
 
@@ -21,8 +21,7 @@ Audit.qs sends the full identity in `payload.context.user`:
 {
   "payload": {
     "context": {
-      "user": "UserDirectory=LAB; UserId=john.doe",
-      "virtualProxyPrefix": "/analytics"
+      "user": "UserDirectory=LAB; UserId=john.doe"
     },
     "event": {
       "type": "screenshot",
@@ -52,29 +51,19 @@ Butler-SOS:
             port: 4243
             ticketTimeoutMs: 5000
 
-            # Used when the event/URL does not identify a virtual proxy.
-            defaultVirtualProxy: analytics
-
-            # Optional mapping used after event/URL resolution.
-            userDirectoryMappings:
-              - userDirectory: LAB
-                virtualProxy: analytics
-
           sessionCache:
             enable: true
             ttlSeconds: 120
             maxEntries: 100
 ```
 
-Virtual proxy resolution order:
+Virtual proxy resolution:
 
-1. `payload.context.virtualProxyPrefix`
-2. `payload.context.virtualProxy`
-3. Virtual proxy inferred from the screenshot URL path
-4. `qps.userDirectoryMappings[]`
-5. `qps.defaultVirtualProxy`
+- Butler SOS derives the QPS virtual proxy from the screenshot URL path.
+- A URL such as `https://qlik.example.com/analytics/tempcontent/abc/screenshot.png` uses `/qps/analytics/ticket`.
+- A URL such as `https://qlik.example.com/tempcontent/abc/screenshot.png` uses `/qps/ticket`.
 
-An empty virtual proxy means the default Qlik Sense proxy, using `/qps/ticket`.
+The screenshot URL is the authoritative source for Qlik Sense routing.
 
 ## Session Cache
 
@@ -104,7 +93,7 @@ When a cached session expires or is evicted, Butler SOS deletes the QPS session 
 1. Butler SOS receives a `screenshot.url.received` event.
 2. It parses `payload.context.user` into `userDirectory` and `userId`.
 3. It checks for a cached Qlik session for the auth mode, virtual proxy and user.
-4. On a cache miss, it requests a ticket from `POST /qps/{virtualProxy}/ticket` using mutual TLS.
+4. On a cache miss, it derives the QPS virtual proxy from the screenshot URL and requests a ticket using mutual TLS.
 5. It appends `qlikTicket=<ticket>` to the screenshot URL for ticket redemption, or sends the cached session as a `Cookie` header on a cache hit.
 6. It downloads the screenshot and writes it to enabled storage targets.
 7. It stores the returned session cookie when caching is enabled, otherwise it deletes the QPS session created by ticket redemption.

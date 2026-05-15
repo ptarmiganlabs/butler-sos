@@ -364,23 +364,6 @@ export const auditEventsSchema = {
                                             userDirectory: { type: 'string', minLength: 1 },
                                             userId: { type: 'string', minLength: 1 },
                                             virtualProxy: { type: 'string' },
-                                            defaultVirtualProxy: { type: 'string' },
-                                            userDirectoryMappings: {
-                                                type: 'array',
-                                                items: {
-                                                    type: 'object',
-                                                    properties: {
-                                                        userDirectory: {
-                                                            type: 'string',
-                                                            minLength: 1,
-                                                        },
-                                                        virtualProxy: { type: 'string' },
-                                                    },
-                                                    required: ['userDirectory', 'virtualProxy'],
-                                                    additionalProperties: false,
-                                                },
-                                                default: [],
-                                            },
                                             ticketTimeoutMs: { type: 'number', default: 5000 },
                                         },
                                         required: ['host', 'port', 'ticketTimeoutMs'],
