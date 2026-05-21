@@ -2051,6 +2051,27 @@ describe('audit-events-api version compatibility', () => {
         expect(body.compatible).toBe(false);
     });
 
+    test('test-connection uses first x-audit-qs-version value when header is duplicated', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'x-audit-qs-version': ['0.3.0', '0.2.0'],
+            },
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.payload);
+        expect(body.auditQsVersion).toBe('0.3.0');
+        expect(body.compatible).toBe(true);
+    });
+
     test('test-connection logs INFO when versions are compatible', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
 
@@ -2206,6 +2227,39 @@ describe('audit-events-api version compatibility', () => {
         expect(body.details.auditQsVersion).toBe('0.2.0');
     });
 
+    test('accepts audit event when duplicated x-audit-qs-version header has compatible first value', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { writeAuditEventToDestinations } = await import('../audit-destinations/index.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                'x-audit-qs-version': ['0.3.0', '0.2.0'],
+            },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'a0000000-0000-4000-8000-000000000001',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.state.changed',
+                payload: {
+                    event: {
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                        details: [],
+                    },
+                },
+            },
+        });
+
+        expect(res.statusCode).toBe(202);
+        expect(writeAuditEventToDestinations).toHaveBeenCalled();
+    });
+
     test('logs missing version at DEBUG for each event and WARN at most once per minute per IP', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
         const { writeAuditEventToDestinations } = await import('../audit-destinations/index.js');
@@ -2319,6 +2373,75 @@ describe('audit-events-api version compatibility', () => {
         expect(missingVersionWarnCalls[1]).toContain('ip=10.10.10.11');
         expect(missingVersionWarnCalls[0]).toContain('missingVersionCount=1');
         expect(missingVersionWarnCalls[1]).toContain('missingVersionCount=1');
+
+        nowSpy.mockRestore();
+    });
+
+    test('evicts stale missing-version WARN state for inactive IPs', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        let now = 1_700_000_000_000;
+        const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => now);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const postEvent = (remoteAddress, eventId, selectionTxnId) =>
+            fastify.inject({
+                method: 'POST',
+                url: '/api/v1/audit-event',
+                headers: {
+                    origin: 'https://qliksense.company.com',
+                    'content-type': 'application/json',
+                },
+                remoteAddress,
+                payload: {
+                    schemaVersion: 1,
+                    eventId,
+                    timestamp: '2025-01-01T00:00:00.000Z',
+                    type: 'selection.state.changed',
+                    payload: {
+                        event: {
+                            selectionTxnId,
+                            details: [],
+                        },
+                    },
+                },
+            });
+
+        await postEvent(
+            '10.0.0.1',
+            'a0000000-0000-4000-8000-000000000001',
+            'c0000000-0000-4000-8000-000000000001'
+        );
+        now += 10_000;
+        await postEvent(
+            '10.0.0.1',
+            'a0000000-0000-4000-8000-000000000002',
+            'c0000000-0000-4000-8000-000000000002'
+        );
+
+        now += 901_000;
+        await postEvent(
+            '10.0.0.2',
+            'a0000000-0000-4000-8000-000000000003',
+            'c0000000-0000-4000-8000-000000000003'
+        );
+
+        now += 1_000;
+        await postEvent(
+            '10.0.0.1',
+            'a0000000-0000-4000-8000-000000000004',
+            'c0000000-0000-4000-8000-000000000004'
+        );
+
+        const ipOneWarnCalls = mockGlobals.logger.warn.mock.calls
+            .map((call) => call[0])
+            .filter((msg) => msg.includes('without version info') && msg.includes('ip=10.0.0.1'));
+
+        expect(ipOneWarnCalls).toHaveLength(2);
+        expect(ipOneWarnCalls[0]).toContain('missingVersionCount=1');
+        expect(ipOneWarnCalls[1]).toContain('missingVersionCount=1');
 
         nowSpy.mockRestore();
     });
