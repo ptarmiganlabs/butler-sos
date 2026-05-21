@@ -37,6 +37,7 @@ const VALID_EVENT_TYPES = new Set([
 const EVENT_WILDCARD_REGEX = /^event\..+$/;
 const MISSING_AUDIT_QS_WARN_WINDOW_MS = 60_000;
 const MISSING_AUDIT_QS_WARN_STATE_TTL_MS = 15 * 60_000;
+const MISSING_AUDIT_QS_WARN_CLEANUP_INTERVAL_MS = 60_000;
 
 /**
  * Compares two strings using a constant-time algorithm to prevent timing attacks.
@@ -1031,6 +1032,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
     const { validatePayloadByType } = createPayloadValidators();
     /** @type {Map<string, { lastWarnTs: number, suppressedCount: number, lastSeenTs: number }>} */
     const missingAuditQsVersionWarnState = new Map();
+    let lastMissingAuditQsWarnCleanupTs = 0;
 
     /**
      * Deletes stale per-IP WARN rate-limit entries that have not been seen recently.
@@ -1039,11 +1041,17 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
      * @returns {void}
      */
     function cleanupMissingAuditQsVersionWarnState(now) {
+        if (now - lastMissingAuditQsWarnCleanupTs < MISSING_AUDIT_QS_WARN_CLEANUP_INTERVAL_MS) {
+            return;
+        }
+
         for (const [ip, state] of missingAuditQsVersionWarnState.entries()) {
             if (now - state.lastSeenTs > MISSING_AUDIT_QS_WARN_STATE_TTL_MS) {
                 missingAuditQsVersionWarnState.delete(ip);
             }
         }
+
+        lastMissingAuditQsWarnCleanupTs = now;
     }
 
     /**
