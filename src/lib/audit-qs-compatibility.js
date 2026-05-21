@@ -1,4 +1,6 @@
-import { satisfies, valid } from 'semver';
+import semver from 'semver';
+
+const { satisfies, valid } = semver;
 
 /**
  * Compatibility matrix mapping Butler SOS version ranges to compatible Audit.qs version ranges.

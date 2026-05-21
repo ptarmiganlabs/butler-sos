@@ -7,18 +7,18 @@ This project is indexed by GitNexus as **butler-sos** (2766 symbols, 5154 relati
 
 ## Always Do
 
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
+- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` when MCP tools are exposed, or run `npx gitnexus impact -r butler-sos <symbolName>` in CLI. Report the blast radius (direct callers, affected processes, risk level) to the user.
+- **MUST run `gitnexus_detect_changes()` before committing** (or `npx gitnexus detect-changes -r butler-sos --scope all` in CLI) to verify your changes only affect expected symbols and execution flows.
 - **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
+- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` when MCP tools are exposed, or run `npx gitnexus query -r butler-sos "concept"` in CLI. It returns process-grouped results ranked by relevance.
+- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})` when MCP tools are exposed, or run `npx gitnexus context -r butler-sos <symbolName>` in CLI.
 
 ## Never Do
 
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
+- NEVER edit a function, class, or method without first running `gitnexus_impact` (or `npx gitnexus impact -r butler-sos <symbolName>`) on it.
 - NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
+- NEVER rename symbols with find-and-replace — use `gitnexus_rename` when MCP tools are exposed, or `npx gitnexus rename -r butler-sos <oldName> <newName>` in CLI.
+- NEVER commit changes without running `gitnexus_detect_changes()` (or `npx gitnexus detect-changes -r butler-sos --scope all`) to check affected scope.
 
 ## Resources
 
