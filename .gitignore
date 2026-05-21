@@ -77,3 +77,4 @@ CLAUDE.md
 .claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md
 .claude/skills/gitnexus/gitnexus-refactoring/SKILL.md
 crash_dumps/
+.env

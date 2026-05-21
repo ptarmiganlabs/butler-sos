@@ -1064,4 +1064,94 @@ describe('auditEvents schema', () => {
 
         expect(validate(invalidConfig)).toBe(false);
     });
+
+    test('should reject json objectdata buffering settings', () => {
+        const ajv = new Ajv({ allErrors: true });
+        addFormats(ajv);
+        addKeywords(ajv);
+
+        const schema = {
+            type: 'object',
+            properties: { auditEvents: auditEventsSchema.auditEvents },
+            required: ['auditEvents'],
+            additionalProperties: false,
+        };
+
+        const validate = ajv.compile(schema);
+
+        const invalidConfig = {
+            auditEvents: {
+                enable: true,
+                host: '0.0.0.0',
+                port: 8181,
+                apiToken: 'test-token',
+                destination: {
+                    enable: true,
+                    type: 'json',
+                    json: {
+                        objectdata: {
+                            enable: true,
+                            exportDirectory: './audit-events/json',
+                            maxBatchSize: 1000,
+                            writeFrequency: 20000,
+                            staticTags: [],
+                        },
+                    },
+                    screenshots: {
+                        enable: false,
+                        downloadTimeoutMs: 15000,
+                        auth: {
+                            mode: 'none',
+                        },
+                        storageTargets: null,
+                    },
+                },
+                tls: {
+                    enable: false,
+                },
+                queue: {
+                    messageQueue: {
+                        maxConcurrent: 10,
+                        maxSize: 200,
+                        backpressureThreshold: 80,
+                    },
+                    rateLimit: {
+                        enable: false,
+                        maxMessagesPerMinute: 600,
+                    },
+                    queueMetrics: {
+                        influxdb: {
+                            enable: false,
+                            writeFrequency: 20000,
+                            measurementName: 'audit_events_queue',
+                            tags: [],
+                        },
+                    },
+                },
+                cors: {
+                    allowedOrigins: ['https://qliksense.company.com'],
+                },
+                rateLimit: {
+                    enable: true,
+                    maxPerMinute: 300,
+                },
+            },
+        };
+
+        const ok = validate(invalidConfig);
+
+        expect(ok).toBe(false);
+        expect(validate.errors).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    keyword: 'additionalProperties',
+                    params: expect.objectContaining({ additionalProperty: 'maxBatchSize' }),
+                }),
+                expect.objectContaining({
+                    keyword: 'additionalProperties',
+                    params: expect.objectContaining({ additionalProperty: 'writeFrequency' }),
+                }),
+            ])
+        );
+    });
 });
