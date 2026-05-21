@@ -108,7 +108,7 @@
         "knip": "^6.12.2",
         "license-checker-rseidelsohn": "^4.4.2",
         "lockfile-lint": "^5.0.0",
-        "npm-check-updates": "^22.1.1",
+        "npm-check-updates": "^22.2.0",
         "prettier": "^3.8.3",
         "snyk": "^1.1304.2",
         "typescript": "^6.0.3"
