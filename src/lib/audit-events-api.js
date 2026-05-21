@@ -1007,6 +1007,8 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
 
     const handlers = createTypeHandlers(globals.logger);
     const { validatePayloadByType } = createPayloadValidators();
+    /** @type {Map<string, { lastWarnTs: number, suppressedCount: number }>} */
+    const missingAuditQsVersionWarnState = new Map();
 
     /**
      * Validates `envelope.payload` using a per-type AJV schema.
@@ -1112,6 +1114,49 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
     }
 
     /**
+     * Logs missing Audit.qs version information using per-IP WARN rate limiting.
+     *
+     * Emits DEBUG for every individual event without version info.
+     * Emits WARN at most once per minute per source IP with an aggregated counter
+     * for events observed since the previous WARN for that IP.
+     *
+     * @param {string} ip - Source IP address.
+     * @param {string | undefined} eventType - Audit event type.
+     * @param {string | undefined} eventId - Audit event id.
+     * @param {string} butlerSosVersion - Current Butler SOS version.
+     * @returns {void}
+     */
+    function logMissingAuditQsVersion(ip, eventType, eventId, butlerSosVersion) {
+        const sourceIp = ip || 'n/a';
+        const now = Date.now();
+        const state = missingAuditQsVersionWarnState.get(sourceIp) || {
+            lastWarnTs: 0,
+            suppressedCount: 0,
+        };
+
+        globals.logger.debug(
+            `AUDIT API: Received audit event without version info type=${eventType} eventId=${eventId} ip=${sourceIp} butlerSosVersion=${butlerSosVersion}. Consider upgrading Audit.qs to a version that sends the X-Audit-QS-Version header.`
+        );
+
+        if (now - state.lastWarnTs >= 60_000) {
+            const missingVersionCount = state.suppressedCount + 1;
+            globals.logger.warn(
+                `AUDIT API: Received audit event(s) without version info type=${eventType} eventId=${eventId} ip=${sourceIp} butlerSosVersion=${butlerSosVersion} missingVersionCount=${missingVersionCount} windowSeconds=60. Individual events are logged at DEBUG level.`
+            );
+            missingAuditQsVersionWarnState.set(sourceIp, {
+                lastWarnTs: now,
+                suppressedCount: 0,
+            });
+            return;
+        }
+
+        missingAuditQsVersionWarnState.set(sourceIp, {
+            lastWarnTs: state.lastWarnTs,
+            suppressedCount: state.suppressedCount + 1,
+        });
+    }
+
+    /**
      * Fastify route handler for receiving audit events.
      *
      * Validates the envelope (via JSON schema), then dispatches by `envelope.type`.
@@ -1177,8 +1222,11 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
         }
 
         if (!auditQsVersion) {
-            globals.logger.warn(
-                `AUDIT API: Received audit event without version info type=${envelope?.type} eventId=${envelope?.eventId} ip=${request.ip} butlerSosVersion=${butlerSosVersion}. Consider upgrading Audit.qs to a version that sends the X-Audit-QS-Version header.`
+            logMissingAuditQsVersion(
+                request.ip,
+                envelope?.type,
+                envelope?.eventId,
+                butlerSosVersion
             );
         }
 

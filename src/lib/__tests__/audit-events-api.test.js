@@ -2206,6 +2206,123 @@ describe('audit-events-api version compatibility', () => {
         expect(body.details.auditQsVersion).toBe('0.2.0');
     });
 
+    test('logs missing version at DEBUG for each event and WARN at most once per minute per IP', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { writeAuditEventToDestinations } = await import('../audit-destinations/index.js');
+
+        let now = 1_700_000_000_000;
+        const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => now);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const postEvent = () =>
+            fastify.inject({
+                method: 'POST',
+                url: '/api/v1/audit-event',
+                headers: {
+                    origin: 'https://qliksense.company.com',
+                    'content-type': 'application/json',
+                },
+                remoteAddress: '10.10.10.10',
+                payload: {
+                    schemaVersion: 1,
+                    eventId: 'a0000000-0000-4000-8000-000000000001',
+                    timestamp: '2025-01-01T00:00:00.000Z',
+                    type: 'selection.state.changed',
+                    payload: {
+                        event: {
+                            selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                            details: [],
+                        },
+                    },
+                },
+            });
+
+        const firstRes = await postEvent();
+        const secondRes = await postEvent();
+        now += 61_000;
+        const thirdRes = await postEvent();
+
+        expect(firstRes.statusCode).toBe(202);
+        expect(secondRes.statusCode).toBe(202);
+        expect(thirdRes.statusCode).toBe(202);
+        expect(writeAuditEventToDestinations).toHaveBeenCalledTimes(3);
+
+        const missingVersionWarnCalls = mockGlobals.logger.warn.mock.calls
+            .map((call) => call[0])
+            .filter((msg) => msg.includes('without version info'));
+        expect(missingVersionWarnCalls).toHaveLength(2);
+        expect(missingVersionWarnCalls[0]).toContain('ip=10.10.10.10');
+        expect(missingVersionWarnCalls[0]).toContain('missingVersionCount=1');
+        expect(missingVersionWarnCalls[1]).toContain('ip=10.10.10.10');
+        expect(missingVersionWarnCalls[1]).toContain('missingVersionCount=2');
+
+        const missingVersionDebugCalls = mockGlobals.logger.debug.mock.calls
+            .map((call) => call[0])
+            .filter((msg) => msg.includes('without version info'));
+        expect(missingVersionDebugCalls).toHaveLength(3);
+
+        nowSpy.mockRestore();
+    });
+
+    test('tracks missing-version WARN rate limit separately per IP', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const postEvent = (remoteAddress, eventId, selectionTxnId) =>
+            fastify.inject({
+                method: 'POST',
+                url: '/api/v1/audit-event',
+                headers: {
+                    origin: 'https://qliksense.company.com',
+                    'content-type': 'application/json',
+                },
+                remoteAddress,
+                payload: {
+                    schemaVersion: 1,
+                    eventId,
+                    timestamp: '2025-01-01T00:00:00.000Z',
+                    type: 'selection.state.changed',
+                    payload: {
+                        event: {
+                            selectionTxnId,
+                            details: [],
+                        },
+                    },
+                },
+            });
+
+        const firstRes = await postEvent(
+            '10.10.10.10',
+            'a0000000-0000-4000-8000-000000000001',
+            'c0000000-0000-4000-8000-000000000001'
+        );
+        const secondRes = await postEvent(
+            '10.10.10.11',
+            'a0000000-0000-4000-8000-000000000002',
+            'c0000000-0000-4000-8000-000000000002'
+        );
+
+        expect(firstRes.statusCode).toBe(202);
+        expect(secondRes.statusCode).toBe(202);
+
+        const missingVersionWarnCalls = mockGlobals.logger.warn.mock.calls
+            .map((call) => call[0])
+            .filter((msg) => msg.includes('without version info'));
+        expect(missingVersionWarnCalls).toHaveLength(2);
+        expect(missingVersionWarnCalls[0]).toContain('ip=10.10.10.10');
+        expect(missingVersionWarnCalls[1]).toContain('ip=10.10.10.11');
+        expect(missingVersionWarnCalls[0]).toContain('missingVersionCount=1');
+        expect(missingVersionWarnCalls[1]).toContain('missingVersionCount=1');
+
+        nowSpy.mockRestore();
+    });
+
     test('allows CORS preflight (OPTIONS) for GET test-connection', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
 
