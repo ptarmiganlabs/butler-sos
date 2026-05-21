@@ -209,7 +209,12 @@ describe('InfluxDB Index (Facade)', () => {
         let intervalSpy;
 
         beforeEach(() => {
-            intervalSpy = jest.spyOn(global, 'setInterval');
+            intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(() => ({
+                hasRef: () => false,
+                refresh: () => undefined,
+                ref: () => undefined,
+                unref: () => undefined,
+            }));
         });
 
         afterEach(() => {
@@ -303,6 +308,7 @@ describe('InfluxDB Index (Facade)', () => {
 
         test('should setup audit event queue metrics when enabled', () => {
             globals.config.has.mockImplementation((path) => {
+                if (path === 'Butler-SOS.auditEvents.enable') return true;
                 if (path === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable')
                     return true;
                 return false;
@@ -314,6 +320,7 @@ describe('InfluxDB Index (Facade)', () => {
                     return false;
                 if (path.includes('logEvents.udpServerConfig.queueMetrics.influxdb.enable'))
                     return false;
+                if (path === 'Butler-SOS.auditEvents.enable') return true;
                 if (path.includes('auditEvents.queue.queueMetrics.influxdb.enable')) return true;
                 if (path.includes('auditEvents.queue.queueMetrics.influxdb.writeFrequency'))
                     return 20000;
@@ -326,6 +333,36 @@ describe('InfluxDB Index (Facade)', () => {
             expect(intervalSpy).toHaveBeenCalledWith(expect.any(Function), 20000);
             expect(globals.logger.info).toHaveBeenCalledWith(
                 expect.stringContaining('audit event queue metrics')
+            );
+        });
+
+        test('should not setup audit event queue metrics when audit events are disabled', () => {
+            globals.config.has.mockImplementation((path) => {
+                if (path === 'Butler-SOS.auditEvents.enable') return true;
+                if (path === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable')
+                    return true;
+                return false;
+            });
+
+            globals.config.get.mockImplementation((path) => {
+                if (path.includes('influxdbConfig.enable')) return true;
+                if (path.includes('userEvents.udpServerConfig.queueMetrics.influxdb.enable'))
+                    return false;
+                if (path.includes('logEvents.udpServerConfig.queueMetrics.influxdb.enable'))
+                    return false;
+                if (path === 'Butler-SOS.auditEvents.enable') return false;
+                if (path.includes('auditEvents.queue.queueMetrics.influxdb.enable')) return true;
+                if (path.includes('auditEvents.queue.queueMetrics.influxdb.writeFrequency'))
+                    return 20000;
+                return undefined;
+            });
+
+            const result = indexModule.setupUdpQueueMetricsStorage();
+
+            expect(result.auditEvents).toBeNull();
+            expect(intervalSpy).not.toHaveBeenCalledWith(expect.any(Function), 20000);
+            expect(globals.logger.info).toHaveBeenCalledWith(
+                expect.stringContaining('Audit event queue metrics storage to InfluxDB is disabled')
             );
         });
 
