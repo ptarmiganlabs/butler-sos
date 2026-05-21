@@ -24,6 +24,7 @@ const mockGlobals = {
      */
     getErrorMessage: (err) => (err instanceof Error ? err.message : String(err)),
     getLoggingLevel: jest.fn().mockReturnValue('info'),
+    appVersion: '15.0.0',
     auditEventsQueueManager: null,
 };
 
@@ -1679,8 +1680,8 @@ describe('audit-events-api GET /api/v1/test-connection', () => {
         expect(body.status).toBe('ok');
         expect(body.message).toBe('Butler SOS Audit API is reachable');
         expect(typeof body.timestamp).toBe('string');
-        expect(mockGlobals.logger.info).toHaveBeenCalledWith(
-            expect.stringContaining('Connection test successful')
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('without Audit.qs version info')
         );
     });
 
@@ -1699,8 +1700,8 @@ describe('audit-events-api GET /api/v1/test-connection', () => {
         expect(res.statusCode).toBe(200);
         const body = res.json();
         expect(body.status).toBe('ok');
-        expect(mockGlobals.logger.info).toHaveBeenCalledWith(
-            expect.stringContaining('Connection test successful')
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('without Audit.qs version info')
         );
     });
 
@@ -1764,8 +1765,8 @@ describe('audit-events-api GET /api/v1/test-connection', () => {
         const ts = new Date(body.timestamp).getTime();
         expect(ts).toBeGreaterThanOrEqual(before);
         expect(ts).toBeLessThanOrEqual(after);
-        expect(mockGlobals.logger.info).toHaveBeenCalledWith(
-            expect.stringContaining('Connection test successful')
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('without Audit.qs version info')
         );
     });
 });
@@ -1991,5 +1992,481 @@ describe('audit-events-api array maxItems constraints', () => {
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Payload validation failed')
         );
+    });
+});
+
+describe('audit-events-api version compatibility', () => {
+    beforeEach(() => {
+        jest.resetModules();
+        jest.clearAllMocks();
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+        mockGlobals.auditEventsQueueManager = null;
+        mockGlobals.appVersion = '15.0.0';
+    });
+
+    test('test-connection returns compatibility info for compatible versions', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'x-audit-qs-version': '0.3.0',
+            },
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('ok');
+        expect(body.butlerSosVersion).toBe('15.0.0');
+        expect(body.auditQsVersion).toBe('0.3.0');
+        expect(body.compatible).toBe(true);
+    });
+
+    test('test-connection returns compatibility info for incompatible versions', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'x-audit-qs-version': '0.2.0',
+            },
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('ok');
+        expect(body.butlerSosVersion).toBe('15.0.0');
+        expect(body.auditQsVersion).toBe('0.2.0');
+        expect(body.compatible).toBe(false);
+    });
+
+    test('test-connection uses first x-audit-qs-version value when header is duplicated', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'x-audit-qs-version': ['0.3.0', '0.2.0'],
+            },
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.payload);
+        expect(body.auditQsVersion).toBe('0.3.0');
+        expect(body.compatible).toBe(true);
+    });
+
+    test('test-connection logs INFO when versions are compatible', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'x-audit-qs-version': '0.3.0',
+            },
+        });
+
+        expect(mockGlobals.logger.info).toHaveBeenCalledWith(
+            expect.stringContaining('Connection test successful')
+        );
+        expect(mockGlobals.logger.warn).not.toHaveBeenCalledWith(
+            expect.stringContaining('incompatible Audit.qs version')
+        );
+    });
+
+    test('test-connection logs WARN when versions are incompatible', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'x-audit-qs-version': '0.2.0',
+            },
+        });
+
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('incompatible Audit.qs version')
+        );
+    });
+
+    test('drops audit event and returns 422 when Audit.qs version is incompatible', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                'x-audit-qs-version': '0.2.0',
+            },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'a0000000-0000-4000-8000-000000000001',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.state.changed',
+                payload: {
+                    event: {
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                        details: [],
+                    },
+                },
+            },
+        });
+
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('Incompatible Audit.qs version');
+        expect(body.details.compatible).toBe(false);
+        expect(body.details.butlerSosVersion).toBe('15.0.0');
+        expect(body.details.auditQsVersion).toBe('0.2.0');
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('incompatible Audit.qs version')
+        );
+    });
+
+    test('accepts audit event when Audit.qs version is compatible', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { writeAuditEventToDestinations } = await import('../audit-destinations/index.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                'x-audit-qs-version': '0.3.0',
+            },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'a0000000-0000-4000-8000-000000000001',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.state.changed',
+                payload: {
+                    event: {
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                        details: [],
+                    },
+                },
+            },
+        });
+
+        expect(res.statusCode).toBe(202);
+        expect(writeAuditEventToDestinations).toHaveBeenCalled();
+    });
+
+    test('drops audit event using envelope.source.version when x-audit-qs-version header is absent', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+            },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'a0000000-0000-4000-8000-000000000001',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.state.changed',
+                source: {
+                    kind: 'qlik-sense-extension',
+                    name: 'audit-qs',
+                    version: '0.2.0',
+                },
+                payload: {
+                    event: {
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                        details: [],
+                    },
+                },
+            },
+        });
+
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.reason).toBe('Incompatible Audit.qs version');
+        expect(body.details.auditQsVersion).toBe('0.2.0');
+    });
+
+    test('accepts audit event when duplicated x-audit-qs-version header has compatible first value', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { writeAuditEventToDestinations } = await import('../audit-destinations/index.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                'x-audit-qs-version': ['0.3.0', '0.2.0'],
+            },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'a0000000-0000-4000-8000-000000000001',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'selection.state.changed',
+                payload: {
+                    event: {
+                        selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                        details: [],
+                    },
+                },
+            },
+        });
+
+        expect(res.statusCode).toBe(202);
+        expect(writeAuditEventToDestinations).toHaveBeenCalled();
+    });
+
+    test('logs missing version at DEBUG for each event and WARN at most once per minute per IP', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { writeAuditEventToDestinations } = await import('../audit-destinations/index.js');
+
+        let now = 1_700_000_000_000;
+        const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => now);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const postEvent = () =>
+            fastify.inject({
+                method: 'POST',
+                url: '/api/v1/audit-event',
+                headers: {
+                    origin: 'https://qliksense.company.com',
+                    'content-type': 'application/json',
+                },
+                remoteAddress: '10.10.10.10',
+                payload: {
+                    schemaVersion: 1,
+                    eventId: 'a0000000-0000-4000-8000-000000000001',
+                    timestamp: '2025-01-01T00:00:00.000Z',
+                    type: 'selection.state.changed',
+                    payload: {
+                        event: {
+                            selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                            details: [],
+                        },
+                    },
+                },
+            });
+
+        const firstRes = await postEvent();
+        const secondRes = await postEvent();
+        now += 61_000;
+        const thirdRes = await postEvent();
+
+        expect(firstRes.statusCode).toBe(202);
+        expect(secondRes.statusCode).toBe(202);
+        expect(thirdRes.statusCode).toBe(202);
+        expect(writeAuditEventToDestinations).toHaveBeenCalledTimes(3);
+
+        const missingVersionWarnCalls = mockGlobals.logger.warn.mock.calls
+            .map((call) => call[0])
+            .filter((msg) => msg.includes('without version info'));
+        expect(missingVersionWarnCalls).toHaveLength(2);
+        expect(missingVersionWarnCalls[0]).toContain('ip=10.10.10.10');
+        expect(missingVersionWarnCalls[0]).toContain('missingVersionCount=1');
+        expect(missingVersionWarnCalls[1]).toContain('ip=10.10.10.10');
+        expect(missingVersionWarnCalls[1]).toContain('missingVersionCount=2');
+
+        const missingVersionDebugCalls = mockGlobals.logger.debug.mock.calls
+            .map((call) => call[0])
+            .filter((msg) => msg.includes('without version info'));
+        expect(missingVersionDebugCalls).toHaveLength(3);
+
+        nowSpy.mockRestore();
+    });
+
+    test('tracks missing-version WARN rate limit separately per IP', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const postEvent = (remoteAddress, eventId, selectionTxnId) =>
+            fastify.inject({
+                method: 'POST',
+                url: '/api/v1/audit-event',
+                headers: {
+                    origin: 'https://qliksense.company.com',
+                    'content-type': 'application/json',
+                },
+                remoteAddress,
+                payload: {
+                    schemaVersion: 1,
+                    eventId,
+                    timestamp: '2025-01-01T00:00:00.000Z',
+                    type: 'selection.state.changed',
+                    payload: {
+                        event: {
+                            selectionTxnId,
+                            details: [],
+                        },
+                    },
+                },
+            });
+
+        const firstRes = await postEvent(
+            '10.10.10.10',
+            'a0000000-0000-4000-8000-000000000001',
+            'c0000000-0000-4000-8000-000000000001'
+        );
+        const secondRes = await postEvent(
+            '10.10.10.11',
+            'a0000000-0000-4000-8000-000000000002',
+            'c0000000-0000-4000-8000-000000000002'
+        );
+
+        expect(firstRes.statusCode).toBe(202);
+        expect(secondRes.statusCode).toBe(202);
+
+        const missingVersionWarnCalls = mockGlobals.logger.warn.mock.calls
+            .map((call) => call[0])
+            .filter((msg) => msg.includes('without version info'));
+        expect(missingVersionWarnCalls).toHaveLength(2);
+        expect(missingVersionWarnCalls[0]).toContain('ip=10.10.10.10');
+        expect(missingVersionWarnCalls[1]).toContain('ip=10.10.10.11');
+        expect(missingVersionWarnCalls[0]).toContain('missingVersionCount=1');
+        expect(missingVersionWarnCalls[1]).toContain('missingVersionCount=1');
+
+        nowSpy.mockRestore();
+    });
+
+    test('evicts stale missing-version WARN state for inactive IPs', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        let now = 1_700_000_000_000;
+        const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => now);
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
+
+        const postEvent = (remoteAddress, eventId, selectionTxnId) =>
+            fastify.inject({
+                method: 'POST',
+                url: '/api/v1/audit-event',
+                headers: {
+                    origin: 'https://qliksense.company.com',
+                    'content-type': 'application/json',
+                },
+                remoteAddress,
+                payload: {
+                    schemaVersion: 1,
+                    eventId,
+                    timestamp: '2025-01-01T00:00:00.000Z',
+                    type: 'selection.state.changed',
+                    payload: {
+                        event: {
+                            selectionTxnId,
+                            details: [],
+                        },
+                    },
+                },
+            });
+
+        await postEvent(
+            '10.0.0.1',
+            'a0000000-0000-4000-8000-000000000001',
+            'c0000000-0000-4000-8000-000000000001'
+        );
+        now += 10_000;
+        await postEvent(
+            '10.0.0.1',
+            'a0000000-0000-4000-8000-000000000002',
+            'c0000000-0000-4000-8000-000000000002'
+        );
+
+        now += 901_000;
+        await postEvent(
+            '10.0.0.2',
+            'a0000000-0000-4000-8000-000000000003',
+            'c0000000-0000-4000-8000-000000000003'
+        );
+
+        now += 1_000;
+        await postEvent(
+            '10.0.0.1',
+            'a0000000-0000-4000-8000-000000000004',
+            'c0000000-0000-4000-8000-000000000004'
+        );
+
+        const ipOneWarnCalls = mockGlobals.logger.warn.mock.calls
+            .map((call) => call[0])
+            .filter((msg) => msg.includes('without version info') && msg.includes('ip=10.0.0.1'));
+
+        expect(ipOneWarnCalls).toHaveLength(2);
+        expect(ipOneWarnCalls[0]).toContain('missingVersionCount=1');
+        expect(ipOneWarnCalls[1]).toContain('missingVersionCount=1');
+
+        nowSpy.mockRestore();
+    });
+
+    test('allows CORS preflight (OPTIONS) for GET test-connection', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, {
+            apiToken: 'secret',
+            corsOrigins: ['https://qliksense.company.com'],
+        });
+
+        const res = await fastify.inject({
+            method: 'OPTIONS',
+            url: '/api/v1/test-connection',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'access-control-request-method': 'GET',
+                'access-control-request-headers': 'content-type,x-audit-qs-version',
+            },
+        });
+
+        expect([200, 204]).toContain(res.statusCode);
+        expect(res.headers['access-control-allow-origin']).toBe('https://qliksense.company.com');
+        expect(res.headers['access-control-allow-methods']).toContain('GET');
     });
 });

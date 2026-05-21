@@ -16,25 +16,32 @@
  * Reusable schema fragment for an objectdata sub-section.
  *
  * @param {object} [overrides] Additional properties merged into the schema.
+ * @param {{ includeBuffering?: boolean }} [options] Schema options.
  * @returns {object} JSON Schema object.
  */
-function objectdataSubSchema(overrides = {}) {
+function objectdataSubSchema(overrides = {}, options = {}) {
+    const { includeBuffering = true } = options;
+
     return {
         type: 'object',
         properties: {
             enable: { type: 'boolean', default: false },
             exportDirectory: { type: 'string' },
-            maxBatchSize: {
-                type: 'integer',
-                default: 1000,
-                minimum: 1,
-                maximum: 10000,
-            },
-            writeFrequency: {
-                type: 'number',
-                default: 20000,
-                minimum: 0,
-            },
+            ...(includeBuffering
+                ? {
+                      maxBatchSize: {
+                          type: 'integer',
+                          default: 1000,
+                          minimum: 1,
+                          maximum: 10000,
+                      },
+                      writeFrequency: {
+                          type: 'number',
+                          default: 20000,
+                          minimum: 0,
+                      },
+                  }
+                : {}),
             staticTags: {
                 type: ['array', 'null'],
                 items: {
@@ -314,7 +321,7 @@ export const auditEventsSchema = {
                     json: {
                         type: 'object',
                         properties: {
-                            objectdata: objectdataSubSchema(),
+                            objectdata: objectdataSubSchema({}, { includeBuffering: false }),
                         },
                         required: ['objectdata'],
                         additionalProperties: false,

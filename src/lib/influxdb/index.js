@@ -134,6 +134,10 @@ export function setupUdpQueueMetricsStorage() {
         auditEvents: null,
     };
 
+    const isAuditEventsEnabled =
+        globals.config.has('Butler-SOS.auditEvents.enable') &&
+        globals.config.get('Butler-SOS.auditEvents.enable') === true;
+
     // Check if InfluxDB is enabled
     if (globals.config.get('Butler-SOS.influxdbConfig.enable') !== true) {
         globals.logger.info(
@@ -210,6 +214,7 @@ export function setupUdpQueueMetricsStorage() {
 
     // Set up audit events queue metrics storage
     if (
+        isAuditEventsEnabled &&
         globals.config.has('Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable') &&
         globals.config.get('Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable') === true
     ) {

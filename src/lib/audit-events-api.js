@@ -9,6 +9,7 @@ import path from 'node:path';
 import tls from 'node:tls';
 
 import globals from '../globals.js';
+import { checkCompatibility } from './audit-qs-compatibility.js';
 import { downloadScreenshot } from './audit-screenshots.js';
 import { writeAuditEventToDestinations } from './audit-destinations/index.js';
 
@@ -34,6 +35,9 @@ const VALID_EVENT_TYPES = new Set([
 
 /** Matches dynamic `event.{value}` types; requires at least one character after the dot. */
 const EVENT_WILDCARD_REGEX = /^event\..+$/;
+const MISSING_AUDIT_QS_WARN_WINDOW_MS = 60_000;
+const MISSING_AUDIT_QS_WARN_STATE_TTL_MS = 15 * 60_000;
+const MISSING_AUDIT_QS_WARN_CLEANUP_INTERVAL_MS = 60_000;
 
 /**
  * Compares two strings using a constant-time algorithm to prevent timing attacks.
@@ -58,6 +62,26 @@ function safeStringEqual(a, b) {
     } catch {
         return false;
     }
+}
+
+/**
+ * Normalizes a possibly duplicated HTTP header value to a single string.
+ *
+ * @param {string | string[] | undefined} headerValue - Header value from Fastify request headers.
+ * @returns {string | undefined} First header value when duplicated, otherwise the original string.
+ */
+function normalizeHeaderToSingleValue(headerValue) {
+    const stringValue = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+    if (typeof stringValue !== 'string') {
+        return undefined;
+    }
+
+    const firstValue = stringValue.split(',')[0]?.trim();
+    if (!firstValue) {
+        return undefined;
+    }
+
+    return firstValue;
 }
 
 /**
@@ -158,6 +182,7 @@ function getAuditEventSchema() {
                     properties: {
                         kind: { type: 'string', enum: ['qlik-sense-extension'] },
                         name: { type: 'string', enum: ['audit-qs'] },
+                        version: { type: 'string', minLength: 1 },
                     },
                     additionalProperties: false,
                 },
@@ -212,14 +237,14 @@ function buildCorsOptions(corsOriginList) {
         return {
             origin: '*',
             credentials: false,
-            methods: ['POST', 'OPTIONS'],
+            methods: ['GET', 'POST', 'OPTIONS'],
         };
     }
 
     return {
         origin: origins,
         credentials: false,
-        methods: ['POST', 'OPTIONS'],
+        methods: ['GET', 'POST', 'OPTIONS'],
     };
 }
 
@@ -1005,6 +1030,29 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
 
     const handlers = createTypeHandlers(globals.logger);
     const { validatePayloadByType } = createPayloadValidators();
+    /** @type {Map<string, { lastWarnTs: number, suppressedCount: number, lastSeenTs: number }>} */
+    const missingAuditQsVersionWarnState = new Map();
+    let lastMissingAuditQsWarnCleanupTs = 0;
+
+    /**
+     * Deletes stale per-IP WARN rate-limit entries that have not been seen recently.
+     *
+     * @param {number} now - Current timestamp in milliseconds.
+     * @returns {void}
+     */
+    function cleanupMissingAuditQsVersionWarnState(now) {
+        if (now - lastMissingAuditQsWarnCleanupTs < MISSING_AUDIT_QS_WARN_CLEANUP_INTERVAL_MS) {
+            return;
+        }
+
+        for (const [ip, state] of missingAuditQsVersionWarnState.entries()) {
+            if (now - state.lastSeenTs > MISSING_AUDIT_QS_WARN_STATE_TTL_MS) {
+                missingAuditQsVersionWarnState.delete(ip);
+            }
+        }
+
+        lastMissingAuditQsWarnCleanupTs = now;
+    }
 
     /**
      * Validates `envelope.payload` using a per-type AJV schema.
@@ -1110,6 +1158,53 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
     }
 
     /**
+     * Logs missing Audit.qs version information using per-IP WARN rate limiting.
+     *
+     * Emits DEBUG for every individual event without version info.
+     * Emits WARN at most once per minute per source IP with an aggregated counter
+     * for events observed since the previous WARN for that IP.
+     *
+     * @param {string} ip - Source IP address.
+     * @param {string | undefined} eventType - Audit event type.
+     * @param {string | undefined} eventId - Audit event id.
+     * @param {string} butlerSosVersion - Current Butler SOS version.
+     * @returns {void}
+     */
+    function logMissingAuditQsVersion(ip, eventType, eventId, butlerSosVersion) {
+        const sourceIp = ip || 'n/a';
+        const now = Date.now();
+        cleanupMissingAuditQsVersionWarnState(now);
+        const state = missingAuditQsVersionWarnState.get(sourceIp) || {
+            lastWarnTs: 0,
+            suppressedCount: 0,
+            lastSeenTs: now,
+        };
+
+        globals.logger.debug(
+            `AUDIT API: Received audit event without version info type=${eventType} eventId=${eventId} ip=${sourceIp} butlerSosVersion=${butlerSosVersion}. Consider upgrading Audit.qs to a version that sends the X-Audit-QS-Version header.`
+        );
+
+        if (now - state.lastWarnTs >= MISSING_AUDIT_QS_WARN_WINDOW_MS) {
+            const missingVersionCount = state.suppressedCount + 1;
+            globals.logger.warn(
+                `AUDIT API: Received audit event(s) without version info type=${eventType} eventId=${eventId} ip=${sourceIp} butlerSosVersion=${butlerSosVersion} missingVersionCount=${missingVersionCount} windowSeconds=60. Individual events are logged at DEBUG level.`
+            );
+            missingAuditQsVersionWarnState.set(sourceIp, {
+                lastWarnTs: now,
+                suppressedCount: 0,
+                lastSeenTs: now,
+            });
+            return;
+        }
+
+        missingAuditQsVersionWarnState.set(sourceIp, {
+            lastWarnTs: state.lastWarnTs,
+            suppressedCount: state.suppressedCount + 1,
+            lastSeenTs: now,
+        });
+    }
+
+    /**
      * Fastify route handler for receiving audit events.
      *
      * Validates the envelope (via JSON schema), then dispatches by `envelope.type`.
@@ -1153,6 +1248,37 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
             return buildAuditResponse(reply, 422, 'dropped', 'One or more constraint violations', {
                 errors: constraintReasons.map((r) => ({ message: r })),
             });
+        }
+
+        // Verify Audit.qs version compatibility.
+        // If a version is provided and is incompatible, drop the event with a 422 response.
+        // If no version is provided, log a warning for observability but still accept the event
+        // (backward compatibility with older Audit.qs clients that do not send version info).
+        const headerAuditQsVersion = normalizeHeaderToSingleValue(
+            request.headers['x-audit-qs-version']
+        );
+        const auditQsVersion = headerAuditQsVersion || envelope?.source?.version;
+        const butlerSosVersion = globals.appVersion;
+        const compatResult = checkCompatibility(butlerSosVersion, auditQsVersion);
+
+        if (auditQsVersion && !compatResult.compatible) {
+            globals.logger.warn(
+                `AUDIT API: Dropped audit event from incompatible Audit.qs version type=${envelope?.type} eventId=${envelope?.eventId} ip=${request.ip} butlerSosVersion=${butlerSosVersion} auditQsVersion=${auditQsVersion} message=${compatResult.message}`
+            );
+            return buildAuditResponse(reply, 422, 'dropped', 'Incompatible Audit.qs version', {
+                butlerSosVersion,
+                auditQsVersion,
+                compatible: false,
+            });
+        }
+
+        if (!auditQsVersion) {
+            logMissingAuditQsVersion(
+                request.ip,
+                envelope?.type,
+                envelope?.eventId,
+                butlerSosVersion
+            );
         }
 
         // Validate payload structure using per-type AJV schema (envelope is validated by Fastify schema).
@@ -1246,17 +1372,37 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
      * @returns {Promise<void>} Resolves when the response is sent.
      */
     async function handleTestConnectionGet(request, reply) {
+        const auditQsVersion = normalizeHeaderToSingleValue(request.headers['x-audit-qs-version']);
+        const butlerSosVersion = globals.appVersion;
+
         debugLog(
             globals.logger,
-            `AUDIT API: test-connection request ip=${request.ip} origin=${request.headers.origin || 'n/a'}`
+            `AUDIT API: test-connection request ip=${request.ip} origin=${request.headers.origin || 'n/a'} auditQsVersion=${auditQsVersion || 'n/a'}`
         );
-        globals.logger.info(
-            `AUDIT API: Connection test successful ip=${request.ip} origin=${request.headers.origin || 'n/a'}`
-        );
+
+        const compatResult = checkCompatibility(butlerSosVersion, auditQsVersion);
+
+        if (compatResult.compatible) {
+            globals.logger.info(
+                `AUDIT API: Connection test successful ip=${request.ip} origin=${request.headers.origin || 'n/a'} butlerSosVersion=${butlerSosVersion} auditQsVersion=${auditQsVersion || 'n/a'}`
+            );
+        } else if (auditQsVersion) {
+            globals.logger.warn(
+                `AUDIT API: Connection test from incompatible Audit.qs version ip=${request.ip} origin=${request.headers.origin || 'n/a'} butlerSosVersion=${butlerSosVersion} auditQsVersion=${auditQsVersion} message=${compatResult.message}`
+            );
+        } else {
+            globals.logger.warn(
+                `AUDIT API: Connection test without Audit.qs version info ip=${request.ip} origin=${request.headers.origin || 'n/a'} butlerSosVersion=${butlerSosVersion}. Consider upgrading Audit.qs to a version that sends the X-Audit-QS-Version header.`
+            );
+        }
+
         reply.code(200).send({
             status: 'ok',
             message: 'Butler SOS Audit API is reachable',
             timestamp: new Date().toISOString(),
+            butlerSosVersion,
+            auditQsVersion: auditQsVersion || null,
+            compatible: compatResult.compatible,
         });
     }
 

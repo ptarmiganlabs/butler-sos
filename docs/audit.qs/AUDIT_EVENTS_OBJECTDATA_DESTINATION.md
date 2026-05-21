@@ -190,10 +190,6 @@ Butler-SOS:
         objectdata:
           enable: true
           exportDirectory: ./audit-events/json
-          # maxBatchSize/writeFrequency are accepted by the shared objectdata schema,
-          # but JSON files are written immediately by the current implementation.
-          maxBatchSize: 1000
-          writeFrequency: 20000
           staticTags:
             - name: env
               value: production
@@ -201,14 +197,14 @@ Butler-SOS:
               value: eu-north-1
 ```
 
+JSON writes each event immediately, so this destination has no buffering settings.
+
 ### Configuration Properties
 
 | Property | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `enable` | boolean | Yes | — | Enable/disable the JSON objectdata destination |
 | `exportDirectory` | string | No | `audit-events/json` | Directory where JSON files are written |
-| `maxBatchSize` | integer | No | `1000` | Accepted by the shared objectdata schema; not used by the JSON writer today |
-| `writeFrequency` | number | No | `20000` | Accepted by the shared objectdata schema; not used by the JSON writer today |
 | `staticTags` | array/null | No | `null` | Key-value pairs included as `tags` in every JSON file |
 
 ## Destination Architecture
@@ -246,4 +242,3 @@ graph TD
 - **`objectdata`** — Dedicated storage settings for the raw dimension/measure payload from the Qlik Sense object. The current implementation writes this dedicated objectdata output only for the `json` destination.
 
 > **Note:** The configuration schema accepts optional `objectdata` sub-sections for Parquet, QVD, and InfluxDB, but those dedicated objectdata writers are not implemented today. The `metadata` sub-sections for those destinations always include `objectData` as a JSON-stringified field whenever it is present in the incoming event.
-
