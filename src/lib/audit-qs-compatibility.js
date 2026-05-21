@@ -1,4 +1,4 @@
-import { satisfies, valid } from 'semver';
+import semver from 'semver';
 
 /**
  * Compatibility matrix mapping Butler SOS version ranges to compatible Audit.qs version ranges.
@@ -47,14 +47,14 @@ export function checkCompatibility(butlerSosVersion, auditQsVersion) {
         };
     }
 
-    if (!valid(butlerSosVersion)) {
+    if (!semver.valid(butlerSosVersion)) {
         return {
             compatible: false,
             message: `Invalid Butler SOS version format: "${butlerSosVersion}".`,
         };
     }
 
-    if (!valid(auditQsVersion)) {
+    if (!semver.valid(auditQsVersion)) {
         return {
             compatible: false,
             message: `Invalid Audit.qs version format: "${auditQsVersion}".`,
@@ -63,7 +63,7 @@ export function checkCompatibility(butlerSosVersion, auditQsVersion) {
 
     // Check if Butler SOS version is covered by any matrix entry
     const matchingEntry = COMPATIBILITY_MATRIX.find((entry) =>
-        satisfies(butlerSosVersion, entry.butlerSosVersionRange)
+        semver.satisfies(butlerSosVersion, entry.butlerSosVersionRange)
     );
 
     if (!matchingEntry) {
@@ -73,7 +73,7 @@ export function checkCompatibility(butlerSosVersion, auditQsVersion) {
         };
     }
 
-    const auditQsCompatible = satisfies(auditQsVersion, matchingEntry.auditQsVersionRange);
+    const auditQsCompatible = semver.satisfies(auditQsVersion, matchingEntry.auditQsVersionRange);
 
     if (auditQsCompatible) {
         return {
