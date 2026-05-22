@@ -124,6 +124,19 @@ describe('audit influx buffer', () => {
             },
         };
 
+        /**
+         * Build a minimal deterministic point for tests.
+         *
+         * @param {{ measurementName: string, tags: Record<string,string>, fields: Record<string, string|number|boolean> }} model Point model.
+         * @param {number} _version Influx version.
+         * @returns {{ measurement: string, tags: Record<string,string>, fields: Record<string, string|number|boolean> }} Influx v1 point.
+         */
+        const buildAuditInfluxPoint = jest.fn((model, _version) => ({
+            measurement: model.measurementName,
+            tags: model.tags,
+            fields: model.fields,
+        }));
+
         jest.unstable_mockModule('../../../globals.js', () => ({ default: globalsMock }));
         jest.unstable_mockModule('./shared/mapping.js', () => {
             /**
@@ -135,18 +148,6 @@ describe('audit influx buffer', () => {
                 measurementName: 'audit_event',
                 tags: { eventType: 'test', auditEventSchemaVersion: '1' },
                 fields: { value: 1 },
-            });
-
-            /**
-             * Build a minimal deterministic point for tests.
-             *
-             * @param {{ measurementName: string, tags: Record<string,string>, fields: Record<string, string|number|boolean> }} model Point model.
-             * @returns {{ measurement: string, tags: Record<string,string>, fields: Record<string, string|number|boolean> }} Influx v1 point.
-             */
-            const buildAuditInfluxPoint = (model) => ({
-                measurement: model.measurementName,
-                tags: model.tags,
-                fields: model.fields,
             });
 
             return { buildAuditInfluxPoint, buildAuditInfluxPointModel };
@@ -190,6 +191,7 @@ describe('audit influx buffer', () => {
 
         expect(writePoints).toHaveBeenCalledTimes(1);
         expect(writePoints.mock.calls[0][0]).toHaveLength(2);
+        expect(buildAuditInfluxPoint).toHaveBeenCalledWith(expect.any(Object), 1);
 
         // Clean up timer/buffer
         store.set('Butler-SOS.auditEvents.destination.enable', false);
@@ -273,6 +275,19 @@ describe('audit influx buffer', () => {
             },
         };
 
+        /**
+         * Build a minimal deterministic point for tests.
+         *
+         * @param {{ measurementName: string, tags: Record<string,string>, fields: Record<string, string|number|boolean> }} model Point model.
+         * @param {number} _version Influx version.
+         * @returns {{ measurement: string, tags: Record<string,string>, fields: Record<string, string|number|boolean> }} Influx v1 point.
+         */
+        const buildAuditInfluxPoint = jest.fn((model, _version) => ({
+            measurement: model.measurementName,
+            tags: model.tags,
+            fields: model.fields,
+        }));
+
         jest.unstable_mockModule('../../../globals.js', () => ({ default: globalsMock }));
         jest.unstable_mockModule('./shared/mapping.js', () => {
             /**
@@ -284,18 +299,6 @@ describe('audit influx buffer', () => {
                 measurementName: 'audit_event',
                 tags: { eventType: 'test', auditEventSchemaVersion: '1' },
                 fields: { value: 1 },
-            });
-
-            /**
-             * Build a minimal deterministic point for tests.
-             *
-             * @param {{ measurementName: string, tags: Record<string,string>, fields: Record<string, string|number|boolean> }} model Point model.
-             * @returns {{ measurement: string, tags: Record<string,string>, fields: Record<string, string|number|boolean> }} Influx v1 point.
-             */
-            const buildAuditInfluxPoint = (model) => ({
-                measurement: model.measurementName,
-                tags: model.tags,
-                fields: model.fields,
             });
 
             return { buildAuditInfluxPoint, buildAuditInfluxPointModel };
@@ -340,6 +343,7 @@ describe('audit influx buffer', () => {
 
         expect(writePoints).toHaveBeenCalledTimes(1);
         expect(writePoints.mock.calls[0][0]).toHaveLength(1);
+        expect(buildAuditInfluxPoint).toHaveBeenCalledWith(expect.any(Object), 1);
 
         // Clean up timer/buffer
         store.set('Butler-SOS.auditEvents.destination.enable', false);
