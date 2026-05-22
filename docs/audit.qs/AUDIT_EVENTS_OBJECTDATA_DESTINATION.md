@@ -21,7 +21,7 @@ When `Butler-SOS.auditEvents.apiToken` is configured, both endpoints require an 
 
 The POST endpoint requires these top-level envelope fields: `schemaVersion`, `eventId`, `timestamp`, `type`, and `payload`. `correlationId` and `source` are optional. `correlationId` is an opaque string: Audit.qs uses `selectionTxnId` when available and otherwise the stringified `currentDataStateId`. The JSON destination looks specifically for `payload.event.objectData`.
 
-Known concrete event types with payload validation are `selection.state.changed`, `app.model.validated`, `screenshot.url.received`, `event.unsupported.visualization`, and `object.view.duration`. The audit API also accepts wildcard `event.{value}` types. Other event types that are neither in the allow-list nor matched by the `event.*` wildcard are rejected with `422` before they reach this destination.
+Known concrete event types with payload validation are `selection.state.changed`, `app.model.validated`, `screenshot.url.received`, `event.unsupported.visualization`, and `object.view.duration`. The audit API also accepts these additional concrete allow-listed event types: `navigation.sheet.loaded`, `object.visibility.changed`, `event.bookmark`, and `audit.event`. Wildcard `event.{value}` types are also accepted. Event types that are neither in the concrete allow-list nor matched by the `event.*` wildcard are rejected with `422` before they reach this destination.
 
 ## Data Flow
 
