@@ -2409,10 +2409,17 @@ describe('audit-events-api version compatibility', () => {
         await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
 
         /**
+         * Post an audit event request for a specific client IP and selection transaction.
          *
-         * @param remoteAddress
-         * @param eventId
-         * @param selectionTxnId
+         * @param {string} remoteAddress
+         *   Client IP address to associate with the injected request.
+         * @param {string} eventId
+         *   Unique audit event identifier to include in the request payload.
+         * @param {string} selectionTxnId
+         *   Selection transaction identifier to include in the nested event payload.
+         *
+         * @returns {Promise<import('light-my-request').Response>}
+         *   Injected Fastify response for the posted audit event.
          */
         const postEvent = (remoteAddress, eventId, selectionTxnId) =>
             fastify.inject({
