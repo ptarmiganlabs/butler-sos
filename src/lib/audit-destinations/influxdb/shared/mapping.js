@@ -194,12 +194,14 @@ export function buildAuditInfluxPointModel(envelope, extras = {}) {
  * @returns {unknown} Version-specific point.
  */
 export function buildAuditInfluxPoint(model, version) {
+    const hasTimestamp = model.timestampMs !== undefined && model.timestampMs !== null;
+
     if (version === 1) {
         return {
             measurement: model.measurementName,
             tags: model.tags,
             fields: model.fields,
-            ...(model.timestampMs ? { timestamp: new Date(model.timestampMs) } : {}),
+            ...(hasTimestamp ? { timestamp: new Date(model.timestampMs) } : {}),
         };
     }
 
@@ -222,7 +224,7 @@ export function buildAuditInfluxPoint(model, version) {
             }
         }
 
-        if (model.timestampMs) {
+        if (hasTimestamp) {
             point.timestamp(new Date(model.timestampMs));
         }
 
@@ -248,7 +250,7 @@ export function buildAuditInfluxPoint(model, version) {
             }
         }
 
-        if (model.timestampMs) {
+        if (hasTimestamp) {
             point.setTimestamp(new Date(model.timestampMs));
         }
 
