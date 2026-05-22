@@ -30,13 +30,15 @@ jest.unstable_mockModule('../../../../globals.js', () => ({
 }));
 
 // Mock Bowser
+const mockBowserParse = jest.fn().mockImplementation(() => ({
+    browser: { name: 'Chrome', version: '91.0.4472.124' },
+    platform: { type: 'desktop', vendor: undefined, model: undefined },
+    os: { name: 'Windows', version: '10' },
+}));
+
 jest.unstable_mockModule('bowser', () => ({
     default: {
-        parse: jest.fn().mockImplementation(() => ({
-            browser: { name: 'Chrome', version: '91.0.4472.124' },
-            platform: { type: 'desktop', vendor: undefined, model: undefined },
-            os: { name: 'Windows', version: '10' },
-        })),
+        parse: mockBowserParse,
     },
 }));
 
@@ -74,6 +76,11 @@ const { messageEventHandler } = await import('../message-event.js');
 describe('messageEventHandler', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockBowserParse.mockImplementation(() => ({
+            browser: { name: 'Chrome', version: '91.0.4472.124' },
+            platform: { type: 'desktop', vendor: undefined, model: undefined },
+            os: { name: 'Windows', version: '10' },
+        }));
 
         // Setup default config values
         globals.config.get.mockImplementation((path) => {
@@ -215,6 +222,19 @@ describe('messageEventHandler', () => {
             expect(Bowser.parse).toHaveBeenCalledWith(
                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             );
+            expect(postUserEventToMQTT).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    ua: {
+                        browser: {
+                            name: 'Chrome',
+                            version: '91.0.4472.124',
+                            major: '91',
+                        },
+                        os: { name: 'Windows', version: '10' },
+                        ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    },
+                })
+            );
         });
 
         test('should handle user agent with single quotes', async () => {
@@ -236,6 +256,25 @@ describe('messageEventHandler', () => {
 
             expect(Bowser.parse).not.toHaveBeenCalled();
             expect(globals.logger.debug).toHaveBeenCalledWith(expect.not.stringContaining('"ua":'));
+        });
+
+        test('should not parse blank user agent values', async () => {
+            const message = Buffer.from(
+                "/qseow-proxy-connection/;host1;Start session;INTERNAL;testuser;origin;context;UserAgent: ''"
+            );
+
+            await messageEventHandler(message, {});
+
+            expect(Bowser.parse).not.toHaveBeenCalled();
+            expect(postUserEventToMQTT).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    ua: {
+                        browser: { name: '', version: '', major: undefined },
+                        os: {},
+                        ua: '',
+                    },
+                })
+            );
         });
     });
 

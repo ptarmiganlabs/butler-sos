@@ -198,28 +198,19 @@ export async function messageEventHandler(message, _remote) {
             userAgent = userAgent.trim();
             userAgent = userAgent.replace(/'/g, '');
 
-            // Parse the user agent string
-            const ua = Bowser.parse(userAgent);
-            const browserVersion = ua.browser.version;
+            const ua = userAgent.length > 0 ? Bowser.parse(userAgent) : { browser: {}, os: {} };
+            const browserVersion =
+                typeof ua.browser?.version === 'string' ? ua.browser.version : '';
 
-            msgObj.ua = {};
-            msgObj.ua.browser = {
-                name: ua.browser.name,
-                version: browserVersion,
-                major:
-                    typeof browserVersion === 'string' && browserVersion.length > 0
-                        ? browserVersion.split('.')[0]
-                        : undefined,
+            msgObj.ua = {
+                browser: {
+                    name: ua.browser?.name ?? '',
+                    version: browserVersion,
+                    major: browserVersion.length > 0 ? browserVersion.split('.')[0] : undefined,
+                },
+                os: ua.os ?? {},
+                ua: userAgent,
             };
-            msgObj.ua.cpu = {};
-            msgObj.ua.device = {
-                type: ua.platform.type,
-                vendor: ua.platform.vendor,
-                model: ua.platform.model,
-            };
-            msgObj.ua.engine = {};
-            msgObj.ua.os = ua.os;
-            msgObj.ua.ua = userAgent;
         }
 
         // Post to MQTT
