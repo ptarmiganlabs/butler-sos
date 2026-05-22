@@ -2,7 +2,7 @@ import globals from '../../../../globals.js';
 import { writeToInfluxWithRetry } from '../../../influxdb/shared/utils.js';
 
 import { getAuditInfluxClient } from '../shared/client.js';
-import { buildAuditInfluxPointModel } from '../shared/mapping.js';
+import { buildAuditInfluxPoint, buildAuditInfluxPointModel } from '../shared/mapping.js';
 
 /**
  * Writes an audit event point to InfluxDB v1 using the audit destination config.
@@ -17,14 +17,7 @@ export async function writeAuditEventInfluxV1(envelope, extras = {}) {
 
     const model = buildAuditInfluxPointModel(envelope, extras);
 
-    const datapoints = [
-        {
-            measurement: model.measurementName,
-            tags: model.tags,
-            fields: model.fields,
-            ...(model.timestampMs ? { timestamp: new Date(model.timestampMs) } : {}),
-        },
-    ];
+    const datapoints = [buildAuditInfluxPoint(model, 1)];
 
     await writeToInfluxWithRetry(
         async () => await client.writePoints(datapoints),

@@ -359,4 +359,61 @@ describe('audit-destinations/influxdb/shared/mapping', () => {
         expect(model.tags.objectType).toBe('barchart');
         expect(model.fields.objectData).toBeDefined();
     });
+
+    test('builds version-specific InfluxDB points from shared model', async () => {
+        const { buildAuditInfluxPoint } = await import('../mapping.js');
+        const model = {
+            measurementName: 'audit',
+            tags: { t1: 'v1', skipNull: null, skipUndefined: undefined },
+            fields: { f1: true, f2: 's1', f3: 123, skipObject: {} },
+            timestampMs: 1234567890,
+        };
+        /**
+         * Assert the key invariants for a serialized InfluxDB point.
+         *
+         * @param {string} lineProtocol Serialized point in line protocol format.
+         */
+        const expectLineProtocolPoint = (lineProtocol) => {
+            expect(lineProtocol).toMatch(/^audit,t1=v1 /);
+            expect(lineProtocol).toContain('f1=T');
+            expect(lineProtocol).toContain('f2="s1"');
+            expect(lineProtocol).toContain('f3=123');
+            expect(lineProtocol).not.toContain('skipNull');
+            expect(lineProtocol).not.toContain('skipUndefined');
+            expect(lineProtocol).not.toContain('skipObject');
+            expect(lineProtocol).toMatch(/ 1234567890000000$/);
+        };
+
+        const v1Point = buildAuditInfluxPoint(model, 1);
+        expect(v1Point).toMatchObject({
+            measurement: 'audit',
+            tags: model.tags,
+            fields: model.fields,
+            timestamp: new Date(1234567890),
+        });
+
+        const v2LineProtocol = buildAuditInfluxPoint(model, 2).toLineProtocol();
+        expectLineProtocolPoint(v2LineProtocol);
+
+        const v3LineProtocol = buildAuditInfluxPoint(model, 3).toLineProtocol();
+        expectLineProtocolPoint(v3LineProtocol);
+
+        expect(buildAuditInfluxPoint(model, 99)).toBeNull();
+    });
+
+    test('preserves unix epoch timestamps when building InfluxDB points', async () => {
+        const { buildAuditInfluxPoint } = await import('../mapping.js');
+        const model = {
+            measurementName: 'audit',
+            tags: { t1: 'v1' },
+            fields: { f1: true },
+            timestampMs: 0,
+        };
+
+        expect(buildAuditInfluxPoint(model, 1)).toMatchObject({
+            timestamp: new Date(0),
+        });
+        expect(buildAuditInfluxPoint(model, 2).toLineProtocol()).toMatch(/ 0+$/);
+        expect(buildAuditInfluxPoint(model, 3).toLineProtocol()).toMatch(/ 0+$/);
+    });
 });
