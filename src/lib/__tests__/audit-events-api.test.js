@@ -129,7 +129,7 @@ describe('audit-events-api event types', () => {
             payload: {
                 schemaVersion: 1,
                 eventId: 'a0000000-0000-4000-8000-000000000002',
-                correlationId: 'txn-1',
+                correlationId: 'd0000000-0000-4000-8000-000000000002',
                 timestamp: '2025-12-27T05:46:40.337Z',
                 type: 'object.view.duration',
                 source: {
@@ -932,12 +932,12 @@ describe('audit-events-api envelope constraint validation', () => {
         );
     });
 
-    test('drops event and warns when correlationId exceeds 64 characters', async () => {
+    test('drops event and warns when correlationId is not a UUID', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
 
-        const res = await postEnvelope(fastify, validEnvelope({ correlationId: 'x'.repeat(65) }));
+        const res = await postEnvelope(fastify, validEnvelope({ correlationId: '1777868693436' }));
 
         expect(res.statusCode).toBe(422);
         const body = JSON.parse(res.payload);
@@ -945,16 +945,19 @@ describe('audit-events-api envelope constraint validation', () => {
         expect(body.outcome).toBe('dropped');
         expect(body.reason).toBe('One or more constraint violations');
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('correlationId exceeds 64 characters')
+            expect.stringContaining('correlationId is not a valid UUID')
         );
     });
 
-    test('accepts a short non-UUID correlationId (numeric fallback from audit.qs)', async () => {
+    test('accepts correlationId when it is a valid UUID', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
 
-        const res = await postEnvelope(fastify, validEnvelope({ correlationId: '1777868693436' }));
+        const res = await postEnvelope(
+            fastify,
+            validEnvelope({ correlationId: 'd0000000-0000-4000-8000-000000000001' })
+        );
 
         expect(res.statusCode).toBe(202);
         expect(mockGlobals.logger.warn).not.toHaveBeenCalledWith(
@@ -1057,6 +1060,26 @@ describe('audit-events-api envelope constraint validation', () => {
         expect(res.statusCode).toBe(202);
         expect(mockGlobals.logger.warn).not.toHaveBeenCalledWith(
             expect.stringContaining('constraint violations')
+        );
+    });
+
+    test('drops legacy event type "selection.transaction.finalized"', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postEnvelope(
+            fastify,
+            validEnvelope({ type: 'selection.transaction.finalized' })
+        );
+
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('One or more constraint violations');
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('type is not a recognised event type')
         );
     });
 
@@ -1895,42 +1918,7 @@ describe('audit-events-api array maxItems constraints', () => {
         mockGlobals.auditEventsQueueManager = null;
     });
 
-    test('drops selection.transaction.finalized with oversized beforeSelections array', async () => {
-        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
-
-        const fastify = Fastify({ logger: false });
-        await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
-
-        const res = await fastify.inject({
-            method: 'POST',
-            url: '/api/v1/audit-event',
-            headers: { 'content-type': 'application/json' },
-            payload: {
-                schemaVersion: 1,
-                eventId: 'a0000000-0000-4000-8000-000000000001',
-                timestamp: '2025-01-01T00:00:00.000Z',
-                type: 'selection.transaction.finalized',
-                payload: {
-                    event: {
-                        selectionTxnId: 'b1000000-0000-4000-8000-000000000001',
-                        beforeSelections: Array.from({ length: 501 }, (_, i) => ({ field: i })),
-                        afterSelections: [],
-                    },
-                },
-            },
-        });
-
-        expect(res.statusCode).toBe(422);
-        const body = JSON.parse(res.payload);
-        expect(body.status).toBe('error');
-        expect(body.outcome).toBe('dropped');
-        expect(body.reason).toBe('Payload validation failed');
-        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('Payload validation failed')
-        );
-    });
-
-    test('accepts selection.transaction.finalized with arrays at the limit', async () => {
+    test('accepts selection.state.changed with details array at the limit', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
         const { writeAuditEventToDestinations } = await import('../audit-destinations/index.js');
 
@@ -1943,14 +1931,13 @@ describe('audit-events-api array maxItems constraints', () => {
             headers: { 'content-type': 'application/json' },
             payload: {
                 schemaVersion: 1,
-                eventId: 'a0000000-0000-4000-8000-000000000002',
+                eventId: 'a0000000-0000-4000-8000-000000000001',
                 timestamp: '2025-01-01T00:00:00.000Z',
-                type: 'selection.transaction.finalized',
+                type: 'selection.state.changed',
                 payload: {
                     event: {
-                        selectionTxnId: 'b1000000-0000-4000-8000-000000000002',
-                        beforeSelections: Array.from({ length: 500 }, (_, i) => ({ field: i })),
-                        afterSelections: Array.from({ length: 500 }, (_, i) => ({ field: i })),
+                        selectionTxnId: 'b1000000-0000-4000-8000-000000000001',
+                        details: Array.from({ length: 500 }, (_, i) => ({ field: i })),
                     },
                 },
             },
@@ -2270,6 +2257,9 @@ describe('audit-events-api version compatibility', () => {
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
 
+        /**
+         *
+         */
         const postEvent = () =>
             fastify.inject({
                 method: 'POST',
@@ -2328,6 +2318,12 @@ describe('audit-events-api version compatibility', () => {
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
 
+        /**
+         *
+         * @param remoteAddress
+         * @param eventId
+         * @param selectionTxnId
+         */
         const postEvent = (remoteAddress, eventId, selectionTxnId) =>
             fastify.inject({
                 method: 'POST',
@@ -2386,6 +2382,12 @@ describe('audit-events-api version compatibility', () => {
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
 
+        /**
+         *
+         * @param remoteAddress
+         * @param eventId
+         * @param selectionTxnId
+         */
         const postEvent = (remoteAddress, eventId, selectionTxnId) =>
             fastify.inject({
                 method: 'POST',

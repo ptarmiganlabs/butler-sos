@@ -22,7 +22,6 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
  */
 const VALID_EVENT_TYPES = new Set([
     'selection.state.changed',
-    'selection.transaction.finalized',
     'object.visibility.changed',
     'object.view.duration',
     'navigation.sheet.loaded',
@@ -137,10 +136,8 @@ function validateEnvelopeConstraints(envelope) {
         reasons.push(`eventId is not a valid UUID ("${envelope.eventId}")`);
     }
 
-    if (envelope.correlationId !== undefined && envelope.correlationId.length > 64) {
-        reasons.push(
-            `correlationId exceeds 64 characters (length=${envelope.correlationId.length})`
-        );
+    if (envelope.correlationId !== undefined && !UUID_REGEX.test(envelope.correlationId)) {
+        reasons.push(`correlationId is not a valid UUID ("${envelope.correlationId}")`);
     }
 
     const appId = envelope.payload?.context?.appId;
@@ -1207,8 +1204,8 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
     /**
      * Fastify route handler for receiving audit events.
      *
-     * Validates the envelope (via JSON schema), then dispatches by `envelope.type`.
-     * Unknown types are accepted and logged for future implementation.
+     * Validates the envelope (via JSON schema and semantic constraints), then dispatches
+     * allowed `envelope.type` values to their handlers.
      *
      * @param {import('fastify').FastifyRequest} request - Fastify request.
      * @param {import('fastify').FastifyReply} reply - Fastify reply.
