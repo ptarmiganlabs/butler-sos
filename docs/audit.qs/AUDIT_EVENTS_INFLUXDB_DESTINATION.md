@@ -372,7 +372,7 @@ The per-version modules exist for compatibility/experimentation, but the default
 - Audit data is sensitive.
 - The audit destination must allow a separate InfluxDB instance/version/bucket/database.
 - Known event handlers log summaries at info level and detailed payload/object data at debug level.
-- Unknown event types are rejected by the audit API before destination writes. Investigate server warnings rather than expecting a destination-side fallback path.
+- Event types that are not on the audit API allow-list are rejected before destination writes, except for types matching the supported `event.*` wildcard, which may still flow through. Investigate server warnings rather than expecting a destination-side fallback or remapping path.
 
 ## Object Data
 
