@@ -15,6 +15,7 @@ import { writeAuditEventToDestinations } from './audit-destinations/index.js';
 
 /** Regex matching a UUID in 8-4-4-4-12 hex format (case-insensitive). */
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CORRELATION_ID_MAX_LENGTH = 64;
 
 /**
  * Exact set of event type strings accepted by this API.
@@ -22,7 +23,6 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
  */
 const VALID_EVENT_TYPES = new Set([
     'selection.state.changed',
-    'selection.transaction.finalized',
     'object.visibility.changed',
     'object.view.duration',
     'navigation.sheet.loaded',
@@ -137,9 +137,12 @@ function validateEnvelopeConstraints(envelope) {
         reasons.push(`eventId is not a valid UUID ("${envelope.eventId}")`);
     }
 
-    if (envelope.correlationId !== undefined && envelope.correlationId.length > 64) {
+    if (
+        envelope.correlationId !== undefined &&
+        envelope.correlationId.length > CORRELATION_ID_MAX_LENGTH
+    ) {
         reasons.push(
-            `correlationId exceeds 64 characters (length=${envelope.correlationId.length})`
+            `correlationId exceeds ${CORRELATION_ID_MAX_LENGTH} characters (length=${envelope.correlationId.length})`
         );
     }
 
@@ -319,6 +322,21 @@ function debugLog(logger, message) {
 }
 
 /**
+ * Writes a verbose message when the provided logger supports it, otherwise falls back to debug.
+ *
+ * @param {object} logger Logger instance.
+ * @param {string} message Message to log.
+ */
+function verboseLog(logger, message) {
+    if (logger && typeof logger.verbose === 'function') {
+        logger.verbose(message);
+        return;
+    }
+
+    debugLog(logger, message);
+}
+
+/**
  * Returns a URL summary suitable for debug logs without sensitive query values.
  *
  * @param {unknown} rawUrl URL to summarize.
@@ -426,21 +444,6 @@ function createTypeHandlers(logger) {
     }
 
     /**
-     * Handles a finalized selection transaction.
-     *
-     * @param {unknown} envelope - The received audit event envelope.
-     * @param {AuditRequestContext} requestContext - Minimal request context.
-     *
-     * @returns {Promise<object | undefined>} Optional metadata for downstream destinations.
-     */
-    async function handleSelectionTransactionFinalized(envelope, requestContext) {
-        const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
-        logger.info(
-            `AUDIT API: selection.transaction.finalized eventId=${envelope?.eventId} selectionTxnId=${selectionTxnId} ip=${requestContext.ip}`
-        );
-    }
-
-    /**
      * Handles a selection state change event.
      *
      * @param {unknown} envelope - The received audit event envelope.
@@ -453,7 +456,8 @@ function createTypeHandlers(logger) {
         const details = envelope?.payload?.event?.details;
         const selectionDetails = pickSelectionDetailsForLog(details);
 
-        logger.info(
+        verboseLog(
+            logger,
             `AUDIT API: selection.state.changed eventId=${envelope?.eventId} selectionTxnId=${selectionTxnId} details=${safeJsonForLog(
                 selectionDetails,
                 20000
@@ -476,7 +480,8 @@ function createTypeHandlers(logger) {
     async function handleAppModelValidated(envelope, requestContext) {
         const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
         const dataStateId = envelope?.payload?.event?.dataStateId;
-        logger.info(
+        verboseLog(
+            logger,
             `AUDIT API: app.model.validated eventId=${envelope?.eventId} selectionTxnId=${selectionTxnId} dataStateId=${dataStateId} ip=${requestContext.ip}`
         );
 
@@ -701,13 +706,13 @@ function createTypeHandlers(logger) {
         const enterSelectionTxnId = envelope?.payload?.event?.enterSelectionTxnId;
         const leaveSelectionTxnId = envelope?.payload?.event?.leaveSelectionTxnId;
 
-        logger.info(
+        verboseLog(
+            logger,
             `AUDIT API: object.view.duration eventId=${envelope?.eventId} objectId=${objectId} durationMs=${durationMs} enteredAt=${enteredAt} leftAt=${leftAt} selectionTxnId=${selectionTxnId} enterSelectionTxnId=${enterSelectionTxnId} leaveSelectionTxnId=${leaveSelectionTxnId} ip=${requestContext.ip}`
         );
     }
 
     return {
-        'selection.transaction.finalized': handleSelectionTransactionFinalized,
         'selection.state.changed': handleSelectionStateChanged,
         'app.model.validated': handleAppModelValidated,
         'screenshot.url.received': handleScreenshotUrlReceived,
@@ -793,41 +798,6 @@ function createPayloadValidators() {
                     selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
                 },
                 required: ['vizType', 'selectionTxnId'],
-                additionalProperties: true,
-            },
-        },
-        required: ['event'],
-        additionalProperties: true,
-    };
-
-    /**
-     * Payload schema for selection.transaction.finalized.
-     *
-     * Expected shape: { event: { selectionTxnId: string, beforeSelections: any[], afterSelections: any[] } }
-     */
-    const selectionTransactionFinalizedPayloadSchema = {
-        type: 'object',
-        properties: {
-            context: {
-                type: 'object',
-                properties: {
-                    appId: { type: 'string' },
-                    appName: { type: 'string', maxLength: 64 },
-                    sheetId: { type: 'string', maxLength: 64 },
-                    sheetName: { type: 'string', maxLength: 64 },
-                    user: { type: 'string', maxLength: 256 },
-                    userAgent: { type: 'string', maxLength: 512 },
-                },
-                additionalProperties: true,
-            },
-            event: {
-                type: 'object',
-                properties: {
-                    selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
-                    beforeSelections: { type: 'array', maxItems: 500 },
-                    afterSelections: { type: 'array', maxItems: 500 },
-                },
-                required: ['selectionTxnId', 'beforeSelections', 'afterSelections'],
                 additionalProperties: true,
             },
         },
@@ -947,9 +917,6 @@ function createPayloadValidators() {
 
     return {
         validatePayloadByType: {
-            'selection.transaction.finalized': ajv.compile(
-                selectionTransactionFinalizedPayloadSchema
-            ),
             'selection.state.changed': ajv.compile(selectionStateChangedPayloadSchema),
             'app.model.validated': ajv.compile(appModelValidatedPayloadSchema),
             'screenshot.url.received': ajv.compile(screenshotUrlReceivedPayloadSchema),
@@ -1137,7 +1104,8 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
                 )}`
             );
         } else {
-            globals.logger.info(
+            verboseLog(
+                globals.logger,
                 `AUDIT API: Received audit event type=${envelope.type} eventId=${envelope.eventId} ip=${requestContext.ip}`
             );
             // Log full envelope at debug only — it may contain PII (userAgent, userId, appName, etc.)
@@ -1207,8 +1175,8 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
     /**
      * Fastify route handler for receiving audit events.
      *
-     * Validates the envelope (via JSON schema), then dispatches by `envelope.type`.
-     * Unknown types are accepted and logged for future implementation.
+     * Validates the envelope (via JSON schema and semantic constraints), then dispatches
+     * allowed `envelope.type` values to their handlers.
      *
      * @param {import('fastify').FastifyRequest} request - Fastify request.
      * @param {import('fastify').FastifyReply} reply - Fastify reply.

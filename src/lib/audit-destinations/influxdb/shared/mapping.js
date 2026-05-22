@@ -1,3 +1,6 @@
+import { Point } from '@influxdata/influxdb-client';
+import { Point as Point3 } from '@influxdata/influxdb3-client';
+
 import globals from '../../../../globals.js';
 import { parseQlikUserIdentity } from '../../../util/user-identity.js';
 
@@ -181,4 +184,80 @@ export function buildAuditInfluxPointModel(envelope, extras = {}) {
         tags,
         fields,
     };
+}
+
+/**
+ * Build a version-specific point representation from a version-agnostic model.
+ *
+ * For v2/v3 points, null/undefined tags are skipped and only string/number/boolean fields are written.
+ *
+ * @param {{ measurementName: string, timestampMs?: number | null, tags: Record<string, unknown>, fields: Record<string, unknown> }} model Point model.
+ * @param {number} version InfluxDB major version.
+ * @returns {{ measurement: string, tags: Record<string, unknown>, fields: Record<string, unknown>, timestamp?: Date } | Point | Point3 | null} Version-specific point, or null if version is unsupported.
+ */
+export function buildAuditInfluxPoint(model, version) {
+    const hasTimestamp = model.timestampMs !== undefined && model.timestampMs !== null;
+
+    if (version === 1) {
+        return {
+            measurement: model.measurementName,
+            tags: model.tags,
+            fields: model.fields,
+            ...(hasTimestamp ? { timestamp: new Date(model.timestampMs) } : {}),
+        };
+    }
+
+    if (version === 2) {
+        const point = new Point(model.measurementName);
+
+        for (const [k, v] of Object.entries(model.tags)) {
+            if (v !== undefined && v !== null) {
+                point.tag(k, String(v));
+            }
+        }
+
+        for (const [k, v] of Object.entries(model.fields)) {
+            if (typeof v === 'number') {
+                point.floatField(k, v);
+            } else if (typeof v === 'boolean') {
+                point.booleanField(k, v);
+            } else if (typeof v === 'string') {
+                point.stringField(k, v);
+            }
+        }
+
+        if (hasTimestamp) {
+            point.timestamp(new Date(model.timestampMs));
+        }
+
+        return point;
+    }
+
+    if (version === 3) {
+        const point = new Point3(model.measurementName);
+
+        for (const [k, v] of Object.entries(model.tags)) {
+            if (v !== undefined && v !== null) {
+                point.setTag(k, String(v));
+            }
+        }
+
+        for (const [k, v] of Object.entries(model.fields)) {
+            if (typeof v === 'number') {
+                point.setFloatField(k, v);
+            } else if (typeof v === 'boolean') {
+                point.setBooleanField(k, v);
+            } else if (typeof v === 'string') {
+                point.setStringField(k, v);
+            }
+        }
+
+        if (hasTimestamp) {
+            point.setTimestamp(new Date(model.timestampMs));
+        }
+
+        return point;
+    }
+
+    return null;
 }

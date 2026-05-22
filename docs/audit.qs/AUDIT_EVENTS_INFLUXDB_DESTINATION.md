@@ -98,8 +98,8 @@ flowchart LR
 - If `Butler-SOS.auditEvents.apiToken` is configured, requests require `Authorization: Bearer <token>`.
 - Browser requests are controlled by `Butler-SOS.auditEvents.cors.allowedOrigins`.
 - The HTTP layer also applies a Fastify rate limit of 300 requests per minute.
-- The POST body is an envelope with required fields `schemaVersion`, `eventId`, `timestamp`, `type`, and `payload`. `correlationId` and `source` are optional. Additional top-level and payload fields are accepted for forward compatibility.
-- Known event types with payload validation are `selection.transaction.finalized`, `selection.state.changed`, `app.model.validated`, `screenshot.url.received`, `event.unsupported.visualization`, and `object.view.duration`. Unknown event types are accepted and stored using the open envelope/payload model.
+- The POST body is an envelope with required fields `schemaVersion`, `eventId`, `timestamp`, `type`, and `payload`. `correlationId` and `source` are optional. `correlationId` is an opaque string: Audit.qs uses `selectionTxnId` when available and otherwise the stringified `currentDataStateId`. Additional top-level and payload fields are accepted for forward compatibility.
+- Event types with payload validation include `selection.state.changed`, `app.model.validated`, `screenshot.url.received`, `event.unsupported.visualization`, and `object.view.duration`. The audit API also accepts additional allow-listed event types, including `navigation.sheet.loaded`, `object.visibility.changed`, `event.bookmark`, `audit.event`, and types matching `event.*`. Only event types outside the API allow-list are rejected with `422` before they reach this destination.
 - Events are processed via `globals.auditEventsQueueManager` (a `UdpQueueManager` used for HTTP ingest too).
 
 ### Screenshot download
@@ -372,7 +372,7 @@ The per-version modules exist for compatibility/experimentation, but the default
 - Audit data is sensitive.
 - The audit destination must allow a separate InfluxDB instance/version/bucket/database.
 - Known event handlers log summaries at info level and detailed payload/object data at debug level.
-- Unknown event types are accepted and currently log the full envelope at info level before destination writes. Be careful when enabling unknown event types in production environments.
+- Event types that are not on the audit API allow-list are rejected before destination writes, except for types matching the supported `event.*` wildcard, which may still flow through. Investigate server warnings rather than expecting a destination-side fallback or remapping path.
 
 ## Object Data
 

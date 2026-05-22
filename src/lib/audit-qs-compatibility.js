@@ -16,7 +16,7 @@ const COMPATIBILITY_MATRIX = [
     // Butler SOS versions before 15.0.0 do not support Audit.qs, but we include an entry during development of 15.0
     {
         butlerSosVersionRange: '>=14.0.0 <15.0.0',
-        auditQsVersionRange: '>=0.3.0 <0.4.0',
+        auditQsVersionRange: '>=0.3.0 <0.5.0',
     },
     {
         butlerSosVersionRange: '>=15.0.0 <16.0.0',

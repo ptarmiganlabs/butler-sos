@@ -241,16 +241,18 @@ async function deleteQpsSession(qps, cookieName, sessionId, logger) {
 
         if (typeof logger.verbose === 'function') {
             logger.verbose(
-                `AUDIT API: Successfully deleted QPS session ${sessionId} for virtual proxy "${vp}"`
+                `AUDIT API: Successfully deleted QPS session virtualProxy="${vp}" cookieName=${cookieName} sessionIdLength=${sessionId.length}`
             );
         } else {
             debugLog(
                 logger,
-                `AUDIT API: Successfully deleted QPS session ${sessionId} for virtual proxy "${vp}"`
+                `AUDIT API: Successfully deleted QPS session virtualProxy="${vp}" cookieName=${cookieName} sessionIdLength=${sessionId.length}`
             );
         }
     } catch (err) {
-        logger.warn(`AUDIT API: Failed to delete QPS session ${sessionId}: ${err.message}`);
+        logger.warn(
+            `AUDIT API: Failed to delete QPS session cookieName=${cookieName} sessionIdLength=${sessionId.length} error=${err.message}`
+        );
     }
 }
 
@@ -542,6 +544,21 @@ function summarizeUrlForDebug(rawUrl) {
     } catch {
         return 'invalidUrl=true';
     }
+}
+
+/**
+ * Builds a safe summary of a screenshot session for operational logs.
+ *
+ * @param {{ host?: string, port?: string|number, virtualProxy?: string }} qps QPS settings.
+ * @param {{ name?: string, value?: string }} sessionCookie Session cookie.
+ * @returns {string} Safe session summary.
+ */
+function summarizeScreenshotSessionForLog(qps, sessionCookie) {
+    const virtualProxy = normalizeVirtualProxyName(qps?.virtualProxy);
+
+    return `qpsHost=${qps?.host || 'n/a'} qpsPort=${qps?.port || 'n/a'} virtualProxy=${
+        virtualProxy === null ? 'invalid' : virtualProxy || '(default)'
+    } cookieName=${sessionCookie?.name || 'n/a'} sessionIdLength=${sessionCookie?.value?.length || 0}`;
 }
 
 /**
@@ -1586,6 +1603,15 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     ticketQpsForAttempt,
                     responseSessionCookieHeader,
                     async (entry, reason) => {
+                        logger.info(
+                            `AUDIT API: Removed cached screenshot QPS session reason=${reason} authMode=${entry.authMode} ${summarizeScreenshotSessionForLog(
+                                entry.qps,
+                                {
+                                    name: entry.cookieName,
+                                    value: entry.cookieValue,
+                                }
+                            )}`
+                        );
                         debugLog(
                             logger,
                             `AUDIT API: Screenshot session cache cleanup reason=${reason} cookieName=${entry.cookieName} virtualProxy=${
@@ -1603,6 +1629,12 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     logger
                 );
                 responseSessionCached = true;
+                logger.info(
+                    `AUDIT API: Established cached screenshot QPS session after acquiring a new ticket selectionTxnId=${selectionTxnId} authMode=${authMode} ${summarizeScreenshotSessionForLog(
+                        ticketQpsForAttempt,
+                        responseSessionCookieHeader
+                    )}`
+                );
             } else if (cacheEnabledForAttempt && !usedCachedSession) {
                 debugLog(
                     logger,
@@ -1683,18 +1715,32 @@ export async function downloadScreenshot(url, envelope, config, logger) {
 
                 savedPaths.push(filePath);
 
-                logger.info(
-                    `AUDIT API: Saved screenshot, selectionTxnId=${selectionTxnId} file=${filePath}`
-                );
+                if (typeof logger.verbose === 'function') {
+                    logger.verbose(
+                        `AUDIT API: Saved screenshot, selectionTxnId=${selectionTxnId} file=${filePath}`
+                    );
+                } else {
+                    debugLog(
+                        logger,
+                        `AUDIT API: Saved screenshot, selectionTxnId=${selectionTxnId} file=${filePath}`
+                    );
+                }
 
                 if (metadataBuffer && metadataBuffer.length > 0) {
                     const metadataFilename = buildMetadataFilename(filename);
                     const metadataFilePath = path.join(directoryPath, metadataFilename);
                     await fs.writeFile(metadataFilePath, metadataBuffer);
                     savedPaths.push(metadataFilePath);
-                    logger.info(
-                        `AUDIT API: Saved screenshot metadata, selectionTxnId=${selectionTxnId} file=${metadataFilePath}`
-                    );
+                    if (typeof logger.verbose === 'function') {
+                        logger.verbose(
+                            `AUDIT API: Saved screenshot metadata, selectionTxnId=${selectionTxnId} file=${metadataFilePath}`
+                        );
+                    } else {
+                        debugLog(
+                            logger,
+                            `AUDIT API: Saved screenshot metadata, selectionTxnId=${selectionTxnId} file=${metadataFilePath}`
+                        );
+                    }
                 }
             }
 
