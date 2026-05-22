@@ -2472,12 +2472,6 @@ describe('audit-events-api version compatibility', () => {
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
 
-        /**
-         *
-         * @param remoteAddress
-         * @param eventId
-         * @param selectionTxnId
-         */
         const postEvent = (remoteAddress, eventId, selectionTxnId) =>
             fastify.inject({
                 method: 'POST',
