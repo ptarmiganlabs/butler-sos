@@ -322,6 +322,21 @@ function debugLog(logger, message) {
 }
 
 /**
+ * Writes a verbose message when the provided logger supports it, otherwise falls back to debug.
+ *
+ * @param {object} logger Logger instance.
+ * @param {string} message Message to log.
+ */
+function verboseLog(logger, message) {
+    if (logger && typeof logger.verbose === 'function') {
+        logger.verbose(message);
+        return;
+    }
+
+    debugLog(logger, message);
+}
+
+/**
  * Returns a URL summary suitable for debug logs without sensitive query values.
  *
  * @param {unknown} rawUrl URL to summarize.
@@ -438,7 +453,8 @@ function createTypeHandlers(logger) {
      */
     async function handleSelectionTransactionFinalized(envelope, requestContext) {
         const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
-        logger.info(
+        verboseLog(
+            logger,
             `AUDIT API: selection.transaction.finalized eventId=${envelope?.eventId} selectionTxnId=${selectionTxnId} ip=${requestContext.ip}`
         );
     }
@@ -456,7 +472,8 @@ function createTypeHandlers(logger) {
         const details = envelope?.payload?.event?.details;
         const selectionDetails = pickSelectionDetailsForLog(details);
 
-        logger.info(
+        verboseLog(
+            logger,
             `AUDIT API: selection.state.changed eventId=${envelope?.eventId} selectionTxnId=${selectionTxnId} details=${safeJsonForLog(
                 selectionDetails,
                 20000
@@ -479,7 +496,8 @@ function createTypeHandlers(logger) {
     async function handleAppModelValidated(envelope, requestContext) {
         const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
         const dataStateId = envelope?.payload?.event?.dataStateId;
-        logger.info(
+        verboseLog(
+            logger,
             `AUDIT API: app.model.validated eventId=${envelope?.eventId} selectionTxnId=${selectionTxnId} dataStateId=${dataStateId} ip=${requestContext.ip}`
         );
 
@@ -704,7 +722,8 @@ function createTypeHandlers(logger) {
         const enterSelectionTxnId = envelope?.payload?.event?.enterSelectionTxnId;
         const leaveSelectionTxnId = envelope?.payload?.event?.leaveSelectionTxnId;
 
-        logger.info(
+        verboseLog(
+            logger,
             `AUDIT API: object.view.duration eventId=${envelope?.eventId} objectId=${objectId} durationMs=${durationMs} enteredAt=${enteredAt} leftAt=${leftAt} selectionTxnId=${selectionTxnId} enterSelectionTxnId=${enterSelectionTxnId} leaveSelectionTxnId=${leaveSelectionTxnId} ip=${requestContext.ip}`
         );
     }
@@ -1140,7 +1159,8 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
                 )}`
             );
         } else {
-            globals.logger.info(
+            verboseLog(
+                globals.logger,
                 `AUDIT API: Received audit event type=${envelope.type} eventId=${envelope.eventId} ip=${requestContext.ip}`
             );
             // Log full envelope at debug only — it may contain PII (userAgent, userId, appName, etc.)

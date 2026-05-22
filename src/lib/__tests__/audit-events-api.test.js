@@ -111,7 +111,7 @@ describe('audit-events-api event types', () => {
         mockGlobals.auditEventsQueueManager = null;
     });
 
-    test('accepts object.view.duration and logs concise info (no full envelope log)', async () => {
+    test('accepts object.view.duration and logs concise verbose output (no full envelope log)', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
         const { writeAuditEventToDestinations } = await import('../audit-destinations/index.js');
 
@@ -164,10 +164,15 @@ describe('audit-events-api event types', () => {
 
         expect(res.statusCode).toBe(202);
 
-        expect(mockGlobals.logger.info).toHaveBeenCalled();
-        const infoMsgs = mockGlobals.logger.info.mock.calls.map((c) => String(c[0]));
-        expect(infoMsgs.some((m) => m.includes('AUDIT API: object.view.duration'))).toBe(true);
-        expect(infoMsgs.some((m) => m.includes('AUDIT API: Full envelope:'))).toBe(false);
+        expect(mockGlobals.logger.verbose).toHaveBeenCalled();
+        const verboseMsgs = mockGlobals.logger.verbose.mock.calls.map((c) => String(c[0]));
+        expect(verboseMsgs.some((m) => m.includes('AUDIT API: object.view.duration'))).toBe(true);
+        expect(verboseMsgs.some((m) => m.includes('AUDIT API: Full envelope:'))).toBe(false);
+        expect(
+            mockGlobals.logger.info.mock.calls.some(([message]) =>
+                String(message).includes('AUDIT API: object.view.duration')
+            )
+        ).toBe(false);
 
         expect(writeAuditEventToDestinations).toHaveBeenCalled();
     });
@@ -364,6 +369,16 @@ describe('audit-events-api event types', () => {
                 selectionDetails: [{ qField: 'Dim1', qSelectedCount: 1, qSelected: 'A' }],
             })
         );
+        expect(
+            mockGlobals.logger.verbose.mock.calls.some(([message]) =>
+                String(message).includes('AUDIT API: selection.state.changed')
+            )
+        ).toBe(true);
+        expect(
+            mockGlobals.logger.info.mock.calls.some(([message]) =>
+                String(message).includes('AUDIT API: selection.state.changed')
+            )
+        ).toBe(false);
     });
 
     test('handles app.model.validated and passes dataStateId to destinations', async () => {
@@ -404,6 +419,62 @@ describe('audit-events-api event types', () => {
                 dataStateId: 1766865955336,
             })
         );
+        expect(
+            mockGlobals.logger.verbose.mock.calls.some(([message]) =>
+                String(message).includes('AUDIT API: app.model.validated')
+            )
+        ).toBe(true);
+        expect(
+            mockGlobals.logger.info.mock.calls.some(([message]) =>
+                String(message).includes('AUDIT API: app.model.validated')
+            )
+        ).toBe(false);
+    });
+
+    test('logs unhandled audit event types at verbose level', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const { writeAuditEventToDestinations } = await import('../audit-destinations/index.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await fastify.inject({
+            method: 'POST',
+            url: '/api/v1/audit-event',
+            headers: {
+                origin: 'https://qliksense.company.com',
+                'content-type': 'application/json',
+                authorization: 'Bearer secret',
+            },
+            payload: {
+                schemaVersion: 1,
+                eventId: 'a0000000-0000-4000-8000-000000000007',
+                timestamp: '2025-01-01T00:00:00.000Z',
+                type: 'navigation.sheet.loaded',
+                payload: {
+                    event: {
+                        sheetId: 'sheet-1',
+                    },
+                },
+            },
+        });
+
+        expect(res.statusCode).toBe(202);
+        expect(writeAuditEventToDestinations).toHaveBeenCalled();
+        expect(
+            mockGlobals.logger.verbose.mock.calls.some(([message]) =>
+                String(message).includes(
+                    'AUDIT API: Received audit event type=navigation.sheet.loaded'
+                )
+            )
+        ).toBe(true);
+        expect(
+            mockGlobals.logger.info.mock.calls.some(([message]) =>
+                String(message).includes(
+                    'AUDIT API: Received audit event type=navigation.sheet.loaded'
+                )
+            )
+        ).toBe(false);
     });
 });
 

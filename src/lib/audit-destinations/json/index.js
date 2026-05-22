@@ -102,6 +102,21 @@ function getJsonObjectdataConfig() {
 }
 
 /**
+ * Writes a verbose message when supported, otherwise falls back to debug.
+ *
+ * @param {string} message Message to log.
+ * @returns {void}
+ */
+function verboseLog(message) {
+    if (typeof globals.logger.verbose === 'function') {
+        globals.logger.verbose(message);
+        return;
+    }
+
+    globals.logger.debug(message);
+}
+
+/**
  * Write an audit event's objectData to a per-event JSON file on disk.
  *
  * File naming matches the screenshot convention for easy correlation:
@@ -218,7 +233,7 @@ export async function writeAuditEventToJson(envelope, extras = {}) {
 
         fs.writeFileSync(filePath, JSON.stringify(doc, null, 2), 'utf-8');
 
-        globals.logger.info(`AUDIT JSON: Wrote objectData to ${filePath}`);
+        verboseLog(`AUDIT JSON: Wrote objectData to ${filePath}`);
     } catch (err) {
         globals.logger.error(
             `AUDIT JSON: Error writing objectData to JSON file: ${globals.getErrorMessage(err)}`
