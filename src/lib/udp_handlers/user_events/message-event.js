@@ -1,5 +1,5 @@
 import { validate } from 'uuid';
-import { UAParser } from 'ua-parser-js';
+import Bowser from 'bowser';
 
 // Load global variables and functions
 import globals from '../../../globals.js';
@@ -199,15 +199,27 @@ export async function messageEventHandler(message, _remote) {
             userAgent = userAgent.replace(/'/g, '');
 
             // Parse the user agent string
-            const ua = UAParser(userAgent);
+            const ua = Bowser.parse(userAgent);
+            const browserVersion = ua.browser.version;
 
             msgObj.ua = {};
-            msgObj.ua.browser = ua.browser;
-            msgObj.ua.cpu = ua.cpu;
-            msgObj.ua.device = ua.device;
-            msgObj.ua.engine = ua.engine;
+            msgObj.ua.browser = {
+                name: ua.browser.name,
+                version: browserVersion,
+                major:
+                    typeof browserVersion === 'string' && browserVersion.length > 0
+                        ? browserVersion.split('.')[0]
+                        : undefined,
+            };
+            msgObj.ua.cpu = {};
+            msgObj.ua.device = {
+                type: ua.platform.type,
+                vendor: ua.platform.vendor,
+                model: ua.platform.model,
+            };
+            msgObj.ua.engine = {};
             msgObj.ua.os = ua.os;
-            msgObj.ua.ua = ua.ua;
+            msgObj.ua.ua = userAgent;
         }
 
         // Post to MQTT

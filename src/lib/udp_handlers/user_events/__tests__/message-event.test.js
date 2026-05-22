@@ -29,16 +29,15 @@ jest.unstable_mockModule('../../../../globals.js', () => ({
     },
 }));
 
-// Mock UAParser
-jest.unstable_mockModule('ua-parser-js', () => ({
-    UAParser: jest.fn().mockImplementation((userAgent) => ({
-        browser: { name: 'Chrome', major: '91' },
-        cpu: { architecture: 'amd64' },
-        device: { type: 'desktop' },
-        engine: { name: 'Blink', version: '91.0.4472.124' },
-        os: { name: 'Windows', version: '10' },
-        ua: userAgent,
-    })),
+// Mock Bowser
+jest.unstable_mockModule('bowser', () => ({
+    default: {
+        parse: jest.fn().mockImplementation(() => ({
+            browser: { name: 'Chrome', version: '91.0.4472.124' },
+            platform: { type: 'desktop', vendor: undefined, model: undefined },
+            os: { name: 'Windows', version: '10' },
+        })),
+    },
 }));
 
 // Mock uuid
@@ -63,7 +62,7 @@ jest.unstable_mockModule('../../../post-to-mqtt.js', () => ({
 
 // Import modules after mocking
 const { validate } = await import('uuid');
-const { UAParser } = await import('ua-parser-js');
+const { default: Bowser } = await import('bowser');
 const { postUserEventToInfluxdb } = await import('../../../influxdb/index.js');
 const { postUserEventToNewRelic } = await import('../../../post-to-new-relic.js');
 const { postUserEventToMQTT } = await import('../../../post-to-mqtt.js');
@@ -213,7 +212,7 @@ describe('messageEventHandler', () => {
             await messageEventHandler(message, {});
 
             // Verify the user agent was parsed
-            expect(UAParser).toHaveBeenCalledWith(
+            expect(Bowser.parse).toHaveBeenCalledWith(
                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             );
         });
@@ -225,7 +224,7 @@ describe('messageEventHandler', () => {
 
             await messageEventHandler(message, {});
 
-            expect(UAParser).toHaveBeenCalledWith('Mozilla/5.0 (Windows NT 10.0)');
+            expect(Bowser.parse).toHaveBeenCalledWith('Mozilla/5.0 (Windows NT 10.0)');
         });
 
         test('should not parse user agent if not present', async () => {
@@ -235,7 +234,7 @@ describe('messageEventHandler', () => {
 
             await messageEventHandler(message, {});
 
-            expect(UAParser).not.toHaveBeenCalled();
+            expect(Bowser.parse).not.toHaveBeenCalled();
             expect(globals.logger.debug).toHaveBeenCalledWith(expect.not.stringContaining('"ua":'));
         });
     });
