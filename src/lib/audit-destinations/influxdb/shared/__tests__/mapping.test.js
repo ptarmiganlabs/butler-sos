@@ -359,4 +359,30 @@ describe('audit-destinations/influxdb/shared/mapping', () => {
         expect(model.tags.objectType).toBe('barchart');
         expect(model.fields.objectData).toBeDefined();
     });
+
+    test('builds version-specific InfluxDB points from shared model', async () => {
+        const { buildAuditInfluxPoint } = await import('../mapping.js');
+        const model = {
+            measurementName: 'audit',
+            tags: { t1: 'v1', skipNull: null, skipUndefined: undefined },
+            fields: { f1: true, f2: 's1', f3: 123, skipObject: {} },
+            timestampMs: 1234567890,
+        };
+
+        const v1Point = buildAuditInfluxPoint(model, 1);
+        expect(v1Point).toMatchObject({
+            measurement: 'audit',
+            tags: model.tags,
+            fields: model.fields,
+            timestamp: new Date(1234567890),
+        });
+
+        const v2LineProtocol = buildAuditInfluxPoint(model, 2).toLineProtocol();
+        expect(v2LineProtocol).toBe('audit,t1=v1 f1=T,f2="s1",f3=123 1234567890000000');
+
+        const v3LineProtocol = buildAuditInfluxPoint(model, 3).toLineProtocol();
+        expect(v3LineProtocol).toBe('audit,t1=v1 f1=T,f2="s1",f3=123 1234567890000000');
+
+        expect(buildAuditInfluxPoint(model, 99)).toBeNull();
+    });
 });

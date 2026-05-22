@@ -26,6 +26,18 @@ const mockMapping = {
             fields: { value: 1 },
         };
     }),
+    buildAuditInfluxPoint: jest.fn((model, version) => {
+        if (version === 1) {
+            return {
+                measurement: model.measurementName,
+                tags: model.tags,
+                fields: model.fields,
+            };
+        }
+        if (version === 2) return model;
+        if (version === 3) return { toLineProtocol: () => 'audit value=1' };
+        return null;
+    }),
 };
 
 const mockClient = {
