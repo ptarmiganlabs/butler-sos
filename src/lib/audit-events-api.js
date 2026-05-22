@@ -15,6 +15,7 @@ import { writeAuditEventToDestinations } from './audit-destinations/index.js';
 
 /** Regex matching a UUID in 8-4-4-4-12 hex format (case-insensitive). */
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CORRELATION_ID_MAX_LENGTH = 64;
 
 /**
  * Exact set of event type strings accepted by this API.
@@ -136,8 +137,13 @@ function validateEnvelopeConstraints(envelope) {
         reasons.push(`eventId is not a valid UUID ("${envelope.eventId}")`);
     }
 
-    if (envelope.correlationId !== undefined && !UUID_REGEX.test(envelope.correlationId)) {
-        reasons.push(`correlationId is not a valid UUID ("${envelope.correlationId}")`);
+    if (
+        envelope.correlationId !== undefined &&
+        envelope.correlationId.length > CORRELATION_ID_MAX_LENGTH
+    ) {
+        reasons.push(
+            `correlationId exceeds ${CORRELATION_ID_MAX_LENGTH} characters (length=${envelope.correlationId.length})`
+        );
     }
 
     const appId = envelope.payload?.context?.appId;

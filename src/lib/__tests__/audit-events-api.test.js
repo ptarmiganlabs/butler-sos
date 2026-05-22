@@ -932,20 +932,16 @@ describe('audit-events-api envelope constraint validation', () => {
         );
     });
 
-    test('drops event and warns when correlationId is not a UUID', async () => {
+    test('accepts correlationId when it is a numeric string', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
 
         const res = await postEnvelope(fastify, validEnvelope({ correlationId: '1777868693436' }));
 
-        expect(res.statusCode).toBe(422);
-        const body = JSON.parse(res.payload);
-        expect(body.status).toBe('error');
-        expect(body.outcome).toBe('dropped');
-        expect(body.reason).toBe('One or more constraint violations');
-        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('correlationId is not a valid UUID')
+        expect(res.statusCode).toBe(202);
+        expect(mockGlobals.logger.warn).not.toHaveBeenCalledWith(
+            expect.stringContaining('constraint violations')
         );
     });
 
@@ -962,6 +958,26 @@ describe('audit-events-api envelope constraint validation', () => {
         expect(res.statusCode).toBe(202);
         expect(mockGlobals.logger.warn).not.toHaveBeenCalledWith(
             expect.stringContaining('constraint violations')
+        );
+    });
+
+    test('drops event and warns when correlationId exceeds 64 characters', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+        const res = await postEnvelope(
+            fastify,
+            validEnvelope({ correlationId: 'c'.repeat(65) })
+        );
+
+        expect(res.statusCode).toBe(422);
+        const body = JSON.parse(res.payload);
+        expect(body.status).toBe('error');
+        expect(body.outcome).toBe('dropped');
+        expect(body.reason).toBe('One or more constraint violations');
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('correlationId exceeds 64 characters')
         );
     });
 

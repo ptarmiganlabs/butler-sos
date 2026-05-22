@@ -19,9 +19,9 @@ Audit events are received by the Butler SOS audit API:
 
 When `Butler-SOS.auditEvents.apiToken` is configured, both endpoints require an `Authorization: Bearer <token>` header. Browser calls also require an allowed origin in `Butler-SOS.auditEvents.cors.allowedOrigins`.
 
-The POST endpoint requires these top-level envelope fields: `schemaVersion`, `eventId`, `timestamp`, `type`, and `payload`. `correlationId` and `source` are optional. The JSON destination looks specifically for `payload.event.objectData`.
+The POST endpoint requires these top-level envelope fields: `schemaVersion`, `eventId`, `timestamp`, `type`, and `payload`. `correlationId` and `source` are optional. `correlationId` is an opaque string: Audit.qs uses `selectionTxnId` when available and otherwise the stringified `currentDataStateId`. The JSON destination looks specifically for `payload.event.objectData`.
 
-Known event types with payload validation are `selection.transaction.finalized`, `selection.state.changed`, `app.model.validated`, `screenshot.url.received`, `event.unsupported.visualization`, and `object.view.duration`. Unknown event types are accepted and stored using the open envelope/payload model.
+Known event types with payload validation are `selection.transaction.finalized`, `selection.state.changed`, `app.model.validated`, `screenshot.url.received`, `event.unsupported.visualization`, and `object.view.duration`. Unknown event types are rejected with `422` by the audit API before they reach this destination.
 
 ## Data Flow
 
@@ -50,7 +50,7 @@ correlate a screenshot image with its object data:
 Example:
 
 ```text
-20260308T164626.181Z_165c9558-abcd-1234-a1b2-cc12e5aa9f01_cc12e5aa-beef-4321-9876-abcdef012345.json
+20260308T164626.181Z_165c9558-abcd-1234-a1b2-cc12e5aa9f01_1777868693436.json
 ```
 
 ### Correlation Model
@@ -92,7 +92,7 @@ erDiagram
     AUDIT_EVENT ||--|| QVD_ROW : "stored in"
 ```
 
-All four file types share `eventId` and `correlationId`. A simple directory listing +
+All four file types share `eventId` and `correlationId`. `correlationId` is an opaque grouping key and may be UUID-like or a numeric stringified data-state id. A simple directory listing +
 `grep` on these IDs links every artefact for a given event:
 
 ```bash
@@ -124,7 +124,7 @@ object data payload:
 ```json
 {
   "eventId": "165c9558-abcd-1234-a1b2-cc12e5aa9f01",
-  "correlationId": "cc12e5aa-beef-4321-9876-abcdef012345",
+  "correlationId": "1777868693436",
   "timestamp": "2026-03-08T16:46:26.181Z",
   "eventType": "screenshot.url.received",
   "user": "UserDirectory=LAB; UserId=johndoe",
