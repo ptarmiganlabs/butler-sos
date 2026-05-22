@@ -189,9 +189,11 @@ export function buildAuditInfluxPointModel(envelope, extras = {}) {
 /**
  * Build a version-specific point representation from a version-agnostic model.
  *
- * @param {{ measurementName: string, timestampMs?: number, tags: Record<string,string>, fields: Record<string, string|number|boolean> }} model Point model.
+ * For v2/v3 points, null/undefined tags are skipped and only string/number/boolean fields are written.
+ *
+ * @param {{ measurementName: string, timestampMs?: number | null, tags: Record<string, unknown>, fields: Record<string, unknown> }} model Point model.
  * @param {number} version InfluxDB major version.
- * @returns {unknown} Version-specific point.
+ * @returns {{ measurement: string, tags: Record<string, unknown>, fields: Record<string, unknown>, timestamp?: Date } | Point | Point3 | null} Version-specific point, or null if version is unsupported.
  */
 export function buildAuditInfluxPoint(model, version) {
     const hasTimestamp = model.timestampMs !== undefined && model.timestampMs !== null;
