@@ -26,6 +26,19 @@ When in doubt, err on the side of explaining more rather than less. Use plain la
 - Include all information relevant to the doc site in a single file — do not split topics across files or assume readers will cross-reference multiple files
 - Do not include internal implementation details (code snippets, internal variable names, file paths in the codebase) unless they are directly relevant to an administrator configuring or operating Butler SOS
 
+## Processing status in file names
+
+Files in this folder can also carry a status prefix in their file name:
+
+- Files without a prefix are still pending review or migration to the doc site.
+- Files starting with `done_` have already been incorporated into the Butler SOS doc site, or their content has been verified to already exist there.
+
+When marking a file as processed, keep the original file name after the prefix:
+
+- `audit-api-return-codes.md` becomes `done_audit-api-return-codes.md`
+
+Keep processed files in this folder for traceability until there is a deliberate cleanup pass.
+
 ## Ownership
 
 These files are maintained by the Butler SOS core team. Pull requests and issues are welcome.
