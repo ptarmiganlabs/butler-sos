@@ -2345,7 +2345,10 @@ describe('audit-events-api version compatibility', () => {
         await registerAuditEventRoutes(fastify, { apiToken: null, corsOrigins: ['*'] });
 
         /**
+         * Post an audit event request that omits version information.
          *
+         * @returns {Promise<import('light-my-request').Response>}
+         *   Injected Fastify response for the audit event request.
          */
         const postEvent = () =>
             fastify.inject({
