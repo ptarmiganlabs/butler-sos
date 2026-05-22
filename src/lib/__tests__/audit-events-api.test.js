@@ -900,13 +900,6 @@ describe('audit-events-api envelope constraint validation', () => {
                     details: [],
                 },
             },
-            'selection.transaction.finalized': {
-                event: {
-                    selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
-                    beforeSelections: [],
-                    afterSelections: [],
-                },
-            },
             'app.model.validated': {
                 event: {
                     selectionTxnId: 'c0000000-0000-4000-8000-000000000001',

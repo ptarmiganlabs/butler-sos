@@ -444,22 +444,6 @@ function createTypeHandlers(logger) {
     }
 
     /**
-     * Handles a finalized selection transaction.
-     *
-     * @param {unknown} envelope - The received audit event envelope.
-     * @param {AuditRequestContext} requestContext - Minimal request context.
-     *
-     * @returns {Promise<object | undefined>} Optional metadata for downstream destinations.
-     */
-    async function handleSelectionTransactionFinalized(envelope, requestContext) {
-        const selectionTxnId = envelope?.payload?.event?.selectionTxnId;
-        verboseLog(
-            logger,
-            `AUDIT API: selection.transaction.finalized eventId=${envelope?.eventId} selectionTxnId=${selectionTxnId} ip=${requestContext.ip}`
-        );
-    }
-
-    /**
      * Handles a selection state change event.
      *
      * @param {unknown} envelope - The received audit event envelope.
@@ -729,7 +713,6 @@ function createTypeHandlers(logger) {
     }
 
     return {
-        'selection.transaction.finalized': handleSelectionTransactionFinalized,
         'selection.state.changed': handleSelectionStateChanged,
         'app.model.validated': handleAppModelValidated,
         'screenshot.url.received': handleScreenshotUrlReceived,
@@ -815,41 +798,6 @@ function createPayloadValidators() {
                     selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
                 },
                 required: ['vizType', 'selectionTxnId'],
-                additionalProperties: true,
-            },
-        },
-        required: ['event'],
-        additionalProperties: true,
-    };
-
-    /**
-     * Payload schema for selection.transaction.finalized.
-     *
-     * Expected shape: { event: { selectionTxnId: string, beforeSelections: any[], afterSelections: any[] } }
-     */
-    const selectionTransactionFinalizedPayloadSchema = {
-        type: 'object',
-        properties: {
-            context: {
-                type: 'object',
-                properties: {
-                    appId: { type: 'string' },
-                    appName: { type: 'string', maxLength: 64 },
-                    sheetId: { type: 'string', maxLength: 64 },
-                    sheetName: { type: 'string', maxLength: 64 },
-                    user: { type: 'string', maxLength: 256 },
-                    userAgent: { type: 'string', maxLength: 512 },
-                },
-                additionalProperties: true,
-            },
-            event: {
-                type: 'object',
-                properties: {
-                    selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
-                    beforeSelections: { type: 'array', maxItems: 500 },
-                    afterSelections: { type: 'array', maxItems: 500 },
-                },
-                required: ['selectionTxnId', 'beforeSelections', 'afterSelections'],
                 additionalProperties: true,
             },
         },
@@ -969,9 +917,6 @@ function createPayloadValidators() {
 
     return {
         validatePayloadByType: {
-            'selection.transaction.finalized': ajv.compile(
-                selectionTransactionFinalizedPayloadSchema
-            ),
             'selection.state.changed': ajv.compile(selectionStateChangedPayloadSchema),
             'app.model.validated': ajv.compile(appModelValidatedPayloadSchema),
             'screenshot.url.received': ajv.compile(screenshotUrlReceivedPayloadSchema),
