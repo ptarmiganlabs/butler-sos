@@ -353,6 +353,16 @@ describe('audit-screenshots', () => {
         expect(getCalls[1][0].url).toBe('https://qlik.example.com/sense/app/screenshot.png?foo=bar');
         expect(getCalls[1][0].headers).toEqual({ Cookie: 'X-Qlik-Session-qlik=SESSION123' });
         expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(2);
+        expect(
+            logger.info.mock.calls.some(([message]) =>
+                String(message).includes(
+                    'AUDIT API: Established cached screenshot QPS session after acquiring a new ticket'
+                )
+            )
+        ).toBe(true);
+        expect(
+            logger.info.mock.calls.some(([message]) => String(message).includes('SESSION123'))
+        ).toBe(false);
         expect(logger.warn).not.toHaveBeenCalled();
     });
 
@@ -456,6 +466,14 @@ describe('audit-screenshots', () => {
         expect(logger.info).toHaveBeenCalledWith(
             expect.stringContaining('cached Qlik session rejected')
         );
+        expect(
+            logger.info.mock.calls.some(([message]) =>
+                String(message).includes('AUDIT API: Removed cached screenshot QPS session')
+            )
+        ).toBe(true);
+        expect(
+            logger.info.mock.calls.some(([message]) => String(message).includes('SESSION123'))
+        ).toBe(false);
         expect(logger.warn).not.toHaveBeenCalled();
     });
 
