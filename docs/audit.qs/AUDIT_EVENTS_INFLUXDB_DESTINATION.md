@@ -99,7 +99,7 @@ flowchart LR
 - Browser requests are controlled by `Butler-SOS.auditEvents.cors.allowedOrigins`.
 - The HTTP layer also applies a Fastify rate limit of 300 requests per minute.
 - The POST body is an envelope with required fields `schemaVersion`, `eventId`, `timestamp`, `type`, and `payload`. `correlationId` and `source` are optional. `correlationId` is an opaque string: Audit.qs uses `selectionTxnId` when available and otherwise the stringified `currentDataStateId`. Additional top-level and payload fields are accepted for forward compatibility.
-- Known event types with payload validation are `selection.transaction.finalized`, `selection.state.changed`, `app.model.validated`, `screenshot.url.received`, `event.unsupported.visualization`, and `object.view.duration`. Unknown event types are rejected with `422` by the audit API before they reach this destination.
+- Known event types with payload validation are `selection.state.changed`, `app.model.validated`, `screenshot.url.received`, `event.unsupported.visualization`, and `object.view.duration`. Unknown event types are rejected with `422` by the audit API before they reach this destination.
 - Events are processed via `globals.auditEventsQueueManager` (a `UdpQueueManager` used for HTTP ingest too).
 
 ### Screenshot download
