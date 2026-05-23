@@ -34,6 +34,7 @@ npx postject "${env:DIST_FILE_NAME}.exe" NODE_SEA_BLOB sea-prep.blob --sentinel-
 # Sign the executable
 # 1st signing
 # TODO: This first SignTool invocation no longer matches the repository's previous dual-signing command: it dropped /fd sha1 and changed /td from sha256 to sha1. On current Windows SDK builds signtool sign typically requires /fd, so this pass can fail the release job outright; even when it succeeds it no longer performs the intended SHA-1/SHA-256 signing sequence.
+# Keep for reference
 # $processOptions1 = @{
 #   FilePath = "C:\Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/signtool.exe"
 #   Wait = $true
@@ -49,18 +50,19 @@ npx postject "${env:DIST_FILE_NAME}.exe" NODE_SEA_BLOB sea-prep.blob --sentinel-
 
 # -------------------
 # 2nd signing
-$processOptions2 = @{
-  FilePath = "C:\Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/signtool.exe"
-  Wait = $true
-  PassThru = $true
-  ArgumentList = "sign", "/sha1", "$env:CODESIGN_WIN_THUMBPRINT", "/tr", "http://time.certum.pl", "/td", "sha256", "/fd", "sha256", "/v", "./${env:DIST_FILE_NAME}.exe"
-  WorkingDirectory = "."
-  NoNewWindow = $true
-}
-$process = Start-Process @processOptions2
-if ($process.ExitCode -ne 0) {
-  throw "signtool sign (2nd pass) failed with exit code $($process.ExitCode)"
-}
+# Keep for reference
+# $processOptions2 = @{
+#   FilePath = "C:\Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/signtool.exe"
+#   Wait = $true
+#   PassThru = $true
+#   ArgumentList = "sign", "/sha1", "$env:CODESIGN_WIN_THUMBPRINT", "/tr", "http://time.certum.pl", "/td", "sha256", "/fd", "sha256", "/v", "./${env:DIST_FILE_NAME}.exe"
+#   WorkingDirectory = "."
+#   NoNewWindow = $true
+# }
+# $process = Start-Process @processOptions2
+# if ($process.ExitCode -ne 0) {
+#   throw "signtool sign (2nd pass) failed with exit code $($process.ExitCode)"
+# }
 
 # -------------------
 # Create release's build zip

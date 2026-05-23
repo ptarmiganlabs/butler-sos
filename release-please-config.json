@@ -1,4 +1,8 @@
 {
+    "last-release-sha": "b8108150161a43d48476587a53bcc03af536bec3",
+    "release-as": "15.0.0",
+
+
     "release-type": "node",
     "prerelease": false,
     "draft": true,
