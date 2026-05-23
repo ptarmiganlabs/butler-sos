@@ -66,7 +66,9 @@ echo "DEBUG: Creating new keychain"
 security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "${KEYCHAIN_NAME}"
 
 echo "DEBUG: Getting current keychain list"
-mapfile -t OLD_KEYCHAIN_NAMES < <(security list-keychains -d user | sed -e 's/^ *//' -e 's/"//g')
+while IFS= read -r keychain_name; do
+	OLD_KEYCHAIN_NAMES+=("${keychain_name}")
+done < <(security list-keychains -d user | sed -e 's/^ *//' -e 's/"//g')
 echo "DEBUG: Current keychains: ${OLD_KEYCHAIN_NAMES[*]}"
 
 echo "DEBUG: Setting keychain search list"
