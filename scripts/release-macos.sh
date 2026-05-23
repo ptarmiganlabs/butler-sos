@@ -36,6 +36,7 @@ printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > certificate.p12
 
 echo "DEBUG: Setting KEYCHAIN_NAME environment variable"
 export KEYCHAIN_NAME="build.keychain"
+SYSTEM_ROOTS_KEYCHAIN="/System/Library/Keychains/SystemRootCertificates.keychain"
 
 echo "DEBUG: Creating new keychain"
 security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "${KEYCHAIN_NAME}"
@@ -45,7 +46,7 @@ OLD_KEYCHAIN_NAMES=$(security list-keychains -d user | sed -e 's/"//g' | xargs)
 echo "DEBUG: Current keychains: ${OLD_KEYCHAIN_NAMES}"
 
 echo "DEBUG: Setting keychain search list"
-security list-keychains -d user -s "${KEYCHAIN_NAME}" ${OLD_KEYCHAIN_NAMES}
+security list-keychains -d user -s "${KEYCHAIN_NAME}" ${OLD_KEYCHAIN_NAMES} "${SYSTEM_ROOTS_KEYCHAIN}"
 
 echo "DEBUG: Getting current default keychain"
 DEFAULT_KEYCHAIN=$(security default-keychain -d user | sed -e 's/"//g' | xargs)
@@ -65,11 +66,6 @@ curl -f -L -sS -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority
 security import DeveloperIDG2CA.cer -k "${KEYCHAIN_NAME}"
 rm DeveloperIDG2CA.cer
 
-echo "DEBUG: Importing and trusting Apple Root CA"
-curl -f -L -sS -o AppleRootCA.cer https://www.apple.com/appleca/AppleIncRootCertificate.cer
-security add-trusted-cert -d -r trustRoot -k "${KEYCHAIN_NAME}" AppleRootCA.cer
-rm AppleRootCA.cer
-
 echo "DEBUG: Setting keychain timeout to prevent locking"
 security set-keychain-settings -t 3600 -l "${KEYCHAIN_NAME}"
 
@@ -81,6 +77,9 @@ security default-keychain -d user || true
 
 echo "DEBUG: Keychain search list after setup"
 security list-keychains -d user || true
+
+echo "DEBUG: Confirming system roots keychain is accessible"
+security list-keychains -d user | grep -F "${SYSTEM_ROOTS_KEYCHAIN}" || true
 
 echo "DEBUG: Available codesigning identities in build keychain"
 security find-identity -v -p codesigning "${KEYCHAIN_NAME}" || true
