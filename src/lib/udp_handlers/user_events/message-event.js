@@ -201,12 +201,13 @@ export async function messageEventHandler(message, _remote) {
             const ua = userAgent.length > 0 ? Bowser.parse(userAgent) : { browser: {}, os: {} };
             const browserVersion =
                 typeof ua.browser?.version === 'string' ? ua.browser.version : '';
+            const browserMajor = /^(\d+)/.exec(browserVersion)?.[1];
 
             msgObj.ua = {
                 browser: {
                     name: ua.browser?.name ?? '',
                     version: browserVersion,
-                    major: browserVersion.length > 0 ? browserVersion.split('.')[0] : undefined,
+                    major: browserMajor,
                 },
                 os: ua.os ?? {},
                 ua: userAgent,

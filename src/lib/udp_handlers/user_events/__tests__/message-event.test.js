@@ -276,6 +276,54 @@ describe('messageEventHandler', () => {
                 })
             );
         });
+
+        test('should derive browser major version from undotted versions', async () => {
+            mockBowserParse.mockImplementation(() => ({
+                browser: { name: 'Chrome', version: '91' },
+                os: { name: 'Windows', version: '10' },
+            }));
+
+            const message = Buffer.from(
+                '/qseow-proxy-connection/;host1;Start session;INTERNAL;testuser;origin;context;UserAgent: Mozilla/5.0 (Windows NT 10.0)'
+            );
+
+            await messageEventHandler(message, {});
+
+            expect(postUserEventToMQTT).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    ua: expect.objectContaining({
+                        browser: expect.objectContaining({
+                            version: '91',
+                            major: '91',
+                        }),
+                    }),
+                })
+            );
+        });
+
+        test('should leave browser major version undefined for malformed versions', async () => {
+            mockBowserParse.mockImplementation(() => ({
+                browser: { name: 'Chrome', version: 'beta' },
+                os: { name: 'Windows', version: '10' },
+            }));
+
+            const message = Buffer.from(
+                '/qseow-proxy-connection/;host1;Start session;INTERNAL;testuser;origin;context;UserAgent: Mozilla/5.0 (Windows NT 10.0)'
+            );
+
+            await messageEventHandler(message, {});
+
+            expect(postUserEventToMQTT).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    ua: expect.objectContaining({
+                        browser: expect.objectContaining({
+                            version: 'beta',
+                            major: undefined,
+                        }),
+                    }),
+                })
+            );
+        });
     });
 
     describe('User filtering', () => {
