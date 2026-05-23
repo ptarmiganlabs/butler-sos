@@ -117,11 +117,14 @@ security list-keychains -d user | grep -F "${SYSTEM_ROOTS_KEYCHAIN}" || true
 echo "DEBUG: Available codesigning identities in build keychain"
 security find-identity -v -p codesigning "${KEYCHAIN_NAME}" || true
 
+echo "DEBUG: Available codesigning identities across search list"
+security find-identity -v -p codesigning || true
+
 echo "DEBUG: Certificates matching signer name in build keychain"
 security find-certificate -a -c "$MACOS_CERTIFICATE_NAME" -Z "${KEYCHAIN_NAME}" || true
 
 echo "DEBUG: Performing codesign operation"
-codesign --force -s "$MACOS_CERTIFICATE_NAME" -v "./${DIST_FILE_NAME}" --deep --strict --options=runtime --timestamp --entitlements ./release-config/${DIST_FILE_NAME}.entitlements
+codesign --keychain "${KEYCHAIN_NAME}" --force -s "$MACOS_CERTIFICATE_NAME" -v "./${DIST_FILE_NAME}" --deep --strict --options=runtime --timestamp --entitlements ./release-config/${DIST_FILE_NAME}.entitlements
 
 echo "DEBUG: Verifying code signature"
 codesign -vvv --deep --strict "./${DIST_FILE_NAME}"
