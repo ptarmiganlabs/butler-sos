@@ -12,6 +12,7 @@ permissions:
   pull-requests: read
 
 safe-outputs:
+  footer: false
   create-issue:
     expires: 2d
     title-prefix: "[duplicate-code] "
