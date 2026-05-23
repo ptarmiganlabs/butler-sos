@@ -65,11 +65,28 @@ curl -f -L -sS -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority
 security import DeveloperIDG2CA.cer -k "${KEYCHAIN_NAME}"
 rm DeveloperIDG2CA.cer
 
+echo "DEBUG: Importing and trusting Apple Root CA"
+curl -f -L -sS -o AppleRootCA.cer https://www.apple.com/appleca/AppleIncRootCertificate.cer
+security add-trusted-cert -d -r trustRoot -k "${KEYCHAIN_NAME}" AppleRootCA.cer
+rm AppleRootCA.cer
+
 echo "DEBUG: Setting keychain timeout to prevent locking"
 security set-keychain-settings -t 3600 -l "${KEYCHAIN_NAME}"
 
 echo "DEBUG: Setting key partition list"
 security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" "${KEYCHAIN_NAME}"
+
+echo "DEBUG: Default keychain after setup"
+security default-keychain -d user || true
+
+echo "DEBUG: Keychain search list after setup"
+security list-keychains -d user || true
+
+echo "DEBUG: Available codesigning identities in build keychain"
+security find-identity -v -p codesigning "${KEYCHAIN_NAME}" || true
+
+echo "DEBUG: Certificates matching signer name in build keychain"
+security find-certificate -a -c "$MACOS_CERTIFICATE_NAME" -Z "${KEYCHAIN_NAME}" || true
 
 echo "DEBUG: Performing codesign operation"
 codesign --force -s "$MACOS_CERTIFICATE_NAME" -v "./${DIST_FILE_NAME}" --deep --strict --options=runtime --timestamp --entitlements ./release-config/${DIST_FILE_NAME}.entitlements
