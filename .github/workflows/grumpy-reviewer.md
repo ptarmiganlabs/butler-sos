@@ -17,6 +17,7 @@ tools:
     toolsets: [pull_requests, repos]
 
 safe-outputs:
+  footer: false
   create-pull-request-review-comment:
     max: 5
     side: "RIGHT"

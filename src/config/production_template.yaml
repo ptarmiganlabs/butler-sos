@@ -30,7 +30,7 @@ Butler-SOS:
         enable: true # Should detailed system information be collected? Set to false in security-sensitive environments.
 
     # Can Butler SOS send anonymous data about what computer it is running on?
-    # More info on whata data is collected: https://butler-sos.ptarmiganlabs.com/docs/about/telemetry/
+    # More info on what data is collected: https://butler-sos.ptarmiganlabs.com/docs/about/telemetry/
     # Please consider leaving this at true - it really helps future development of Butler SOS!
     anonTelemetry: true
 
@@ -63,7 +63,7 @@ Butler-SOS:
         frequency: every 15 minutes # https://bunkat.github.io/later/parsers.html#text
         logLevel: verbose # Starting at what log level should uptime messages be shown in console log and log files?
         storeInInfluxdb:
-            butlerSOSMemoryUsage: true # Should data on Butler SOS' own memory use be stored in Infludb?
+            butlerSOSMemoryUsage: true # Should data on Butler SOS' own memory use be stored in InfluxDB?
             instanceTag: DEV # Tag that can be used to differentiate data from multiple Butler SOS instances
         storeNewRelic:
             enable: false
@@ -444,14 +444,14 @@ Butler-SOS:
         # Items below are mandatory if mqttConfig.enable=true
         brokerHost: <IP of MQTT broker/server>
         brokerPort: 1883
-        baseTopic: butler-sos/ # Default topic used if not not oherwise specified elsewhere. Should end with /
+        baseTopic: butler-sos/ # Default topic used if not otherwise specified elsewhere. Should end with /
 
     # New Relic config
     # If enabled, select Butler SOS metrics will be sent to New Relic.
     newRelic:
         enable: false
         event:
-            # There are different URLs depending on whther you have an EU or US region New Relic account.
+            # There are different URLs depending on whether you have an EU or US region New Relic account.
             # The available URLs are listed here: https://docs.newrelic.com/docs/accounts/accounts-billing/account-setup/choose-your-data-center/
             #
             # Note that the URL path should *not* be included in the url setting below!
@@ -475,7 +475,7 @@ Butler-SOS:
             destinationAccount:
                 # - First NR account
                 # - Second NR account
-            # There are different URLs depending on whther you have an EU or US region New Relic account.
+            # There are different URLs depending on whether you have an EU or US region New Relic account.
             # The available URLs are listed here: https://docs.newrelic.com/docs/accounts/accounts-billing/account-setup/choose-your-data-center/
             # As of this writing the options for the New Relic metrics API are
             # https://insights-collector.eu01.nr-data.net/metric/v1
@@ -496,7 +496,7 @@ Butler-SOS:
                         enable: true
                     sessions: # Engine session metrics (active and total number of engine sessions).
                         enable: true
-                    users: # Engine user metrics (active and total number of users in engine.
+                    users: # Engine user metrics (active and total number of users in engine).
                         enable: true
                     saturated: # Engine saturation status (tracks whether engine has high or low load).
                         enable: true
@@ -538,7 +538,7 @@ Butler-SOS:
         enable: true
         # Items below are mandatory if influxdbConfig.enable=true
         host: influxdb.mycompany.com # InfluxDB host, hostname, FQDN or IP address
-        port: 8086 # Port where InfluxDBdb is listening, usually 8086
+        port: 8086 # Port where InfluxDB is listening, usually 8086
         version: 3 # Is the InfluxDB instance version 1.x, 2.x or 3.x? Valid values are 1, 2, or 3
         maxBatchSize: 1000 # Maximum number of data points to write in a single batch. If a batch fails, progressive retry with smaller sizes (1000→500→250→100→10→1) will be attempted. Valid range: 1-10000.
         v3Config: # Settings for InfluxDB v3.x only, i.e. Butler-SOS.influxdbConfig.version=3
@@ -595,7 +595,7 @@ Butler-SOS:
 
         # If false, Butler SOS will accept TLS certificates on the server without verifying them with the CA.
         # If true, data will only be retrieved from the Sense server if that server's TLS cert verifies
-        # successfuully against the list of CAs available on the computer where Butler SOS is running.
+        # successfully against the list of CAs available on the computer where Butler SOS is running.
         rejectUnauthorized: true
 
         # List of extra tags for each server. Useful for creating more advanced Grafana dashboards.
