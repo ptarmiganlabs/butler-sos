@@ -120,11 +120,7 @@ jobs:
     permissions:
       contents: write
     needs: release-please
-    runs-on:
-      - self-hosted
-      - arm64
-      - macos
-      - sp53
+    runs-on: mac-build2
     # timeout-minutes: 15
 
     if: needs.release-please.outputs.releases_created == 'true'
@@ -187,9 +183,9 @@ jobs:
         run: |
           pwd
           ls -la 
-          rm build.cjs certificate.p12
-          rm "./${DIST_FILE_NAME}"
-          rm "./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-macos-arm64.zip"
+          rm -f build.cjs certificate.p12
+          rm -f "./${DIST_FILE_NAME}"
+          rm -f "./${DIST_FILE_NAME}-${{ needs.release-please.outputs.release_version }}-macos-arm64.zip"
 
   release-win64:
     permissions:
