@@ -1,6 +1,32 @@
 #!/usr/bin/env bash
 set -e
 
+KEYCHAIN_NAME="build.keychain"
+SYSTEM_ROOTS_KEYCHAIN="/System/Library/Keychains/SystemRootCertificates.keychain"
+DEFAULT_KEYCHAIN=""
+declare -a OLD_KEYCHAIN_NAMES=()
+
+cleanup_keychain_state() {
+	local exit_code="$1"
+
+	if [[ -n "${DEFAULT_KEYCHAIN}" ]]; then
+		echo "DEBUG: Restoring original default keychain"
+		security default-keychain -d user -s "${DEFAULT_KEYCHAIN}" || echo "WARNING: Failed to restore default keychain, continuing anyway"
+	fi
+
+	if ((${#OLD_KEYCHAIN_NAMES[@]})); then
+		echo "DEBUG: Restoring original keychain list"
+		security list-keychains -d user -s "${OLD_KEYCHAIN_NAMES[@]}" || echo "WARNING: Failed to restore keychain list, continuing anyway"
+	fi
+
+	security delete-keychain "${KEYCHAIN_NAME}" >/dev/null 2>&1 || true
+	rm -f certificate.p12 DeveloperIDG2CA.cer
+
+	return "${exit_code}"
+}
+
+trap 'cleanup_keychain_state $?' EXIT
+
 # Create a single JS file using esbuild
 ./node_modules/.bin/esbuild src/bundle.js  --bundle --outfile=build.cjs --format=cjs --platform=node --target=node22 --inject:./src/lib/import-meta-url.js --define:import.meta.url=import_meta_url
 
@@ -18,7 +44,7 @@ codesign --remove-signature ${DIST_FILE_NAME}
 # Inject the blob
 npx postject ${DIST_FILE_NAME} NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 --macho-segment-name NODE_SEA
 
-security delete-keychain build.keychain || true
+security delete-keychain "${KEYCHAIN_NAME}" >/dev/null 2>&1 || true
 
 pwd
 ls -la
@@ -34,22 +60,20 @@ ls -la
 echo "DEBUG: Decoding certificate from base64"
 printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > certificate.p12
 
-echo "DEBUG: Setting KEYCHAIN_NAME environment variable"
-export KEYCHAIN_NAME="build.keychain"
-SYSTEM_ROOTS_KEYCHAIN="/System/Library/Keychains/SystemRootCertificates.keychain"
+echo "DEBUG: Using temporary keychain name: ${KEYCHAIN_NAME}"
 
 echo "DEBUG: Creating new keychain"
 security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "${KEYCHAIN_NAME}"
 
 echo "DEBUG: Getting current keychain list"
-OLD_KEYCHAIN_NAMES=$(security list-keychains -d user | sed -e 's/"//g' | xargs)
-echo "DEBUG: Current keychains: ${OLD_KEYCHAIN_NAMES}"
+mapfile -t OLD_KEYCHAIN_NAMES < <(security list-keychains -d user | sed -e 's/^ *//' -e 's/"//g')
+echo "DEBUG: Current keychains: ${OLD_KEYCHAIN_NAMES[*]}"
 
 echo "DEBUG: Setting keychain search list"
-security list-keychains -d user -s "${KEYCHAIN_NAME}" ${OLD_KEYCHAIN_NAMES} "${SYSTEM_ROOTS_KEYCHAIN}"
+security list-keychains -d user -s "${KEYCHAIN_NAME}" "${OLD_KEYCHAIN_NAMES[@]}" "${SYSTEM_ROOTS_KEYCHAIN}"
 
 echo "DEBUG: Getting current default keychain"
-DEFAULT_KEYCHAIN=$(security default-keychain -d user | sed -e 's/"//g' | xargs)
+DEFAULT_KEYCHAIN=$(security default-keychain -d user | tr -d '"' | tr -d '\n' | sed -e 's/^ *//')
 echo "DEBUG: Default keychain is: ${DEFAULT_KEYCHAIN}"
 
 echo "DEBUG: Setting our keychain as default"
@@ -119,16 +143,5 @@ cd ..
 # Here we send the notarization request to the Apple's Notarization service, waiting for the result.
 echo "Notarize release app"
 xcrun notarytool submit "./${DIST_FILE_NAME}-${RELEASE_VERSION}-macos-arm64.zip" --keychain-profile "notarytool-profile" --wait --keychain "${KEYCHAIN_PATH}"
-
-echo "DEBUG: Restoring original default keychain"
-security default-keychain -d user -s "$DEFAULT_KEYCHAIN" || echo "WARNING: Failed to restore default keychain, continuing anyway"
-
-echo "DEBUG: Restoring original keychain list"
-security list-keychains -d user -s ${OLD_KEYCHAIN_NAMES} || echo "WARNING: Failed to restore keychain list, continuing anyway"
-
-# -------------------
-# Clean up
-# Delete build keychain
-security delete-keychain build.keychain
 
 ls -la

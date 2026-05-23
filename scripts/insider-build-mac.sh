@@ -1,6 +1,32 @@
 #!/usr/bin/env bash
 set -e
 
+KEYCHAIN_NAME="build.keychain"
+SYSTEM_ROOTS_KEYCHAIN="/System/Library/Keychains/SystemRootCertificates.keychain"
+DEFAULT_KEYCHAIN=""
+declare -a OLD_KEYCHAIN_NAMES=()
+
+cleanup_keychain_state() {
+	local exit_code="$1"
+
+	if [[ -n "${DEFAULT_KEYCHAIN}" ]]; then
+		echo "DEBUG: Restoring original default keychain"
+		security default-keychain -d user -s "${DEFAULT_KEYCHAIN}" || echo "WARNING: Failed to restore default keychain, continuing anyway"
+	fi
+
+	if ((${#OLD_KEYCHAIN_NAMES[@]})); then
+		echo "DEBUG: Restoring original keychain list"
+		security list-keychains -d user -s "${OLD_KEYCHAIN_NAMES[@]}" || echo "WARNING: Failed to restore keychain list, continuing anyway"
+	fi
+
+	security delete-keychain "${KEYCHAIN_NAME}" >/dev/null 2>&1 || true
+	rm -f build.cjs certificate.p12 DeveloperIDG2CA.cer
+
+	return "${exit_code}"
+}
+
+trap 'cleanup_keychain_state $?' EXIT
+
 # Inject git SHA and date into package.json
 GIT_SHA=$(git rev-parse --short HEAD)
 DATE_STR=$(date +"%Y-%b-%d")
@@ -25,7 +51,7 @@ codesign --remove-signature ${DIST_FILE_NAME}
 # Inject the blob
 npx postject ${DIST_FILE_NAME} NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 --macho-segment-name NODE_SEA
 
-security delete-keychain build.keychain || true
+security delete-keychain "${KEYCHAIN_NAME}" >/dev/null 2>&1 || true
 
 pwd
 ls -la
@@ -41,21 +67,20 @@ ls -la
 echo "DEBUG: Decoding certificate from base64"
 printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > certificate.p12
 
-echo "DEBUG: Setting KEYCHAIN_NAME environment variable"
-export KEYCHAIN_NAME="build.keychain"
+echo "DEBUG: Using temporary keychain name: ${KEYCHAIN_NAME}"
 
 echo "DEBUG: Creating new keychain"
 security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "${KEYCHAIN_NAME}"
 
 echo "DEBUG: Getting current keychain list"
-OLD_KEYCHAIN_NAMES=$(security list-keychains -d user | sed -e 's/"//g' | xargs)
-echo "DEBUG: Current keychains: ${OLD_KEYCHAIN_NAMES}"
+mapfile -t OLD_KEYCHAIN_NAMES < <(security list-keychains -d user | sed -e 's/^ *//' -e 's/"//g')
+echo "DEBUG: Current keychains: ${OLD_KEYCHAIN_NAMES[*]}"
 
 echo "DEBUG: Setting keychain search list"
-security list-keychains -d user -s "${KEYCHAIN_NAME}" ${OLD_KEYCHAIN_NAMES}
+security list-keychains -d user -s "${KEYCHAIN_NAME}" "${OLD_KEYCHAIN_NAMES[@]}" "${SYSTEM_ROOTS_KEYCHAIN}"
 
 echo "DEBUG: Getting current default keychain"
-DEFAULT_KEYCHAIN=$(security default-keychain -d user | sed -e 's/"//g' | xargs)
+DEFAULT_KEYCHAIN=$(security default-keychain -d user | tr -d '"' | tr -d '\n' | sed -e 's/^ *//')
 echo "DEBUG: Default keychain is: ${DEFAULT_KEYCHAIN}"
 
 echo "DEBUG: Setting our keychain as default"
@@ -77,6 +102,21 @@ security set-keychain-settings -t 3600 -l "${KEYCHAIN_NAME}"
 
 echo "DEBUG: Setting key partition list"
 security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" "${KEYCHAIN_NAME}"
+
+echo "DEBUG: Default keychain after setup"
+security default-keychain -d user || true
+
+echo "DEBUG: Keychain search list after setup"
+security list-keychains -d user || true
+
+echo "DEBUG: Confirming system roots keychain is accessible"
+security list-keychains -d user | grep -F "${SYSTEM_ROOTS_KEYCHAIN}" || true
+
+echo "DEBUG: Available codesigning identities in build keychain"
+security find-identity -v -p codesigning "${KEYCHAIN_NAME}" || true
+
+echo "DEBUG: Certificates matching signer name in build keychain"
+security find-certificate -a -c "$MACOS_CERTIFICATE_NAME" -Z "${KEYCHAIN_NAME}" || true
 
 echo "DEBUG: Performing codesign operation"
 codesign --force -s "$MACOS_CERTIFICATE_NAME" -v "./${DIST_FILE_NAME}" --deep --strict --options=runtime --timestamp --entitlements ./release-config/${DIST_FILE_NAME}.entitlements
@@ -114,17 +154,5 @@ echo "Notarize insider app"
 # xcrun notarytool submit "./${DIST_FILE_NAME}--macos-arm64--$SHA.zip" --keychain-profile "notarytool-profile" --wait
 # xcrun notarytool submit "./${DIST_FILE_NAME}--macos-arm64--$SHA.zip" --keychain-profile "notarytool-profile" --wait --keychain "${KEYCHAIN_NAME}"
 xcrun notarytool submit "./${DIST_FILE_NAME}--macos-arm64--$SHA.zip" --keychain-profile "notarytool-profile" --wait --keychain "${KEYCHAIN_PATH}"
-
-echo "DEBUG: Restoring original default keychain"
-security default-keychain -d user -s "$DEFAULT_KEYCHAIN" || echo "WARNING: Failed to restore default keychain, continuing anyway"
-
-echo "DEBUG: Restoring original keychain list"
-security list-keychains -d user -s ${OLD_KEYCHAIN_NAMES} || echo "WARNING: Failed to restore keychain list, continuing anyway"
-
-# -------------------
-# Clean up
-# Delete build keychain
-security delete-keychain build.keychain
-rm build.cjs certificate.p12
 
 ls -la
