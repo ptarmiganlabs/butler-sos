@@ -121,6 +121,9 @@ jobs:
       contents: write
     needs: release-please
     runs-on: mac-build2
+    concurrency:
+      group: butler-sos-macos-signing-mac-build2
+      cancel-in-progress: false
     # timeout-minutes: 15
 
     if: needs.release-please.outputs.releases_created == 'true'

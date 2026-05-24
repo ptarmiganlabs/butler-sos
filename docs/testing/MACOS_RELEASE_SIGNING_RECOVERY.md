@@ -237,6 +237,12 @@ Only intentional source changes should remain.
 
 ## Failure Playbooks
 
+### Concurrent macOS Workflow Runs
+
+The release and insider macOS jobs both run on `mac-build2` and both create temporary keychains for Developer ID signing. The keychain files are per-run, but `security default-keychain -d user` and `security list-keychains -d user` mutate shared state for the `goran` user account.
+
+The workflows therefore use the shared concurrency group `butler-sos-macos-signing-mac-build2` for macOS signing jobs. Do not remove that concurrency guard unless the scripts stop changing per-user keychain state or the jobs move to isolated macOS users/runners.
+
 ### Interrupted Run Before Cleanup
 
 Symptoms:
@@ -271,6 +277,8 @@ KEYCHAIN_PATH="$(find "${RUNNER_TEMP}" -maxdepth 1 -name 'butler-sos-build-*.key
 security list-keychains -d user
 security find-identity -v -p codesigning "${KEYCHAIN_PATH}"
 security find-identity -v -p codesigning
+CODESIGN_IDENTITY=$(security find-identity -v -p codesigning "${KEYCHAIN_PATH}" | awk '/^[[:space:]]*[0-9]+\)/ {print $2; exit}')
+echo "${CODESIGN_IDENTITY}"
 security find-certificate -a -c "${MACOS_CERTIFICATE_NAME}" -Z "${KEYCHAIN_PATH}"
 security find-certificate -c "${MACOS_CERTIFICATE_NAME}" -p "${KEYCHAIN_PATH}" > codesign-certificate.pem
 security verify-cert -c codesign-certificate.pem -p codeSign -L -k "${KEYCHAIN_PATH}" -k /System/Library/Keychains/SystemRootCertificates.keychain -v
@@ -283,6 +291,7 @@ Expected checks:
 3. Exactly one intended Developer ID Application identity is visible.
 4. The certificate issuer is Apple Developer ID G2.
 5. Apple Root CA is imported into the temporary keychain as ordinary certificate material.
+6. `codesign` uses the SHA-1 identity discovered from the temporary keychain, not the certificate display name.
 
 Do not use `security add-trusted-cert` in the CI scripts, even against the disposable keychain. On a headless self-hosted runner it can fail with `SecTrustSettingsSetTrustSettings: The authorization was denied since no user interaction was possible.` Prefer importing Apple root and intermediate certificates as ordinary certificate material and keeping host trust settings unchanged.
 

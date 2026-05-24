@@ -125,6 +125,14 @@ security find-identity -v -p codesigning "${KEYCHAIN_PATH}" || true
 echo "DEBUG: Available codesigning identities across search list"
 security find-identity -v -p codesigning || true
 
+echo "DEBUG: Selecting codesigning identity from build keychain"
+CODESIGN_IDENTITY=$(security find-identity -v -p codesigning "${KEYCHAIN_PATH}" | awk '/^[[:space:]]*[0-9]+\)/ {print $2; exit}')
+if [[ -z "${CODESIGN_IDENTITY}" ]]; then
+	echo "ERROR: No codesigning identity found in build keychain"
+	exit 1
+fi
+echo "DEBUG: Using codesigning identity SHA-1: ${CODESIGN_IDENTITY}"
+
 echo "DEBUG: Certificates matching signer name in build keychain"
 security find-certificate -a -c "$MACOS_CERTIFICATE_NAME" -Z "${KEYCHAIN_PATH}" || true
 
@@ -138,7 +146,7 @@ else
 fi
 
 echo "DEBUG: Performing codesign operation"
-codesign --keychain "${KEYCHAIN_PATH}" --force -s "$MACOS_CERTIFICATE_NAME" -v "./${DIST_FILE_NAME}" --deep --strict --options=runtime --timestamp --entitlements ./release-config/${DIST_FILE_NAME}.entitlements
+codesign --keychain "${KEYCHAIN_PATH}" --force -s "${CODESIGN_IDENTITY}" -vvvv "./${DIST_FILE_NAME}" --deep --strict --options=runtime --timestamp --entitlements ./release-config/${DIST_FILE_NAME}.entitlements
 
 echo "DEBUG: Verifying code signature"
 codesign -vvv --deep --strict "./${DIST_FILE_NAME}"
