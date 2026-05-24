@@ -39,13 +39,11 @@ trap 'cleanup_keychain_state $?' EXIT
 # Create a single JS file using esbuild
 ./node_modules/.bin/esbuild src/bundle.js  --bundle --outfile=build.cjs --format=cjs --platform=node --target=node22 --inject:./src/lib/import-meta-url.js --define:import.meta.url=import_meta_url
 
-NODE_EXECUTABLE="$(node -p 'process.execPath')"
-
 # Generate blob to be injected into the binary
-"${NODE_EXECUTABLE}" --experimental-sea-config src/sea-config.json
+node --experimental-sea-config src/sea-config.json
 
 # Get a copy of the Node executable
-cp "${NODE_EXECUTABLE}" "${DIST_FILE_NAME}"
+cp "$(node -p 'process.execPath')" "${DIST_FILE_NAME}"
 
 # Remove the signature from the Node executable
 codesign --remove-signature ${DIST_FILE_NAME}
