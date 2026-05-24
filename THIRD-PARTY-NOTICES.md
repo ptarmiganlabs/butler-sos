@@ -2,6 +2,8 @@
 
 Butler SOS includes the following third-party packages that require notice beyond the project license.
 
+License review note: user-agent parsing uses `bowser` (MIT) rather than `ua-parser-js` v2 so runtime builds avoid introducing an AGPL dependency. If user-agent parsing dependencies are updated in the future, re-run `npm run license:check` and review the replacement license before allow-listing it.
+
 ## lru-cache
 
 - Package: `lru-cache`

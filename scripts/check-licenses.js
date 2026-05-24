@@ -16,6 +16,7 @@ import { init as licenseCheckerInit } from 'license-checker-rseidelsohn';
 const ALLOWED_LICENSES = [
   'MIT',
   'Apache-2.0',
+  'Apache2',
   'BSD-2-Clause',
   'BSD-3-Clause',
   'ISC',
