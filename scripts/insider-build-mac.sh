@@ -30,7 +30,7 @@ cleanup_keychain_state() {
 
 	security delete-keychain "${KEYCHAIN_PATH}" >/dev/null 2>&1 || true
 	rm -f "${KEYCHAIN_PATH}"
-	rm -f build.cjs certificate.p12 DeveloperIDG2CA.cer
+	rm -f build.cjs certificate.p12 DeveloperIDG2CA.cer AppleIncRootCertificate.cer
 
 	return "${exit_code}"
 }
@@ -109,6 +109,11 @@ echo "DEBUG: Importing Apple Developer ID G2 intermediate CA"
 curl -f -L -sS -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
 security import DeveloperIDG2CA.cer -k "${KEYCHAIN_PATH}"
 rm DeveloperIDG2CA.cer
+
+echo "DEBUG: Trusting Apple Root CA in temporary keychain"
+curl -f -L -sS -o AppleIncRootCertificate.cer https://www.apple.com/appleca/AppleIncRootCertificate.cer
+security add-trusted-cert -r trustRoot -p codeSign -k "${KEYCHAIN_PATH}" AppleIncRootCertificate.cer
+rm AppleIncRootCertificate.cer
 
 echo "DEBUG: Setting keychain timeout to prevent locking"
 security set-keychain-settings -t 3600 -l "${KEYCHAIN_PATH}"
