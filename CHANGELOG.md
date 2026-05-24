@@ -44,6 +44,94 @@
 
 * add .gitkeep to docs/to-doc-site directory ([72a1439](https://github.com/ptarmiganlabs/butler-sos/commit/72a143965e8bfde60d2774a200bb67ecd5b3215a))
 * add comprehensive tests for error-categorizer.js (getErrorCategory and getErrorMetadata) ([61fbbe5](https://github.com/ptarmiganlabs/butler-sos/commit/61fbbe56092a105dadc3fc900ec09b7e461f6570))
+* add JSDoc for audit-events test helpers ([b0affe5](https://github.com/ptarmiganlabs/butler-sos/commit/b0affe5db6aa96f44ad459e360d11b717a68d64b))
+* Add unit tests for tracking of error scenarios ([2ab6175](https://github.com/ptarmiganlabs/butler-sos/commit/2ab6175fd345e8808eb0012f7a70d01816ce75e5))
+* **deps:** update dependencies to latest versions ([1b989ba](https://github.com/ptarmiganlabs/butler-sos/commit/1b989baa2245fbbb55ee200b5b47d029bacde1b3))
+* **deps:** update ESLint and related packages to latest versions ([429c1f1](https://github.com/ptarmiganlabs/butler-sos/commit/429c1f1a5fb13ce9c31873da416cf37488f0348e))
+* **master:** release butler-sos 15.0.0 ([626c9d3](https://github.com/ptarmiganlabs/butler-sos/commit/626c9d313b15ef4bf4dcf9e39df0faa6a746f246))
+* **master:** release butler-sos 15.0.0 ([ccabe38](https://github.com/ptarmiganlabs/butler-sos/commit/ccabe38d38d71f621d0f55733e2ba70eaa829356))
+* **master:** release butler-sos 15.0.0 ([9ff91b6](https://github.com/ptarmiganlabs/butler-sos/commit/9ff91b643dfb4bf0ef0eb2002da78db03fcc51ba))
+* **master:** release butler-sos 15.0.0 ([7a288ea](https://github.com/ptarmiganlabs/butler-sos/commit/7a288ea8be74ebabc8d2543e57cc5683a20bd9fe))
+* **master:** release butler-sos 15.0.0 ([1be0677](https://github.com/ptarmiganlabs/butler-sos/commit/1be0677aef06840f44c70ef554bc1dbc748649d7))
+* **master:** release butler-sos 15.0.0 ([4eb505b](https://github.com/ptarmiganlabs/butler-sos/commit/4eb505b857082ba65232749b447e92904f4b1043))
+* **master:** release butler-sos 15.0.0 ([5a67815](https://github.com/ptarmiganlabs/butler-sos/commit/5a678158d43b632b266aa583a6b5c40f0e10190d))
+* **master:** release butler-sos 15.0.0 ([2a15481](https://github.com/ptarmiganlabs/butler-sos/commit/2a1548116577f1a6337c4762eb4b1dd2b1e77694))
+* **master:** release butler-sos 15.0.0 ([4b1b939](https://github.com/ptarmiganlabs/butler-sos/commit/4b1b939664d8cf21c1a59f7f9c9e5a2bad76a23a))
+* **master:** release butler-sos 15.0.0 ([534605b](https://github.com/ptarmiganlabs/butler-sos/commit/534605b89bc485b60ceb14ee065320f029fe1975))
+* **master:** release butler-sos 15.0.0 ([31d7a90](https://github.com/ptarmiganlabs/butler-sos/commit/31d7a904a6a5d628920fa8c611f662754701c2a7))
+* **master:** release butler-sos 15.0.0 ([5542f64](https://github.com/ptarmiganlabs/butler-sos/commit/5542f64ad6f3c4f8afadc876f9f207046a038f4e))
+* **master:** release butler-sos 15.0.0 ([92f2490](https://github.com/ptarmiganlabs/butler-sos/commit/92f2490601d8e0c7d8bba16c3b5ecad80b286bab))
+* **master:** release butler-sos 15.0.0 ([9452084](https://github.com/ptarmiganlabs/butler-sos/commit/9452084febd45b708b39cc6a6d096bc9eb4eb565))
+* **master:** release butler-sos 15.0.0 ([07b7843](https://github.com/ptarmiganlabs/butler-sos/commit/07b7843ef2341608ed61be78d76e605fe60ebc8b))
+* **master:** release butler-sos 15.0.0 ([920752e](https://github.com/ptarmiganlabs/butler-sos/commit/920752e7f289d00b56982ec8cb8921493564c941))
+* **master:** release butler-sos 15.0.0 ([9c466f2](https://github.com/ptarmiganlabs/butler-sos/commit/9c466f2b97e35e190283bd0a5dbf147b316da169))
+* **master:** release butler-sos 15.0.0 ([90e4b67](https://github.com/ptarmiganlabs/butler-sos/commit/90e4b674cc0076ee13e4870a0c60ab7be81b803b))
+* update dependencies ([99cfb83](https://github.com/ptarmiganlabs/butler-sos/commit/99cfb8347d43c0d5dfc31e5fa21c2fcb8e8cfbaa))
+* update dependencies and improve InfluxDB metrics handling ([18676a9](https://github.com/ptarmiganlabs/butler-sos/commit/18676a903d2c8611008037cb8bfc9b936f571a21))
+* update package.json to add knip ([b3dec68](https://github.com/ptarmiganlabs/butler-sos/commit/b3dec68977146675e3f53dd145df61109343289d))
+
+
+### Refactoring
+
+* enhance error tracking by including error objects in metrics ([7c1b7e3](https://github.com/ptarmiganlabs/butler-sos/commit/7c1b7e345caae837696d7058213bc16943c5fed1))
+* extract createRejectThrottle to shared utility, add tests, prune stale map entries ([69bb8f5](https://github.com/ptarmiganlabs/butler-sos/commit/69bb8f5196c165fb7cf24de4d75e64cd166607de))
+* move error tracking configuration to a separate schema file ([3c029b8](https://github.com/ptarmiganlabs/butler-sos/commit/3c029b889f7490a8ff0576b558b8637409e3ca0b))
+* update correlationId handling in audit events API and documentation ([4968e82](https://github.com/ptarmiganlabs/butler-sos/commit/4968e8247f320807b2522da6c98004b18d6cf3bb))
+
+
+### Documentation
+
+* add comprehensive security precautions documentation ([a0083ba](https://github.com/ptarmiganlabs/butler-sos/commit/a0083ba181b68252a83e00ba1cebf1169928565d))
+* add detailed documentation for Audit Events API, including status codes, rate limiting, and crash dump feature ([784e682](https://github.com/ptarmiganlabs/butler-sos/commit/784e682780f5db3a399b051bcdf3f4048f68bf15))
+* add TLS and CORS configuration documentation for audit events API ([0b6ab86](https://github.com/ptarmiganlabs/butler-sos/commit/0b6ab865d7a4071d5039649f5750a2c12abfd847))
+* clarify gitnexus CLI alternatives and add PR 1345 doc-site summary ([7468a0f](https://github.com/ptarmiganlabs/butler-sos/commit/7468a0fbd16efce64fdc015904f4a734083b3c9c))
+* update GitNexus project details and CLI command instructions in AGENTS.md and CLAUDE.md ([6571022](https://github.com/ptarmiganlabs/butler-sos/commit/6571022847bf7b2406e6e2e7c836b5d61eeb4394))
+* update README to clarify InfluxDB configuration for metrics and audit events ([b3b2a05](https://github.com/ptarmiganlabs/butler-sos/commit/b3b2a0542a032b546b00350159560c27d744dbb7))
+
+## [15.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.0.0...butler-sos-v15.0.0) (2026-05-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* make Butler SOS handle events from Audit.qs Qlik Sense extension
+
+### Features
+
+* add source host validation for UDP endpoints ([95a67f2](https://github.com/ptarmiganlabs/butler-sos/commit/95a67f2e3991adbd8a2be0eb75680918d9b956d2))
+* **audit:** add envelope validation for UUIDs and event types ([faa0920](https://github.com/ptarmiganlabs/butler-sos/commit/faa092075f78cd7af4fdcffce1d6f9f27d854d5e))
+* **audit:** add logging for schema validation and payload errors ([29854c5](https://github.com/ptarmiganlabs/butler-sos/commit/29854c58a8805cb55c8456b42819fe9b887cdb4c))
+* **audit:** check TLS version for  audit events API, warn if deprecated ([9671493](https://github.com/ptarmiganlabs/butler-sos/commit/9671493ad975c91f15d9dbb23080dd675035b6b8))
+* **audit:** enhance logging for connection test success and failures ([8a80b13](https://github.com/ptarmiganlabs/butler-sos/commit/8a80b1352e9b005d91d5d45588568a13cf33d8d8))
+* **audit:** enhance screenshot download functionality with redirect handling and host validation ([386dabf](https://github.com/ptarmiganlabs/butler-sos/commit/386dabf42f70c16e9122cafe6c06a9daefce26f5))
+* **audit:** implement Audit.qs version compatibility checks and update documentation ([92480aa](https://github.com/ptarmiganlabs/butler-sos/commit/92480aa6373a64b52e872477498ae54e9995e510))
+* **audit:** implement consistent response structure and codes ([c57d15f](https://github.com/ptarmiganlabs/butler-sos/commit/c57d15f5ecb141dc062a78c6222ea61dc8f5f25c))
+* **audit:** implement HTTP rate limiting configuration and validation ([494a529](https://github.com/ptarmiganlabs/butler-sos/commit/494a52940c3fb792d6b43fbb087c11260aee539c))
+* **audit:** implement SSRF protection with hostname allow-list for screenshot downloads ([d96e673](https://github.com/ptarmiganlabs/butler-sos/commit/d96e673bab5237ee418c94e795e8a1b1d5dff7e1))
+* **audit:** implement verbose logging for audit events and enhance tests ([4a18df7](https://github.com/ptarmiganlabs/butler-sos/commit/4a18df757151d83cd685691da6a0fbf7e35858b8))
+* **audit:** update audit events schema to include user ticket support and enhance session caching ([ad579d1](https://github.com/ptarmiganlabs/butler-sos/commit/ad579d196293d02a85e11858e9484ca20e0603ce))
+* **audit:** update user ticket handling to derive virtual proxy from screenshot URL ([8921cd6](https://github.com/ptarmiganlabs/butler-sos/commit/8921cd63bd8cf36820381e601a2c1bcc05523c4a))
+* make Butler SOS handle events from Audit.qs Qlik Sense extension ([d63cf97](https://github.com/ptarmiganlabs/butler-sos/commit/d63cf97ae4859c966acf392aa7aabc63d4736095))
+
+
+### Bug Fixes
+
+* address review feedback on UDP source validation ([b127825](https://github.com/ptarmiganlabs/butler-sos/commit/b127825909fa38ca46687575fc365b5e0fd3c9fa))
+* **audit:** gate debug JSON.stringify behind isLevelEnabled check to avoid eager PII evaluation ([bca65d4](https://github.com/ptarmiganlabs/butler-sos/commit/bca65d421b29ccef4db0ec74aee8548a9c58d619))
+* **audit:** refine CORS and headers handling for audit API ([1fca905](https://github.com/ptarmiganlabs/butler-sos/commit/1fca90586e27fc2cba6acd8758f16214e0907117))
+* **audit:** update config schema to require 'destination' and 'tls' properties ([7960808](https://github.com/ptarmiganlabs/butler-sos/commit/79608083e76e68e2e716d32e99c22cc1d3fed8fd))
+* **dependabot:** add cooldown to reduce supply-chain risk ([093360e](https://github.com/ptarmiganlabs/butler-sos/commit/093360ed21b8acb386643834afb3d62b50ecc88e))
+* **docs:** update agent instruction files ([5ff9fce](https://github.com/ptarmiganlabs/butler-sos/commit/5ff9fce4aa72f23d021e07fb4c209f97ab0e8cd6))
+* **insiders-build:** prevent template-injection in deploy step ([b67b69a](https://github.com/ptarmiganlabs/butler-sos/commit/b67b69ae6773d4c5964651bc0e35dd925ee689eb))
+* parallel DNS resolution, early IP check, throttled reject logs for UDP handlers ([c5ab84d](https://github.com/ptarmiganlabs/butler-sos/commit/c5ab84dbe6db7359841e3d54958e5274795de6da))
+* **startup:** Log successful startup of rejected events tracking ([3825015](https://github.com/ptarmiganlabs/butler-sos/commit/382501560db5eca1c8d0b0fc854cb058ba3293e2))
+* throttle missing-version warn state cleanup to once per minute ([a96d6b5](https://github.com/ptarmiganlabs/butler-sos/commit/a96d6b5c669738e74f88c814c1d16a733d173a8a))
+* use callback-based publishAsync to capture broker-side MQTT errors; add broker-side error test ([9b86a0d](https://github.com/ptarmiganlabs/butler-sos/commit/9b86a0d29ab6a911f0234b78e5fc43bba8de1980))
+
+
+### Miscellaneous
+
+* add .gitkeep to docs/to-doc-site directory ([72a1439](https://github.com/ptarmiganlabs/butler-sos/commit/72a143965e8bfde60d2774a200bb67ecd5b3215a))
+* add comprehensive tests for error-categorizer.js (getErrorCategory and getErrorMetadata) ([61fbbe5](https://github.com/ptarmiganlabs/butler-sos/commit/61fbbe56092a105dadc3fc900ec09b7e461f6570))
 * add InfluxDB-writing paths and config gate tests for ErrorTracker; fix config-file-verify.js and docs ([bd48f94](https://github.com/ptarmiganlabs/butler-sos/commit/bd48f94eadd31f15ae4c43c2d3de2b61d8d8f738))
 * add JSDoc for audit-events test helpers ([b0affe5](https://github.com/ptarmiganlabs/butler-sos/commit/b0affe5db6aa96f44ad459e360d11b717a68d64b))
 * Add unit tests for tracking of error scenarios ([2ab6175](https://github.com/ptarmiganlabs/butler-sos/commit/2ab6175fd345e8808eb0012f7a70d01816ce75e5))
