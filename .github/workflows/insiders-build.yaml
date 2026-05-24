@@ -7,8 +7,21 @@ on:
 permissions: {}
 jobs:
     insiders-build:
+        if: |
+            github.event_name == 'workflow_dispatch' ||
+            !(
+                github.event_name == 'push' &&
+                (
+                    contains(github.event.head_commit.message, 'chore: release') ||
+                    contains(github.event.head_commit.message, 'chore(master): release') ||
+                    contains(github.event.head_commit.message, 'release-please--branches--master')
+                )
+            )
         permissions:
             security-events: write
+        concurrency:
+            group: ${{ matrix.os == 'mac-build2' && 'butler-sos-macos-signing-mac-build2' || format('butler-sos-insiders-build-{0}-{1}', github.ref, matrix.os) }}
+            cancel-in-progress: false
         strategy:
             matrix:
                 os: [win-code-sign, mac-build2, ubuntu-latest]
