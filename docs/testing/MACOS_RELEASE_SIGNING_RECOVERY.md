@@ -111,6 +111,7 @@ for file in \
     certificate.p12 \
     DeveloperIDG2CA.cer \
     AppleIncRootCertificate.cer \
+    codesign-certificate.pem \
     "${DIST_FILE_NAME}" \
     "${DIST_FILE_NAME}-${RELEASE_VERSION}-macos-arm64.zip"; do
     if [[ -e "${file}" ]]; then
@@ -191,7 +192,7 @@ Do not run broad keychain deletion commands. In particular, do not delete local 
 Remove sensitive temporary files from the repository root:
 
 ```bash
-rm -f certificate.p12 DeveloperIDG2CA.cer AppleIncRootCertificate.cer
+rm -f certificate.p12 DeveloperIDG2CA.cer AppleIncRootCertificate.cer codesign-certificate.pem
 ```
 
 Remove generated release outputs unless they are intentionally being inspected:
@@ -249,7 +250,7 @@ Recovery:
 1. Restore the default keychain from `default-keychain.before`.
 2. Restore the keychain search list from `keychains.before`.
 3. Delete only the disposable keychain path that was created under `RUNNER_TEMP`.
-4. Remove `certificate.p12`, `DeveloperIDG2CA.cer`, and `AppleIncRootCertificate.cer`.
+4. Remove `certificate.p12`, `DeveloperIDG2CA.cer`, `AppleIncRootCertificate.cer`, and `codesign-certificate.pem`.
 5. Restore or remove generated artifacts using the pre-run snapshot.
 6. Run the verification commands in the previous section.
 
@@ -271,6 +272,8 @@ security list-keychains -d user
 security find-identity -v -p codesigning "${KEYCHAIN_PATH}"
 security find-identity -v -p codesigning
 security find-certificate -a -c "${MACOS_CERTIFICATE_NAME}" -Z "${KEYCHAIN_PATH}"
+security find-certificate -c "${MACOS_CERTIFICATE_NAME}" -p "${KEYCHAIN_PATH}" > codesign-certificate.pem
+security verify-cert -c codesign-certificate.pem -p codeSign -L -k "${KEYCHAIN_PATH}" -k /System/Library/Keychains/SystemRootCertificates.keychain -v
 ```
 
 Expected checks:
@@ -279,9 +282,9 @@ Expected checks:
 2. `/System/Library/Keychains/SystemRootCertificates.keychain` appears in the search list before signing.
 3. Exactly one intended Developer ID Application identity is visible.
 4. The certificate issuer is Apple Developer ID G2.
-5. Apple Root CA has been trusted only in the temporary keychain with `security add-trusted-cert -r trustRoot -p codeSign -k "${KEYCHAIN_PATH}" AppleIncRootCertificate.cer`.
+5. Apple Root CA is imported into the temporary keychain as ordinary certificate material.
 
-Do not use `security add-trusted-cert` against login or system keychains as a first recovery step. Headless host trust-setting changes can fail and may modify permanent trust settings. It is safe to use `security add-trusted-cert` against the disposable per-run keychain created under `RUNNER_TEMP`.
+Do not use `security add-trusted-cert` in the CI scripts, even against the disposable keychain. On a headless self-hosted runner it can fail with `SecTrustSettingsSetTrustSettings: The authorization was denied since no user interaction was possible.` Prefer importing Apple root and intermediate certificates as ordinary certificate material and keeping host trust settings unchanged.
 
 ### Certificate Import Failure
 
@@ -423,7 +426,7 @@ Before leaving the machine after a failed local release rehearsal:
 1. `security default-keychain -d user` matches the pre-run snapshot.
 2. `security list-keychains -d user` matches the pre-run snapshot.
 3. The disposable `RUNNER_TEMP` keychain has been deleted.
-4. `certificate.p12`, `DeveloperIDG2CA.cer`, and `AppleIncRootCertificate.cer` are removed from the repository root.
+4. `certificate.p12`, `DeveloperIDG2CA.cer`, `AppleIncRootCertificate.cer`, and `codesign-certificate.pem` are removed from the repository root.
 5. Generated binaries and release zips are removed unless intentionally retained.
 6. Existing `sea-prep.blob` has been restored or removed according to the pre-run snapshot.
 7. `git status --short` shows only intentional source changes.
