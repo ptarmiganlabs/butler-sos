@@ -30,7 +30,7 @@ cleanup_keychain_state() {
 
 	security delete-keychain "${KEYCHAIN_PATH}" >/dev/null 2>&1 || true
 	rm -f "${KEYCHAIN_PATH}"
-	rm -f build.cjs certificate.p12 DeveloperIDG2CA.cer AppleIncRootCertificate.cer
+	rm -f build.cjs certificate.p12 DeveloperIDG2CA.cer AppleIncRootCertificate.cer codesign-certificate.pem
 
 	return "${exit_code}"
 }
@@ -108,12 +108,10 @@ security import certificate.p12 -k "${KEYCHAIN_PATH}" -P "$MACOS_CERTIFICATE_PWD
 echo "DEBUG: Importing Apple Developer ID G2 intermediate CA"
 curl -f -L -sS -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
 security import DeveloperIDG2CA.cer -k "${KEYCHAIN_PATH}"
-rm DeveloperIDG2CA.cer
 
-echo "DEBUG: Trusting Apple Root CA in temporary keychain"
+echo "DEBUG: Importing Apple Root CA into temporary keychain"
 curl -f -L -sS -o AppleIncRootCertificate.cer https://www.apple.com/appleca/AppleIncRootCertificate.cer
-security add-trusted-cert -r trustRoot -p codeSign -k "${KEYCHAIN_PATH}" AppleIncRootCertificate.cer
-rm AppleIncRootCertificate.cer
+security import AppleIncRootCertificate.cer -k "${KEYCHAIN_PATH}" || true
 
 echo "DEBUG: Setting keychain timeout to prevent locking"
 security set-keychain-settings -t 3600 -l "${KEYCHAIN_PATH}"
@@ -138,6 +136,15 @@ security find-identity -v -p codesigning || true
 
 echo "DEBUG: Certificates matching signer name in build keychain"
 security find-certificate -a -c "$MACOS_CERTIFICATE_NAME" -Z "${KEYCHAIN_PATH}" || true
+
+echo "DEBUG: Verifying signer certificate chain via keychain search"
+security find-certificate -c "$MACOS_CERTIFICATE_NAME" -p "${KEYCHAIN_PATH}" > codesign-certificate.pem || true
+if [[ -s codesign-certificate.pem ]]; then
+	security verify-cert -c codesign-certificate.pem -p codeSign -L -k "${KEYCHAIN_PATH}" -k "${SYSTEM_ROOTS_KEYCHAIN}" -v || true
+	security verify-cert -c codesign-certificate.pem -c DeveloperIDG2CA.cer -r AppleIncRootCertificate.cer -p codeSign -L -v || true
+else
+	echo "WARNING: Could not export signer certificate for chain diagnostics"
+fi
 
 echo "DEBUG: Performing codesign operation"
 codesign --keychain "${KEYCHAIN_PATH}" --force -s "$MACOS_CERTIFICATE_NAME" -v "./${DIST_FILE_NAME}" --deep --strict --options=runtime --timestamp --entitlements ./release-config/${DIST_FILE_NAME}.entitlements
