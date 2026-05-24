@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-KEYCHAIN_NAME="butler-sos-build.keychain-db"
+KEYCHAIN_LABEL="${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-0}-${GITHUB_JOB:-macos}-$$"
+KEYCHAIN_LABEL=$(printf '%s' "${KEYCHAIN_LABEL}" | tr -cd '[:alnum:]_.-')
+KEYCHAIN_NAME="butler-sos-build-${KEYCHAIN_LABEL}.keychain-db"
 KEYCHAIN_PATH="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/${KEYCHAIN_NAME}"
 SYSTEM_ROOTS_KEYCHAIN="/System/Library/Keychains/SystemRootCertificates.keychain"
 LOGIN_KEYCHAIN="${HOME}/Library/Keychains/login.keychain-db"
@@ -27,7 +29,6 @@ cleanup_keychain_state() {
 	fi
 
 	security delete-keychain "${KEYCHAIN_PATH}" >/dev/null 2>&1 || true
-	security delete-keychain build.keychain >/dev/null 2>&1 || true
 	rm -f "${KEYCHAIN_PATH}"
 	rm -f certificate.p12 DeveloperIDG2CA.cer
 
@@ -52,7 +53,6 @@ codesign --remove-signature ${DIST_FILE_NAME}
 npx postject ${DIST_FILE_NAME} NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 --macho-segment-name NODE_SEA
 
 security delete-keychain "${KEYCHAIN_PATH}" >/dev/null 2>&1 || true
-security delete-keychain build.keychain >/dev/null 2>&1 || true
 rm -f "${KEYCHAIN_PATH}"
 
 pwd
