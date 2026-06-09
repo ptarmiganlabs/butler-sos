@@ -1,5 +1,18 @@
 # Changelog
 
+## [15.0.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.0.0...butler-sos-v15.0.1) (2026-06-09)
+
+
+### Bug Fixes
+
+* remove redundant esbuild install step from CI workflows ([b95417e](https://github.com/ptarmiganlabs/butler-sos/commit/b95417edd3813f0030cc6261ec01f02caaaf6f9b))
+* update Audit.qs version range for Butler SOS 15.0.0 compatibility ([4385677](https://github.com/ptarmiganlabs/butler-sos/commit/43856771fa404d686b218a739c2b90096ace5723))
+
+
+### Miscellaneous
+
+* update dependencies to latest versions ([fbc02f5](https://github.com/ptarmiganlabs/butler-sos/commit/fbc02f588f2e5369dfaedeedb8e49bd0710309da))
+
 ## [15.0.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.0.0...butler-sos-v15.0.0) (2026-05-24)
 
 
