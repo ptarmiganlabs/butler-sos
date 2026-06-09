@@ -184,9 +184,15 @@ export async function verifyAppConfig(cfg) {
 
         if ((await resolvesToIpAddress(appNamesHost)) === false) {
             console.error(
-                `VERIFY CONFIG FILE ERROR: Butler-SOS.appNames.hostIP="${appNamesHost}" is invalid. It must be an IP address or a hostname that resolves to an IP address. Exiting.`
+                `VERIFY CONFIG FILE ERROR: Butler-SOS.appNames.hostIP="${appNamesHost}" is invalid. It must be an IPv4 address or a hostname that resolves to an IPv4 address. Exiting.`
             );
             return false;
+        }
+
+        if ((await resolvesToIpAddress(appNamesHost, true, 4242)) === false) {
+            console.warn(
+                `VERIFY CONFIG FILE WARNING: Butler-SOS.appNames.hostIP="${appNamesHost}" resolves to an IPv4 address, but Butler SOS could not reach ${appNamesHost}:4242 during startup. Continuing startup anyway.`
+            );
         }
     }
 

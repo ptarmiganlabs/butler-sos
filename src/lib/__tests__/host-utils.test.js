@@ -5,8 +5,12 @@ import { describe, test, expect } from '@jest/globals';
 import { resolvesToIpAddress } from '../host-utils.js';
 
 describe('host-utils', () => {
-    test('accepts literal IP addresses', async () => {
+    test('accepts literal IPv4 addresses', async () => {
         await expect(resolvesToIpAddress('127.0.0.1')).resolves.toBe(true);
+    });
+
+    test('rejects literal IPv6 addresses', async () => {
+        await expect(resolvesToIpAddress('::1')).resolves.toBe(false);
     });
 
     test('rejects invalid host names', async () => {

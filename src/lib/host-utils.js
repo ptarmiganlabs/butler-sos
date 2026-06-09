@@ -15,14 +15,14 @@ export function isValidHostname(value) {
 }
 
 /**
- * Tests whether a host string is an IP literal or resolves to an IP address.
- * Optionally verifies that a TCP port on the resolved IP address is reachable.
+ * Tests whether a host string is an IPv4 literal or resolves to an IPv4 address.
+ * Optionally verifies that a TCP port on the resolved IPv4 address is reachable.
  *
- * @param {string} host - IP address or hostname to validate
- * @param {boolean} [verifyTcpReachability] - When true, verify the resolved IP/port using TCP
+ * @param {string} host - IPv4 address or hostname to validate
+ * @param {boolean} [verifyTcpReachability] - When true, verify the resolved IPv4/port using TCP
  * @param {number|null} [port] - TCP port to verify when verifyTcpReachability is true
  * @param {number} [timeoutMs] - Timeout used for TCP reachability checks
- * @returns {Promise<boolean>} True if the host resolves to an IP address and optional TCP check succeeds
+ * @returns {Promise<boolean>} True if the host resolves to an IPv4 address and optional TCP check succeeds
  */
 export async function resolvesToIpAddress(
     host,
@@ -41,21 +41,24 @@ export async function resolvesToIpAddress(
     }
 
     let resolvedAddress = trimmedHost;
+    const ipVersion = net.isIP(trimmedHost);
 
-    if (net.isIP(trimmedHost) === 0) {
+    if (ipVersion === 0) {
         if (!isValidHostname(trimmedHost)) {
             return false;
         }
 
         try {
-            const lookupResult = await dns.lookup(trimmedHost);
+            const lookupResult = await dns.lookup(trimmedHost, { family: 4 });
             resolvedAddress = lookupResult.address;
         } catch (err) {
             return false;
         }
+    } else if (ipVersion !== 4) {
+        return false;
     }
 
-    if (net.isIP(resolvedAddress) === 0) {
+    if (net.isIP(resolvedAddress) !== 4) {
         return false;
     }
 

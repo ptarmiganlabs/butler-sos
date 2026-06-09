@@ -16,7 +16,6 @@ export const appSessionsSchema = {
                 type: 'string',
                 anyOf: [
                     { format: 'ipv4' },
-                    { format: 'ipv6' },
                     {
                         pattern: hostnamePattern.source,
                     },

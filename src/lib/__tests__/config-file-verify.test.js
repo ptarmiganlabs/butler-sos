@@ -1,9 +1,14 @@
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterAll, jest } from '@jest/globals';
 
 // Mock process.exit
 const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
     throw new Error('process.exit called');
 });
+const mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+const mockConsoleWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+const mockResolvesToIpAddress = jest.fn();
+const mockHostnamePattern =
+    /^(?=.{1,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)(?:\.(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?))*$/u;
 
 jest.unstable_mockModule('fs/promises', () => ({
     default: {
@@ -15,6 +20,11 @@ jest.unstable_mockModule('js-yaml', () => ({
     load: jest.fn(),
 }));
 
+jest.unstable_mockModule('../host-utils.js', () => ({
+    hostnamePattern: mockHostnamePattern,
+    resolvesToIpAddress: mockResolvesToIpAddress,
+}));
+
 const fs = (await import('fs/promises')).default;
 const { load } = await import('js-yaml');
 const { verifyConfigFileSchema, verifyAppConfig } = await import('../config-file-verify.js');
@@ -22,6 +32,13 @@ const { verifyConfigFileSchema, verifyAppConfig } = await import('../config-file
 describe('config-file-verify', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockResolvesToIpAddress.mockReset();
+    });
+
+    afterAll(() => {
+        mockExit.mockRestore();
+        mockConsoleError.mockRestore();
+        mockConsoleWarn.mockRestore();
     });
 
     describe('verifyConfigFileSchema', () => {
@@ -169,6 +186,7 @@ describe('config-file-verify', () => {
         });
 
         test('accepts app name host values that resolve to an IP address', async () => {
+            mockResolvesToIpAddress.mockResolvedValueOnce(true).mockResolvedValueOnce(true);
             mockCfg.get.mockImplementation((key) => {
                 if (key === 'Butler-SOS.appNames.enableAppNameExtract') return true;
                 if (key === 'Butler-SOS.appNames.hostIP') return '127.0.0.1';
@@ -182,9 +200,13 @@ describe('config-file-verify', () => {
 
             const result = await verifyAppConfig(mockCfg);
             expect(result).toBe(true);
+            expect(mockResolvesToIpAddress).toHaveBeenNthCalledWith(1, '127.0.0.1');
+            expect(mockResolvesToIpAddress).toHaveBeenNthCalledWith(2, '127.0.0.1', true, 4242);
+            expect(mockConsoleWarn).not.toHaveBeenCalled();
         });
 
         test('rejects app name host values that cannot resolve to an IP address', async () => {
+            mockResolvesToIpAddress.mockResolvedValueOnce(false);
             mockCfg.get.mockImplementation((key) => {
                 if (key === 'Butler-SOS.appNames.enableAppNameExtract') return true;
                 if (key === 'Butler-SOS.appNames.hostIP') return 'invalid host name';
@@ -196,6 +218,34 @@ describe('config-file-verify', () => {
 
             const result = await verifyAppConfig(mockCfg);
             expect(result).toBe(false);
+            expect(mockResolvesToIpAddress).toHaveBeenCalledTimes(1);
+            expect(mockConsoleError).toHaveBeenCalledWith(
+                expect.stringContaining(
+                    'It must be an IPv4 address or a hostname that resolves to an IPv4 address.'
+                )
+            );
+        });
+
+        test('warns when app name host resolves to IPv4 but is not reachable during startup', async () => {
+            mockResolvesToIpAddress.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+            mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return true;
+                if (key === 'Butler-SOS.appNames.hostIP') return '127.0.0.1';
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.anonTelemetry') return false;
+                if (key === 'Butler-SOS.systemInfo.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') return [];
+                if (key === 'Butler-SOS.serversToMonitor.servers') return [];
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockCfg);
+            expect(result).toBe(true);
+            expect(mockResolvesToIpAddress).toHaveBeenNthCalledWith(1, '127.0.0.1');
+            expect(mockResolvesToIpAddress).toHaveBeenNthCalledWith(2, '127.0.0.1', true, 4242);
+            expect(mockConsoleWarn).toHaveBeenCalledWith(
+                expect.stringContaining('could not reach 127.0.0.1:4242 during startup')
+            );
         });
     });
 });

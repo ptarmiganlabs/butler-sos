@@ -369,12 +369,13 @@ describe('config-file-schema', () => {
         expect(isValid).toBe(true);
     });
 
-    test('should accept IP addresses and host names for Butler-SOS.appNames.hostIP', () => {
+    test('should accept IPv4 addresses and host names for Butler-SOS.appNames.hostIP', () => {
         const validate = ajv.compile(
             configFileSchema.properties['Butler-SOS'].properties.appNames.properties.hostIP
         );
 
         expect(validate('127.0.0.1')).toBe(true);
+        expect(validate('::1')).toBe(false);
         expect(validate('senseops1')).toBe(true);
         expect(validate('senseops1.company.net')).toBe(true);
         expect(validate('invalid host name')).toBe(false);
