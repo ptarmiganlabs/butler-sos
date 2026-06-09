@@ -20,7 +20,7 @@ const COMPATIBILITY_MATRIX = [
     },
     {
         butlerSosVersionRange: '>=15.0.0 <16.0.0',
-        auditQsVersionRange: '>=0.3.0 <0.4.0',
+        auditQsVersionRange: '>=0.3.0 <0.5.0',
     },
 ];
 
