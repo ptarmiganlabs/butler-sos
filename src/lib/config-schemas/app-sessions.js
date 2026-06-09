@@ -1,3 +1,5 @@
+import { hostnamePattern } from '../host-utils.js';
+
 // Application and user session configuration for Butler-SOS
 // This module contains schema definitions for:
 // - App names extraction from Qlik Sense
@@ -12,7 +14,13 @@ export const appSessionsSchema = {
             extractInterval: { type: 'number' },
             hostIP: {
                 type: 'string',
-                format: 'hostname',
+                anyOf: [
+                    { format: 'ipv4' },
+                    { format: 'ipv6' },
+                    {
+                        pattern: hostnamePattern.source,
+                    },
+                ],
             },
         },
         required: ['enableAppNameExtract', 'extractInterval', 'hostIP'],

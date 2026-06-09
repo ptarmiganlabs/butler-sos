@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import { default as Ajv } from 'ajv';
 
 import configFileSchema from './config-file-schema.js';
+import { resolvesToIpAddress } from './host-utils.js';
 
 /**
  * Creates a modified schema that only validates sections when their associated features are enabled.
@@ -177,6 +178,17 @@ export async function verifyConfigFileSchema(configFile) {
  */
 export async function verifyAppConfig(cfg) {
     // Verify values of specific config entries
+
+    if (cfg.get('Butler-SOS.appNames.enableAppNameExtract') === true) {
+        const appNamesHost = cfg.get('Butler-SOS.appNames.hostIP');
+
+        if ((await resolvesToIpAddress(appNamesHost)) === false) {
+            console.error(
+                `VERIFY CONFIG FILE ERROR: Butler-SOS.appNames.hostIP="${appNamesHost}" is invalid. It must be an IP address or a hostname that resolves to an IP address. Exiting.`
+            );
+            return false;
+        }
+    }
 
     // If InfluxDB is enabled, check if the version is valid
     // Valid values: 1, 2, and 3

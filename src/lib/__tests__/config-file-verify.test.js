@@ -60,6 +60,7 @@ describe('config-file-verify', () => {
 
         test('returns true for valid app config', async () => {
             mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
                 if (key === 'Butler-SOS.influxdbConfig.enable') return false;
                 if (key === 'Butler-SOS.anonTelemetry') return false;
                 if (key === 'Butler-SOS.systemInfo.enable') return false;
@@ -74,6 +75,7 @@ describe('config-file-verify', () => {
 
         test('validates InfluxDB version', async () => {
             mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
                 if (key === 'Butler-SOS.influxdbConfig.enable') return true;
                 if (key === 'Butler-SOS.influxdbConfig.version') return 4; // Invalid
                 return null;
@@ -85,6 +87,7 @@ describe('config-file-verify', () => {
 
         test('validates InfluxDB maxBatchSize', async () => {
             mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
                 if (key === 'Butler-SOS.influxdbConfig.enable') return true;
                 if (key === 'Butler-SOS.influxdbConfig.version') return 1;
                 if (key === 'Butler-SOS.influxdbConfig.maxBatchSize') return 20000; // Too large
@@ -106,6 +109,7 @@ describe('config-file-verify', () => {
 
         test('validates telemetry vs system info', async () => {
             mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
                 if (key === 'Butler-SOS.influxdbConfig.enable') return false;
                 if (key === 'Butler-SOS.anonTelemetry') return true;
                 if (key === 'Butler-SOS.systemInfo.enable') return false;
@@ -118,6 +122,7 @@ describe('config-file-verify', () => {
 
         test('validates server tags - missing tag on server', async () => {
             mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
                 if (key === 'Butler-SOS.influxdbConfig.enable') return false;
                 if (key === 'Butler-SOS.anonTelemetry') return false;
                 if (key === 'Butler-SOS.systemInfo.enable') return false;
@@ -133,6 +138,7 @@ describe('config-file-verify', () => {
 
         test('validates server tags - extra tag on server', async () => {
             mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
                 if (key === 'Butler-SOS.influxdbConfig.enable') return false;
                 if (key === 'Butler-SOS.anonTelemetry') return false;
                 if (key === 'Butler-SOS.systemInfo.enable') return false;
@@ -148,12 +154,43 @@ describe('config-file-verify', () => {
 
         test('handles error in server tags verification', async () => {
             mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
                 if (key === 'Butler-SOS.influxdbConfig.enable') return false;
                 if (key === 'Butler-SOS.anonTelemetry') return false;
                 if (key === 'Butler-SOS.systemInfo.enable') return false;
                 if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') {
                     throw new Error('Unexpected error');
                 }
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockCfg);
+            expect(result).toBe(false);
+        });
+
+        test('accepts app name host values that resolve to an IP address', async () => {
+            mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return true;
+                if (key === 'Butler-SOS.appNames.hostIP') return '127.0.0.1';
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.anonTelemetry') return false;
+                if (key === 'Butler-SOS.systemInfo.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') return [];
+                if (key === 'Butler-SOS.serversToMonitor.servers') return [];
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockCfg);
+            expect(result).toBe(true);
+        });
+
+        test('rejects app name host values that cannot resolve to an IP address', async () => {
+            mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return true;
+                if (key === 'Butler-SOS.appNames.hostIP') return 'invalid host name';
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.anonTelemetry') return false;
+                if (key === 'Butler-SOS.systemInfo.enable') return false;
                 return null;
             });
 
