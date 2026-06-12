@@ -30,20 +30,22 @@ describe('host-utils', () => {
             server.listen(0, '127.0.0.1', resolve);
         });
 
-        const address = server.address();
-        const port = typeof address === 'object' && address !== null ? address.port : null;
+        try {
+            const address = server.address();
+            const port = typeof address === 'object' && address !== null ? address.port : null;
 
-        await expect(resolvesToIpAddress('127.0.0.1', true, port)).resolves.toBe(true);
+            await expect(resolvesToIpAddress('127.0.0.1', true, port)).resolves.toBe(true);
+        } finally {
+            await new Promise((resolve, reject) => {
+                server.close((err) => {
+                    if (err) {
+                        reject(err);
+                        return;
+                    }
 
-        await new Promise((resolve, reject) => {
-            server.close((err) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-
-                resolve();
+                    resolve();
+                });
             });
-        });
+        }
     });
 });
