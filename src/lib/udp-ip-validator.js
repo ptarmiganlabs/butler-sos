@@ -1,4 +1,5 @@
 import dns from 'dns';
+import net from 'node:net';
 import { promisify } from 'util';
 
 const resolve4 = promisify(dns.resolve4);
@@ -10,13 +11,7 @@ const resolve4 = promisify(dns.resolve4);
  * @returns {boolean} True if the string is a valid IPv4 address, false otherwise
  */
 export function isIPv4(ip) {
-    const parts = ip.split('.');
-    if (parts.length !== 4) return false;
-    return parts.every((part) => {
-        if (!/^\d+$/.test(part)) return false;
-        const num = parseInt(part, 10);
-        return num >= 0 && num <= 255;
-    });
+    return net.isIP(ip) === 4;
 }
 
 /**

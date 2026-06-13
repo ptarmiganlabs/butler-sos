@@ -114,7 +114,7 @@ export async function resolvesToIpAddress(
  * @param {string} host - IPv4 address or hostname to validate
  * @param {number|null} [port] - TCP port to verify (null skips TCP check)
  * @param {number} [timeoutMs] - Timeout for TCP reachability check
- * @returns {Promise<{resolvesToIp: boolean, tcpReachable: boolean | null}>}
+ * @returns {Promise<{resolvesToIp: boolean, tcpReachable: boolean | null}>} Object with DNS resolution and TCP reachability results
  */
 export async function verifyHost(host, port = null, timeoutMs = 5000) {
     if (typeof host !== 'string') {
