@@ -1,5 +1,24 @@
 # Changelog
 
+## [15.0.2](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.0.1...butler-sos-v15.0.2) (2026-06-13)
+
+
+### Bug Fixes
+
+* add logging for DNS lookup failures in host-utils ([60b230f](https://github.com/ptarmiganlabs/butler-sos/commit/60b230f0c197779eb2c14ea59c9814e1bb552390))
+* restrict appNames host validation to IPv4 ([ecc2253](https://github.com/ptarmiganlabs/butler-sos/commit/ecc2253245b3b6cc17d4224302abf650ef5d1b8e))
+
+
+### Miscellaneous
+
+* add mocked dns.lookup tests for hostname resolution path ([ed28d2b](https://github.com/ptarmiganlabs/butler-sos/commit/ed28d2bbeb31fd14ad163a802fffefe9c3dfba66))
+
+
+### Refactoring
+
+* Improve startup validation of hosts specified in config  file ([1523e4d](https://github.com/ptarmiganlabs/butler-sos/commit/1523e4de21feab2a83367b30ff0273c2a0057ada))
+* simplify DNS check during startup ([a0b303d](https://github.com/ptarmiganlabs/butler-sos/commit/a0b303d2cd4d873b480e1e381c96b89da13d9314))
+
 ## [15.0.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.0.0...butler-sos-v15.0.1) (2026-06-09)
 
 
