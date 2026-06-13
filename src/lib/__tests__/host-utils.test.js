@@ -1,8 +1,16 @@
 import net from 'node:net';
 
-import { describe, test, expect } from '@jest/globals';
+import { describe, test, expect, jest } from '@jest/globals';
 
-import { resolvesToIpAddress, verifyHost } from '../host-utils.js';
+jest.unstable_mockModule('../../globals.js', () => ({
+    default: {
+        logger: {
+            warn: jest.fn(),
+        },
+    },
+}));
+
+const { resolvesToIpAddress, verifyHost } = await import('../host-utils.js');
 
 describe('host-utils', () => {
     test('accepts literal IPv4 addresses', async () => {

@@ -1,6 +1,8 @@
 import dns from 'node:dns/promises';
 import net from 'node:net';
 
+import globals from '../globals.js';
+
 export const hostnamePattern =
     /^(?=.{1,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)(?:\.(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?))*$/u;
 
@@ -52,6 +54,9 @@ export async function resolvesToIpAddress(
             const lookupResult = await dns.lookup(trimmedHost, { family: 4 });
             resolvedAddress = lookupResult.address;
         } catch (err) {
+            globals.logger.warn(
+                `HOST-UTIL: DNS lookup failed for "${trimmedHost}": ${err.message}`
+            );
             return false;
         }
     } else if (ipVersion !== 4) {
@@ -139,6 +144,9 @@ export async function verifyHost(host, port = null, timeoutMs = 5000) {
             const lookupResult = await dns.lookup(trimmedHost, { family: 4 });
             resolvedAddress = lookupResult.address;
         } catch (err) {
+            globals.logger.warn(
+                `HOST-UTIL: DNS lookup failed for "${trimmedHost}": ${err.message}`
+            );
             return { resolvesToIp: false, tcpReachable: null };
         }
     } else if (ipVersion !== 4) {

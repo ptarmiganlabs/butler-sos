@@ -8,6 +8,14 @@ jest.unstable_mockModule('node:dns/promises', () => ({
     lookup: mockLookup,
 }));
 
+jest.unstable_mockModule('../../globals.js', () => ({
+    default: {
+        logger: {
+            warn: jest.fn(),
+        },
+    },
+}));
+
 const { resolvesToIpAddress } = await import('../host-utils.js');
 
 describe('host-utils – hostname DNS resolution', () => {
