@@ -2,7 +2,7 @@ import net from 'node:net';
 
 import { describe, test, expect } from '@jest/globals';
 
-import { resolvesToIpAddress } from '../host-utils.js';
+import { resolvesToIpAddress, verifyHost } from '../host-utils.js';
 
 describe('host-utils', () => {
     test('accepts literal IPv4 addresses', async () => {
@@ -47,5 +47,60 @@ describe('host-utils', () => {
                 });
             });
         }
+    });
+});
+
+describe('verifyHost', () => {
+    test('returns resolvesToIp true and tcpReachable null when no port provided', async () => {
+        const result = await verifyHost('127.0.0.1');
+        expect(result).toEqual({ resolvesToIp: true, tcpReachable: null });
+    });
+
+    test('returns resolvesToIp false for invalid host', async () => {
+        const result = await verifyHost('invalid host name');
+        expect(result).toEqual({ resolvesToIp: false, tcpReachable: null });
+    });
+
+    test('returns resolvesToIp false for IPv6 addresses', async () => {
+        const result = await verifyHost('::1');
+        expect(result).toEqual({ resolvesToIp: false, tcpReachable: null });
+    });
+
+    test('throws TypeError for invalid port when port is provided', async () => {
+        await expect(verifyHost('127.0.0.1', 0)).rejects.toThrow(
+            'A valid port must be provided when TCP reachability check is requested.'
+        );
+    });
+
+    test('returns tcpReachable true when port is reachable', async () => {
+        const server = net.createServer();
+
+        await new Promise((resolve) => {
+            server.listen(0, '127.0.0.1', resolve);
+        });
+
+        try {
+            const address = server.address();
+            const port = typeof address === 'object' && address !== null ? address.port : null;
+
+            const result = await verifyHost('127.0.0.1', port);
+            expect(result).toEqual({ resolvesToIp: true, tcpReachable: true });
+        } finally {
+            await new Promise((resolve, reject) => {
+                server.close((err) => {
+                    if (err) {
+                        reject(err);
+                        return;
+                    }
+
+                    resolve();
+                });
+            });
+        }
+    });
+
+    test('returns tcpReachable false when port is unreachable', async () => {
+        const result = await verifyHost('127.0.0.1', 1);
+        expect(result).toEqual({ resolvesToIp: true, tcpReachable: false });
     });
 });

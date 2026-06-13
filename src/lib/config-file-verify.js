@@ -3,7 +3,7 @@ import fs from 'fs/promises';
 import { default as Ajv } from 'ajv';
 
 import configFileSchema from './config-file-schema.js';
-import { resolvesToIpAddress } from './host-utils.js';
+import { verifyHost } from './host-utils.js';
 
 /**
  * Creates a modified schema that only validates sections when their associated features are enabled.
@@ -182,14 +182,16 @@ export async function verifyAppConfig(cfg) {
     if (cfg.get('Butler-SOS.appNames.enableAppNameExtract') === true) {
         const appNamesHost = cfg.get('Butler-SOS.appNames.hostIP');
 
-        if ((await resolvesToIpAddress(appNamesHost)) === false) {
+        const { resolvesToIp, tcpReachable } = await verifyHost(appNamesHost, 4242);
+
+        if (!resolvesToIp) {
             console.error(
                 `VERIFY CONFIG FILE ERROR: Butler-SOS.appNames.hostIP="${appNamesHost}" is invalid. It must be an IPv4 address or a hostname that resolves to an IPv4 address. Exiting.`
             );
             return false;
         }
 
-        if ((await resolvesToIpAddress(appNamesHost, true, 4242)) === false) {
+        if (tcpReachable === false) {
             console.warn(
                 `VERIFY CONFIG FILE WARNING: Butler-SOS.appNames.hostIP="${appNamesHost}" resolves to an IPv4 address, but Butler SOS could not reach ${appNamesHost}:4242 during startup. Continuing startup anyway.`
             );

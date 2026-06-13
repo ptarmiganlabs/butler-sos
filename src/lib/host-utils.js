@@ -106,3 +106,92 @@ export async function resolvesToIpAddress(
         });
     });
 }
+
+/**
+ * Verifies a host resolves to IPv4 and optionally checks TCP reachability in a single pass.
+ * Performs DNS lookup once and reuses the resolved IP for TCP verification.
+ *
+ * @param {string} host - IPv4 address or hostname to validate
+ * @param {number|null} [port] - TCP port to verify (null skips TCP check)
+ * @param {number} [timeoutMs] - Timeout for TCP reachability check
+ * @returns {Promise<{resolvesToIp: boolean, tcpReachable: boolean | null}>}
+ */
+export async function verifyHost(host, port = null, timeoutMs = 5000) {
+    if (typeof host !== 'string') {
+        return { resolvesToIp: false, tcpReachable: null };
+    }
+
+    const trimmedHost = host.trim();
+
+    if (trimmedHost.length === 0) {
+        return { resolvesToIp: false, tcpReachable: null };
+    }
+
+    let resolvedAddress = trimmedHost;
+    const ipVersion = net.isIP(trimmedHost);
+
+    if (ipVersion === 0) {
+        if (!isValidHostname(trimmedHost)) {
+            return { resolvesToIp: false, tcpReachable: null };
+        }
+
+        try {
+            const lookupResult = await dns.lookup(trimmedHost, { family: 4 });
+            resolvedAddress = lookupResult.address;
+        } catch (err) {
+            return { resolvesToIp: false, tcpReachable: null };
+        }
+    } else if (ipVersion !== 4) {
+        return { resolvesToIp: false, tcpReachable: null };
+    }
+
+    if (net.isIP(resolvedAddress) !== 4) {
+        return { resolvesToIp: false, tcpReachable: null };
+    }
+
+    if (port === null) {
+        return { resolvesToIp: true, tcpReachable: null };
+    }
+
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+        throw new TypeError(
+            'A valid port must be provided when TCP reachability check is requested.'
+        );
+    }
+
+    const tcpReachable = await new Promise((resolve) => {
+        const socket = net.createConnection({
+            host: resolvedAddress,
+            port,
+        });
+
+        /**
+         * Removes listeners and closes the TCP socket.
+         *
+         * @returns {void}
+         */
+        const cleanup = () => {
+            socket.removeAllListeners();
+            socket.destroy();
+        };
+
+        socket.setTimeout(timeoutMs);
+
+        socket.once('connect', () => {
+            cleanup();
+            resolve(true);
+        });
+
+        socket.once('timeout', () => {
+            cleanup();
+            resolve(false);
+        });
+
+        socket.once('error', () => {
+            cleanup();
+            resolve(false);
+        });
+    });
+
+    return { resolvesToIp: true, tcpReachable };
+}

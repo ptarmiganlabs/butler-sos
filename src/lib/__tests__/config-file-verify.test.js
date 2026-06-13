@@ -6,7 +6,7 @@ const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
 });
 const mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
 const mockConsoleWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-const mockResolvesToIpAddress = jest.fn();
+const mockVerifyHost = jest.fn();
 const mockHostnamePattern =
     /^(?=.{1,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)(?:\.(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?))*$/u;
 
@@ -22,7 +22,7 @@ jest.unstable_mockModule('js-yaml', () => ({
 
 jest.unstable_mockModule('../host-utils.js', () => ({
     hostnamePattern: mockHostnamePattern,
-    resolvesToIpAddress: mockResolvesToIpAddress,
+    verifyHost: mockVerifyHost,
 }));
 
 const fs = (await import('fs/promises')).default;
@@ -32,7 +32,7 @@ const { verifyConfigFileSchema, verifyAppConfig } = await import('../config-file
 describe('config-file-verify', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        mockResolvesToIpAddress.mockReset();
+        mockVerifyHost.mockReset();
     });
 
     afterAll(() => {
@@ -186,7 +186,7 @@ describe('config-file-verify', () => {
         });
 
         test('accepts app name host values that resolve to an IP address', async () => {
-            mockResolvesToIpAddress.mockResolvedValueOnce(true).mockResolvedValueOnce(true);
+            mockVerifyHost.mockResolvedValueOnce({ resolvesToIp: true, tcpReachable: true });
             mockCfg.get.mockImplementation((key) => {
                 if (key === 'Butler-SOS.appNames.enableAppNameExtract') return true;
                 if (key === 'Butler-SOS.appNames.hostIP') return '127.0.0.1';
@@ -200,13 +200,12 @@ describe('config-file-verify', () => {
 
             const result = await verifyAppConfig(mockCfg);
             expect(result).toBe(true);
-            expect(mockResolvesToIpAddress).toHaveBeenNthCalledWith(1, '127.0.0.1');
-            expect(mockResolvesToIpAddress).toHaveBeenNthCalledWith(2, '127.0.0.1', true, 4242);
+            expect(mockVerifyHost).toHaveBeenCalledWith('127.0.0.1', 4242);
             expect(mockConsoleWarn).not.toHaveBeenCalled();
         });
 
         test('rejects app name host values that cannot resolve to an IP address', async () => {
-            mockResolvesToIpAddress.mockResolvedValueOnce(false);
+            mockVerifyHost.mockResolvedValueOnce({ resolvesToIp: false, tcpReachable: null });
             mockCfg.get.mockImplementation((key) => {
                 if (key === 'Butler-SOS.appNames.enableAppNameExtract') return true;
                 if (key === 'Butler-SOS.appNames.hostIP') return 'invalid host name';
@@ -218,7 +217,7 @@ describe('config-file-verify', () => {
 
             const result = await verifyAppConfig(mockCfg);
             expect(result).toBe(false);
-            expect(mockResolvesToIpAddress).toHaveBeenCalledTimes(1);
+            expect(mockVerifyHost).toHaveBeenCalledTimes(1);
             expect(mockConsoleError).toHaveBeenCalledWith(
                 expect.stringContaining(
                     'It must be an IPv4 address or a hostname that resolves to an IPv4 address.'
@@ -227,7 +226,7 @@ describe('config-file-verify', () => {
         });
 
         test('warns when app name host resolves to IPv4 but is not reachable during startup', async () => {
-            mockResolvesToIpAddress.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+            mockVerifyHost.mockResolvedValueOnce({ resolvesToIp: true, tcpReachable: false });
             mockCfg.get.mockImplementation((key) => {
                 if (key === 'Butler-SOS.appNames.enableAppNameExtract') return true;
                 if (key === 'Butler-SOS.appNames.hostIP') return '127.0.0.1';
@@ -241,8 +240,7 @@ describe('config-file-verify', () => {
 
             const result = await verifyAppConfig(mockCfg);
             expect(result).toBe(true);
-            expect(mockResolvesToIpAddress).toHaveBeenNthCalledWith(1, '127.0.0.1');
-            expect(mockResolvesToIpAddress).toHaveBeenNthCalledWith(2, '127.0.0.1', true, 4242);
+            expect(mockVerifyHost).toHaveBeenCalledWith('127.0.0.1', 4242);
             expect(mockConsoleWarn).toHaveBeenCalledWith(
                 expect.stringContaining('could not reach 127.0.0.1:4242 during startup')
             );
