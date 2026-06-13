@@ -1,9 +1,14 @@
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterAll, jest } from '@jest/globals';
 
 // Mock process.exit
 const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
     throw new Error('process.exit called');
 });
+const mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+const mockConsoleWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+const mockVerifyHost = jest.fn();
+const mockHostnamePattern =
+    /^(?=.{1,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)(?:\.(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?))*$/u;
 
 jest.unstable_mockModule('fs/promises', () => ({
     default: {
@@ -15,6 +20,11 @@ jest.unstable_mockModule('js-yaml', () => ({
     load: jest.fn(),
 }));
 
+jest.unstable_mockModule('../host-utils.js', () => ({
+    hostnamePattern: mockHostnamePattern,
+    verifyHost: mockVerifyHost,
+}));
+
 const fs = (await import('fs/promises')).default;
 const { load } = await import('js-yaml');
 const { verifyConfigFileSchema, verifyAppConfig } = await import('../config-file-verify.js');
@@ -22,6 +32,13 @@ const { verifyConfigFileSchema, verifyAppConfig } = await import('../config-file
 describe('config-file-verify', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockVerifyHost.mockReset();
+    });
+
+    afterAll(() => {
+        mockExit.mockRestore();
+        mockConsoleError.mockRestore();
+        mockConsoleWarn.mockRestore();
     });
 
     describe('verifyConfigFileSchema', () => {
@@ -60,6 +77,7 @@ describe('config-file-verify', () => {
 
         test('returns true for valid app config', async () => {
             mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
                 if (key === 'Butler-SOS.influxdbConfig.enable') return false;
                 if (key === 'Butler-SOS.anonTelemetry') return false;
                 if (key === 'Butler-SOS.systemInfo.enable') return false;
@@ -74,6 +92,7 @@ describe('config-file-verify', () => {
 
         test('validates InfluxDB version', async () => {
             mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
                 if (key === 'Butler-SOS.influxdbConfig.enable') return true;
                 if (key === 'Butler-SOS.influxdbConfig.version') return 4; // Invalid
                 return null;
@@ -85,6 +104,7 @@ describe('config-file-verify', () => {
 
         test('validates InfluxDB maxBatchSize', async () => {
             mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
                 if (key === 'Butler-SOS.influxdbConfig.enable') return true;
                 if (key === 'Butler-SOS.influxdbConfig.version') return 1;
                 if (key === 'Butler-SOS.influxdbConfig.maxBatchSize') return 20000; // Too large
@@ -106,6 +126,7 @@ describe('config-file-verify', () => {
 
         test('validates telemetry vs system info', async () => {
             mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
                 if (key === 'Butler-SOS.influxdbConfig.enable') return false;
                 if (key === 'Butler-SOS.anonTelemetry') return true;
                 if (key === 'Butler-SOS.systemInfo.enable') return false;
@@ -118,6 +139,7 @@ describe('config-file-verify', () => {
 
         test('validates server tags - missing tag on server', async () => {
             mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
                 if (key === 'Butler-SOS.influxdbConfig.enable') return false;
                 if (key === 'Butler-SOS.anonTelemetry') return false;
                 if (key === 'Butler-SOS.systemInfo.enable') return false;
@@ -133,6 +155,7 @@ describe('config-file-verify', () => {
 
         test('validates server tags - extra tag on server', async () => {
             mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
                 if (key === 'Butler-SOS.influxdbConfig.enable') return false;
                 if (key === 'Butler-SOS.anonTelemetry') return false;
                 if (key === 'Butler-SOS.systemInfo.enable') return false;
@@ -148,6 +171,7 @@ describe('config-file-verify', () => {
 
         test('handles error in server tags verification', async () => {
             mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
                 if (key === 'Butler-SOS.influxdbConfig.enable') return false;
                 if (key === 'Butler-SOS.anonTelemetry') return false;
                 if (key === 'Butler-SOS.systemInfo.enable') return false;
@@ -159,6 +183,67 @@ describe('config-file-verify', () => {
 
             const result = await verifyAppConfig(mockCfg);
             expect(result).toBe(false);
+        });
+
+        test('accepts app name host values that resolve to an IP address', async () => {
+            mockVerifyHost.mockResolvedValueOnce({ resolvesToIp: true, tcpReachable: true });
+            mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return true;
+                if (key === 'Butler-SOS.appNames.hostIP') return '127.0.0.1';
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.anonTelemetry') return false;
+                if (key === 'Butler-SOS.systemInfo.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') return [];
+                if (key === 'Butler-SOS.serversToMonitor.servers') return [];
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockCfg);
+            expect(result).toBe(true);
+            expect(mockVerifyHost).toHaveBeenCalledWith('127.0.0.1', 4242);
+            expect(mockConsoleWarn).not.toHaveBeenCalled();
+        });
+
+        test('rejects app name host values that cannot resolve to an IP address', async () => {
+            mockVerifyHost.mockResolvedValueOnce({ resolvesToIp: false, tcpReachable: null });
+            mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return true;
+                if (key === 'Butler-SOS.appNames.hostIP') return 'invalid host name';
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.anonTelemetry') return false;
+                if (key === 'Butler-SOS.systemInfo.enable') return false;
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockCfg);
+            expect(result).toBe(false);
+            expect(mockVerifyHost).toHaveBeenCalledTimes(1);
+            expect(mockConsoleError).toHaveBeenCalledWith(
+                expect.stringContaining(
+                    'It must be an IPv4 address or a hostname that resolves to an IPv4 address.'
+                )
+            );
+        });
+
+        test('warns when app name host resolves to IPv4 but is not reachable during startup', async () => {
+            mockVerifyHost.mockResolvedValueOnce({ resolvesToIp: true, tcpReachable: false });
+            mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return true;
+                if (key === 'Butler-SOS.appNames.hostIP') return '127.0.0.1';
+                if (key === 'Butler-SOS.influxdbConfig.enable') return false;
+                if (key === 'Butler-SOS.anonTelemetry') return false;
+                if (key === 'Butler-SOS.systemInfo.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') return [];
+                if (key === 'Butler-SOS.serversToMonitor.servers') return [];
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockCfg);
+            expect(result).toBe(true);
+            expect(mockVerifyHost).toHaveBeenCalledWith('127.0.0.1', 4242);
+            expect(mockConsoleWarn).toHaveBeenCalledWith(
+                expect.stringContaining('could not reach 127.0.0.1:4242 during startup')
+            );
         });
     });
 });
