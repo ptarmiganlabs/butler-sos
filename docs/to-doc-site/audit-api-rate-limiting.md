@@ -249,7 +249,7 @@ flowchart LR
 
 | Layer | Config key | Purpose | Rejection signal to client | Server log entry |
 |-------|-----------|---------|----------------------------|------------------|
-| HTTP rate limit | `Butler-SOS.auditEvents.rateLimit.*` | Protect Butler SOS from runaway clients, buggy extensions, or unauthorized flooding | `429 Too Many Requests` with `status: "dropped"`, `reason: "Rate limit exceeded"` | `warn: AUDIT API: HTTP rate limit exceeded ...` (this page) |
+| HTTP rate limit | `Butler-SOS.auditEvents.rateLimit.*` | Protect Butler SOS from runaway clients, buggy extensions, or unauthorized flooding | `429 Too Many Requests` with `outcome: "dropped"`, `reason: "Rate limit exceeded"` | `warn: AUDIT API: HTTP rate limit exceeded ...` (this page) |
 | Queue rate limit | `Butler-SOS.auditEvents.queue.rateLimit.*` | Throttle how fast Butler SOS writes to downstream destinations (InfluxDB, Parquet, QVD, JSON) | `202 Accepted` — the event is accepted but dropped before being written | `warn: AUDIT API: Dropped audit event due to queue rate limit ...` |
 
 If you see queue-level drops in the log, raise
