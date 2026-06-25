@@ -177,7 +177,7 @@ export async function messageEventHandler(message, _remote) {
             // can see what strange/unexpected payload is arriving.
             const sanitizedPreview = sanitizeField(message.toString(), 25);
             globals.logger.warn(
-                `LOG EVENT: Unrecognized log event type. First 25 chars: "${sanitizedPreview}"`
+                `LOG EVENT: Log event source not recognized or not enabled. First 25 chars: "${sanitizedPreview}"`
             );
 
             globals.logger.debug(
