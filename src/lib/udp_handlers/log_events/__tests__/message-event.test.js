@@ -211,7 +211,7 @@ describe('messageEventHandler', () => {
         await messageEventHandler(msg, {});
 
         expect(globals.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('Unrecognized log event type')
+            expect.stringContaining('Log event source not recognized or not enabled')
         );
         expect(globals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('First 25 chars: "/unknown/;1;2;3;4;5;6;7;8"')
@@ -231,7 +231,7 @@ describe('messageEventHandler', () => {
         await messageEventHandler(msg, {});
 
         expect(globals.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('Unrecognized log event type')
+            expect.stringContaining('Log event source not recognized or not enabled')
         );
         expect(globals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('First 25 chars: "/unknown/;1;2;3;4;5;6;7;8"')
@@ -246,7 +246,7 @@ describe('messageEventHandler', () => {
         await messageEventHandler(msg, {});
 
         const warnCall = globals.logger.warn.mock.calls.find((c) =>
-            String(c[0]).includes('Unrecognized log event type')
+            String(c[0]).includes('Log event source not recognized or not enabled')
         );
         expect(warnCall).toBeDefined();
         // Control chars must not appear in the logged preview

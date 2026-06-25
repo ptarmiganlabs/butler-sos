@@ -986,20 +986,19 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
             max: maxPerMinute,
             timeWindow: '1 minute',
             /**
-             * Builds a minimal, well-formed 429 error. The audit API's error handler
+             * Builds a minimal, well-formed 429 response payload. The audit API's error handler
              * detects `code === 'AUDIT_RATE_LIMIT_EXCEEDED'` and skips the error log
              * (and its stack trace); the WARN emitted by `onExceeded` is the
              * authoritative operator signal.
              *
-             * @returns {Error} A 429 error tagged with a recognisable code.
+             * @returns {object} A 429 response body tagged with a recognisable code.
              */
-            errorResponseBuilder: () => {
-                const err = new Error('Rate limit exceeded');
-                err.statusCode = 429;
-                err.code = 'AUDIT_RATE_LIMIT_EXCEEDED';
-                err.name = 'AuditRateLimitError';
-                return err;
-            },
+            errorResponseBuilder: () => ({
+                statusCode: 429,
+                error: 'Too Many Requests',
+                message: 'Rate limit exceeded',
+                code: 'AUDIT_RATE_LIMIT_EXCEEDED',
+            }),
             /**
              * Called when a client exceeds the rate limit. Emits a single aggregated
              * WARN per source IP per `RATE_LIMIT_WARN_THROTTLE_MS`, and DEBUG lines
@@ -1606,7 +1605,7 @@ export async function setupAuditEventsApiServer() {
         auditServer.setErrorHandler((error, request, reply) => {
             // Rate-limit hits are signalled by the onExceeded WARN; do not log them as
             // errors (and avoid the resulting stack trace).
-            if (error.statusCode === 429 || error.code === 'AUDIT_RATE_LIMIT_EXCEEDED') {
+            if (error.code === 'AUDIT_RATE_LIMIT_EXCEEDED') {
                 return buildAuditResponse(reply, 429, 'dropped', 'Rate limit exceeded');
             }
             if (error.statusCode === 400 && error.validation) {
