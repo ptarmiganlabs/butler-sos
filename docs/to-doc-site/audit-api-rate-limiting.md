@@ -244,7 +244,7 @@ flowchart LR
     H -- allowed --> Q{Queue rate limit<br/>maxMessagesPerMinute<br/>config: auditEvents.queue.rateLimit}
     H -- exceeded --> X1[429 to client<br/>WARN: 'HTTP rate limit exceeded']
     Q -- allowed --> D[Audit destinations<br/>InfluxDB / Parquet / QVD / JSON]
-    Q -- exceeded --> X2[202 to client<br/>WARN: 'Dropped audit event due to queue rate limit']
+    Q -- exceeded --> X2[429 to client<br/>WARN: 'Dropped audit event due to queue rate limit']
 ```
 
 | Layer | Config key | Purpose | Rejection signal to client | Server log entry |
