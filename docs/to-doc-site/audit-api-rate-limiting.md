@@ -116,7 +116,7 @@ warn: AUDIT API: HTTP rate limit exceeded ip=192.168.3.250 ... ipViolations=N ..
 | `url` | Request URL (always `/api/v1/audit-event` in this release) |
 | `max=N/1m` | The configured maximum per minute |
 | `ipViolations=N` | How many times this IP has been rate-limited so far (counting only rejections, not allowed requests) |
-| `ipFirstViolationAgo=Xs` | Seconds since this IP's first rate-limit hit in the current window |
+| `ipFirstViolationAgo=Xs` | Seconds since this IP's first rate-limit hit since it was first observed (state is purged after 15 minutes of inactivity) |
 | `globalViolations=N` | How many rate-limit rejections Butler SOS has served in total since startup |
 | `windowSeconds=60` | The throttle window length for the WARN itself |
 | `(suppressed)` (debug lines) | Indicates a hit inside the 60-second WARN window for an IP that was already warned about |
