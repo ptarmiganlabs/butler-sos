@@ -1495,7 +1495,7 @@ function warnIfRateLimitsLookInconsistent({ httpMaxPerMinute, queueMaxPerMinute 
         globals.logger.warn(
             `AUDIT API: auditEvents.queue.rateLimit.maxMessagesPerMinute (${queueMaxPerMinute}) ` +
                 `is higher than auditEvents.rateLimit.maxPerMinute (${httpMaxPerMinute}). ` +
-                'The queue limit is unreachable because the HTTP rate limit runs first; ' +
+                'In a single-client deployment, the queue limit is unreachable because the HTTP rate limit runs first; ' +
                 'raise the HTTP limit or lower the queue limit.'
         );
         return;
