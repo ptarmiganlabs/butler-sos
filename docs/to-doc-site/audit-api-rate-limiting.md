@@ -49,7 +49,9 @@ small JSON body that follows the same shape the rest of the audit API uses:
 
 ```json
 {
-    "status": "dropped",
+    "status": "error",
+    "receivedAt": "2026-01-01T00:00:00.000Z",
+    "outcome": "dropped",
     "reason": "Rate limit exceeded"
 }
 ```
