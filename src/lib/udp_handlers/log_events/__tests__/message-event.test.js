@@ -211,11 +211,52 @@ describe('messageEventHandler', () => {
         await messageEventHandler(msg, {});
 
         expect(globals.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('Unrecognized log event')
+            expect.stringContaining('Unrecognized log event type')
+        );
+        expect(globals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('First 25 chars: "/unknown/;1;2;3;4;5;6;7;8"')
         );
         expect(globals.udpEvents.addLogEvent).toHaveBeenCalledWith(
             expect.objectContaining({ source: 'unknown' })
         );
+    });
+
+    test('should always warn on unknown source even when eventCount is disabled', async () => {
+        globals.config.get.mockImplementation((path) => {
+            if (path === 'Butler-SOS.qlikSenseEvents.eventCount.enable') return false;
+            return true;
+        });
+
+        const msg = Buffer.from('/unknown/;1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18');
+        await messageEventHandler(msg, {});
+
+        expect(globals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Unrecognized log event type')
+        );
+        expect(globals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('First 25 chars: "/unknown/;1;2;3;4;5;6;7;8"')
+        );
+        expect(globals.udpEvents.addLogEvent).not.toHaveBeenCalled();
+    });
+
+    test('should sanitize control characters in the warn preview', async () => {
+        // Raw bytes include control chars (\x01, \x07) that should be stripped from the preview
+        const raw = '/unknown/\x01\x07;1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;1f;18';
+        const msg = Buffer.from(raw, 'binary');
+        await messageEventHandler(msg, {});
+
+        const warnCall = globals.logger.warn.mock.calls.find((c) =>
+            String(c[0]).includes('Unrecognized log event type')
+        );
+        expect(warnCall).toBeDefined();
+        // Control chars must not appear in the logged preview
+        expect(String(warnCall[0])).not.toMatch(/[\x00-\x1F\x7F]/);
+        // Preview must be truncated to <= 25 chars
+        const match = String(warnCall[0]).match(/First 25 chars: "([^"]*)"/);
+        expect(match).not.toBeNull();
+        expect(match[1].length).toBeLessThanOrEqual(25);
+        // After stripping the two control chars, the preview is the first 25 sanitized chars
+        expect(match[1]).toBe('/unknown/;1;2;3;4;5;6;7;8');
     });
 
     test('should handle disabled source', async () => {

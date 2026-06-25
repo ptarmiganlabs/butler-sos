@@ -1986,6 +1986,234 @@ describe('audit-events-api HTTP rate limit (Fastify)', () => {
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('HTTP rate limit exceeded')
         );
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('max=2/1m')
+        );
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('ipViolations=1')
+        );
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('globalViolations=1')
+        );
+        expect(mockGlobals.logger.error).not.toHaveBeenCalledWith(
+            expect.stringContaining('Unexpected error')
+        );
+    });
+
+    test('does not log error or stack for rate-limit hits', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, {
+            apiToken: null,
+            corsOrigins: ['*'],
+            rateLimitOpts: { enable: true, maxPerMinute: 1 },
+        });
+
+        await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            remoteAddress: '10.0.0.2',
+        });
+        const overRes = await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            remoteAddress: '10.0.0.2',
+        });
+
+        expect(overRes.statusCode).toBe(429);
+        expect(mockGlobals.logger.error).not.toHaveBeenCalled();
+        // No pino stack-trace emission either
+        expect(mockGlobals.logger.error).not.toHaveBeenCalledWith(
+            expect.stringContaining('Rate limit exceeded')
+        );
+    });
+
+    test('warns once per IP per throttle window under sustained abuse', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, {
+            apiToken: null,
+            corsOrigins: ['*'],
+            rateLimitOpts: { enable: true, maxPerMinute: 1 },
+        });
+
+        // 5 requests, max=1 → 1 allowed + 4 exceeded → 1 WARN + 3 DEBUG (suppressed)
+        for (let i = 0; i < 5; i++) {
+            await fastify.inject({
+                method: 'GET',
+                url: '/api/v1/test-connection',
+                remoteAddress: '10.0.0.3',
+            });
+        }
+
+        const warnCalls = mockGlobals.logger.warn.mock.calls.filter((c) =>
+            String(c[0]).includes('HTTP rate limit exceeded')
+        );
+        const debugCalls = mockGlobals.logger.debug.mock.calls.filter((c) =>
+            String(c[0]).includes('HTTP rate limit exceeded (suppressed)')
+        );
+
+        expect(warnCalls).toHaveLength(1);
+        expect(debugCalls).toHaveLength(3);
+        expect(warnCalls[0][0]).toContain('ipViolations=1');
+        expect(debugCalls[debugCalls.length - 1][0]).toContain('ipViolations=4');
+        expect(debugCalls[debugCalls.length - 1][0]).toContain('globalViolations=4');
+    });
+
+    test('global violation counter increments across IPs', async () => {
+        const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+
+        const fastify = Fastify({ logger: false });
+        await registerAuditEventRoutes(fastify, {
+            apiToken: null,
+            corsOrigins: ['*'],
+            rateLimitOpts: { enable: true, maxPerMinute: 1 },
+        });
+
+        // First IP: 2 hits → 1 allowed + 1 exceeded → 1 WARN (ipViolations=1, global=1)
+        await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            remoteAddress: '10.0.0.4',
+        });
+        await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            remoteAddress: '10.0.0.4',
+        });
+
+        // Second IP: 2 hits → 1 allowed + 1 exceeded → 1 WARN (ipViolations=1, global=2)
+        await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            remoteAddress: '10.0.0.5',
+        });
+        await fastify.inject({
+            method: 'GET',
+            url: '/api/v1/test-connection',
+            remoteAddress: '10.0.0.5',
+        });
+
+        const warnCalls = mockGlobals.logger.warn.mock.calls
+            .filter((c) => String(c[0]).includes('HTTP rate limit exceeded'))
+            .map((c) => String(c[0]));
+
+        expect(warnCalls).toHaveLength(2);
+        expect(warnCalls[0]).toContain('globalViolations=1');
+        expect(warnCalls[1]).toContain('globalViolations=2');
+    });
+});
+
+describe('audit-events-api warnIfRateLimitsLookInconsistent', () => {
+    beforeEach(() => {
+        jest.resetModules();
+        jest.clearAllMocks();
+        mockGlobals.config.has.mockReturnValue(false);
+        mockGlobals.config.get.mockReturnValue(undefined);
+        mockGlobals.auditEventsQueueManager = null;
+    });
+
+    test('warns when queue limit is higher than HTTP limit', async () => {
+        const { warnIfRateLimitsLookInconsistent } = await import('../audit-events-api.js');
+
+        warnIfRateLimitsLookInconsistent({ httpMaxPerMinute: 300, queueMaxPerMinute: 600 });
+
+        expect(mockGlobals.logger.warn).toHaveBeenCalledTimes(1);
+        const msg = String(mockGlobals.logger.warn.mock.calls[0][0]);
+        expect(msg).toContain('is higher than');
+        expect(msg).toContain('(600)');
+        expect(msg).toContain('(300)');
+        expect(msg).toContain('raise the HTTP limit or lower the queue limit');
+    });
+
+    test('warns when queue limit is less than half the HTTP limit', async () => {
+        const { warnIfRateLimitsLookInconsistent } = await import('../audit-events-api.js');
+
+        warnIfRateLimitsLookInconsistent({ httpMaxPerMinute: 300, queueMaxPerMinute: 100 });
+
+        expect(mockGlobals.logger.warn).toHaveBeenCalledTimes(1);
+        const msg = String(mockGlobals.logger.warn.mock.calls[0][0]);
+        expect(msg).toContain('is less than half of');
+        expect(msg).toContain('(100)');
+        expect(msg).toContain('(300)');
+        expect(msg).toContain('make sure this is intentional');
+    });
+
+    test('does not warn when queue and HTTP limits are equal', async () => {
+        const { warnIfRateLimitsLookInconsistent } = await import('../audit-events-api.js');
+
+        warnIfRateLimitsLookInconsistent({ httpMaxPerMinute: 300, queueMaxPerMinute: 300 });
+
+        expect(mockGlobals.logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('does not warn when queue is just above half of HTTP (within tolerance)', async () => {
+        const { warnIfRateLimitsLookInconsistent } = await import('../audit-events-api.js');
+
+        // http=300, queue=200: queue is 2/3 of http, well above the half threshold
+        warnIfRateLimitsLookInconsistent({ httpMaxPerMinute: 300, queueMaxPerMinute: 200 });
+
+        expect(mockGlobals.logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('warns when queue is exactly half the HTTP limit', async () => {
+        const { warnIfRateLimitsLookInconsistent } = await import('../audit-events-api.js');
+
+        // http=300, queue=150: queue is exactly http/2; trigger condition uses strict '<'
+        // so this should NOT warn
+        warnIfRateLimitsLookInconsistent({ httpMaxPerMinute: 300, queueMaxPerMinute: 150 });
+
+        expect(mockGlobals.logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('warns when queue is just below half the HTTP limit', async () => {
+        const { warnIfRateLimitsLookInconsistent } = await import('../audit-events-api.js');
+
+        // http=300, queue=149: queue is below http/2 → warn
+        warnIfRateLimitsLookInconsistent({ httpMaxPerMinute: 300, queueMaxPerMinute: 149 });
+
+        expect(mockGlobals.logger.warn).toHaveBeenCalledTimes(1);
+        const msg = String(mockGlobals.logger.warn.mock.calls[0][0]);
+        expect(msg).toContain('is less than half of');
+    });
+
+    test('does not warn when HTTP limit is disabled (undefined)', async () => {
+        const { warnIfRateLimitsLookInconsistent } = await import('../audit-events-api.js');
+
+        warnIfRateLimitsLookInconsistent({ httpMaxPerMinute: undefined, queueMaxPerMinute: 600 });
+
+        expect(mockGlobals.logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('does not warn when queue limit is disabled (undefined)', async () => {
+        const { warnIfRateLimitsLookInconsistent } = await import('../audit-events-api.js');
+
+        warnIfRateLimitsLookInconsistent({ httpMaxPerMinute: 300, queueMaxPerMinute: undefined });
+
+        expect(mockGlobals.logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('does not warn when both limits are disabled', async () => {
+        const { warnIfRateLimitsLookInconsistent } = await import('../audit-events-api.js');
+
+        warnIfRateLimitsLookInconsistent({});
+
+        expect(mockGlobals.logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('prioritises the higher-than warning over the less-than-half warning', async () => {
+        // queue > http is checked first; it returns early so the second condition never runs.
+        // This is the only branch where both could theoretically be true
+        // (impossible in practice since higher implies not lower, but defensive).
+        const { warnIfRateLimitsLookInconsistent } = await import('../audit-events-api.js');
+
+        warnIfRateLimitsLookInconsistent({ httpMaxPerMinute: 100, queueMaxPerMinute: 500 });
+
+        expect(mockGlobals.logger.warn).toHaveBeenCalledTimes(1);
+        const msg = String(mockGlobals.logger.warn.mock.calls[0][0]);
+        expect(msg).toContain('is higher than');
     });
 });
 

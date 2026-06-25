@@ -39,6 +39,11 @@ const MISSING_AUDIT_QS_WARN_WINDOW_MS = 60_000;
 const MISSING_AUDIT_QS_WARN_STATE_TTL_MS = 15 * 60_000;
 const MISSING_AUDIT_QS_WARN_CLEANUP_INTERVAL_MS = 60_000;
 
+/** Per-source-IP rate-limit violation tracking (mirrors the missing-version WARN throttle). */
+const RATE_LIMIT_WARN_THROTTLE_MS = 60_000;
+const RATE_LIMIT_STATE_TTL_MS = 15 * 60_000;
+const RATE_LIMIT_CLEANUP_INTERVAL_MS = 60_000;
+
 /**
  * Compares two strings using a constant-time algorithm to prevent timing attacks.
  *
@@ -947,21 +952,107 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
     // CORS (browser calls)
     await fastify.register(FastifyCors, buildCorsOptions(corsOrigins));
 
+    // Per-source-IP rate-limit violation tracking. In-memory only; cleared on Butler SOS restart.
+    /** @type {Map<string, { count: number, firstAt: number, lastAt: number, lastWarnTs: number }>} */
+    const rateLimitViolationState = new Map();
+    const rateLimitGlobalStats = { count: 0, firstAt: 0, lastAt: 0 };
+    let lastRateLimitStateCleanupTs = 0;
+
+    /**
+     * Deletes stale per-IP rate-limit entries that have not been seen recently.
+     *
+     * @param {number} now - Current timestamp in milliseconds.
+     * @returns {void}
+     */
+    function cleanupRateLimitViolationState(now) {
+        if (now - lastRateLimitStateCleanupTs < RATE_LIMIT_CLEANUP_INTERVAL_MS) {
+            return;
+        }
+
+        for (const [ip, state] of rateLimitViolationState.entries()) {
+            if (now - state.lastAt > RATE_LIMIT_STATE_TTL_MS) {
+                rateLimitViolationState.delete(ip);
+            }
+        }
+
+        lastRateLimitStateCleanupTs = now;
+    }
+
     // Rate limit (simple abuse protection)
     if (rateLimitOpts?.enable !== false) {
+        const maxPerMinute = rateLimitOpts?.maxPerMinute ?? 300;
+
         await fastify.register(FastifyRateLimit, {
-            max: rateLimitOpts?.maxPerMinute ?? 300,
+            max: maxPerMinute,
             timeWindow: '1 minute',
             /**
-             * Called when a client exceeds the rate limit. Logs a WARN with request details.
+             * Builds a minimal, well-formed 429 error. The audit API's error handler
+             * detects `code === 'AUDIT_RATE_LIMIT_EXCEEDED'` and skips the error log
+             * (and its stack trace); the WARN emitted by `onExceeded` is the
+             * authoritative operator signal.
+             *
+             * @returns {Error} A 429 error tagged with a recognisable code.
+             */
+            errorResponseBuilder: () => {
+                const err = new Error('Rate limit exceeded');
+                err.statusCode = 429;
+                err.code = 'AUDIT_RATE_LIMIT_EXCEEDED';
+                err.name = 'AuditRateLimitError';
+                return err;
+            },
+            /**
+             * Called when a client exceeds the rate limit. Emits a single aggregated
+             * WARN per source IP per `RATE_LIMIT_WARN_THROTTLE_MS`, and DEBUG lines
+             * for the additional hits inside the same window.
              *
              * @param {import('fastify').FastifyRequest} req - The Fastify request object.
              * @param {string} key - The rate limit key (defaults to client IP address).
              */
             onExceeded: (req, key) => {
-                globals.logger.warn(
-                    `AUDIT API: HTTP rate limit exceeded ip=${req.ip} url=${req.url} key=${key}`
-                );
+                const now = Date.now();
+                cleanupRateLimitViolationState(now);
+                const ip = req.ip || 'n/a';
+
+                const prev = rateLimitViolationState.get(ip);
+                const ipStats = prev
+                    ? {
+                          count: prev.count + 1,
+                          firstAt: prev.firstAt,
+                          lastAt: now,
+                          lastWarnTs: prev.lastWarnTs,
+                      }
+                    : { count: 1, firstAt: now, lastAt: now, lastWarnTs: 0 };
+                rateLimitViolationState.set(ip, ipStats);
+
+                if (rateLimitGlobalStats.count === 0) {
+                    rateLimitGlobalStats.firstAt = now;
+                }
+                rateLimitGlobalStats.count += 1;
+                rateLimitGlobalStats.lastAt = now;
+
+                const shouldEmitWarn =
+                    ipStats.lastWarnTs === 0 ||
+                    now - ipStats.lastWarnTs >= RATE_LIMIT_WARN_THROTTLE_MS;
+
+                if (shouldEmitWarn) {
+                    const ipFirstViolationAgo = Math.max(
+                        0,
+                        Math.floor((now - ipStats.firstAt) / 1000)
+                    );
+                    globals.logger.warn(
+                        `AUDIT API: HTTP rate limit exceeded ip=${ip} url=${req.url} key=${key} ` +
+                            `max=${maxPerMinute}/1m ` +
+                            `ipViolations=${ipStats.count} ipFirstViolationAgo=${ipFirstViolationAgo}s ` +
+                            `globalViolations=${rateLimitGlobalStats.count} ` +
+                            `windowSeconds=${Math.floor(RATE_LIMIT_WARN_THROTTLE_MS / 1000)}`
+                    );
+                    ipStats.lastWarnTs = now;
+                } else {
+                    globals.logger.debug(
+                        `AUDIT API: HTTP rate limit exceeded (suppressed) ip=${ip} ` +
+                            `ipViolations=${ipStats.count} globalViolations=${rateLimitGlobalStats.count}`
+                    );
+                }
             },
         });
     }
@@ -1379,6 +1470,47 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
 }
 
 /**
+ * Logs a startup warning when the HTTP and queue rate-limit settings look inconsistent.
+ *
+ * The HTTP rate limit (per source IP) runs first, so the queue rate limit (global) can
+ * only become the effective ceiling when it is at or below the per-IP HTTP number.
+ * - If `queueMax > httpMax`, the queue limit is unreachable in a single-client deployment
+ *   and suspicious in a multi-client one. Warn.
+ * - If `queueMax < httpMax / 2`, the queue limit will be the effective ceiling for any
+ *   single client, which is fine if intentional. Warn to make it visible.
+ * - If either side is disabled (passed as `undefined`), no comparison is made.
+ *
+ * Exported for unit testing.
+ *
+ * @param {object} [opts] - Named arguments.
+ * @param {number} [opts.httpMaxPerMinute] - HTTP rate limit (per source IP), or undefined if disabled.
+ * @param {number} [opts.queueMaxPerMinute] - Queue rate limit (global), or undefined if disabled.
+ * @returns {void}
+ */
+function warnIfRateLimitsLookInconsistent({ httpMaxPerMinute, queueMaxPerMinute } = {}) {
+    if (typeof httpMaxPerMinute !== 'number' || typeof queueMaxPerMinute !== 'number') {
+        return;
+    }
+    if (queueMaxPerMinute > httpMaxPerMinute) {
+        globals.logger.warn(
+            `AUDIT API: auditEvents.queue.rateLimit.maxMessagesPerMinute (${queueMaxPerMinute}) ` +
+                `is higher than auditEvents.rateLimit.maxPerMinute (${httpMaxPerMinute}). ` +
+                'The queue limit is unreachable because the HTTP rate limit runs first; ' +
+                'raise the HTTP limit or lower the queue limit.'
+        );
+        return;
+    }
+    if (queueMaxPerMinute > 0 && queueMaxPerMinute < httpMaxPerMinute / 2) {
+        globals.logger.warn(
+            `AUDIT API: auditEvents.queue.rateLimit.maxMessagesPerMinute (${queueMaxPerMinute}) ` +
+                `is less than half of auditEvents.rateLimit.maxPerMinute (${httpMaxPerMinute}). ` +
+                'The queue limit will be the effective ceiling for accepted events; ' +
+                'make sure this is intentional.'
+        );
+    }
+}
+
+/**
  * Starts a dedicated Fastify server for receiving audit events from the browser extension.
  *
  * The server reads config from:
@@ -1454,10 +1586,29 @@ export async function setupAuditEventsApiServer() {
             } rateLimit=${JSON.stringify(rateLimitOpts)} fastifyLogLevel=${auditServer.log.level}`
         );
 
+        // Warn if the HTTP and queue rate-limit settings look inconsistent.
+        // Either side may be disabled (passed as undefined) in which case we skip the comparison.
+        const httpRateLimitMax =
+            rateLimitOpts?.enable === false ? undefined : (rateLimitOpts?.maxPerMinute ?? 300);
+        const queueRateLimit = globals.config.has('Butler-SOS.auditEvents.queue.rateLimit')
+            ? globals.config.get('Butler-SOS.auditEvents.queue.rateLimit')
+            : null;
+        const queueRateLimitMax =
+            queueRateLimit?.enable === false ? undefined : queueRateLimit?.maxMessagesPerMinute;
+        warnIfRateLimitsLookInconsistent({
+            httpMaxPerMinute: httpRateLimitMax,
+            queueMaxPerMinute: queueRateLimitMax,
+        });
+
         await registerAuditEventRoutes(auditServer, { apiToken, corsOrigins, rateLimitOpts });
 
         // Log schema validation failures (400) with offending field details
         auditServer.setErrorHandler((error, request, reply) => {
+            // Rate-limit hits are signalled by the onExceeded WARN; do not log them as
+            // errors (and avoid the resulting stack trace).
+            if (error.statusCode === 429 || error.code === 'AUDIT_RATE_LIMIT_EXCEEDED') {
+                return buildAuditResponse(reply, 429, 'dropped', 'Rate limit exceeded');
+            }
             if (error.statusCode === 400 && error.validation) {
                 const validationErrors = error.validation.map((v) => ({
                     instancePath: v.instancePath,
@@ -1529,4 +1680,4 @@ export async function setupAuditEventsApiServer() {
     }
 }
 
-export { registerAuditEventRoutes };
+export { registerAuditEventRoutes, warnIfRateLimitsLookInconsistent };
