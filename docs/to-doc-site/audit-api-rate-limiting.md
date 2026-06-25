@@ -157,7 +157,7 @@ HTTP layer accepted.
 | 300/min | **600/min** | The queue limit is **dead weight** in a single-client deployment. In a multi-client deployment it can still be reached if many clients all hit their per-IP limit, but a per-IP ceiling higher than the global ceiling is usually a sign the two numbers were set independently. |
 | 300/min | **100/min** | The queue limit becomes the effective ceiling. Useful if your downstream destination (InfluxDB, Parquet writer, etc.) cannot keep up with the HTTP-accepted rate. |
 
-**General rule:** keep `auditEvents.rateLimit.maxPerMinute <= auditEvents.queue.rateLimit.maxMessagesPerMinute`, and prefer keeping them equal unless you have a specific reason to make the queue limit tighter. If you find yourself wanting the queue limit higher than the HTTP limit, raise the HTTP limit instead.
+**General rule:** keep `auditEvents.queue.rateLimit.maxMessagesPerMinute <= auditEvents.rateLimit.maxPerMinute`, and prefer keeping them equal unless you have a specific reason to make the queue limit tighter. If you find yourself wanting the queue limit higher than the HTTP limit, raise the HTTP limit instead.
 
 ```mermaid
 flowchart LR
