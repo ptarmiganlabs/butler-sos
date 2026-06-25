@@ -2158,7 +2158,7 @@ describe('audit-events-api warnIfRateLimitsLookInconsistent', () => {
         expect(mockGlobals.logger.warn).not.toHaveBeenCalled();
     });
 
-    test('warns when queue is exactly half the HTTP limit', async () => {
+    test('does not warn when queue is exactly half the HTTP limit', async () => {
         const { warnIfRateLimitsLookInconsistent } = await import('../audit-events-api.js');
 
         // http=300, queue=150: queue is exactly http/2; trigger condition uses strict '<'
