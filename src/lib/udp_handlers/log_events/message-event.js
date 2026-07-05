@@ -175,7 +175,7 @@ export async function messageEventHandler(message, _remote) {
             // Always emit a WARN when the message type is not recognized, including a
             // sanitized preview of the first 25 chars of the raw message so operators
             // can see what strange/unexpected payload is arriving.
-            const sanitizedPreview = sanitizeField(message.toString(), 25);
+            const sanitizedPreview = sanitizeField(msgParts.join(';'), 25);
             globals.logger.warn(
                 `LOG EVENT: Log event source not recognized or not enabled. First 25 chars: "${sanitizedPreview}"`
             );
