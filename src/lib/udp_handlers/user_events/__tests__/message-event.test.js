@@ -133,6 +133,13 @@ describe('messageEventHandler', () => {
                 host: 'host1',
                 subsystem: 'https://host1',
             });
+            expect(postUserEventToMQTT).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    user_directory: 'INTERNAL',
+                    user_id: 'testuser',
+                    user_full: 'INTERNAL\\testuser',
+                })
+            );
         });
 
         test('should process qseow-proxy-session message correctly', async () => {

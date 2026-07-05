@@ -8,6 +8,7 @@ import { postUserEventToInfluxdb } from '../../influxdb/index.js';
 import { postUserEventToNewRelic } from '../../post-to-new-relic.js';
 import { postUserEventToMQTT } from '../../post-to-mqtt.js';
 import { logError } from '../../log-error.js';
+import { formatUserFields } from '../log_events/utils/common-utils.js';
 
 /**
  * Handler for UDP messages relating to user events from Qlik Sense Proxy service.
@@ -132,15 +133,7 @@ export async function messageEventHandler(message, _remote) {
                 message: sanitizeField(msg[7], 1000),
             };
 
-            // Different log events deliver QSEoW user directory/user differently.
-            // Create fields that are consistent across all log events
-            if (msgObj.user_directory !== '' && msgObj.user_id !== '') {
-                // User directory and user id available in separate fields.
-                // Combine them into a single field
-                msgObj.user_full = `${msgObj.user_directory}\\${msgObj.user_id}`;
-            } else {
-                msgObj.user_full = '';
-            }
+            formatUserFields(msgObj);
         }
 
         // Log the user event object for debugging and testing
