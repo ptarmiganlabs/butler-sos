@@ -1995,6 +1995,7 @@ describe('audit-events-api HTTP rate limit (Fastify)', () => {
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('globalViolations=1')
         );
+    });
 
     test('does not log error or stack for rate-limit hits', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
