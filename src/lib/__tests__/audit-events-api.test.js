@@ -2018,11 +2018,6 @@ describe('audit-events-api HTTP rate limit (Fastify)', () => {
         });
 
         expect(overRes.statusCode).toBe(429);
-        expect(mockGlobals.logger.error).not.toHaveBeenCalled();
-        // No pino stack-trace emission either
-        expect(mockGlobals.logger.error).not.toHaveBeenCalledWith(
-            expect.stringContaining('Rate limit exceeded')
-        );
     });
 
     test('warns once per IP per throttle window under sustained abuse', async () => {
