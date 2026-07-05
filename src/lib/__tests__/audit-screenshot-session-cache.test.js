@@ -117,7 +117,7 @@ describe('audit-screenshot-session-cache', () => {
             ...authConfig,
             sessionCache: {
                 ...authConfig.sessionCache,
-                ttlSeconds: 0.001,
+                ttlSeconds: 0.005,
             },
         };
 
