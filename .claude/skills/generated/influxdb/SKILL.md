@@ -50,8 +50,8 @@ Start here when exploring this area:
 | `bufferAuditQvdEvent` | Function | `src/lib/audit-destinations/qvd/index.js` | 95 |
 | `writeAuditEventToQvd` | Function | `src/lib/audit-destinations/qvd/index.js` | 106 |
 | `postButlerSOSMemoryUsageToInfluxdb` | Function | `src/lib/influxdb/index.js` | 48 |
-| `applyTagsToPoint3` | Function | `src/lib/influxdb/shared/utils.js` | 189 |
-| `validateUnsignedField` | Function | `src/lib/influxdb/shared/utils.js` | 368 |
+| `applyTagsToPoint3` | Function | `src/lib/influxdb/shared/utils.js` | 209 |
+| `validateUnsignedField` | Function | `src/lib/influxdb/shared/utils.js` | 388 |
 | `postButlerSOSUptimeToNewRelic` | Function | `src/lib/post-to-new-relic.js` | 556 |
 | `postLogEventToNewRelic` | Function | `src/lib/post-to-new-relic.js` | 1010 |
 | `serviceUptimeStart` | Function | `src/lib/service_uptime.js` | 37 |

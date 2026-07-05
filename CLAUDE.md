@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **butler-sos** (2849 symbols, 5346 relationships, 241 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **butler-sos** (2852 symbols, 5338 relationships, 241 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -41,7 +41,7 @@ This project is indexed by GitNexus as **butler-sos** (2849 symbols, 5346 relati
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 | Work in the Influxdb area (94 symbols) | `.claude/skills/generated/influxdb/SKILL.md` |
 | Work in the Configvis area (77 symbols) | `.claude/skills/generated/configvis/SKILL.md` |
-| Work in the V2 area (44 symbols) | `.claude/skills/generated/v2/SKILL.md` |
+| Work in the V2 area (45 symbols) | `.claude/skills/generated/v2/SKILL.md` |
 | Work in the Globals area (31 symbols) | `.claude/skills/generated/globals/SKILL.md` |
 | Work in the Cluster_29 area (21 symbols) | `.claude/skills/generated/cluster-29/SKILL.md` |
 | Work in the Cluster_19 area (20 symbols) | `.claude/skills/generated/cluster-19/SKILL.md` |
