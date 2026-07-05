@@ -148,6 +148,26 @@ export function isInfluxDbEnabled() {
 }
 
 /**
+ * Validates that all required fields are present and truthy in a message object.
+ * Logs a warning listing any missing fields when validation fails.
+ *
+ * @param {object} msg - The message object to validate
+ * @param {string[]} requiredFields - Array of field names that must be present and truthy
+ * @param {string} logPrefix - Prefix for the warning log message (e.g. 'USER EVENT V1')
+ * @returns {boolean} True if all required fields are present, false otherwise
+ */
+export function validateRequiredFields(msg, requiredFields, logPrefix) {
+    const missing = requiredFields.filter((f) => !msg[f]);
+    if (missing.length > 0) {
+        globals.logger.warn(
+            `${logPrefix}: Missing required fields [${missing.join(', ')}]: ${JSON.stringify(msg)}`
+        );
+        return false;
+    }
+    return true;
+}
+
+/**
  * Gets the InfluxDB version from configuration.
  *
  * @returns {number} The InfluxDB version (1, 2, or 3)

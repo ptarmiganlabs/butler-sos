@@ -32,6 +32,16 @@ jest.unstable_mockModule('@influxdata/influxdb-client', () => ({
 
 const mockUtils = {
     isInfluxDbEnabled: jest.fn(),
+    validateRequiredFields: jest.fn((msg, fields, logPrefix) => {
+        const missing = fields.filter((f) => !msg[f]);
+        if (missing.length > 0) {
+            mockGlobals.logger.warn(
+                `${logPrefix}: Missing required fields [${missing.join(', ')}]: ${JSON.stringify(msg)}`
+            );
+            return false;
+        }
+        return true;
+    }),
     writeToInfluxWithRetry: jest.fn(),
     writeBatchToInfluxV2: jest.fn(),
     writePointsToInfluxV2: jest.fn(),

@@ -2,6 +2,7 @@ import { Point } from '@influxdata/influxdb-client';
 import globals from '../../../globals.js';
 import {
     isInfluxDbEnabled,
+    validateRequiredFields,
     writeToInfluxWithRetry,
     writePointsToInfluxV2,
 } from '../shared/utils.js';
@@ -40,10 +41,13 @@ export async function storeUserEventV2(msg) {
     }
 
     // Validate required fields
-    if (!msg.host || !msg.command || !msg.user_directory || !msg.user_id || !msg.origin) {
-        globals.logger.warn(
-            `USER EVENT V2: Missing required fields in user event message: ${JSON.stringify(msg)}`
-        );
+    if (
+        !validateRequiredFields(
+            msg,
+            ['host', 'command', 'user_directory', 'user_id', 'origin'],
+            'USER EVENT V2'
+        )
+    ) {
         return;
     }
 

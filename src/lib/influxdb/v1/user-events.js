@@ -1,5 +1,5 @@
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, writeBatchToInfluxV1 } from '../shared/utils.js';
+import { isInfluxDbEnabled, validateRequiredFields, writeBatchToInfluxV1 } from '../shared/utils.js';
 
 /**
  * Posts a user event to InfluxDB v1.
@@ -27,10 +27,13 @@ export async function storeUserEventV1(msg) {
     }
 
     // Validate required fields
-    if (!msg.host || !msg.command || !msg.user_directory || !msg.user_id || !msg.origin) {
-        globals.logger.warn(
-            `USER EVENT V1: Missing required fields in user event message: ${JSON.stringify(msg)}`
-        );
+    if (
+        !validateRequiredFields(
+            msg,
+            ['host', 'command', 'user_directory', 'user_id', 'origin'],
+            'USER EVENT V1'
+        )
+    ) {
         return;
     }
 
