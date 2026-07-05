@@ -1,11 +1,11 @@
 ---
 name: v2
-description: "Skill for the V2 area of butler-sos. 44 symbols across 26 files."
+description: "Skill for the V2 area of butler-sos. 45 symbols across 26 files."
 ---
 
 # V2
 
-44 symbols | 26 files | Cohesion: 70%
+45 symbols | 26 files | Cohesion: 70%
 
 ## When to Use
 
@@ -17,7 +17,7 @@ description: "Skill for the V2 area of butler-sos. 44 symbols across 26 files."
 
 | File | Symbols |
 |------|---------|
-| `src/lib/influxdb/shared/utils.js` | getFormattedTime, processAppDocuments, isInfluxDbEnabled, getInfluxDbVersion, sanitizeInfluxTagValue (+6) |
+| `src/lib/influxdb/shared/utils.js` | getFormattedTime, processAppDocuments, isInfluxDbEnabled, validateRequiredFields, getInfluxDbVersion (+7) |
 | `src/lib/influxdb/factory.js` | postHealthMetricsToInfluxdb, postProxySessionsToInfluxdb, postButlerSOSMemoryUsageToInfluxdb, postUserEventToInfluxdb, storeRejectedEventCountInfluxDB (+1) |
 | `src/lib/error-tracker.js` | incrementError, _isInfluxDbErrorTrackingEnabled, _writeErrorToInfluxDB |
 | `src/lib/error-categorizer.js` | getErrorCategory, getErrorMetadata |
@@ -54,14 +54,14 @@ Start here when exploring this area:
 | `getFormattedTime` | Function | `src/lib/influxdb/shared/utils.js` | 14 |
 | `processAppDocuments` | Function | `src/lib/influxdb/shared/utils.js` | 86 |
 | `isInfluxDbEnabled` | Function | `src/lib/influxdb/shared/utils.js` | 139 |
-| `getInfluxDbVersion` | Function | `src/lib/influxdb/shared/utils.js` | 154 |
-| `sanitizeInfluxTagValue` | Function | `src/lib/influxdb/shared/utils.js` | 172 |
-| `writeToInfluxWithRetry` | Function | `src/lib/influxdb/shared/utils.js` | 225 |
-| `chunkArray` | Function | `src/lib/influxdb/shared/utils.js` | 341 |
-| `writeBatchToInfluxV1` | Function | `src/lib/influxdb/shared/utils.js` | 408 |
-| `writePointsToInfluxV2` | Function | `src/lib/influxdb/shared/utils.js` | 484 |
-| `writeBatchToInfluxV2` | Function | `src/lib/influxdb/shared/utils.js` | 516 |
-| `writeBatchToInfluxV3` | Function | `src/lib/influxdb/shared/utils.js` | 610 |
+| `validateRequiredFields` | Function | `src/lib/influxdb/shared/utils.js` | 158 |
+| `getInfluxDbVersion` | Function | `src/lib/influxdb/shared/utils.js` | 174 |
+| `sanitizeInfluxTagValue` | Function | `src/lib/influxdb/shared/utils.js` | 192 |
+| `writeToInfluxWithRetry` | Function | `src/lib/influxdb/shared/utils.js` | 245 |
+| `chunkArray` | Function | `src/lib/influxdb/shared/utils.js` | 361 |
+| `writeBatchToInfluxV1` | Function | `src/lib/influxdb/shared/utils.js` | 428 |
+| `writePointsToInfluxV2` | Function | `src/lib/influxdb/shared/utils.js` | 504 |
+| `writeBatchToInfluxV2` | Function | `src/lib/influxdb/shared/utils.js` | 536 |
 
 ## Execution Flows
 
@@ -71,12 +71,12 @@ Start here when exploring this area:
 | `WriteAuditEventToQvd → GetErrorMessage` | cross_community | 7 |
 | `PostHealthMetricsToInfluxdbV1 → GetErrorStats` | cross_community | 6 |
 | `StoreLogEventV1 → GetErrorStats` | cross_community | 6 |
-| `StoreUserEventV1 → GetErrorStats` | cross_community | 6 |
 | `SetupHealthMetricsTimer → GetErrorStats` | cross_community | 6 |
 | `StoreButlerMemoryV1 → GetErrorStats` | cross_community | 6 |
 | `StoreSessionsV1 → GetErrorStats` | cross_community | 6 |
 | `PostButlerSOSMemoryUsageToInfluxdbV3 → GetErrorStats` | cross_community | 6 |
 | `PostProxySessionsToInfluxdbV3 → GetErrorStats` | cross_community | 6 |
+| `StoreLogEventV2 → GetErrorStats` | cross_community | 6 |
 
 ## Connected Areas
 

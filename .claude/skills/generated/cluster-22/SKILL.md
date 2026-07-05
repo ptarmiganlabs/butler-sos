@@ -37,6 +37,12 @@ Start here when exploring this area:
 | `drawText` | Function | `src/lib/audit-screenshot-metadata-image.js` | 235 |
 | `measureTextWidthPx` | Function | `src/lib/audit-screenshot-metadata-image.js` | 249 |
 
+## Execution Flows
+
+| Flow | Type | Steps |
+|------|------|-------|
+| `AddTextHeaderToPng → SetPixel` | intra_community | 4 |
+
 ## How to Explore
 
 1. `gitnexus_context({name: "addTextHeaderToPng"})` — see callers and callees

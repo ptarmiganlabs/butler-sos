@@ -45,6 +45,7 @@ Start here when exploring this area:
 | `WriteAuditEventInfluxV2 → ReadNonEmptyString` | cross_community | 4 |
 | `WriteAuditEventInfluxV1 → ReadNonEmptyString` | cross_community | 4 |
 | `WriteAuditEventInfluxV3 → ReadNonEmptyString` | cross_community | 4 |
+| `WriteAuditEventInfluxV2 → ReadString` | cross_community | 3 |
 
 ## Connected Areas
 
