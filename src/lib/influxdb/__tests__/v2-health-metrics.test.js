@@ -27,6 +27,7 @@ const mockGlobals = {
     influx: { getWriteApi: jest.fn(() => mockWriteApi) },
     hostInfo: { hostname: 'test-host' },
     getErrorMessage: jest.fn((err) => err.message),
+    errorTracker: { incrementError: jest.fn() },
 };
 
 jest.unstable_mockModule('../../../globals.js', () => ({ default: mockGlobals }));
@@ -258,5 +259,46 @@ describe('v2/health-metrics', () => {
         await storeHealthMetricsV2('server1', 'host1', body, {});
 
         expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+    });
+
+    describe('Error handling', () => {
+        test('should catch and log errors without throwing', async () => {
+            const body = {
+                version: '1.0',
+                started: '2024-01-01',
+                mem: { committed: 1000, allocated: 800, free: 200 },
+                apps: {
+                    active_docs: [],
+                    loaded_docs: [],
+                    in_memory_docs: [],
+                    calls: 10,
+                    selections: 5,
+                },
+                cpu: { total: 50 },
+                session: { active: 5, total: 10 },
+                users: { active: 3, total: 8 },
+                cache: { hits: 100, lookups: 120, added: 20, replaced: 5, bytes_added: 1024 },
+                saturated: false,
+            };
+
+            // Mock writeToInfluxWithRetry to throw an error
+            utils.writeToInfluxWithRetry.mockRejectedValue(new Error('Write failed'));
+
+            // Should not throw
+            await expect(storeHealthMetricsV2('server1', 'host1', body, {})).resolves.not.toThrow();
+
+            // Verify error was logged
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error saving health data')
+            );
+
+            // Verify error was tracked
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'INFLUXDB_V2_WRITE',
+                'server1',
+                { module: 'HEALTH_METRICS' },
+                expect.any(Error)
+            );
+        });
     });
 });

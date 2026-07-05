@@ -24,6 +24,7 @@ const mockGlobals = {
     influx: { getWriteApi: jest.fn(() => mockWriteApi) },
     hostInfo: { hostname: 'test-host' },
     getErrorMessage: jest.fn((err) => err.message),
+    errorTracker: { incrementError: jest.fn() },
     udpQueueManagerUserActivity: null,
     udpQueueManagerLogEvents: null,
 };
@@ -367,6 +368,157 @@ describe('v2/queue-metrics', () => {
                 100
             );
             expect(mockQueueManager.clearMetrics).toHaveBeenCalled();
+        });
+    });
+
+    describe('Error handling', () => {
+        test('storeUserEventQueueMetricsV2 should catch and log errors without throwing', async () => {
+            // Setup valid metrics data
+            mockQueueManager.getMetrics.mockReturnValue({
+                queueSize: 10,
+                queueMaxSize: 1000,
+                queueUtilizationPct: 1.0,
+                queuePending: 0,
+                messagesReceived: 100,
+                messagesQueued: 90,
+                messagesProcessed: 85,
+                messagesFailed: 5,
+                messagesDroppedTotal: 0,
+                messagesDroppedRateLimit: 0,
+                messagesDroppedQueueFull: 0,
+                messagesDroppedSize: 0,
+                processingTimeAvgMs: 10.5,
+                processingTimeP95Ms: 25.0,
+                processingTimeMaxMs: 50.0,
+                rateLimitCurrent: 0,
+                backpressureActive: 0,
+            });
+
+            globals.config.get.mockImplementation((path) => {
+                if (path.includes('org')) return 'test-org';
+                if (path.includes('bucket')) return 'test-bucket';
+                if (path === 'Butler-SOS.userEvents.udpServerConfig.queueMetrics.influxdb.measurementName')
+                    return 'user_events_queue';
+                if (path === 'Butler-SOS.userEvents.udpServerConfig.queueMetrics.influxdb.tags')
+                    return [{ name: 'env', value: 'prod' }];
+                if (path === 'Butler-SOS.userEvents.udpServerConfig.queueMetrics.influxdb.enable')
+                    return true;
+                if (path === 'Butler-SOS.influxdbConfig.maxBatchSize') return 100;
+                return undefined;
+            });
+
+            // Mock writeBatchToInfluxV2 to throw an error
+            utils.writeBatchToInfluxV2.mockRejectedValue(new Error('Write failed'));
+
+            // Should not throw
+            await expect(storeUserEventQueueMetricsV2()).resolves.not.toThrow();
+
+            // Verify error was logged
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error saving queue metrics')
+            );
+
+            // Verify error was tracked
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'INFLUXDB_V2_WRITE',
+                'test-host',
+                { module: 'QUEUE_METRICS' },
+                expect.any(Error)
+            );
+        });
+
+        test('storeLogEventQueueMetricsV2 should catch and log errors without throwing', async () => {
+            // Setup valid metrics data
+            mockQueueManager.getMetrics.mockReturnValue({
+                queueSize: 10,
+                queueMaxSize: 1000,
+                queueUtilizationPct: 1.0,
+                queuePending: 0,
+                messagesReceived: 100,
+                messagesQueued: 90,
+                messagesProcessed: 85,
+                messagesFailed: 5,
+                messagesDroppedTotal: 0,
+                messagesDroppedRateLimit: 0,
+                messagesDroppedQueueFull: 0,
+                messagesDroppedSize: 0,
+                processingTimeAvgMs: 10.5,
+                processingTimeP95Ms: 25.0,
+                processingTimeMaxMs: 50.0,
+                rateLimitCurrent: 0,
+                backpressureActive: 0,
+            });
+
+            globals.config.get.mockImplementation((path) => {
+                if (path.includes('org')) return 'test-org';
+                if (path.includes('bucket')) return 'test-bucket';
+                if (path === 'Butler-SOS.logEvents.udpServerConfig.queueMetrics.influxdb.measurementName')
+                    return 'log_events_queue';
+                if (path === 'Butler-SOS.logEvents.udpServerConfig.queueMetrics.influxdb.tags')
+                    return [{ name: 'env', value: 'prod' }];
+                if (path === 'Butler-SOS.logEvents.udpServerConfig.queueMetrics.influxdb.enable')
+                    return true;
+                if (path === 'Butler-SOS.influxdbConfig.maxBatchSize') return 100;
+                return undefined;
+            });
+
+            // Mock writeBatchToInfluxV2 to throw an error
+            utils.writeBatchToInfluxV2.mockRejectedValue(new Error('Write failed'));
+
+            // Should not throw
+            await expect(storeLogEventQueueMetricsV2()).resolves.not.toThrow();
+
+            // Verify error was logged
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error saving queue metrics')
+            );
+        });
+
+        test('storeAuditEventQueueMetricsV2 should catch and log errors without throwing', async () => {
+            // Setup valid metrics data
+            mockQueueManager.getMetrics.mockReturnValue({
+                queueSize: 10,
+                queueMaxSize: 1000,
+                queueUtilizationPct: 1.0,
+                queuePending: 0,
+                messagesReceived: 100,
+                messagesQueued: 90,
+                messagesProcessed: 85,
+                messagesFailed: 5,
+                messagesDroppedTotal: 0,
+                messagesDroppedRateLimit: 0,
+                messagesDroppedQueueFull: 0,
+                messagesDroppedSize: 0,
+                processingTimeAvgMs: 10.5,
+                processingTimeP95Ms: 25.0,
+                processingTimeMaxMs: 50.0,
+                rateLimitCurrent: 0,
+                backpressureActive: 0,
+            });
+
+            globals.config.get.mockImplementation((path) => {
+                if (path.includes('org')) return 'test-org';
+                if (path.includes('bucket')) return 'test-bucket';
+                if (path === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.measurementName')
+                    return 'audit_events_queue';
+                if (path === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.tags')
+                    return [{ name: 'env', value: 'prod' }];
+                if (path === 'Butler-SOS.auditEvents.queue.queueMetrics.influxdb.enable')
+                    return true;
+                if (path === 'Butler-SOS.influxdbConfig.maxBatchSize') return 100;
+                return undefined;
+            });
+
+            // Mock writeBatchToInfluxV2 to throw an error
+            utils.writeBatchToInfluxV2.mockRejectedValue(new Error('Write failed'));
+
+            // Should not throw
+            await expect(storeAuditEventQueueMetricsV2()).resolves.not.toThrow();
+
+            // Verify error was logged
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error saving queue metrics')
+            );
         });
     });
 });

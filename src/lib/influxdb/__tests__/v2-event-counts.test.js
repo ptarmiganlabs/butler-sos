@@ -40,6 +40,7 @@ const mockGlobals = {
         getRejectedLogEvents: jest.fn(),
     },
     getErrorMessage: jest.fn((err) => err.message),
+    errorTracker: { incrementError: jest.fn() },
 };
 
 jest.unstable_mockModule('../../../globals.js', () => ({ default: mockGlobals }));
@@ -212,6 +213,59 @@ describe('v2/event-counts', () => {
 
             expect(globals.logger.verbose).toHaveBeenCalledWith(
                 'REJECTED EVENT COUNT V2: Sent rejected event count data to InfluxDB'
+            );
+        });
+    });
+
+    describe('Error handling', () => {
+        test('storeEventCountV2 should catch and log errors without throwing', async () => {
+            globals.udpEvents.getLogEvents.mockResolvedValue([
+                { source: 'qseow-engine', host: 'host1', subsystem: 'Core', counter: 5 },
+            ]);
+            globals.udpEvents.getUserEvents.mockResolvedValue([]);
+
+            // Mock writeBatchToInfluxV2 to throw an error
+            utils.writeBatchToInfluxV2.mockRejectedValue(new Error('Write failed'));
+
+            // Should not throw
+            await expect(storeEventCountV2()).resolves.not.toThrow();
+
+            // Verify error was logged
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error saving event counts')
+            );
+
+            // Verify error was tracked
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'INFLUXDB_V2_WRITE',
+                '',
+                { module: 'EVENT_COUNTS' },
+                expect.any(Error)
+            );
+        });
+
+        test('storeRejectedEventCountV2 should catch and log errors without throwing', async () => {
+            globals.rejectedEvents.getRejectedLogEvents.mockResolvedValue([
+                { source: 'qseow-engine', counter: 5 },
+            ]);
+
+            // Mock writeBatchToInfluxV2 to throw an error
+            utils.writeBatchToInfluxV2.mockRejectedValue(new Error('Write failed'));
+
+            // Should not throw
+            await expect(storeRejectedEventCountV2()).resolves.not.toThrow();
+
+            // Verify error was logged
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error saving rejected event counts')
+            );
+
+            // Verify error was tracked
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'INFLUXDB_V2_WRITE',
+                '',
+                { module: 'REJECTED_EVENT_COUNTS' },
+                expect.any(Error)
             );
         });
     });

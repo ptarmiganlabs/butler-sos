@@ -69,7 +69,7 @@ Start here when exploring this area:
 |------|-------------|
 | Influxdb | 4 calls |
 | Globals | 3 calls |
-| Cluster_52 | 2 calls |
+| Cluster_51 | 2 calls |
 | Cluster_29 | 1 calls |
 | Cluster_20 | 1 calls |
 | V2 | 1 calls |

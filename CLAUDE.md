@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **butler-sos** (2852 symbols, 5338 relationships, 241 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **butler-sos** (2919 symbols, 5442 relationships, 247 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -39,22 +39,22 @@ This project is indexed by GitNexus as **butler-sos** (2852 symbols, 5338 relati
 | Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
 | Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-| Work in the Influxdb area (94 symbols) | `.claude/skills/generated/influxdb/SKILL.md` |
+| Work in the Influxdb area (82 symbols) | `.claude/skills/generated/influxdb/SKILL.md` |
 | Work in the Configvis area (77 symbols) | `.claude/skills/generated/configvis/SKILL.md` |
-| Work in the V2 area (45 symbols) | `.claude/skills/generated/v2/SKILL.md` |
-| Work in the Globals area (31 symbols) | `.claude/skills/generated/globals/SKILL.md` |
+| Work in the V2 area (46 symbols) | `.claude/skills/generated/v2/SKILL.md` |
+| Work in the Globals area (36 symbols) | `.claude/skills/generated/globals/SKILL.md` |
 | Work in the Cluster_29 area (21 symbols) | `.claude/skills/generated/cluster-29/SKILL.md` |
 | Work in the Cluster_19 area (20 symbols) | `.claude/skills/generated/cluster-19/SKILL.md` |
-| Work in the Cluster_52 area (16 symbols) | `.claude/skills/generated/cluster-52/SKILL.md` |
+| Work in the Cluster_51 area (16 symbols) | `.claude/skills/generated/cluster-51/SKILL.md` |
 | Work in the V1 area (14 symbols) | `.claude/skills/generated/v1/SKILL.md` |
-| Work in the Handlers area (13 symbols) | `.claude/skills/generated/handlers/SKILL.md` |
+| Work in the Handlers area (14 symbols) | `.claude/skills/generated/handlers/SKILL.md` |
+| Work in the Util area (13 symbols) | `.claude/skills/generated/util/SKILL.md` |
 | Work in the Json area (10 symbols) | `.claude/skills/generated/json/SKILL.md` |
+| Work in the Cluster_37 area (10 symbols) | `.claude/skills/generated/cluster-37/SKILL.md` |
 | Work in the Cluster_25 area (8 symbols) | `.claude/skills/generated/cluster-25/SKILL.md` |
-| Work in the Cluster_35 area (8 symbols) | `.claude/skills/generated/cluster-35/SKILL.md` |
 | Work in the Cluster_16 area (7 symbols) | `.claude/skills/generated/cluster-16/SKILL.md` |
-| Work in the Util area (7 symbols) | `.claude/skills/generated/util/SKILL.md` |
 | Work in the Cluster_22 area (7 symbols) | `.claude/skills/generated/cluster-22/SKILL.md` |
-| Work in the Cluster_37 area (7 symbols) | `.claude/skills/generated/cluster-37/SKILL.md` |
+| Work in the Cluster_39 area (7 symbols) | `.claude/skills/generated/cluster-39/SKILL.md` |
 | Work in the Cluster_31 area (6 symbols) | `.claude/skills/generated/cluster-31/SKILL.md` |
 | Work in the Log area (6 symbols) | `.claude/skills/generated/log/SKILL.md` |
 | Work in the Get area (6 symbols) | `.claude/skills/generated/get/SKILL.md` |

@@ -22,6 +22,7 @@ const mockGlobals = {
     config: { get: jest.fn(), has: jest.fn() },
     influx: { getWriteApi: jest.fn(() => mockWriteApi) },
     getErrorMessage: jest.fn((err) => err.message),
+    errorTracker: { incrementError: jest.fn() },
 };
 
 jest.unstable_mockModule('../../../globals.js', () => ({ default: mockGlobals }));
@@ -237,5 +238,36 @@ describe('v2/user-events', () => {
 
             expect(mockPoint.tag).toHaveBeenCalledWith('event_action', command);
         }
+    });
+
+    describe('Error handling', () => {
+        test('should catch and log errors without throwing', async () => {
+            const msg = {
+                host: 'host1',
+                command: 'OpenApp',
+                user_directory: 'DOMAIN',
+                user_id: 'user1',
+                origin: 'QlikSense',
+            };
+
+            // Mock writeToInfluxWithRetry to throw an error
+            utils.writeToInfluxWithRetry.mockRejectedValue(new Error('Write failed'));
+
+            // Should not throw
+            await expect(storeUserEventV2(msg)).resolves.not.toThrow();
+
+            // Verify error was logged
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error saving user event')
+            );
+
+            // Verify error was tracked
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'INFLUXDB_V2_WRITE',
+                'host1',
+                { module: 'USER_EVENTS' },
+                expect.any(Error)
+            );
+        });
     });
 });

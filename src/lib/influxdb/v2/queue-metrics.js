@@ -41,30 +41,42 @@ function buildPointV2(data) {
  *     written (or when the operation has been skipped).
  */
 async function storeQueueMetricsV2(queueType, logPrefix) {
-    const data = await prepareQueueMetricData(queueType, logPrefix);
-    if (!data) {
-        return;
+    try {
+        const data = await prepareQueueMetricData(queueType, logPrefix);
+        if (!data) {
+            return;
+        }
+
+        const point = buildPointV2(data);
+
+        const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
+        const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
+
+        // Write to InfluxDB with retry logic
+        await writeBatchToInfluxV2(
+            [point],
+            org,
+            bucketName,
+            data.config.description,
+            data.config.bucketKey,
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+        );
+
+        globals.logger.verbose(`${logPrefix}: Sent queue metrics data to InfluxDB`);
+
+        // Clear metrics after successful write
+        await data.queueManager.clearMetrics();
+    } catch (err) {
+        await globals.errorTracker.incrementError(
+            'INFLUXDB_V2_WRITE',
+            globals.hostInfo.hostname,
+            { module: 'QUEUE_METRICS' },
+            err
+        );
+        globals.logger.error(
+            `${logPrefix}: Error saving queue metrics: ${globals.getErrorMessage(err)}`
+        );
     }
-
-    const point = buildPointV2(data);
-
-    const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
-    const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
-
-    // Write to InfluxDB with retry logic
-    await writeBatchToInfluxV2(
-        [point],
-        org,
-        bucketName,
-        data.config.description,
-        data.config.bucketKey,
-        globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
-    );
-
-    globals.logger.verbose(`${logPrefix}: Sent queue metrics data to InfluxDB`);
-
-    // Clear metrics after successful write
-    await data.queueManager.clearMetrics();
 }
 
 /**

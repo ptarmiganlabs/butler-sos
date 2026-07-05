@@ -17,49 +17,61 @@ import { isInfluxDbEnabled, writeBatchToInfluxV2 } from '../shared/utils.js';
  * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
  */
 export async function storeButlerMemoryV2(memory) {
-    globals.logger.debug(`MEMORY USAGE V2: Memory usage ${JSON.stringify(memory, null, 2)}`);
+    try {
+        globals.logger.debug(`MEMORY USAGE V2: Memory usage ${JSON.stringify(memory, null, 2)}`);
 
-    // Check if InfluxDB v2 is enabled
-    if (!isInfluxDbEnabled()) {
-        return;
+        // Check if InfluxDB v2 is enabled
+        if (!isInfluxDbEnabled()) {
+            return;
+        }
+
+        // Validate input
+        if (!memory || typeof memory !== 'object') {
+            globals.logger.warn('MEMORY USAGE V2: Invalid memory data provided');
+            return;
+        }
+
+        const butlerVersion = globals.appVersion;
+        const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
+        const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
+
+        // Create point using v2 Point class
+        const point = new Point('butlersos_memory_usage')
+            .tag('butler_sos_instance', memory.instanceTag)
+            .tag('version', butlerVersion)
+            .floatField('heap_used', memory.heapUsedMByte)
+            .floatField('heap_total', memory.heapTotalMByte)
+            .floatField('external', memory.externalMemoryMByte)
+            .floatField('process_memory', memory.processMemoryMByte);
+
+        globals.logger.silly(
+            `MEMORY USAGE V2: Influxdb datapoint for Butler SOS memory usage: ${JSON.stringify(
+                point,
+                null,
+                2
+            )}`
+        );
+
+        // Write to InfluxDB with retry logic
+        await writeBatchToInfluxV2(
+            [point],
+            org,
+            bucketName,
+            'Memory usage metrics',
+            '',
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+        );
+
+        globals.logger.verbose('MEMORY USAGE V2: Sent Butler SOS memory usage data to InfluxDB');
+    } catch (err) {
+        await globals.errorTracker.incrementError(
+            'INFLUXDB_V2_WRITE',
+            '',
+            { module: 'BUTLER_MEMORY' },
+            err
+        );
+        globals.logger.error(
+            `MEMORY USAGE V2: Error saving memory usage data: ${globals.getErrorMessage(err)}`
+        );
     }
-
-    // Validate input
-    if (!memory || typeof memory !== 'object') {
-        globals.logger.warn('MEMORY USAGE V2: Invalid memory data provided');
-        return;
-    }
-
-    const butlerVersion = globals.appVersion;
-    const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
-    const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
-
-    // Create point using v2 Point class
-    const point = new Point('butlersos_memory_usage')
-        .tag('butler_sos_instance', memory.instanceTag)
-        .tag('version', butlerVersion)
-        .floatField('heap_used', memory.heapUsedMByte)
-        .floatField('heap_total', memory.heapTotalMByte)
-        .floatField('external', memory.externalMemoryMByte)
-        .floatField('process_memory', memory.processMemoryMByte);
-
-    globals.logger.silly(
-        `MEMORY USAGE V2: Influxdb datapoint for Butler SOS memory usage: ${JSON.stringify(
-            point,
-            null,
-            2
-        )}`
-    );
-
-    // Write to InfluxDB with retry logic
-    await writeBatchToInfluxV2(
-        [point],
-        org,
-        bucketName,
-        'Memory usage metrics',
-        '',
-        globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
-    );
-
-    globals.logger.verbose('MEMORY USAGE V2: Sent Butler SOS memory usage data to InfluxDB');
 }

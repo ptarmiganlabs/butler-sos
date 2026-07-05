@@ -1,11 +1,11 @@
 ---
 name: influxdb
-description: "Skill for the Influxdb area of butler-sos. 94 symbols across 38 files."
+description: "Skill for the Influxdb area of butler-sos. 82 symbols across 32 files."
 ---
 
 # Influxdb
 
-94 symbols | 38 files | Cohesion: 53%
+82 symbols | 32 files | Cohesion: 52%
 
 ## When to Use
 
@@ -18,15 +18,15 @@ description: "Skill for the Influxdb area of butler-sos. 94 symbols across 38 fi
 | File | Symbols |
 |------|---------|
 | `src/lib/audit-destinations/influxdb/buffer.js` | getAuditDestinationEnabled, getAuditInfluxConfig, stopFlushTimer, ensureFlushTimer, requestFlush (+11) |
-| `src/lib/post-to-new-relic.js` | postButlerSOSUptimeToNewRelic, sendNRLogEventYesNo, postLogEventToNewRelic, getFormattedTime, postHealthMetricsToNewRelic (+2) |
 | `src/lib/audit-destinations/influxdb/init.js` | isAuditApiEnabled, isAuditDestinationEnabled, getAuditInfluxConfig, initAuditInfluxDestination, ensureInfluxV1DatabaseExists (+1) |
-| `src/lib/influxdb/index.js` | postButlerSOSMemoryUsageToInfluxdb, postHealthMetricsToInfluxdb, setupUdpQueueMetricsStorage, postProxySessionsToInfluxdb, postUserEventToInfluxdb |
-| `src/lib/audit-screenshots.js` | generateXrfkey, createQlikMutualTlsAgent, requestQpsTicket, deleteQpsSession, debugLog |
-| `src/lib/proxysessionmetrics.js` | prepUserSessionMetrics, setupUserSessionsTimer, getProxySessionStatsFromSense |
+| `src/lib/post-to-new-relic.js` | postButlerSOSUptimeToNewRelic, sendNRLogEventYesNo, postLogEventToNewRelic, getFormattedTime, postHealthMetricsToNewRelic (+1) |
+| `src/lib/influxdb/index.js` | postButlerSOSMemoryUsageToInfluxdb, setupUdpQueueMetricsStorage, postHealthMetricsToInfluxdb, postProxySessionsToInfluxdb |
+| `src/lib/influxdb/shared/utils.js` | getFormattedTime, processAppDocuments, applyTagsToPoint3, validateUnsignedField |
 | `src/lib/telemetry.js` | safeGetConfig, safeGetProperty, callRemoteURL |
-| `src/lib/prom-client.js` | saveHealthMetricsToPrometheus, setupPromClient, saveUserSessionMetricsToPrometheus |
-| `src/lib/influxdb/factory.js` | storeEventCountInfluxDB, postUserEventQueueMetricsToInfluxdb, postLogEventQueueMetricsToInfluxdb |
-| `src/lib/udp-event.js` | getLogEvents, getUserEvents, addUserEvent |
+| `src/lib/prom-client.js` | setupPromClient, saveHealthMetricsToPrometheus, saveUserSessionMetricsToPrometheus |
+| `src/lib/proxysessionmetrics.js` | setupUserSessionsTimer, prepUserSessionMetrics, getProxySessionStatsFromSense |
+| `src/lib/influxdb/factory.js` | postHealthMetricsToInfluxdb, postUserEventQueueMetricsToInfluxdb, postLogEventQueueMetricsToInfluxdb |
+| `src/lib/audit-destinations/influxdb/shared/client.js` | getConfigKey, getAuditInfluxConfig, getAuditInfluxClient |
 
 ## Entry Points
 
@@ -50,18 +50,18 @@ Start here when exploring this area:
 | `bufferAuditQvdEvent` | Function | `src/lib/audit-destinations/qvd/index.js` | 95 |
 | `writeAuditEventToQvd` | Function | `src/lib/audit-destinations/qvd/index.js` | 106 |
 | `postButlerSOSMemoryUsageToInfluxdb` | Function | `src/lib/influxdb/index.js` | 48 |
-| `applyTagsToPoint3` | Function | `src/lib/influxdb/shared/utils.js` | 209 |
-| `validateUnsignedField` | Function | `src/lib/influxdb/shared/utils.js` | 388 |
 | `postButlerSOSUptimeToNewRelic` | Function | `src/lib/post-to-new-relic.js` | 556 |
 | `postLogEventToNewRelic` | Function | `src/lib/post-to-new-relic.js` | 1010 |
 | `serviceUptimeStart` | Function | `src/lib/service_uptime.js` | 37 |
 | `callRemoteURL` | Function | `src/lib/telemetry.js` | 58 |
-| `createCertificateOptions` | Function | `src/lib/cert-utils.js` | 20 |
-| `getCertificates` | Function | `src/lib/cert-utils.js` | 63 |
-| `getHealthStatsFromSense` | Function | `src/lib/healthmetrics.js` | 31 |
-| `postHealthMetricsToInfluxdb` | Function | `src/lib/influxdb/index.js` | 28 |
-| `postHealthMetricsToNewRelic` | Function | `src/lib/post-to-new-relic.js` | 69 |
-| `saveHealthMetricsToPrometheus` | Function | `src/lib/prom-client.js` | 255 |
+| `setupHealthMetricsTimer` | Function | `src/lib/healthmetrics.js` | 130 |
+| `setupUdpQueueMetricsStorage` | Function | `src/lib/influxdb/index.js` | 129 |
+| `setupPromClient` | Function | `src/lib/prom-client.js` | 51 |
+| `setupUserSessionsTimer` | Function | `src/lib/proxysessionmetrics.js` | 383 |
+| `getServerHeaders` | Function | `src/lib/serverheaders.js` | 15 |
+| `getServerTags` | Function | `src/lib/servertags.js` | 20 |
+| `bufferAuditInfluxEvent` | Function | `src/lib/audit-destinations/influxdb/buffer.js` | 495 |
+| `_resetState` | Function | `src/lib/audit-destinations/influxdb/buffer.js` | 549 |
 
 ## Execution Flows
 
@@ -82,14 +82,14 @@ Start here when exploring this area:
 
 | Area | Connections |
 |------|-------------|
-| V2 | 44 calls |
-| Globals | 38 calls |
-| Cluster_35 | 11 calls |
+| Globals | 35 calls |
+| V2 | 34 calls |
+| Cluster_37 | 8 calls |
 | V1 | 6 calls |
 | Cluster_13 | 4 calls |
-| Cluster_50 | 3 calls |
-| Cluster_52 | 2 calls |
+| Cluster_51 | 2 calls |
 | Cluster_16 | 2 calls |
+| Cluster_20 | 1 calls |
 
 ## How to Explore
 

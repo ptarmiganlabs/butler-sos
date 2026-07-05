@@ -1,9 +1,9 @@
 ---
-name: cluster-52
-description: "Skill for the Cluster_52 area of butler-sos. 16 symbols across 4 files."
+name: cluster-51
+description: "Skill for the Cluster_51 area of butler-sos. 16 symbols across 4 files."
 ---
 
-# Cluster_52
+# Cluster_51
 
 16 symbols | 4 files | Cohesion: 85%
 
@@ -11,7 +11,7 @@ description: "Skill for the Cluster_52 area of butler-sos. 16 symbols across 4 f
 
 - Working with code in `src/`
 - Understanding how isIPv4, parseAllowedSources, isIpAllowed work
-- Modifying cluster_52-related functionality
+- Modifying cluster_51-related functionality
 
 ## Key Files
 
@@ -68,12 +68,11 @@ Start here when exploring this area:
 
 | Area | Connections |
 |------|-------------|
-| Cluster_35 | 2 calls |
-| Handlers | 1 calls |
-| Influxdb | 1 calls |
+| Cluster_37 | 2 calls |
+| Handlers | 2 calls |
 
 ## How to Explore
 
 1. `gitnexus_context({name: "isIPv4"})` — see callers and callees
-2. `gitnexus_query({query: "cluster_52"})` — find related execution flows
+2. `gitnexus_query({query: "cluster_51"})` — find related execution flows
 3. Read key files listed above for implementation details

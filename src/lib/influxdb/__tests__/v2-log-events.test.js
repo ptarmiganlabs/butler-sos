@@ -24,6 +24,7 @@ const mockGlobals = {
     config: { get: jest.fn(), has: jest.fn() },
     influx: { getWriteApi: jest.fn(() => mockWriteApi) },
     getErrorMessage: jest.fn((err) => err.message),
+    errorTracker: { incrementError: jest.fn() },
 };
 
 jest.unstable_mockModule('../../../globals.js', () => ({ default: mockGlobals }));
@@ -373,5 +374,61 @@ describe('v2/log-events', () => {
         expect(globals.logger.verbose).toHaveBeenCalledWith(
             'LOG EVENT V2: Sent log event data to InfluxDB'
         );
+    });
+
+    describe('Error handling', () => {
+        test('should catch and log errors without throwing', async () => {
+            const msg = {
+                host: 'host1',
+                source: 'qseow-engine',
+                level: 'INFO',
+                log_row: '1',
+                subsystem: 'Core',
+                message: 'Test',
+            };
+
+            // Mock writeBatchToInfluxV2 to throw an error
+            utils.writeBatchToInfluxV2.mockRejectedValue(new Error('Write failed'));
+
+            // Should not throw
+            await expect(storeLogEventV2(msg)).resolves.not.toThrow();
+
+            // Verify error was logged
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error saving log event')
+            );
+
+            // Verify error was tracked
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'INFLUXDB_V2_WRITE',
+                'host1',
+                { module: 'LOG_EVENTS' },
+                expect.any(Error)
+            );
+        });
+
+        test('should handle errors during point creation', async () => {
+            const msg = {
+                host: 'host1',
+                source: 'qseow-engine',
+                level: 'INFO',
+                log_row: '1',
+                subsystem: 'Core',
+                message: 'Test',
+            };
+
+            // Mock Point constructor to throw
+            Point.mockImplementationOnce(() => {
+                throw new Error('Point creation failed');
+            });
+
+            // Should not throw
+            await expect(storeLogEventV2(msg)).resolves.not.toThrow();
+
+            // Verify error was logged
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error saving log event')
+            );
+        });
     });
 });
