@@ -23,6 +23,7 @@ const mockGlobals = {
     influx: { getWriteApi: jest.fn(() => mockWriteApi) },
     influxWriteApi: [{ serverName: 'server1' }],
     getErrorMessage: jest.fn((err) => err.message),
+    errorTracker: { incrementError: jest.fn() },
 };
 
 jest.unstable_mockModule('../../../globals.js', () => ({ default: mockGlobals }));
@@ -190,5 +191,37 @@ describe('v2/sessions', () => {
             datapoints
         );
         expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+    });
+
+    describe('Error handling', () => {
+        test('should catch and log errors without throwing', async () => {
+            const userSessions = {
+                serverName: 'server1',
+                host: 'host1',
+                virtualProxy: 'vp1',
+                sessionCount: 5,
+                uniqueUserList: 'user1,user2',
+                datapointInfluxdb: [mockPoint],
+            };
+
+            // Mock writeToInfluxWithRetry to throw an error
+            utils.writeToInfluxWithRetry.mockRejectedValue(new Error('Write failed'));
+
+            // Should not throw
+            await expect(storeSessionsV2(userSessions)).resolves.not.toThrow();
+
+            // Verify error was logged
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error saving session data')
+            );
+
+            // Verify error was tracked
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'INFLUXDB_V2_WRITE',
+                'host1',
+                { module: 'PROXY_SESSIONS' },
+                expect.any(Error)
+            );
+        });
     });
 });

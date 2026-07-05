@@ -28,55 +28,67 @@ import {
  * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
  */
 export async function storeSessionsV2(userSessions) {
-    globals.logger.debug(`PROXY SESSIONS V2: User sessions: ${JSON.stringify(userSessions)}`);
+    try {
+        globals.logger.debug(`PROXY SESSIONS V2: User sessions: ${JSON.stringify(userSessions)}`);
 
-    // Only write to InfluxDB if enabled
-    if (!isInfluxDbEnabled()) {
-        return;
-    }
+        // Only write to InfluxDB if enabled
+        if (!isInfluxDbEnabled()) {
+            return;
+        }
 
-    // Validate input - ensure datapointInfluxdb is an array
-    if (!Array.isArray(userSessions.datapointInfluxdb)) {
-        globals.logger.warn(
-            `PROXY SESSIONS V2: Invalid data format for host ${userSessions.host} - datapointInfluxdb must be an array`
+        // Validate input - ensure datapointInfluxdb is an array
+        if (!Array.isArray(userSessions.datapointInfluxdb)) {
+            globals.logger.warn(
+                `PROXY SESSIONS V2: Invalid data format for host ${userSessions.host} - datapointInfluxdb must be an array`
+            );
+            return;
+        }
+
+        // Find writeApi for the server specified by serverName
+        const writeApi = globals.influxWriteApi.find(
+            (element) => element.serverName === userSessions.serverName
         );
-        return;
-    }
 
-    // Find writeApi for the server specified by serverName
-    const writeApi = globals.influxWriteApi.find(
-        (element) => element.serverName === userSessions.serverName
-    );
+        if (!writeApi) {
+            globals.logger.warn(
+                `PROXY SESSIONS V2: Influxdb write API object not found for host ${userSessions.host}`
+            );
+            return;
+        }
 
-    if (!writeApi) {
-        globals.logger.warn(
-            `PROXY SESSIONS V2: Influxdb write API object not found for host ${userSessions.host}`
+        globals.logger.silly(
+            `PROXY SESSIONS V2: Influxdb datapoint for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}": ${JSON.stringify(
+                userSessions.datapointInfluxdb,
+                null,
+                2
+            )}`
         );
-        return;
+
+        const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
+        const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
+
+        // Write array of measurements using retry logic
+        await writeToInfluxWithRetry(
+            () =>
+                writePointsToInfluxV2(globals.influx, org, bucketName, userSessions.datapointInfluxdb),
+            `Proxy sessions for ${userSessions.host}/${userSessions.virtualProxy}`,
+            'v2',
+            userSessions.serverName,
+            { module: 'PROXY_SESSIONS' }
+        );
+
+        globals.logger.verbose(
+            `PROXY SESSIONS V2: Sent user session data to InfluxDB for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"`
+        );
+    } catch (err) {
+        await globals.errorTracker.incrementError(
+            'INFLUXDB_V2_WRITE',
+            userSessions.host,
+            { module: 'PROXY_SESSIONS' },
+            err
+        );
+        globals.logger.error(
+            `PROXY SESSIONS V2: Error saving session data: ${globals.getErrorMessage(err)}`
+        );
     }
-
-    globals.logger.silly(
-        `PROXY SESSIONS V2: Influxdb datapoint for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}": ${JSON.stringify(
-            userSessions.datapointInfluxdb,
-            null,
-            2
-        )}`
-    );
-
-    const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
-    const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
-
-    // Write array of measurements using retry logic
-    await writeToInfluxWithRetry(
-        () =>
-            writePointsToInfluxV2(globals.influx, org, bucketName, userSessions.datapointInfluxdb),
-        `Proxy sessions for ${userSessions.host}/${userSessions.virtualProxy}`,
-        'v2',
-        userSessions.serverName,
-        { module: 'PROXY_SESSIONS' }
-    );
-
-    globals.logger.verbose(
-        `PROXY SESSIONS V2: Sent user session data to InfluxDB for server "${userSessions.host}", virtual proxy "${userSessions.virtualProxy}"`
-    );
 }

@@ -33,68 +33,80 @@ import { applyInfluxTags } from './utils.js';
  * @returns {Promise<void>} Promise that resolves when data has been posted to InfluxDB
  */
 export async function storeUserEventV2(msg) {
-    globals.logger.debug(`USER EVENT V2: ${JSON.stringify(msg)}`);
+    try {
+        globals.logger.debug(`USER EVENT V2: ${JSON.stringify(msg)}`);
 
-    // Only write to InfluxDB if enabled
-    if (!isInfluxDbEnabled()) {
-        return;
+        // Only write to InfluxDB if enabled
+        if (!isInfluxDbEnabled()) {
+            return;
+        }
+
+        // Validate required fields
+        if (
+            !validateRequiredFields(
+                msg,
+                ['host', 'command', 'user_directory', 'user_id', 'origin'],
+                'USER EVENT V2'
+            )
+        ) {
+            return;
+        }
+
+        const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
+        const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
+
+        // Create point using v2 Point class
+        const point = new Point('user_events')
+            .tag('host', msg.host)
+            .tag('event_action', msg.command)
+            .tag('userFull', `${msg.user_directory}\\${msg.user_id}`)
+            .tag('userDirectory', msg.user_directory)
+            .tag('userId', msg.user_id)
+            .tag('origin', msg.origin)
+            .stringField('userFull', `${msg.user_directory}\\${msg.user_id}`)
+            .stringField('userId', msg.user_id);
+
+        // Add app id and name to tags and fields if available
+        if (msg?.appId) {
+            point.tag('appId', msg.appId);
+            point.stringField('appId_field', msg.appId);
+        }
+        if (msg?.appName) {
+            point.tag('appName', msg.appName);
+            point.stringField('appName_field', msg.appName);
+        }
+
+        // Add user agent info to tags if available
+        if (msg?.ua?.browser?.name) point.tag('uaBrowserName', msg?.ua?.browser?.name);
+        if (msg?.ua?.browser?.major) point.tag('uaBrowserMajorVersion', msg?.ua?.browser?.major);
+        if (msg?.ua?.os?.name) point.tag('uaOsName', msg?.ua?.os?.name);
+        if (msg?.ua?.os?.version) point.tag('uaOsVersion', msg?.ua?.os?.version);
+
+        // Add custom tags from config file
+        const configTags = globals.config.get('Butler-SOS.userEvents.tags');
+        applyInfluxTags(point, configTags);
+
+        globals.logger.silly(`USER EVENT V2: Influxdb datapoint: ${JSON.stringify(point, null, 2)}`);
+
+        // Write to InfluxDB with retry logic
+        await writeToInfluxWithRetry(
+            () => writePointsToInfluxV2(globals.influx, org, bucketName, point),
+            `User event for ${msg.host}`,
+            'v2',
+            msg.host,
+            { module: 'USER_EVENTS' }
+        );
+
+        globals.logger.verbose('USER EVENT V2: Sent user event data to InfluxDB');
+    } catch (err) {
+        await globals.errorTracker.incrementError(
+            'INFLUXDB_V2_WRITE',
+            msg?.host ?? '',
+            { module: 'USER_EVENTS' },
+            err
+        );
+        globals.logger.error(
+            `USER EVENT V2: Error saving user event: ${globals.getErrorMessage(err)}`
+        );
     }
-
-    // Validate required fields
-    if (
-        !validateRequiredFields(
-            msg,
-            ['host', 'command', 'user_directory', 'user_id', 'origin'],
-            'USER EVENT V2'
-        )
-    ) {
-        return;
-    }
-
-    const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
-    const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
-
-    // Create point using v2 Point class
-    const point = new Point('user_events')
-        .tag('host', msg.host)
-        .tag('event_action', msg.command)
-        .tag('userFull', `${msg.user_directory}\\${msg.user_id}`)
-        .tag('userDirectory', msg.user_directory)
-        .tag('userId', msg.user_id)
-        .tag('origin', msg.origin)
-        .stringField('userFull', `${msg.user_directory}\\${msg.user_id}`)
-        .stringField('userId', msg.user_id);
-
-    // Add app id and name to tags and fields if available
-    if (msg?.appId) {
-        point.tag('appId', msg.appId);
-        point.stringField('appId_field', msg.appId);
-    }
-    if (msg?.appName) {
-        point.tag('appName', msg.appName);
-        point.stringField('appName_field', msg.appName);
-    }
-
-    // Add user agent info to tags if available
-    if (msg?.ua?.browser?.name) point.tag('uaBrowserName', msg?.ua?.browser?.name);
-    if (msg?.ua?.browser?.major) point.tag('uaBrowserMajorVersion', msg?.ua?.browser?.major);
-    if (msg?.ua?.os?.name) point.tag('uaOsName', msg?.ua?.os?.name);
-    if (msg?.ua?.os?.version) point.tag('uaOsVersion', msg?.ua?.os?.version);
-
-    // Add custom tags from config file
-    const configTags = globals.config.get('Butler-SOS.userEvents.tags');
-    applyInfluxTags(point, configTags);
-
-    globals.logger.silly(`USER EVENT V2: Influxdb datapoint: ${JSON.stringify(point, null, 2)}`);
-
-    // Write to InfluxDB with retry logic
-    await writeToInfluxWithRetry(
-        () => writePointsToInfluxV2(globals.influx, org, bucketName, point),
-        `User event for ${msg.host}`,
-        'v2',
-        msg.host,
-        { module: 'USER_EVENTS' }
-    );
-
-    globals.logger.verbose('USER EVENT V2: Sent user event data to InfluxDB');
 }

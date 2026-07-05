@@ -1,11 +1,11 @@
 ---
 name: util
-description: "Skill for the Util area of butler-sos. 7 symbols across 3 files."
+description: "Skill for the Util area of butler-sos. 13 symbols across 5 files."
 ---
 
 # Util
 
-7 symbols | 3 files | Cohesion: 67%
+13 symbols | 5 files | Cohesion: 64%
 
 ## When to Use
 
@@ -17,9 +17,11 @@ description: "Skill for the Util area of butler-sos. 7 symbols across 3 files."
 
 | File | Symbols |
 |------|---------|
+| `src/lib/audit-screenshots.js` | generateXrfkey, createQlikMutualTlsAgent, requestQpsTicket, deleteQpsSession, debugLog |
 | `src/lib/audit-destinations/shared/helpers.js` | readString, readBoolean, asObject |
 | `src/lib/audit-destinations/shared/extract-fields.js` | readIntegerBigInt, extractAuditEventFields |
 | `src/lib/util/user-identity.js` | readNonEmptyString, parseQlikUserIdentity |
+| `src/lib/util/qlik-session-utils.js` | extractVirtualProxyFromSessionCookieName |
 
 ## Entry Points
 
@@ -40,8 +42,14 @@ Start here when exploring this area:
 | `readBoolean` | Function | `src/lib/audit-destinations/shared/helpers.js` | 36 |
 | `asObject` | Function | `src/lib/audit-destinations/shared/helpers.js` | 46 |
 | `parseQlikUserIdentity` | Function | `src/lib/util/user-identity.js` | 31 |
+| `extractVirtualProxyFromSessionCookieName` | Function | `src/lib/util/qlik-session-utils.js` | 12 |
 | `readIntegerBigInt` | Function | `src/lib/audit-destinations/shared/extract-fields.js` | 22 |
 | `readNonEmptyString` | Function | `src/lib/util/user-identity.js` | 10 |
+| `generateXrfkey` | Function | `src/lib/audit-screenshots.js` | 112 |
+| `createQlikMutualTlsAgent` | Function | `src/lib/audit-screenshots.js` | 123 |
+| `requestQpsTicket` | Function | `src/lib/audit-screenshots.js` | 146 |
+| `deleteQpsSession` | Function | `src/lib/audit-screenshots.js` | 211 |
+| `debugLog` | Function | `src/lib/audit-screenshots.js` | 506 |
 
 ## Execution Flows
 
@@ -62,8 +70,9 @@ Start here when exploring this area:
 
 | Area | Connections |
 |------|-------------|
-| Influxdb | 1 calls |
-| Globals | 1 calls |
+| Influxdb | 3 calls |
+| Globals | 2 calls |
+| Cluster_30 | 1 calls |
 
 ## How to Explore
 

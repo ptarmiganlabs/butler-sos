@@ -23,6 +23,7 @@ const mockGlobals = {
     influx: { getWriteApi: jest.fn(() => mockWriteApi) },
     appVersion: '1.2.3',
     getErrorMessage: jest.fn((err) => err.message),
+    errorTracker: { incrementError: jest.fn() },
 };
 
 jest.unstable_mockModule('../../../globals.js', () => ({ default: mockGlobals }));
@@ -151,5 +152,36 @@ describe('v2/butler-memory', () => {
 
         expect(globals.logger.debug).toHaveBeenCalled();
         expect(globals.logger.silly).toHaveBeenCalled();
+    });
+
+    describe('Error handling', () => {
+        test('should catch and log errors without throwing', async () => {
+            const memory = {
+                instanceTag: 'test-instance',
+                heapUsedMByte: 100,
+                heapTotalMByte: 200,
+                externalMemoryMByte: 50,
+                processMemoryMByte: 250,
+            };
+
+            // Mock writeBatchToInfluxV2 to throw an error
+            utils.writeBatchToInfluxV2.mockRejectedValue(new Error('Write failed'));
+
+            // Should not throw
+            await expect(storeButlerMemoryV2(memory)).resolves.not.toThrow();
+
+            // Verify error was logged
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Error saving memory usage data')
+            );
+
+            // Verify error was tracked
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'INFLUXDB_V2_WRITE',
+                '',
+                { module: 'BUTLER_MEMORY' },
+                expect.any(Error)
+            );
+        });
     });
 });

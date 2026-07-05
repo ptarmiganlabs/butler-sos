@@ -1,11 +1,11 @@
 ---
 name: globals
-description: "Skill for the Globals area of butler-sos. 31 symbols across 20 files."
+description: "Skill for the Globals area of butler-sos. 36 symbols across 21 files."
 ---
 
 # Globals
 
-31 symbols | 20 files | Cohesion: 42%
+36 symbols | 21 files | Cohesion: 43%
 
 ## When to Use
 
@@ -17,6 +17,7 @@ description: "Skill for the Globals area of butler-sos. 31 symbols across 20 fil
 
 | File | Symbols |
 |------|---------|
+| `src/lib/post-to-mqtt.js` | publishAsync, postHealthToMQTT, postUserSessionsToMQTT, postUserEventToMQTT, postLogEventToMQTT |
 | `src/lib/appnamesextract.js` | trackAppNamesFailure, getAppNames, setupAppNamesExtractTimer |
 | `src/lib/heartbeat.js` | callRemoteURL, setupHeartbeatTimer, t |
 | `src/lib/sea-wrapper.js` | initialize, isSea, getAsset |
@@ -26,7 +27,6 @@ description: "Skill for the Globals area of butler-sos. 31 symbols across 20 fil
 | `src/lib/udp-event.js` | setupUdpEventsStorage, UdpEvents |
 | `src/lib/audit-destinations/influxdb/buffer.test.js` | get |
 | `src/lib/audit-destinations/parquet/index.js` | getAuditParquetConfig |
-| `src/lib/audit-destinations/qvd/index.js` | getAuditQvdConfig |
 
 ## Entry Points
 
@@ -51,6 +51,10 @@ Start here when exploring this area:
 | `initInfluxDB` | Function | `src/lib/globals/influxdb.js` | 418 |
 | `setupHeartbeatTimer` | Function | `src/lib/heartbeat.js` | 34 |
 | `t` | Function | `src/lib/heartbeat.js` | 43 |
+| `postHealthToMQTT` | Function | `src/lib/post-to-mqtt.js` | 32 |
+| `postUserSessionsToMQTT` | Function | `src/lib/post-to-mqtt.js` | 112 |
+| `postUserEventToMQTT` | Function | `src/lib/post-to-mqtt.js` | 155 |
+| `postLogEventToMQTT` | Function | `src/lib/post-to-mqtt.js` | 291 |
 | `setupUdpEventsStorage` | Function | `src/lib/udp-event.js` | 363 |
 | `initCommandLine` | Function | `src/lib/globals/command-line.js` | 7 |
 | `initLogging` | Function | `src/lib/globals/logging.js` | 9 |
@@ -58,35 +62,31 @@ Start here when exploring this area:
 | `initConfig` | Function | `src/lib/globals/config-loader.js` | 11 |
 | `initUdp` | Function | `src/lib/globals/udp-servers.js` | 10 |
 | `initAppInfo` | Function | `src/lib/globals/app-info.js` | 10 |
-| `getErrorMessage` | Function | `src/lib/globals/utils.js` | 12 |
-| `init` | Method | `src/globals.js` | 74 |
-| `trackAppNamesFailure` | Function | `src/lib/appnamesextract.js` | 16 |
-| `get` | Function | `src/lib/audit-destinations/influxdb/buffer.test.js` | 21 |
 
 ## Execution Flows
 
 | Flow | Type | Steps |
 |------|------|-------|
 | `SetupConfigVisServer → IsSea` | cross_community | 6 |
+| `SetupHealthMetricsTimer → GetErrorStats` | cross_community | 6 |
 | `SetupHealthMetricsTimer → IsSea` | cross_community | 6 |
+| `SetupUserSessionsTimer → GetErrorStats` | cross_community | 6 |
 | `SetupUserSessionsTimer → IsSea` | cross_community | 6 |
 | `WriteAuditEventToParquet → Get` | cross_community | 6 |
 | `WriteAuditEventToQvd → Get` | cross_community | 6 |
 | `ProcessAuditEventEnvelope → Get` | cross_community | 6 |
 | `Init → MakeFeatureConditional` | cross_community | 5 |
 | `Init → IsValidHostname` | cross_community | 5 |
-| `PostHealthMetricsToInfluxdbV1 → Get` | cross_community | 5 |
-| `PostUserEventQueueMetricsToInfluxdb → Get` | cross_community | 5 |
 
 ## Connected Areas
 
 | Area | Connections |
 |------|-------------|
-| V2 | 3 calls |
-| Influxdb | 3 calls |
-| Cluster_35 | 1 calls |
-| Cluster_34 | 1 calls |
-| Cluster_39 | 1 calls |
+| V2 | 7 calls |
+| Cluster_37 | 5 calls |
+| Influxdb | 5 calls |
+| Cluster_36 | 1 calls |
+| Cluster_41 | 1 calls |
 
 ## How to Explore
 

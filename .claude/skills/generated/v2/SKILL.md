@@ -1,32 +1,32 @@
 ---
 name: v2
-description: "Skill for the V2 area of butler-sos. 45 symbols across 26 files."
+description: "Skill for the V2 area of butler-sos. 46 symbols across 24 files."
 ---
 
 # V2
 
-45 symbols | 26 files | Cohesion: 70%
+46 symbols | 24 files | Cohesion: 74%
 
 ## When to Use
 
 - Working with code in `src/`
-- Understanding how getErrorCategory, getErrorMetadata, postHealthMetricsToInfluxdb work
+- Understanding how getErrorCategory, getErrorMetadata, postProxySessionsToInfluxdb work
 - Modifying v2-related functionality
 
 ## Key Files
 
 | File | Symbols |
 |------|---------|
-| `src/lib/influxdb/shared/utils.js` | getFormattedTime, processAppDocuments, isInfluxDbEnabled, validateRequiredFields, getInfluxDbVersion (+7) |
-| `src/lib/influxdb/factory.js` | postHealthMetricsToInfluxdb, postProxySessionsToInfluxdb, postButlerSOSMemoryUsageToInfluxdb, postUserEventToInfluxdb, storeRejectedEventCountInfluxDB (+1) |
+| `src/lib/influxdb/shared/utils.js` | isInfluxDbEnabled, validateRequiredFields, getInfluxDbVersion, sanitizeInfluxTagValue, writeToInfluxWithRetry (+5) |
+| `src/lib/influxdb/factory.js` | postProxySessionsToInfluxdb, postButlerSOSMemoryUsageToInfluxdb, postUserEventToInfluxdb, storeEventCountInfluxDB, storeRejectedEventCountInfluxDB (+1) |
 | `src/lib/error-tracker.js` | incrementError, _isInfluxDbErrorTrackingEnabled, _writeErrorToInfluxDB |
+| `src/lib/udp-event.js` | getLogEvents, getRejectedLogEvents, getUserEvents |
 | `src/lib/error-categorizer.js` | getErrorCategory, getErrorMetadata |
+| `src/lib/influxdb/v1/event-counts.js` | storeEventCountV1, storeRejectedEventCountV1 |
+| `src/lib/influxdb/v2/event-counts.js` | storeEventCountV2, storeRejectedEventCountV2 |
+| `src/lib/influxdb/v3/event-counts.js` | storeEventCountInfluxDBV3, storeRejectedEventCountInfluxDBV3 |
 | `src/globals.js` | getErrorMessage |
-| `src/lib/influxdb/shared/health-metrics-builder.js` | buildHealthMetricDatapoints |
 | `src/lib/influxdb/v1/butler-memory.js` | storeButlerMemoryV1 |
-| `src/lib/influxdb/v1/event-counts.js` | storeRejectedEventCountV1 |
-| `src/lib/influxdb/v1/health-metrics.js` | postHealthMetricsToInfluxdbV1 |
-| `src/lib/influxdb/v1/log-events.js` | storeLogEventV1 |
 
 ## Entry Points
 
@@ -34,9 +34,9 @@ Start here when exploring this area:
 
 - **`getErrorCategory`** (Function) — `src/lib/error-categorizer.js:13`
 - **`getErrorMetadata`** (Function) — `src/lib/error-categorizer.js:71`
-- **`postHealthMetricsToInfluxdb`** (Function) — `src/lib/influxdb/factory.js:49`
 - **`postProxySessionsToInfluxdb`** (Function) — `src/lib/influxdb/factory.js:72`
 - **`postButlerSOSMemoryUsageToInfluxdb`** (Function) — `src/lib/influxdb/factory.js:95`
+- **`postUserEventToInfluxdb`** (Function) — `src/lib/influxdb/factory.js:118`
 
 ## Key Symbols
 
@@ -44,15 +44,12 @@ Start here when exploring this area:
 |--------|------|------|------|
 | `getErrorCategory` | Function | `src/lib/error-categorizer.js` | 13 |
 | `getErrorMetadata` | Function | `src/lib/error-categorizer.js` | 71 |
-| `postHealthMetricsToInfluxdb` | Function | `src/lib/influxdb/factory.js` | 49 |
 | `postProxySessionsToInfluxdb` | Function | `src/lib/influxdb/factory.js` | 72 |
 | `postButlerSOSMemoryUsageToInfluxdb` | Function | `src/lib/influxdb/factory.js` | 95 |
 | `postUserEventToInfluxdb` | Function | `src/lib/influxdb/factory.js` | 118 |
+| `storeEventCountInfluxDB` | Function | `src/lib/influxdb/factory.js` | 140 |
 | `storeRejectedEventCountInfluxDB` | Function | `src/lib/influxdb/factory.js` | 162 |
 | `postLogEventToInfluxdb` | Function | `src/lib/influxdb/factory.js` | 275 |
-| `buildHealthMetricDatapoints` | Function | `src/lib/influxdb/shared/health-metrics-builder.js` | 29 |
-| `getFormattedTime` | Function | `src/lib/influxdb/shared/utils.js` | 14 |
-| `processAppDocuments` | Function | `src/lib/influxdb/shared/utils.js` | 86 |
 | `isInfluxDbEnabled` | Function | `src/lib/influxdb/shared/utils.js` | 139 |
 | `validateRequiredFields` | Function | `src/lib/influxdb/shared/utils.js` | 158 |
 | `getInfluxDbVersion` | Function | `src/lib/influxdb/shared/utils.js` | 174 |
@@ -62,6 +59,9 @@ Start here when exploring this area:
 | `writeBatchToInfluxV1` | Function | `src/lib/influxdb/shared/utils.js` | 428 |
 | `writePointsToInfluxV2` | Function | `src/lib/influxdb/shared/utils.js` | 504 |
 | `writeBatchToInfluxV2` | Function | `src/lib/influxdb/shared/utils.js` | 536 |
+| `writeBatchToInfluxV3` | Function | `src/lib/influxdb/shared/utils.js` | 630 |
+| `storeButlerMemoryV1` | Function | `src/lib/influxdb/v1/butler-memory.js` | 17 |
+| `storeEventCountV1` | Function | `src/lib/influxdb/v1/event-counts.js` | 14 |
 
 ## Execution Flows
 
@@ -71,20 +71,20 @@ Start here when exploring this area:
 | `WriteAuditEventToQvd → GetErrorMessage` | cross_community | 7 |
 | `PostHealthMetricsToInfluxdbV1 → GetErrorStats` | cross_community | 6 |
 | `StoreLogEventV1 → GetErrorStats` | cross_community | 6 |
+| `StoreLogEventV2 → GetErrorStats` | cross_community | 6 |
 | `SetupHealthMetricsTimer → GetErrorStats` | cross_community | 6 |
 | `StoreButlerMemoryV1 → GetErrorStats` | cross_community | 6 |
 | `StoreSessionsV1 → GetErrorStats` | cross_community | 6 |
+| `StoreButlerMemoryV2 → GetErrorStats` | cross_community | 6 |
 | `PostButlerSOSMemoryUsageToInfluxdbV3 → GetErrorStats` | cross_community | 6 |
-| `PostProxySessionsToInfluxdbV3 → GetErrorStats` | cross_community | 6 |
-| `StoreLogEventV2 → GetErrorStats` | cross_community | 6 |
 
 ## Connected Areas
 
 | Area | Connections |
 |------|-------------|
-| Globals | 23 calls |
-| Influxdb | 10 calls |
-| Cluster_39 | 2 calls |
+| Globals | 24 calls |
+| Influxdb | 12 calls |
+| Cluster_41 | 2 calls |
 
 ## How to Explore
 

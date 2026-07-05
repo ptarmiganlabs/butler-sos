@@ -5,7 +5,7 @@ description: "Skill for the V1 area of butler-sos. 14 symbols across 7 files."
 
 # V1
 
-14 symbols | 7 files | Cohesion: 60%
+14 symbols | 7 files | Cohesion: 58%
 
 ## When to Use
 
@@ -33,7 +33,7 @@ Start here when exploring this area:
 - **`postAuditEventQueueMetricsToInfluxdb`** (Function) — `src/lib/influxdb/factory.js:244`
 - **`prepareQueueMetricData`** (Function) — `src/lib/influxdb/shared/queue-metrics-builder.js:113`
 - **`storeAuditEventQueueMetricsV1`** (Function) — `src/lib/influxdb/v1/queue-metrics.js:127`
-- **`storeAuditEventQueueMetricsV2`** (Function) — `src/lib/influxdb/v2/queue-metrics.js:110`
+- **`storeAuditEventQueueMetricsV2`** (Function) — `src/lib/influxdb/v2/queue-metrics.js:122`
 
 ## Key Symbols
 
@@ -43,7 +43,7 @@ Start here when exploring this area:
 | `postAuditEventQueueMetricsToInfluxdb` | Function | `src/lib/influxdb/factory.js` | 244 |
 | `prepareQueueMetricData` | Function | `src/lib/influxdb/shared/queue-metrics-builder.js` | 113 |
 | `storeAuditEventQueueMetricsV1` | Function | `src/lib/influxdb/v1/queue-metrics.js` | 127 |
-| `storeAuditEventQueueMetricsV2` | Function | `src/lib/influxdb/v2/queue-metrics.js` | 110 |
+| `storeAuditEventQueueMetricsV2` | Function | `src/lib/influxdb/v2/queue-metrics.js` | 122 |
 | `postAuditEventQueueMetricsToInfluxdbV3` | Function | `src/lib/influxdb/v3/queue-metrics.js` | 121 |
 | `clearMetrics` | Method | `src/lib/udp-queue-manager.js` | 457 |
 | `buildPointV1` | Function | `src/lib/influxdb/v1/queue-metrics.js` | 10 |
@@ -73,7 +73,7 @@ Start here when exploring this area:
 
 | Area | Connections |
 |------|-------------|
-| V2 | 10 calls |
+| V2 | 12 calls |
 | Globals | 4 calls |
 | Influxdb | 1 calls |
 | Get | 1 calls |

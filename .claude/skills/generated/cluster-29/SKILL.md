@@ -61,13 +61,13 @@ Start here when exploring this area:
 
 | Area | Connections |
 |------|-------------|
-| Influxdb | 7 calls |
+| Util | 6 calls |
 | Cluster_25 | 3 calls |
 | Cluster_31 | 3 calls |
+| Influxdb | 2 calls |
 | Cluster_30 | 2 calls |
 | Cluster_32 | 2 calls |
 | Globals | 1 calls |
-| Util | 1 calls |
 | Cluster_24 | 1 calls |
 
 ## How to Explore
