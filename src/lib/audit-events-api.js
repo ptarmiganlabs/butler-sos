@@ -987,7 +987,7 @@ async function registerAuditEventRoutes(fastify, { apiToken, corsOrigins, rateLi
             timeWindow: '1 minute',
             /**
              * Builds a minimal, well-formed 429 response payload. The audit API's error handler
-             * detects `code === 'AUDIT_RATE_LIMIT_EXCEEDED'` and skips the error log
+             * detects `statusCode === 429` and skips the error log
              * (and its stack trace); the WARN emitted by `onExceeded` is the
              * authoritative operator signal.
              *
