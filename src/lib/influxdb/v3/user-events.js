@@ -3,6 +3,7 @@ import globals from '../../../globals.js';
 import {
     isInfluxDbEnabled,
     sanitizeInfluxTagValue,
+    validateRequiredFields,
     writeBatchToInfluxV3,
 } from '../shared/utils.js';
 
@@ -31,10 +32,13 @@ export async function postUserEventToInfluxdbV3(msg) {
     const database = globals.config.get('Butler-SOS.influxdbConfig.v3Config.database');
 
     // Validate required fields
-    if (!msg.host || !msg.command || !msg.user_directory || !msg.user_id || !msg.origin) {
-        globals.logger.warn(
-            `USER EVENT INFLUXDB V3: Missing required fields in user event message: ${JSON.stringify(msg)}`
-        );
+    if (
+        !validateRequiredFields(
+            msg,
+            ['host', 'command', 'user_directory', 'user_id', 'origin'],
+            'USER EVENT INFLUXDB V3'
+        )
+    ) {
         return;
     }
 

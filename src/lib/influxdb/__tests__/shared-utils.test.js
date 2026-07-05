@@ -682,3 +682,104 @@ describe('Shared Utils - writePointsToInfluxV2', () => {
         ).rejects.toThrow('write failed');
     });
 });
+
+describe('Shared Utils - validateRequiredFields', () => {
+    let utils;
+    let globals;
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        globals = (await import('../../../globals.js')).default;
+        utils = await import('../shared/utils.js');
+    });
+
+    test('should return true when all required fields are present', () => {
+        const msg = { host: 'server1', command: 'OpenApp', user_directory: 'DOMAIN' };
+        const result = utils.validateRequiredFields(
+            msg,
+            ['host', 'command', 'user_directory'],
+            'TEST'
+        );
+
+        expect(result).toBe(true);
+        expect(globals.logger.warn).not.toHaveBeenCalled();
+    });
+
+    test('should return false and warn when a single field is missing', () => {
+        const msg = { host: 'server1', command: 'OpenApp' };
+        const result = utils.validateRequiredFields(
+            msg,
+            ['host', 'command', 'user_directory'],
+            'TEST'
+        );
+
+        expect(result).toBe(false);
+        expect(globals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('Missing required fields [user_directory]')
+        );
+    });
+
+    test('should list all missing fields in warning', () => {
+        const msg = { host: 'server1' };
+        const result = utils.validateRequiredFields(
+            msg,
+            ['host', 'command', 'user_directory', 'user_id'],
+            'TEST'
+        );
+
+        expect(result).toBe(false);
+        expect(globals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('command, user_directory, user_id')
+        );
+    });
+
+    test('should return false when all fields are missing', () => {
+        const msg = {};
+        const result = utils.validateRequiredFields(msg, ['host', 'command'], 'TEST');
+
+        expect(result).toBe(false);
+        expect(globals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('host, command')
+        );
+    });
+
+    test('should treat falsy values as missing', () => {
+        const msg = { host: '', command: null, user_directory: undefined };
+        const result = utils.validateRequiredFields(
+            msg,
+            ['host', 'command', 'user_directory'],
+            'TEST'
+        );
+
+        expect(result).toBe(false);
+        expect(globals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('host, command, user_directory')
+        );
+    });
+
+    test('should include JSON-stringified message in warning', () => {
+        const msg = { host: 'server1' };
+        utils.validateRequiredFields(msg, ['host', 'command'], 'USER EVENT V1');
+
+        expect(globals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('{"host":"server1"}')
+        );
+    });
+
+    test('should use logPrefix in warning message', () => {
+        const msg = {};
+        utils.validateRequiredFields(msg, ['host'], 'MY PREFIX');
+
+        expect(globals.logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining('MY PREFIX: Missing required fields')
+        );
+    });
+
+    test('should return true for empty required fields array', () => {
+        const msg = { host: 'server1' };
+        const result = utils.validateRequiredFields(msg, [], 'TEST');
+
+        expect(result).toBe(true);
+        expect(globals.logger.warn).not.toHaveBeenCalled();
+    });
+});
