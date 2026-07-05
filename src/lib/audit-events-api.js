@@ -1605,7 +1605,7 @@ export async function setupAuditEventsApiServer() {
         auditServer.setErrorHandler((error, request, reply) => {
             // Rate-limit hits are signalled by the onExceeded WARN; do not log them as
             // errors (and avoid the resulting stack trace).
-            if (error.code === 'AUDIT_RATE_LIMIT_EXCEEDED') {
+            if (error.statusCode === 429) {
                 return buildAuditResponse(reply, 429, 'dropped', 'Rate limit exceeded');
             }
             if (error.statusCode === 400 && error.validation) {
