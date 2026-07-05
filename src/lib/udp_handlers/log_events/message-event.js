@@ -4,6 +4,7 @@ import { postLogEventToNewRelic } from '../../post-to-new-relic.js';
 import { postLogEventToMQTT } from '../../post-to-mqtt.js';
 import { categoriseLogEvent } from '../../log-event-categorise.js';
 import { logError } from '../../log-error.js';
+import { sanitizeField } from '../../udp-queue-manager.js';
 
 // Import handlers for different log event sources
 import { processEngineEvent } from './handlers/engine-handler.js';
@@ -171,6 +172,14 @@ export async function messageEventHandler(message, _remote) {
                 postLogEventToNewRelic(msgObj);
             }
         } else {
+            // Always emit a WARN when the message type is not recognized, including a
+            // sanitized preview of the first 25 chars of the raw message so operators
+            // can see what strange/unexpected payload is arriving.
+            const sanitizedPreview = sanitizeField(msgParts.join(';'), 25);
+            globals.logger.warn(
+                `LOG EVENT: Log event source not recognized or not enabled. First 25 chars: "${sanitizedPreview}"`
+            );
+
             globals.logger.debug(
                 `LOG EVENT: Log event source not recognized or not enabled in configuration, skipping message: ${msgParts[0]}`
             );
@@ -191,8 +200,6 @@ export async function messageEventHandler(message, _remote) {
                 if (msgParts.length > 5) {
                     subsystem = msgParts[5];
                 }
-
-                globals.logger.warn(`LOG EVENT: Unrecognized log event type: ${source}`);
 
                 // Increase counter for log events
                 await globals.udpEvents.addLogEvent({
