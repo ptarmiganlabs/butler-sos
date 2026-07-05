@@ -9,6 +9,7 @@ import { postUserEventToNewRelic } from '../../post-to-new-relic.js';
 import { postUserEventToMQTT } from '../../post-to-mqtt.js';
 import { logError } from '../../log-error.js';
 import { formatUserFields } from '../log_events/utils/common-utils.js';
+import { publishToDestinations } from '../utils/event-publisher.js';
 
 /**
  * Handler for UDP messages relating to user events from Qlik Sense Proxy service.
@@ -207,33 +208,11 @@ export async function messageEventHandler(message, _remote) {
             };
         }
 
-        // Post to MQTT
-        if (
-            globals.config.get('Butler-SOS.mqttConfig.enable') === true &&
-            globals.config.get('Butler-SOS.userEvents.sendToMQTT.enable')
-        ) {
-            globals.logger.debug('USER EVENT: Calling user sessions MQTT posting method');
-            // Ensure we call the postUserEventToMQTT function
-            postUserEventToMQTT(msgObj);
-        }
-
-        // Post to Influxdb
-        if (
-            globals.config.get('Butler-SOS.influxdbConfig.enable') === true &&
-            globals.config.get('Butler-SOS.userEvents.sendToInfluxdb.enable')
-        ) {
-            globals.logger.debug('USER EVENT: Calling user sessions Influxdb posting method');
-            postUserEventToInfluxdb(msgObj);
-        }
-
-        // Post to New Relic
-        if (
-            globals.config.get('Butler-SOS.newRelic.enable') === true &&
-            globals.config.get('Butler-SOS.userEvents.sendToNewRelic.enable')
-        ) {
-            globals.logger.debug('USER EVENT: Calling user event New Relic posting method');
-            postUserEventToNewRelic(msgObj);
-        }
+        publishToDestinations(msgObj, 'userEvents', {
+            mqtt: postUserEventToMQTT,
+            influxdb: postUserEventToInfluxdb,
+            newRelic: postUserEventToNewRelic,
+        });
     } catch (err) {
         await globals.errorTracker.incrementError(
             'UDP_USER_EVENT',

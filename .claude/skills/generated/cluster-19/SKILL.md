@@ -62,6 +62,7 @@ Start here when exploring this area:
 | `HandleAuditEventPost → Has` | cross_community | 3 |
 | `HandleScreenshotUrlReceived → Get` | cross_community | 3 |
 | `HandleScreenshotUrlReceived → Has` | cross_community | 3 |
+| `HandleSelectionStateChanged → DebugLog` | intra_community | 3 |
 
 ## Connected Areas
 

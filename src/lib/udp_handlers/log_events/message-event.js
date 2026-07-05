@@ -5,6 +5,7 @@ import { postLogEventToMQTT } from '../../post-to-mqtt.js';
 import { categoriseLogEvent } from '../../log-event-categorise.js';
 import { logError } from '../../log-error.js';
 import { sanitizeField } from '../../udp-queue-manager.js';
+import { publishToDestinations } from '../utils/event-publisher.js';
 
 // Import handlers for different log event sources
 import { processEngineEvent } from './handlers/engine-handler.js';
@@ -145,32 +146,11 @@ export async function messageEventHandler(message, _remote) {
 
             globals.logger.debug(`LOG EVENT (json): ${JSON.stringify(msgObj, null, 2)}`);
 
-            // Post to MQTT (if enabled)
-            if (
-                globals.config.get('Butler-SOS.mqttConfig.enable') === true &&
-                globals.config.get('Butler-SOS.logEvents.sendToMQTT.enable')
-            ) {
-                globals.logger.debug('LOG EVENT: Calling log event MQTT posting method');
-                postLogEventToMQTT(msgObj);
-            }
-
-            // Post to Influxdb (if enabled)
-            if (
-                globals.config.get('Butler-SOS.influxdbConfig.enable') === true &&
-                globals.config.get('Butler-SOS.logEvents.sendToInfluxdb.enable')
-            ) {
-                globals.logger.debug('LOG EVENT: Calling log event Influxdb posting method');
-                postLogEventToInfluxdb(msgObj);
-            }
-
-            // Post to New Relic (if enabled)
-            if (
-                globals.config.get('Butler-SOS.newRelic.enable') === true &&
-                globals.config.get('Butler-SOS.logEvents.sendToNewRelic.enable')
-            ) {
-                globals.logger.debug('LOG EVENT: Calling log event New Relic posting method');
-                postLogEventToNewRelic(msgObj);
-            }
+            publishToDestinations(msgObj, 'logEvents', {
+                mqtt: postLogEventToMQTT,
+                influxdb: postLogEventToInfluxdb,
+                newRelic: postLogEventToNewRelic,
+            });
         } else {
             // Always emit a WARN when the message type is not recognized, including a
             // sanitized preview of the first 25 chars of the raw message so operators
