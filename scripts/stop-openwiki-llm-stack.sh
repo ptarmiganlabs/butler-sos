@@ -6,8 +6,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-PID_FILE=".llm-stack.pids"
+cd "$PROJECT_ROOT"
+PID_FILE="$PROJECT_ROOT/.llm-stack.pids"
 
 echo "=== Stopping OpenWiki LLM Stack ==="
 echo ""
