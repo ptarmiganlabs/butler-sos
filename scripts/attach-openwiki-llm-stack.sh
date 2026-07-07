@@ -17,8 +17,15 @@ if [ ! -f "$PID_FILE" ]; then
     echo "The LLM stack may not be running, or was started from a different directory."
     exit 1
 fi
+get_pid_var() {
+    local key="$1"
+    local line
+    line="$(grep -E "^${key}=" "$PID_FILE" | head -n 1 || true)"
+    printf '%s' "${line#*=}"
+}
 
-source "$PID_FILE"
+USE_TMUX="$(get_pid_var USE_TMUX)"
+SESSION_NAME="$(get_pid_var SESSION_NAME)"
 
 if [ "${USE_TMUX:-false}" != true ]; then
     echo "ERROR: Stack is running in background mode."
