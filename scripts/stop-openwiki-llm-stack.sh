@@ -54,8 +54,8 @@ if kill -0 "$LLAMA_SERVER_PID" 2>/dev/null; then
     fi
 
     echo "Stopping litellm (PID: $LITELLM_PID)..."
-    if kill -0 $LITELLM_PID 2>/dev/null; then
-        kill $LITELLM_PID
+    if kill -0 "$LITELLM_PID" 2>/dev/null; then
+        kill "$LITELLM_PID"
         echo "✓ litellm stopped"
     else
         echo "⚠ litellm (PID $LITELLM_PID) is not running"
