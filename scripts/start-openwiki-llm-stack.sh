@@ -80,6 +80,13 @@ if ! command -v llama-server >/dev/null 2>&1; then
     exit 1
 fi
 
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "ERROR: python3 command not found. Please install Python 3."
+    exit 1
+fi
+
+mkdir -p "$LITELLM_DIR"
+
 if [ ! -d "$LITELLM_DIR/.venv" ]; then
     echo "Creating Python virtual environment in $LITELLM_DIR..."
     python3 -m venv "$LITELLM_DIR/.venv"
