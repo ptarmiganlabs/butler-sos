@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Platform: macOS only
-# Requires: tmux, llama-server, litellm, and one of iTerm2/Ghostty/Terminal.app
+# Requires: tmux, llama-server, lsof, python3 (venv), litellm, and one of iTerm2/Ghostty/Terminal.app (plus osascript for iTerm2/Terminal integration)
 
 set -euo pipefail
 
