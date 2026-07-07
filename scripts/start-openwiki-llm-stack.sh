@@ -260,11 +260,11 @@ else
     echo ""
 
     echo "Starting litellm proxy..."
-    echo "  Config: /Users/goran/code/litellm_config/litellm_config.yaml"
-    echo "  Port: 4000"
+echo "  Config: $LITELLM_DIR/litellm_config.yaml"
+echo "  Port: 4000"
 
-    litellm --config /Users/goran/code/litellm_config/litellm_config.yaml --port 4000 \
-      > /dev/null 2>&1 &
+litellm --config "$LITELLM_DIR/litellm_config.yaml" --port 4000 \
+  > /dev/null 2>&1 &
 
     LITELLM_PID=$!
     echo "✓ litellm started (PID: $LITELLM_PID)"
