@@ -146,7 +146,7 @@ if [ "$USE_TMUX" = true ]; then
     tmux send-keys -t "$SESSION_NAME":0.0 'llama-server --hf-repo unsloth/Qwen3.6-27B-MTP-GGUF --hf-file "Qwen3.6-27B-Q8_0.gguf" --spec-type draft-mtp -ngl 999 -fa on -c 262144 --port 8080' C-m
 
     echo "Starting litellm in pane 1..."
-    tmux send-keys -t "$SESSION_NAME":0.1 'cd /Users/goran/code/litellm_config && source .venv/bin/activate && litellm --config /Users/goran/code/litellm_config/litellm_config.yaml --port 4000' C-m
+tmux send-keys -t "$SESSION_NAME":0.1 "cd \"$LITELLM_DIR\" && source .venv/bin/activate && litellm --config \"$LITELLM_DIR/litellm_config.yaml\" --port 4000" C-m
 
 cat > "$PID_FILE" <<EOF
 USE_TMUX=true
