@@ -19,8 +19,18 @@ if [ ! -f "$PID_FILE" ]; then
 fi
 
 echo "Reading $PID_FILE..."
-source "$PID_FILE"
 
+get_pid_var() {
+    local key="$1"
+    local line
+    line="$(grep -E "^${key}=" "$PID_FILE" | head -n 1 || true)"
+    printf '%s' "${line#*=}"
+}
+
+USE_TMUX="$(get_pid_var USE_TMUX)"
+SESSION_NAME="$(get_pid_var SESSION_NAME)"
+LLAMA_SERVER_PID="$(get_pid_var LLAMA_SERVER_PID)"
+LITELLM_PID="$(get_pid_var LITELLM_PID)"
 if [ "${USE_TMUX:-false}" = true ]; then
     echo "Stopping tmux session '$SESSION_NAME'..."
     if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
