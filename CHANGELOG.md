@@ -1,5 +1,36 @@
 # Changelog
 
+## [15.1.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.0.1...butler-sos-v15.1.0) (2026-07-07)
+
+
+### Features
+
+* Add AI-generated wiki explaining the Butler SOS codebase ([2f5430c](https://github.com/ptarmiganlabs/butler-sos/commit/2f5430cd29cc16844b054109bc1ccd24382445c9))
+* **audit:** enhance rate limit feature of audit API, incl of for rate limit violations ([b0ee993](https://github.com/ptarmiganlabs/butler-sos/commit/b0ee9931781ebd6863c38b3d0482cb2d3114dac5))
+* Improve error handling for InfluxDB v2 ([ae01582](https://github.com/ptarmiganlabs/butler-sos/commit/ae01582c9e27cc58a857d5030a181ea3f2eb20a0))
+
+
+### Bug Fixes
+
+* add logging for DNS lookup failures in host-utils ([60b230f](https://github.com/ptarmiganlabs/butler-sos/commit/60b230f0c197779eb2c14ea59c9814e1bb552390))
+* restrict appNames host validation to IPv4 ([ecc2253](https://github.com/ptarmiganlabs/butler-sos/commit/ecc2253245b3b6cc17d4224302abf650ef5d1b8e))
+
+
+### Miscellaneous
+
+* add mocked dns.lookup tests for hostname resolution path ([ed28d2b](https://github.com/ptarmiganlabs/butler-sos/commit/ed28d2bbeb31fd14ad163a802fffefe9c3dfba66))
+* update @fastify/rate-limit and js-yaml dependencies ([50988fa](https://github.com/ptarmiganlabs/butler-sos/commit/50988fa6292a44bcb69ce7c4302f075f15ca810a))
+* update @types/node to version 26.1.0 in package.json and package-lock.json ([65e3f7f](https://github.com/ptarmiganlabs/butler-sos/commit/65e3f7fe2b17f5d4980d0017a30a0dcaece3f2f2))
+* update dependencies and fix associated tests ([98a377f](https://github.com/ptarmiganlabs/butler-sos/commit/98a377fe361c2b47f5bbb6b268c1d8fed742b414))
+
+
+### Refactoring
+
+* Centralize event publishing to enabled destinations ([b9838d0](https://github.com/ptarmiganlabs/butler-sos/commit/b9838d0da6bd46d20d21b1d21ec25def19d3bad4))
+* Improve startup validation of hosts specified in config  file ([1523e4d](https://github.com/ptarmiganlabs/butler-sos/commit/1523e4de21feab2a83367b30ff0273c2a0057ada))
+* Improve validation of incoming user event UDP messages ([e9d8847](https://github.com/ptarmiganlabs/butler-sos/commit/e9d88474b0e0f2bd5940140bac088eca2586cb27))
+* simplify DNS check during startup ([a0b303d](https://github.com/ptarmiganlabs/butler-sos/commit/a0b303d2cd4d873b480e1e381c96b89da13d9314))
+
 ## [15.0.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.0.0...butler-sos-v15.0.1) (2026-06-09)
 
 
