@@ -6,8 +6,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-LITELLM_DIR="/Users/goran/code/litellm_config"
-
+cd "$PROJECT_ROOT"
+PID_FILE="$PROJECT_ROOT/.llm-stack.pids"
+LITELLM_DIR="${LITELLM_DIR:-"$HOME/code/litellm_config"}"
 USE_TMUX=true
 SPLIT_DIR="horizontal"
 SESSION_NAME="llm"
