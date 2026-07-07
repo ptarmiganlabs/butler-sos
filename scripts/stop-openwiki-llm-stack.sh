@@ -45,10 +45,10 @@ else
         exit 1
     fi
 
-    echo "Stopping llama-server (PID: $LLAMA_SERVER_PID)..."
-    if kill -0 $LLAMA_SERVER_PID 2>/dev/null; then
-        kill $LLAMA_SERVER_PID
-        echo "✓ llama-server stopped"
+echo "Stopping llama-server (PID: $LLAMA_SERVER_PID)..."
+if kill -0 "$LLAMA_SERVER_PID" 2>/dev/null; then
+    kill "$LLAMA_SERVER_PID"
+    echo "✓ llama-server stopped"
     else
         echo "⚠ llama-server (PID $LLAMA_SERVER_PID) is not running"
     fi
