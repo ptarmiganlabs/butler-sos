@@ -148,7 +148,7 @@ if [ "$USE_TMUX" = true ]; then
     echo "Starting litellm in pane 1..."
     tmux send-keys -t "$SESSION_NAME":0.1 'cd /Users/goran/code/litellm_config && source .venv/bin/activate && litellm --config /Users/goran/code/litellm_config/litellm_config.yaml --port 4000' C-m
 
-    cat > .llm-stack.pids <<EOF
+cat > "$PID_FILE" <<EOF
 USE_TMUX=true
 SESSION_NAME=$SESSION_NAME
 EOF
