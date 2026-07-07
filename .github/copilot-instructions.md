@@ -18,7 +18,7 @@ At the start of each session, read:
 This repository has documentation located in the /openwiki directory.
 
 Start here:
-- [OpenWiki quickstart](openwiki/quickstart.md)
+- [OpenWiki quickstart](../openwiki/quickstart.md)
 
 OpenWiki includes repository overview, architecture notes, workflows, domain concepts, operations, integrations, testing guidance, and source maps.
 
