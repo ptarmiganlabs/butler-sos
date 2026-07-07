@@ -55,7 +55,7 @@ trap cleanup SIGINT SIGTERM
 echo "=== Starting OpenWiki LLM Stack ==="
 echo ""
 
-if [ -f ".llm-stack.pids" ]; then
+if [ -f "$PID_FILE" ]; then
     echo "WARNING: .llm-stack.pids file exists. Services may already be running."
     echo "Run scripts/stop-openwiki-llm-stack.sh first if you want to restart."
     echo ""
