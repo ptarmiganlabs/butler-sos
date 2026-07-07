@@ -28,9 +28,9 @@ USE_TMUX="$(get_pid_var USE_TMUX)"
 SESSION_NAME="$(get_pid_var SESSION_NAME)"
 
 if [ "${USE_TMUX:-false}" != true ]; then
-    echo "ERROR: Stack is running in background mode."
-    echo "Cannot attach to background processes. Use 'tail -f' on log files or stop/start with tmux mode."
-    exit 1
+echo "ERROR: Stack is running in background mode."
+echo "Cannot attach to background processes. Stop and restart the stack in tmux mode to attach."
+exit 1
 fi
 
 if ! tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
