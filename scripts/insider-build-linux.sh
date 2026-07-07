@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Platform: Linux only
+# Requires: Node.js, esbuild
 set -e
 
 # Inject git SHA and date into package.json

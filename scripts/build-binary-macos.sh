@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-# Build a standalone Butler SOS binary for macOS (arm64).
-# Run this script from the repository root: bash scripts/build-binary-macos.sh
-# The resulting binary is placed in the repository root with a date and commit SHA suffix,
-# e.g. ./butler-sos--local--2025-Jan-31--a1b2c3d
-# Note: Code signing and notarization are NOT performed (CI-only steps).
+# Platform: macOS only
+# Requires: Node.js, esbuild, codesign (for ad-hoc signing)
 
 set -e
 

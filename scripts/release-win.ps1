@@ -1,3 +1,5 @@
+# Platform: Windows only
+# Requires: Node.js, esbuild, PowerShell, Windows SDK (signtool.exe)
 $ErrorActionPreference = 'Stop'
 
 # Create a single JS file using esbuild

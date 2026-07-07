@@ -1,3 +1,5 @@
+# Platform: Windows only
+# Requires: Node.js, esbuild, PowerShell, Windows SDK (signtool.exe)
 $ErrorActionPreference = 'Stop'
 
 # Inject git SHA and date into package.json

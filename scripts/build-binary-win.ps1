@@ -1,3 +1,5 @@
+# Platform: Windows only
+# Requires: Node.js, esbuild, PowerShell
 # Build a standalone Butler SOS binary for Windows (x64).
 # Run this script from the repository root: powershell -ExecutionPolicy Bypass -File scripts/build-binary-win.ps1
 # The resulting binary is placed in the repository root with a date and commit SHA suffix,

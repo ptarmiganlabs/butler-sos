@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Platform: macOS only
+# Requires: Node.js, esbuild, codesign, xcrun (for notarization), macOS signing certificates
 set -e
 
 KEYCHAIN_LABEL="${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-0}-${GITHUB_JOB:-macos}-$$"
