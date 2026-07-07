@@ -270,7 +270,7 @@ litellm --config "$LITELLM_DIR/litellm_config.yaml" --port 4000 \
     echo "✓ litellm started (PID: $LITELLM_PID)"
     echo ""
 
-    cat > .llm-stack.pids <<EOF
+cat > "$PID_FILE" <<EOF
 USE_TMUX=false
 LLAMA_SERVER_PID=$LLAMA_PID
 LITELLM_PID=$LITELLM_PID
