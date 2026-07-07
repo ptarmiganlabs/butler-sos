@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Platform: Linux only
+# Requires: Node.js, esbuild
 set -e
 
 ./node_modules/.bin/esbuild src/bundle.js  --bundle --outfile=build.cjs --format=cjs --platform=node --target=node22 --inject:./src/lib/import-meta-url.js --define:import.meta.url=import_meta_url

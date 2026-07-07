@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// Platform: Cross-platform (macOS, Linux, Windows)
+// Requires: Node.js
 
 /**
  * License compliance checker.

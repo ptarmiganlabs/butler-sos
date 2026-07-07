@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# Build a standalone Butler SOS binary for Linux (x64).
-# Run this script from the repository root: bash scripts/build-binary-linux.sh
-# The resulting binary is placed in the repository root with a date and commit SHA suffix,
-# e.g. ./butler-sos--local--2025-Jan-31--a1b2c3d
+# Platform: Linux only
+# Requires: Node.js, esbuild
 
 set -e
 
