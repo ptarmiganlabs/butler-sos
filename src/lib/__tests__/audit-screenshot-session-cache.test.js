@@ -137,7 +137,9 @@ describe('audit-screenshot-session-cache', () => {
             setTimeout(resolve, 10);
         });
 
-        expect(cacheModule.getCachedScreenshotSession(shortTtlAuthConfig, qpsConfig, logger)).toBeNull();
+        expect(
+            cacheModule.getCachedScreenshotSession(shortTtlAuthConfig, qpsConfig, logger)
+        ).toBeNull();
         expect(cleanup).toHaveBeenCalledWith(
             expect.objectContaining({
                 cookieName: 'X-Qlik-Session-analytics',

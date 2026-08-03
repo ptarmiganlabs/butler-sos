@@ -70,7 +70,12 @@ export async function storeSessionsV2(userSessions) {
         // Write array of measurements using retry logic
         await writeToInfluxWithRetry(
             () =>
-                writePointsToInfluxV2(globals.influx, org, bucketName, userSessions.datapointInfluxdb),
+                writePointsToInfluxV2(
+                    globals.influx,
+                    org,
+                    bucketName,
+                    userSessions.datapointInfluxdb
+                ),
             `Proxy sessions for ${userSessions.host}/${userSessions.virtualProxy}`,
             'v2',
             userSessions.serverName,

@@ -1030,10 +1030,7 @@ describe('audit-events-api envelope constraint validation', () => {
         const fastify = Fastify({ logger: false });
         await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
 
-        const res = await postEnvelope(
-            fastify,
-            validEnvelope({ correlationId: 'c'.repeat(65) })
-        );
+        const res = await postEnvelope(fastify, validEnvelope({ correlationId: 'c'.repeat(65) }));
 
         expect(res.statusCode).toBe(422);
         const body = JSON.parse(res.payload);
@@ -1986,9 +1983,7 @@ describe('audit-events-api HTTP rate limit (Fastify)', () => {
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('HTTP rate limit exceeded')
         );
-        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('max=2/1m')
-        );
+        expect(mockGlobals.logger.warn).toHaveBeenCalledWith(expect.stringContaining('max=2/1m'));
         expect(mockGlobals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('ipViolations=1')
         );

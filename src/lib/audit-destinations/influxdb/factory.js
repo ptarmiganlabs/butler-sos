@@ -4,6 +4,11 @@ import { writeAuditEventInfluxV1 } from './v1/audit-events.js';
 import { writeAuditEventInfluxV2 } from './v2/audit-events.js';
 import { writeAuditEventInfluxV3 } from './v3/audit-events.js';
 
+/**
+ * Reads the configured InfluxDB version used for audit event destinations.
+ *
+ * @returns {number} The configured InfluxDB major version (1, 2 or 3).
+ */
 function getAuditInfluxVersion() {
     return globals.config.get('Butler-SOS.auditEvents.destination.influxdb.version');
 }

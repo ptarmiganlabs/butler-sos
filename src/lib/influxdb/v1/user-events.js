@@ -1,5 +1,9 @@
 import globals from '../../../globals.js';
-import { isInfluxDbEnabled, validateRequiredFields, writeBatchToInfluxV1 } from '../shared/utils.js';
+import {
+    isInfluxDbEnabled,
+    validateRequiredFields,
+    writeBatchToInfluxV1,
+} from '../shared/utils.js';
 
 /**
  * Posts a user event to InfluxDB v1.

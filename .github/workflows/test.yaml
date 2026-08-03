@@ -1,0 +1,88 @@
+name: test
+
+# Quality gate for pull requests.
+#
+# Before this workflow existed, no CI job ran the test suite, the linter, or a dependency
+# audit — ci.yaml only triggers on push to master and handles release-please, SBOM
+# generation and binary builds. CodeQL was the only PR-time check, so a pull request could
+# break every test, add lint errors, or introduce a vulnerable dependency and still merge.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Only cancel superseded pull-request runs. For push events github.ref is
+  # refs/heads/master for every commit, so cancelling would let consecutive merges cancel
+  # each other's runs — leaving master commits with no pass/fail verdict (cancelled runs
+  # render grey, not red) while ci.yaml still builds and signs binaries from them.
+  # ci.yaml sets cancel-in-progress: false for the same reason.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint-and-test:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Fails on high and critical advisories. Kept in its own job so a newly published
+      # advisory against an unchanged dependency does not mask a genuine lint or test
+      # regression in the pull request.
+      - name: Audit dependencies
+        run: npm run security:audit
+
+      - name: Validate lockfile
+        run: npm run deps:lockfile

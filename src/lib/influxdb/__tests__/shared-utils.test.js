@@ -738,9 +738,7 @@ describe('Shared Utils - validateRequiredFields', () => {
         const result = utils.validateRequiredFields(msg, ['host', 'command'], 'TEST');
 
         expect(result).toBe(false);
-        expect(globals.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('host, command')
-        );
+        expect(globals.logger.warn).toHaveBeenCalledWith(expect.stringContaining('host, command'));
     });
 
     test('should treat falsy values as missing', () => {

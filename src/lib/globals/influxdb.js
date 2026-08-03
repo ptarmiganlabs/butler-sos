@@ -318,7 +318,17 @@ export async function initInfluxDBClient(settings) {
         } else if (settings.config.get('Butler-SOS.influxdbConfig.version') === 3) {
             // Configure InfluxDB v3 client logger to suppress internal error messages
             setInfluxV3Logger({
+                /**
+                 * Swallows internal client errors; Butler SOS reports write failures itself.
+                 *
+                 * @returns {void}
+                 */
                 error: () => {},
+                /**
+                 * Swallows internal client warnings; Butler SOS reports these itself.
+                 *
+                 * @returns {void}
+                 */
                 warn: () => {},
             });
 

@@ -86,7 +86,9 @@ export async function storeUserEventV2(msg) {
         const configTags = globals.config.get('Butler-SOS.userEvents.tags');
         applyInfluxTags(point, configTags);
 
-        globals.logger.silly(`USER EVENT V2: Influxdb datapoint: ${JSON.stringify(point, null, 2)}`);
+        globals.logger.silly(
+            `USER EVENT V2: Influxdb datapoint: ${JSON.stringify(point, null, 2)}`
+        );
 
         // Write to InfluxDB with retry logic
         await writeToInfluxWithRetry(
