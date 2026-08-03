@@ -47,8 +47,11 @@ jobs:
           node-version: 24
           cache: npm
 
+      # --ignore-scripts blocks dependency lifecycle scripts, which are a supply-chain
+      # execution path in CI. Verified that lint, tests, audit and lockfile-lint all pass
+      # without them; only the binary-build scripts need esbuild's postinstall.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Lint
         run: npm run lint
@@ -75,8 +78,11 @@ jobs:
           node-version: 24
           cache: npm
 
+      # --ignore-scripts blocks dependency lifecycle scripts, which are a supply-chain
+      # execution path in CI. Verified that lint, tests, audit and lockfile-lint all pass
+      # without them; only the binary-build scripts need esbuild's postinstall.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       # Fails on high and critical advisories. Kept in its own job so a newly published
       # advisory against an unchanged dependency does not mask a genuine lint or test

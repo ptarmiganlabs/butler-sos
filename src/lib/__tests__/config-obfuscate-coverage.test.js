@@ -214,9 +214,6 @@ function SENTINEL(index) {
 /** Full mask emitted by config-obfuscate.js. */
 const MASK = '*'.repeat(10);
 
-/** Property names that must never be walked or written when following a path. */
-const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
-
 /**
  * Collects every string-typed leaf path from a JSON schema.
  *
@@ -269,7 +266,9 @@ function setAtPath(root, path, value) {
         // a hostile key today. Guarded anyway: assigning down an unvalidated property chain
         // is the prototype-pollution pattern, and a helper that walks arbitrary paths should
         // not be the thing that makes it reachable later.
-        if (UNSAFE_KEYS.has(key)) return;
+        // Written as explicit comparisons rather than a Set lookup: CodeQL's
+        // js/prototype-pollution-utility query only recognises the guard in this form.
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') return;
 
         if (isLast && !isArray) {
             cursor[key] = value;
@@ -308,7 +307,7 @@ function getAtPath(root, path) {
 
         const isArray = part.endsWith('[]');
         const key = isArray ? part.slice(0, -2) : part;
-        if (UNSAFE_KEYS.has(key)) return undefined;
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') return undefined;
         cursor = cursor[key];
 
         if (isArray) {
