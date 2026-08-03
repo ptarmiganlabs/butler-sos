@@ -532,6 +532,15 @@ Butler-SOS:
         enable: false # Default false
         host: <IP or FQDN where Butler SOS is running> # On what IP/FQDN should the Prometheus metrics be exposed? Default 0.0.0.0, i.e. all available IPs
         port: 9842 # Port for Prometheus endpoint. Default 9842
+        # Butler SOS exposes a SECOND endpoint alongside the one above, serving Node.js
+        # internal process metrics (heap, event loop lag, GC, handles).
+        # Both settings below are optional and default to 0.0.0.0:9001, i.e. all available
+        # IPs on port 9001. That is the address this endpoint has always used, so leaving
+        # them commented out keeps the existing behaviour.
+        # Note this endpoint does NOT follow the `host` setting above. If you restrict
+        # `host` and want the Node.js metrics restricted too, set nodeMetricsHost explicitly.
+        # nodeMetricsHost: 127.0.0.1 # Optional. Default 0.0.0.0 (all available IPs)
+        # nodeMetricsPort: 9001 # Optional. Default 9001
 
     # Influx db config parameters
     influxdbConfig:

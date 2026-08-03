@@ -302,6 +302,15 @@ export const destinationsSchema = {
                 format: 'hostname',
             },
             port: { type: 'number' },
+            // Butler SOS starts a second endpoint alongside the one above, serving Node.js
+            // internal process metrics. Both settings are optional and default to
+            // 0.0.0.0:9001 — the address this listener was hardcoded to before it became
+            // configurable — so existing deployments are unaffected.
+            //
+            // No `format: 'hostname'` here: it rejects the IPv6 all-interfaces address `::`,
+            // which would leave IPv6-only hosts unable to express the default binding.
+            nodeMetricsHost: { type: 'string', minLength: 1 },
+            nodeMetricsPort: { type: 'number' },
         },
         required: ['enable', 'port'],
         additionalProperties: false,
