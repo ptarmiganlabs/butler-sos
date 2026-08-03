@@ -23,6 +23,7 @@ import path from 'path';
 
 import globals from '../globals.js';
 import sea from './sea-wrapper.js';
+import { buildSecretKeyValueRegex, buildSecretJsonPairRegex } from './secret-patterns.js';
 
 // ---------------------------------------------------------------------------
 // Module-level constants and state
@@ -114,17 +115,13 @@ function redactSensitivePatterns(text) {
     // 3. Common key=value secret patterns (query strings, connection strings, etc.)
     //    Matches: password=, passwd=, pwd=, secret=, token=, api_key=, apiKey=, apitoken=,
     //             access_key=, accessKey=, auth=, passphrase=, clientSecret=, client_secret=
-    result = result.replace(
-        /\b(password|passwd|pwd|secret|token|api[_-]?key|api[_-]?token|access[_-]?key|auth|passphrase|client[_-]?secret)\s*[=:]\s*[^\s&,;"'[\]{}()]+/gi,
-        '$1=[REDACTED]'
-    );
+    //    Keyword list is shared with config-obfuscate.js via secret-patterns.js so the two
+    //    places that recognise secrets cannot drift apart.
+    result = result.replace(buildSecretKeyValueRegex(), '$1=[REDACTED]');
 
     // 4. JSON-style quoted key/value pairs for the same patterns
     //    e.g. "password": "mysecret" or 'token': 'abc123'
-    result = result.replace(
-        /["'](password|passwd|pwd|secret|token|api[_-]?key|api[_-]?token|access[_-]?key|auth|passphrase|client[_-]?secret)["']\s*:\s*["'][^"']+["']/gi,
-        '"$1": "[REDACTED]"'
-    );
+    result = result.replace(buildSecretJsonPairRegex(), '"$1": "[REDACTED]"');
 
     return result;
 }
