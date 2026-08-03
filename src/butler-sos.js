@@ -28,7 +28,11 @@ import { initAuditInfluxDestination } from './lib/audit-destinations/influxdb/in
 import { setupUdpEventsStorage } from './lib/udp-event.js';
 import { setupUdpQueueMetricsStorage } from './lib/influxdb/index.js';
 import { logError } from './lib/log-error.js';
-import { writeCrashDump } from './lib/crash-dump.js';
+import {
+    handleUncaughtException,
+    registerProcessSafetyNet,
+    setGlobalsRef,
+} from './lib/process-safety-net.js';
 
 // Suppress experimental warnings
 // https://stackoverflow.com/questions/55778283/how-to-disable-warnings-when-node-is-launched-via-a-global-shell-script
@@ -94,6 +98,11 @@ async function mainScript() {
     // Load globals dynamically/async to ensure singleton pattern works
     const settingsObj = (await import('./globals.js')).default;
     const globals = await settingsObj.init();
+
+    // Hand globals to the process-level safety net so uncaught errors and unhandled
+    // rejections are logged through the real logger rather than console.error.
+    setGlobalsRef(globals);
+
     globals.logger.verbose(`START: Globals init done: ${globals.initialised}`);
 
     // Ensure that initialisation of globals is complete
@@ -277,8 +286,21 @@ async function mainScript() {
         const promHost = globals.config.get('Butler-SOS.prometheus.host');
         const promPort = globals.config.get('Butler-SOS.prometheus.port');
 
-        const promNodeHost = '0.0.0.0';
-        const promNodePort = 9001;
+        // Node.js internal metrics are served by a second endpoint. Both settings are
+        // optional and default to 0.0.0.0:9001 — the address this listener was hardcoded to
+        // before it became configurable — so upgrading changes nothing for existing
+        // deployments. Restricting it is opt-in via nodeMetricsHost.
+        //
+        // Deliberately not defaulting to Butler-SOS.prometheus.host: that silently moves an
+        // established endpoint on upgrade, breaking remote scrapes with no warning, and makes
+        // the awaited listen() below fail fatally whenever the configured host is a VIP or
+        // cluster name that is not a local interface.
+        const promNodeHost = globals.config.has('Butler-SOS.prometheus.nodeMetricsHost')
+            ? globals.config.get('Butler-SOS.prometheus.nodeMetricsHost')
+            : '0.0.0.0';
+        const promNodePort = globals.config.has('Butler-SOS.prometheus.nodeMetricsPort')
+            ? globals.config.get('Butler-SOS.prometheus.nodeMetricsPort')
+            : 9001;
 
         try {
             // Set up Butler SOS metrics
@@ -348,40 +370,17 @@ async function mainScript() {
     const udpQueueMetricsIntervalIds = setupUdpQueueMetricsStorage();
 }
 
-mainScript();
-
 // ---------------------------------------------------------------------------
-// Process-level safety net: catch any error that escapes all try/catch blocks
+// Process-level safety net: catch any error that escapes all try/catch blocks.
+// Registered before mainScript() so failures during startup are captured too.
 // ---------------------------------------------------------------------------
+registerProcessSafetyNet();
 
-/**
- * Handler for synchronous uncaught exceptions.
- * Writes a crash dump and exits with code 1.
- *
- * @param {Error} err - The uncaught error
- */
-process.on('uncaughtException', async (err) => {
-    try {
-        console.error('FATAL: Uncaught exception – writing crash dump…');
-        await writeCrashDump(err, 'uncaughtException');
-    } catch {
-        // Must not throw
-    } finally {
-        process.exit(1);
-    }
-});
-
-/**
- * Handler for unhandled promise rejections.
- * Logs the error and continues running — no crash dump, no exit.
- *
- * @param {Error|*} reason - The rejection reason (usually an Error)
- */
-process.on('unhandledRejection', async (reason) => {
-    try {
-        const err = reason instanceof Error ? reason : new Error(String(reason));
-        globals.logger.error(`Unhandled promise rejection: ${globals.getErrorMessage(err)}`);
-    } catch {
-        // Must not throw
-    }
-});
+// A startup failure must exit non-zero. Without this catch the rejection falls through to
+// the unhandledRejection handler, which by design logs and keeps running — so nothing is
+// listening, the event loop drains, and the process exits 0. Docker `restart: on-failure`
+// and systemd `Restart=on-failure` both read that as a clean shutdown and never restart.
+//
+// handleUncaughtException is used rather than logFatal because it is hardened for the
+// pre-init case: startup can fail before globals (and its logger) exist.
+mainScript().catch(handleUncaughtException);
