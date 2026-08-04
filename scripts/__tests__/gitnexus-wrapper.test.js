@@ -34,9 +34,19 @@ describe('GitNexus version pinning', () => {
     });
 
     test.each(['package.json', '.husky/gitnexus-reindex.sh'])(
-        '%s pins no gitnexus version of its own',
+        '%s neither pins nor invokes gitnexus itself',
         (file) => {
-            expect(readRepoFile(file)).not.toMatch(/gitnexus@\d/);
+            // Comments are stripped so prose about npx cannot trip the second assertion.
+            const contents = readRepoFile(file).replace(/^\s*#.*$/gm, '');
+
+            // Any spec, not only a numeric one. `gitnexus@latest` and `gitnexus@^1.6.5`
+            // are worse than a duplicated pin, not better: the pin exists so that a hook
+            // firing after every commit cannot run whatever the registry serves that day.
+            expect(contents).not.toMatch(/gitnexus@/);
+
+            // An unversioned invocation is the same hazard by another route — npx would
+            // resolve it to latest.
+            expect(contents).not.toMatch(/npx[^\n]*gitnexus/i);
         }
     );
 
@@ -65,7 +75,10 @@ describe('GitNexus version pinning', () => {
         expect(gitnexusScripts.length).toBeGreaterThan(0);
 
         for (const [, commandLine] of gitnexusScripts) {
-            expect(commandLine).toMatch(/^node scripts\/gitnexus\.js [a-z]+$/);
+            // Anchored on the prefix only. What matters is that the script goes through
+            // the wrapper; a future subcommand may be hyphenated or take arguments, and
+            // that should not fail a test about routing.
+            expect(commandLine).toMatch(/^node scripts\/gitnexus\.js\b/);
         }
     });
 
@@ -93,12 +106,24 @@ describe('GitNexus reindex hook', () => {
         expect(hook).toMatch(/command -v npx/);
     });
 
-    test('every exit in the hook is exit 0, so git is never blocked', () => {
-        const exits = hook.match(/^\s*exit \d+$/gm) ?? [];
+    test('every exit in the hook is an explicit exit 0, so git is never blocked', () => {
+        // Deliberately not anchored to the start of a line: two of the hook's exits are
+        // guarded (`command -v node ... || exit 0`), and an anchored pattern silently
+        // skipped them — rewriting one to `exit 1` used to pass this test.
+        //
+        // Comments are stripped so prose about exit codes neither satisfies nor breaks it.
+        const code = hook.replace(/^\s*#.*$/gm, '');
+        const exitStatements = code.match(/exit\s+\d+/g) ?? [];
+        const exitKeywords = code.match(/\bexit\b/g) ?? [];
 
-        expect(exits.length).toBeGreaterThan(0);
-        for (const exitLine of exits) {
-            expect(exitLine.trim()).toBe('exit 0');
+        expect(exitKeywords.length).toBeGreaterThan(0);
+
+        // Every `exit` must carry an explicit status. A bare `exit` in sh returns the
+        // previous command's status, which is exactly how a hook ends up blocking a commit.
+        expect(exitStatements).toHaveLength(exitKeywords.length);
+
+        for (const statement of exitStatements) {
+            expect(statement.replace(/\s+/g, ' ')).toBe('exit 0');
         }
     });
 });
