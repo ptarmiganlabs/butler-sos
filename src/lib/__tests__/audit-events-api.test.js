@@ -1127,6 +1127,78 @@ describe('audit-events-api envelope constraint validation', () => {
         );
     });
 
+    describe('screenshot crop geometry validation', () => {
+        /**
+         * Posts a screenshot.url.received envelope carrying the given crop object.
+         *
+         * @param {object|undefined} crop - Crop rectangle to place on the event payload.
+         * @returns {Promise<object>} Fastify inject response.
+         */
+        async function postCrop(crop) {
+            const { registerAuditEventRoutes } = await import('../audit-events-api.js');
+            const fastify = Fastify({ logger: false });
+            await registerAuditEventRoutes(fastify, { apiToken: 'secret', corsOrigins: ['*'] });
+
+            return postEnvelope(
+                fastify,
+                validEnvelope({
+                    type: 'screenshot.url.received',
+                    payload: {
+                        event: {
+                            screenshotUrl: 'https://example.com/screenshot.png',
+                            selectionTxnId: 'c0000000-0000-4000-8000-000000000001',
+                            ...(crop === undefined ? {} : { crop }),
+                        },
+                    },
+                })
+            );
+        }
+
+        test('accepts a well-formed crop rectangle', async () => {
+            const res = await postCrop({
+                top: 0,
+                left: 0,
+                width: 800,
+                height: 600,
+                scrollTop: 120,
+                scrollAreaOffsetY: 40,
+                renderingOverflow: 3,
+            });
+
+            expect(res.statusCode).toBe(202);
+        });
+
+        test('accepts a payload with no crop at all', async () => {
+            // crop is optional -- only cropped visualisations send one.
+            const res = await postCrop(undefined);
+
+            expect(res.statusCode).toBe(202);
+        });
+
+        test.each([
+            ['negative top', { width: 10, height: 10, top: -1 }],
+            ['negative left', { width: 10, height: 10, left: -5 }],
+            ['negative scrollTop', { width: 10, height: 10, scrollTop: -1 }],
+            ['negative scrollAreaOffsetY', { width: 10, height: 10, scrollAreaOffsetY: -1 }],
+            ['negative renderingOverflow', { width: 10, height: 10, renderingOverflow: -1 }],
+            ['zero width', { width: 0, height: 10 }],
+            ['zero height', { width: 10, height: 0 }],
+            ['oversized width', { width: 40000, height: 10 }],
+            ['oversized height', { width: 10, height: 40000 }],
+            ['oversized top', { width: 10, height: 10, top: 99999 }],
+            ['oversized scrollTop', { width: 10, height: 10, scrollTop: 99999 }],
+            ['fractional height', { width: 10, height: 10.5 }],
+            ['non-numeric width', { width: '10', height: 10 }],
+            ['missing width', { height: 10 }],
+            ['missing height', { width: 10 }],
+        ])('rejects crop with %s', async (_label, crop) => {
+            const res = await postCrop(crop);
+
+            expect(res.statusCode).toBe(422);
+            expect(JSON.parse(res.payload).reason).toBe('Payload validation failed');
+        });
+    });
+
     test('accepts wildcard event type "event.custom"', async () => {
         const { registerAuditEventRoutes } = await import('../audit-events-api.js');
         const fastify = Fastify({ logger: false });
