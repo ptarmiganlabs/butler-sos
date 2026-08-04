@@ -76,7 +76,7 @@
         "fastify": "^5.11.2",
         "fastify-healthcheck": "^5.1.0",
         "fastify-metrics": "^13.2.1",
-        "fastify-plugin": "^5.1.0",
+        "fastify-plugin": "^6.0.0",
         "fs-extra": "^11.4.0",
         "handlebars": "^4.7.8",
         "hyparquet-writer": "^0.16.5",
@@ -117,9 +117,8 @@
         "knip": "^6.31.0",
         "license-checker-rseidelsohn": "^5.0.1",
         "lockfile-lint": "^5.0.0",
-        "npm-check-updates": "^22.2.9",
+        "npm-check-updates": "^23.0.1",
         "prettier": "^3.9.6",
-        "snyk": "^1.1306.2",
-        "typescript": "^6.0.3"
+        "snyk": "^1.1306.2"
     }
 }
