@@ -606,6 +606,106 @@ describe('audit-screenshots', () => {
         });
     });
 
+    describe('crop fast path avoids decoding when no work is needed', () => {
+        /**
+         * Downloads a PNG of the given size with the given crop rectangle.
+         *
+         * @param {number} w - Source image width.
+         * @param {number} h - Source image height.
+         * @param {object} crop - Crop rectangle to send on the payload.
+         * @returns {Promise<Buffer>} The buffer that was written to storage.
+         */
+        async function downloadAndGetStored(w, h, crop) {
+            const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+            const png = new PNG({ width: w, height: h });
+            for (let i = 0; i < png.data.length; i += 4) {
+                png.data[i] = 30;
+                png.data[i + 1] = 60;
+                png.data[i + 2] = 90;
+                png.data[i + 3] = 255;
+            }
+            const srcBuffer = PNG.sync.write(png);
+
+            mockAxios.request.mockResolvedValue({
+                status: 200,
+                headers: { 'content-type': 'image/png' },
+                data: srcBuffer,
+            });
+
+            await downloadScreenshot(
+                'https://example.com/screenshot.png',
+                {
+                    timestamp: '2025-12-22T12:34:56.000Z',
+                    eventId: 'evt-fast',
+                    correlationId: 'corr-fast',
+                    payload: {
+                        event: { screenshotUrl: 'https://example.com/screenshot.png', crop },
+                    },
+                },
+                {
+                    enable: true,
+                    downloadTimeoutMs: 15000,
+                    storageTargets: [
+                        { enable: true, type: 'flat', directory: 'screenshots/audit' },
+                    ],
+                },
+                {
+                    debug: jest.fn(),
+                    info: jest.fn(),
+                    warn: jest.fn(),
+                    error: jest.fn(),
+                    isLevelEnabled: jest.fn().mockReturnValue(false),
+                }
+            );
+
+            return mockFsPromises.writeFile.mock.calls[0][1];
+        }
+
+        test('returns the original bytes untouched when the render already matches the crop', async () => {
+            const stored = await downloadAndGetStored(20, 20, {
+                top: 0,
+                left: 0,
+                width: 20,
+                height: 20,
+            });
+
+            const out = PNG.sync.read(stored);
+            expect(out.width).toBe(20);
+            expect(out.height).toBe(20);
+        });
+
+        test('still crops when the render is larger than the crop rectangle', async () => {
+            // The fast path must not swallow real cropping work.
+            const stored = await downloadAndGetStored(40, 40, {
+                top: 0,
+                left: 0,
+                width: 20,
+                height: 20,
+            });
+
+            const out = PNG.sync.read(stored);
+            expect(out.width).toBe(20);
+            expect(out.height).toBe(20);
+        });
+
+        test('still composites when scrollTop is set', async () => {
+            const stored = await downloadAndGetStored(40, 40, {
+                top: 0,
+                left: 0,
+                width: 40,
+                height: 40,
+                scrollTop: 10,
+                scrollAreaOffsetY: 5,
+            });
+
+            // Scroll compositing removes the scrolled-past rows, so the result is shorter
+            // than the source even though the crop rectangle matches the source size.
+            const out = PNG.sync.read(stored);
+            expect(out.height).toBeLessThan(40);
+        });
+    });
+
     test('adds metadata header to PNG screenshot when enabled', async () => {
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 

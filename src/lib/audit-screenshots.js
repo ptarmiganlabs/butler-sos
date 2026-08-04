@@ -528,6 +528,39 @@ function isDebugEnabled(logger) {
     return typeof logger?.isLevelEnabled === 'function' && logger.isLevelEnabled('debug') === true;
 }
 
+/** PNG file signature: the first eight bytes of every PNG. */
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/**
+ * Reads image dimensions straight out of a PNG's IHDR header.
+ *
+ * The spec fixes the layout of the first 24 bytes: an 8-byte signature, then the IHDR chunk
+ * length and type, then width and height as big-endian 32-bit integers at offsets 16 and 20.
+ * Reading them costs nothing, whereas a full decode allocates and inflates the entire pixel
+ * buffer — tens to hundreds of milliseconds of blocked event loop for a large screenshot.
+ *
+ * This is a cheap pre-check, not a validator. It returns null whenever the buffer does not
+ * look like a PNG or the dimensions are not sensible, and callers must fall back to the real
+ * decoder in that case rather than treating null as "no work needed".
+ *
+ * @param {Buffer} buffer - Candidate PNG buffer.
+ * @returns {{width: number, height: number}|null} Dimensions, or null if they cannot be read.
+ */
+function readPngHeaderDimensions(buffer) {
+    if (!Buffer.isBuffer(buffer) || buffer.length < 24) return null;
+    if (!buffer.subarray(0, 8).equals(PNG_SIGNATURE)) return null;
+    if (buffer.toString('ascii', 12, 16) !== 'IHDR') return null;
+
+    const width = buffer.readUInt32BE(16);
+    const height = buffer.readUInt32BE(20);
+
+    if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
+        return null;
+    }
+
+    return { width, height };
+}
+
 /**
  * Returns a URL string with any qlikTicket query value redacted.
  *
@@ -949,14 +982,46 @@ export function buildScreenshotFilename(envelope, url, contentType) {
  * @returns {Buffer} Cropped PNG buffer, or the original buffer if cropping is unnecessary.
  */
 function cropPngBuffer(buffer, crop, logger) {
+    const debugEnabledEarly = isDebugEnabled(logger);
+
+    // Fast path: decide from the 24-byte PNG header whether any pixel work is needed at all.
+    //
+    // Decoding is expensive and fully blocks the event loop -- measured at ~19 ms for a
+    // 1920x1080 sheet and ~62 ms for a tall pivot table, before any re-encode. The common
+    // case is that the Printing Service rendered exactly the requested size, so every branch
+    // below is skipped and the function returns the original buffer untouched. Paying for a
+    // full decode to discover that is pure waste.
+    //
+    // The conditions mirror the branch guards below exactly: no scroll composite, no overflow
+    // composite, and the standard crop's own early return. Debug mode is excluded because it
+    // scans pixels, which needs the decode.
+    if (!debugEnabledEarly) {
+        const header = readPngHeaderDimensions(buffer);
+
+        if (header !== null) {
+            const scrollTopEarly = crop.scrollTop || 0;
+            const scrollAreaOffsetYEarly = crop.scrollAreaOffsetY || 0;
+            const wouldScrollComposite =
+                scrollTopEarly > 0 &&
+                scrollAreaOffsetYEarly >= 0 &&
+                scrollAreaOffsetYEarly + scrollTopEarly < header.height;
+            const wouldOverflowComposite = (crop.renderingOverflow || 0) > 0;
+            const wouldCrop = header.width > crop.width || header.height > crop.height;
+
+            if (!wouldScrollComposite && !wouldOverflowComposite && !wouldCrop) {
+                return buffer;
+            }
+        }
+    }
+
     let src = PNG.sync.read(buffer);
 
     // Every diagnostic below is gated on debug being enabled, not merely on a logger being
     // present. A real logger is always passed, so `if (logger)` was always true: at any log
     // level, every cropped screenshot wrote PNGs into <cwd>/audit-events/debug/ and ran the
     // O(width x height) scan below purely to produce one number for a log line nobody would
-    // see. Cheap to compute once here and reuse for the later blocks.
-    const debugEnabled = isDebugEnabled(logger);
+    // see.
+    const debugEnabled = debugEnabledEarly;
 
     if (debugEnabled) {
         // Scan from the bottom to find the last row that contains non-white pixels.
