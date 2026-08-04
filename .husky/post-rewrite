@@ -1,0 +1,3 @@
+# Runs after history is rewritten — `git rebase` and `git commit --amend`.
+# Git passes the trigger as $1 ("rebase" or "amend"); both change the tree.
+exec "$(dirname "$0")/gitnexus-reindex.sh"

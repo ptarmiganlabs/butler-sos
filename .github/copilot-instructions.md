@@ -85,17 +85,24 @@ If any check fails, fix the issues and run checks again.
 
 This repo is indexed in GitNexus as `butler-sos`. In this multi-repo workspace, always include `-r butler-sos` on GitNexus CLI commands. GitNexus MCP tools may not be available in VS Code/Copilot chats, so use the CLI unless a `gitnexus_*` tool is actually exposed.
 
+The index is kept current automatically by git hooks (`.husky/post-commit`, `post-merge`,
+`post-rewrite`, `post-checkout`), so you should not normally need to re-index by hand.
+
 Start by checking index freshness:
 
 ```bash
-npx gitnexus status
+npm run gitnexus:status
 ```
 
 If the index is stale, rebuild it before relying on impact analysis:
 
 ```bash
-npx gitnexus analyze
+npm run gitnexus:index
 ```
+
+Always go through the npm scripts, never a bare `npx gitnexus analyze`. The scripts pass
+`--skip-agents-md`; a bare `analyze` rewrites the managed GitNexus block in `CLAUDE.md` and
+`AGENTS.md` and, without `--skills`, deletes the generated-skills table from both.
 
 Before modifying a function, class, or method, run upstream impact analysis and report the blast radius to the user:
 
