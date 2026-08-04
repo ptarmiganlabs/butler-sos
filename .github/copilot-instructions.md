@@ -36,6 +36,36 @@ When working in this repository, read the OpenWiki quickstart first, then follow
   a patch. The types that appear in the changelog are defined in `release-please-config.json`:
   `feat`, `fix`, `chore`, `refactor`, `docs`, `build`, `test`.
 
+## 📝 Doc Site Staging (`docs/to-doc-site`)
+
+The Butler SOS documentation site lives in a separate repository and takes its input from
+`docs/to-doc-site`. When a change is user-visible, capture it there **in the same pull
+request as the code change** — otherwise the change ships and the doc site never learns
+about it.
+
+Write a file when the change involves:
+
+- a new feature, or a change to how an existing one behaves
+- a new, renamed, removed or re-defaulted configuration setting
+- a bug fix an administrator would notice (wrong data, a silent failure that now surfaces)
+- new or changed log messages, error codes or HTTP status codes an operator might search for
+- anything that changes what an administrator must do when upgrading
+
+Do **not** write a file for internal refactors, test-only changes, CI/tooling work, or
+dependency bumps that change no behaviour.
+
+**Read `docs/to-doc-site/README.md` before writing.** It is the authority on audience, file
+format and naming, and is deliberately not restated here. The two rules most often got wrong:
+
+- The audience is **Qlik Sense administrators, not Node.js developers**. No code snippets, no
+  internal function or variable names, no paths inside `src/`.
+- Each file is self-contained: one topic per file, kebab-case file name, no cross-references
+  to other staging files.
+
+`docs/to-doc-site/audit-api-rate-limiting.md` is a good worked example of the expected depth
+and structure. Never add the `done_` prefix yourself — that is applied by whoever migrates
+the content to the doc site.
+
 ## ✅ Quality Gates
 
 When writing code, Copilot must not finish until all of these succeed:

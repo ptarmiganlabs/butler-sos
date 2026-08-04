@@ -74,6 +74,22 @@ This project is indexed by GitNexus as **butler-sos** (2919 symbols, 5442 relati
   the commit type. Sections defined in `release-please-config.json`: `feat`, `fix`, `chore`,
   `refactor`, `docs`, `build`, `test`
 
+## Doc site staging — `docs/to-doc-site`
+
+The doc site is a separate repo that takes its input from `docs/to-doc-site`. Capture
+admin-facing changes there **in the same PR as the code change**.
+
+- **Write a file for**: new features, changed behaviour, new/renamed/removed/re-defaulted
+  config settings, bug fixes an admin would notice, new log messages or status codes an
+  operator might search for, anything affecting an upgrade
+- **Skip**: internal refactors, test-only changes, CI/tooling, dependency bumps with no
+  behaviour change
+- **Read `docs/to-doc-site/README.md` first** — it owns the rules on audience, format and
+  naming. Most-missed points: the audience is Qlik Sense admins, *not* developers (no code
+  snippets, no `src/` paths, no internal symbol names), and each file is self-contained
+- See `docs/to-doc-site/audit-api-rate-limiting.md` for expected depth and structure
+- Never add the `done_` prefix — that is applied when the content reaches the doc site
+
 ## Commands
 
 - `npm ci` — install deps

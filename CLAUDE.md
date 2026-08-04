@@ -73,6 +73,37 @@ This project is indexed by GitNexus as **butler-sos** (2919 symbols, 5442 relati
   from the commit type. Types with a changelog section are defined in
   `release-please-config.json`: `feat`, `fix`, `chore`, `refactor`, `docs`, `build`, `test`.
 
+## Doc site staging — `docs/to-doc-site`
+
+The Butler SOS documentation site lives in a separate repo and takes its input from
+`docs/to-doc-site`. Anything an administrator would need to know about must be captured
+there, in the same PR as the code change — otherwise the change ships and the doc site
+never learns about it.
+
+**Write a file when the change is user-visible**, including:
+
+- a new feature, or a change to how an existing one behaves
+- a new, renamed, removed or re-defaulted config setting
+- a bug fix an admin would notice (wrong data, a silent failure that now surfaces)
+- new or changed log messages, error codes or HTTP status codes an operator might search for
+- anything that changes what an admin must do when upgrading
+
+**Do not write a file** for changes with no admin-visible effect: internal refactors,
+test-only changes, CI/tooling, or dependency bumps that change no behaviour.
+
+**Read `docs/to-doc-site/README.md` before writing** — it is the authority on audience,
+file format and naming, and this section deliberately does not restate its rules. The two
+things most often got wrong:
+
+- The audience is **Qlik Sense administrators, not Node.js developers**. Do not include code
+  snippets, internal function or variable names, or paths inside `src/`.
+- Each file is self-contained. One topic per file, kebab-case name, no cross-references to
+  other staging files.
+
+`docs/to-doc-site/audit-api-rate-limiting.md` is a good worked example of the expected depth
+and structure. Never add the `done_` prefix yourself — that is applied by whoever migrates
+the content to the doc site.
+
 ## OpenWiki
 
 This repository has documentation located in the /openwiki directory.
