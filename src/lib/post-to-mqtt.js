@@ -1,5 +1,6 @@
 import globals from '../globals.js';
 import { logError } from './log-error.js';
+import { getConfigArray } from './util/config-utils.js';
 
 /**
  * Wraps `mqttClient.publish()` in a Promise so that both synchronous argument
@@ -179,16 +180,8 @@ export async function postUserEventToMQTT(msg) {
         if (msg?.ua?.os?.version) payload.uaOsVersion = msg.ua.os.version;
 
         // Add custom tags from config file to payload
-        if (
-            globals.config.has('Butler-SOS.userEvents.tags') &&
-            globals.config.get('Butler-SOS.userEvents.tags') !== null &&
-            globals.config.get('Butler-SOS.userEvents.tags').length > 0
-        ) {
-            const configTags = globals.config.get('Butler-SOS.userEvents.tags');
-
-            for (const item of configTags) {
-                payload.tags[item.name] = item.value;
-            }
+        for (const item of getConfigArray(globals.config, 'Butler-SOS.userEvents.tags')) {
+            payload.tags[item.name] = item.value;
         }
 
         // Send message to MQTT topics, as defined in the config file.
@@ -299,16 +292,8 @@ export async function postLogEventToMQTT(msg) {
         payload.tags = {};
 
         // Add custom tags from config file to payload
-        if (
-            globals.config.has('Butler-SOS.logEvents.tags') &&
-            globals.config.get('Butler-SOS.logEvents.tags') !== null &&
-            globals.config.get('Butler-SOS.logEvents.tags').length > 0
-        ) {
-            const configTags = globals.config.get('Butler-SOS.logEvents.tags');
-
-            for (const item of configTags) {
-                payload.tags[item.name] = item.value;
-            }
+        for (const item of getConfigArray(globals.config, 'Butler-SOS.logEvents.tags')) {
+            payload.tags[item.name] = item.value;
         }
 
         // Collect all publish Promises so mqttClient.publish() is called

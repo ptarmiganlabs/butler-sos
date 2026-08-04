@@ -6,6 +6,7 @@ import {
     setLogger as setInfluxV3Logger,
 } from '@influxdata/influxdb3-client';
 import { getServerTags } from '../servertags.js';
+import { getConfigArray } from '../util/config-utils.js';
 
 /**
  * Initializes the InfluxDB client based on configuration settings.
@@ -13,27 +14,26 @@ import { getServerTags } from '../servertags.js';
  * @param {object} settings - The settings object to populate
  */
 export async function initInfluxDBClient(settings) {
-    // Get info on what servers to monitor
-    settings.serverList = settings.config.get('Butler-SOS.serversToMonitor.servers');
+    // Get info on what servers to monitor.
+    // `servers` is nullable in the schema; a null here would reach the settings.serverList
+    // .forEach() calls further down this file.
+    settings.serverList = getConfigArray(settings.config, 'Butler-SOS.serversToMonitor.servers');
 
     // Get list of standard and user configurable tags
     // ..begin with standard tags
     const tagValues = ['host', 'server_name', 'server_description'];
 
     // ..check if there are any extra tags for this Butler SOS instance that should be sent to InfluxDB
-    if (
-        settings.config.has('Butler-SOS.serversToMonitor.serverTagsDefinition') &&
-        settings.config.get('Butler-SOS.serversToMonitor.serverTagsDefinition') !== null
-    ) {
-        // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
-        settings.config.get('Butler-SOS.serversToMonitor.serverTagsDefinition').forEach((entry) => {
+    // Loop over all tags defined for the current server, adding them to the data structure that will later be passed to Influxdb
+    getConfigArray(settings.config, 'Butler-SOS.serversToMonitor.serverTagsDefinition').forEach(
+        (entry) => {
             settings.logger.debug(
                 `CONFIG: Setting up new Influx database: Found server tag : ${entry}`
             );
 
             tagValues.push(entry);
-        });
-    }
+        }
+    );
 
     // Add tags for log events
     const tagValuesLogEvent = tagValues.slice();
@@ -61,29 +61,27 @@ export async function initInfluxDBClient(settings) {
     tagValuesLogEvent.push('object_id');
 
     // Check if there are any extra log event tags in the config file
-    if (
-        settings.config.has('Butler-SOS.logEvents.tags') &&
-        settings.config.get('Butler-SOS.logEvents.tags') !== null
-    ) {
-        settings.config.get('Butler-SOS.logEvents.tags').forEach((entry) => {
-            settings.logger.debug(
-                `CONFIG: Setting up new Influx database: Found log event tag in config file: ${JSON.stringify(
-                    entry
-                )}`
-            );
+    getConfigArray(settings.config, 'Butler-SOS.logEvents.tags').forEach((entry) => {
+        settings.logger.debug(
+            `CONFIG: Setting up new Influx database: Found log event tag in config file: ${JSON.stringify(
+                entry
+            )}`
+        );
 
-            tagValuesLogEvent.push(entry.name);
-        });
-    }
+        tagValuesLogEvent.push(entry.name);
+    });
 
     // Add tags for log events categories, if enabled and configured
     if (
         settings.config.has('Butler-SOS.logEvents.categorise.enable') &&
-        settings.config.get('Butler-SOS.logEvents.categorise.enable') === true &&
-        settings.config.has('Butler-SOS.logEvents.categorise.rules')
+        settings.config.get('Butler-SOS.logEvents.categorise.enable') === true
     ) {
         // Add tags from Butler-SOS.logEvents.categorise.rules[].category[], where each object has properties 'name' and 'value'
-        settings.config.get('Butler-SOS.logEvents.categorise.rules').forEach((rule) => {
+        // `rules` is nullable in the schema and ships commented out in the template, so the
+        // has() check the surrounding block used to rely on was not enough — has() is true for
+        // an explicitly-null value. `rule.category` needs no guard: the schema makes it
+        // required and non-nullable.
+        getConfigArray(settings.config, 'Butler-SOS.logEvents.categorise.rules').forEach((rule) => {
             rule.category.forEach((category) => {
                 tagValuesLogEvent.push(category.name);
             });
@@ -92,14 +90,14 @@ export async function initInfluxDBClient(settings) {
         // Add default rule categories, if enabled
         if (
             settings.config.has('Butler-SOS.logEvents.categorise.ruleDefault.enable') &&
-            settings.config.get('Butler-SOS.logEvents.categorise.ruleDefault.enable') === true &&
-            settings.config.has('Butler-SOS.logEvents.categorise.ruleDefault.category')
+            settings.config.get('Butler-SOS.logEvents.categorise.ruleDefault.enable') === true
         ) {
-            settings.config
-                .get('Butler-SOS.logEvents.categorise.ruleDefault.category')
-                .forEach((category) => {
-                    tagValuesLogEvent.push(category.name);
-                });
+            getConfigArray(
+                settings.config,
+                'Butler-SOS.logEvents.categorise.ruleDefault.category'
+            ).forEach((category) => {
+                tagValuesLogEvent.push(category.name);
+            });
         }
     }
 

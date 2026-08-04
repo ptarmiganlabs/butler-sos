@@ -9,6 +9,7 @@ import { Point } from '@influxdata/influxdb-client';
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 
 import globals from '../globals.js';
+import { getConfigArray } from './util/config-utils.js';
 import { postProxySessionsToInfluxdb } from './influxdb/index.js';
 import { postProxySessionsToNewRelic } from './post-to-new-relic.js';
 import { applyTagsToPoint3, validateUnsignedField } from './influxdb/shared/utils.js';
@@ -146,26 +147,23 @@ function prepUserSessionMetrics(serverName, host, virtualProxy, body, tags) {
                 // If so just skip this user's session
 
                 let includeUser = true;
+                const excludeList = getConfigArray(
+                    globals.config,
+                    'Butler-SOS.userSessions.excludeUser'
+                );
                 if (
-                    globals.config.has('Butler-SOS.userSessions.excludeUser') &&
-                    globals.config.get('Butler-SOS.userSessions.excludeUser') !== null &&
-                    globals.config.get('Butler-SOS.userSessions.excludeUser').length > 0
+                    excludeList.some(
+                        (blacklistUser) =>
+                            blacklistUser.directory === bodyItem.UserDirectory &&
+                            blacklistUser.userId === bodyItem.UserId
+                    )
                 ) {
-                    const excludeList = globals.config.get('Butler-SOS.userSessions.excludeUser');
-                    if (
-                        excludeList.findIndex(
-                            (blacklistUser) =>
-                                blacklistUser.directory === bodyItem.UserDirectory &&
-                                blacklistUser.userId === bodyItem.UserId
-                        ) >= 0
-                    ) {
-                        // The user associated with the session was found in the blacklist. Return with no further action.
-                        globals.logger.debug(
-                            `PROXY SESSIONS: User ${bodyItem.UserDirectory}\\${bodyItem.UserId} in blacklist, not reporting session.`
-                        );
+                    // The user associated with the session was found in the blacklist. Return with no further action.
+                    globals.logger.debug(
+                        `PROXY SESSIONS: User ${bodyItem.UserDirectory}\\${bodyItem.UserId} in blacklist, not reporting session.`
+                    );
 
-                        includeUser = false;
-                    }
+                    includeUser = false;
                 }
 
                 if (includeUser === true) {

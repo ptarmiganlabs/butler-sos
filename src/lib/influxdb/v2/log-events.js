@@ -1,5 +1,6 @@
 import { Point } from '@influxdata/influxdb-client';
 import globals from '../../../globals.js';
+import { getConfigArray } from '../../util/config-utils.js';
 import { isInfluxDbEnabled, writeBatchToInfluxV2 } from '../shared/utils.js';
 import { applyInfluxTags } from './utils.js';
 
@@ -191,7 +192,7 @@ export async function storeLogEventV2(msg) {
         }
 
         // Add custom tags from config file
-        const configTags = globals.config.get('Butler-SOS.logEvents.tags');
+        const configTags = getConfigArray(globals.config, 'Butler-SOS.logEvents.tags');
         applyInfluxTags(point, configTags);
 
         globals.logger.silly(`LOG EVENT V2: Influxdb datapoint: ${JSON.stringify(point, null, 2)}`);

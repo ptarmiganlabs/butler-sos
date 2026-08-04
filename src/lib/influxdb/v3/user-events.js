@@ -1,5 +1,6 @@
 import { Point as Point3 } from '@influxdata/influxdb3-client';
 import globals from '../../../globals.js';
+import { getConfigArray } from '../../util/config-utils.js';
 import {
     isInfluxDbEnabled,
     sanitizeInfluxTagValue,
@@ -75,15 +76,8 @@ export async function postUserEventToInfluxdbV3(msg) {
         point.setTag('uaOsVersion', sanitizeInfluxTagValue(msg?.ua?.os?.version));
 
     // Add custom tags from config file to payload
-    if (
-        globals.config.has('Butler-SOS.userEvents.tags') &&
-        globals.config.get('Butler-SOS.userEvents.tags') !== null &&
-        globals.config.get('Butler-SOS.userEvents.tags').length > 0
-    ) {
-        const configTags = globals.config.get('Butler-SOS.userEvents.tags');
-        for (const item of configTags) {
-            point.setTag(sanitizeInfluxTagValue(item.name), sanitizeInfluxTagValue(item.value));
-        }
+    for (const item of getConfigArray(globals.config, 'Butler-SOS.userEvents.tags')) {
+        point.setTag(sanitizeInfluxTagValue(item.name), sanitizeInfluxTagValue(item.value));
     }
 
     globals.logger.silly(

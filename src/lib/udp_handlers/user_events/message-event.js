@@ -6,6 +6,7 @@ import globals from '../../../globals.js';
 import { sanitizeField } from '../../udp-queue-manager.js';
 import { postUserEventToInfluxdb } from '../../influxdb/index.js';
 import { postUserEventToNewRelic } from '../../post-to-new-relic.js';
+import { getConfigArray } from '../../util/config-utils.js';
 import { postUserEventToMQTT } from '../../post-to-mqtt.js';
 import { logError } from '../../log-error.js';
 import { formatUserFields } from '../log_events/utils/common-utils.js';
@@ -142,21 +143,16 @@ export async function messageEventHandler(message, _remote) {
 
         // Is user in blacklist?
         // If so skip this event
+        const excludeList = getConfigArray(globals.config, 'Butler-SOS.userEvents.excludeUser');
         if (
-            globals.config.get('Butler-SOS.userEvents.excludeUser') !== null &&
-            globals.config.get('Butler-SOS.userEvents.excludeUser').length > 0
+            excludeList.some(
+                (blacklistUser) =>
+                    blacklistUser.directory === msgObj.user_directory &&
+                    blacklistUser.userId === msgObj.user_id
+            )
         ) {
-            const excludeList = globals.config.get('Butler-SOS.userEvents.excludeUser');
-            if (
-                excludeList.findIndex(
-                    (blacklistUser) =>
-                        blacklistUser.directory === msgObj.user_directory &&
-                        blacklistUser.userId === msgObj.user_id
-                ) >= 0
-            ) {
-                // The user associated with the event was found in the blacklist. Return with no further action.
-                return;
-            }
+            // The user associated with the event was found in the blacklist. Return with no further action.
+            return;
         }
 
         // Do we have an app id in the msgObj.context field?

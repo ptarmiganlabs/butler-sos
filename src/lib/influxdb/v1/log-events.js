@@ -1,4 +1,5 @@
 import globals from '../../../globals.js';
+import { getConfigArray } from '../../util/config-utils.js';
 import { isInfluxDbEnabled, writeBatchToInfluxV1 } from '../shared/utils.js';
 
 /**
@@ -169,15 +170,8 @@ export async function storeLogEventV1(msg) {
         }
 
         // Add custom tags from config file to payload
-        if (
-            globals.config.has('Butler-SOS.logEvents.tags') &&
-            globals.config.get('Butler-SOS.logEvents.tags') !== null &&
-            globals.config.get('Butler-SOS.logEvents.tags').length > 0
-        ) {
-            const configTags = globals.config.get('Butler-SOS.logEvents.tags');
-            for (const item of configTags) {
-                tags[item.name] = item.value;
-            }
+        for (const item of getConfigArray(globals.config, 'Butler-SOS.logEvents.tags')) {
+            tags[item.name] = item.value;
         }
 
         const datapoint = [

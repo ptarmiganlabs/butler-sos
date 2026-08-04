@@ -9,6 +9,9 @@ jest.unstable_mockModule('../../globals.js', () => ({
         },
         config: {
             get: jest.fn(),
+            // Required by getConfigArray(): node-config exposes has() alongside get(), and
+            // returns true for any configured key — including one whose value is null.
+            has: jest.fn(() => true),
         },
     },
 }));
@@ -173,8 +176,13 @@ describe('log-event-categorise', () => {
     });
 
     test('should handle errors and return null', () => {
-        // Force an error by returning null from config.get
-        globals.config.get.mockImplementationOnce(() => null);
+        // Force a genuine error. This previously used `() => null` and relied on
+        // `for (const rule of null)` throwing — i.e. on the very crash that issue #1450 is
+        // about. Now that a null rules list is read as an empty list, that no longer throws,
+        // so the error path needs a real failure to exercise it.
+        globals.config.get.mockImplementationOnce(() => {
+            throw new Error('config read failed');
+        });
 
         const result = categoriseLogEvent('ERROR', 'Test message');
 
@@ -182,5 +190,36 @@ describe('log-event-categorise', () => {
         expect(globals.logger.error).toHaveBeenCalledWith(
             expect.stringContaining('Error processing log event')
         );
+    });
+
+    test('treats a null rules list as no rules instead of throwing', () => {
+        // The shipped production_template.yaml leaves categorise.rules with every entry
+        // commented out, which YAML parses as null. Regression guard for #1450.
+        globals.config.get.mockImplementation((path) => {
+            if (path === 'Butler-SOS.logEvents.categorise.rules') return null;
+            if (path === 'Butler-SOS.logEvents.categorise.ruleDefault.enable') return false;
+            return null;
+        });
+
+        const result = categoriseLogEvent('ERROR', 'Test message');
+
+        expect(result).toEqual({ category: [], actionTaken: 'categorised' });
+        expect(globals.logger.error).not.toHaveBeenCalled();
+    });
+
+    test('treats a null default-category list as no categories instead of throwing', () => {
+        // Same shape one level down: ruleDefault.category is nullable and also ships
+        // commented out. Spreading it (`...null`) throws just as iterating does.
+        globals.config.get.mockImplementation((path) => {
+            if (path === 'Butler-SOS.logEvents.categorise.rules') return [];
+            if (path === 'Butler-SOS.logEvents.categorise.ruleDefault.enable') return true;
+            if (path === 'Butler-SOS.logEvents.categorise.ruleDefault.category') return null;
+            return null;
+        });
+
+        const result = categoriseLogEvent('ERROR', 'Test message');
+
+        expect(result).toEqual({ category: [], actionTaken: 'categorised' });
+        expect(globals.logger.error).not.toHaveBeenCalled();
     });
 });

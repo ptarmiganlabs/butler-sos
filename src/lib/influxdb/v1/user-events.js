@@ -1,4 +1,5 @@
 import globals from '../../../globals.js';
+import { getConfigArray } from '../../util/config-utils.js';
 import {
     isInfluxDbEnabled,
     validateRequiredFields,
@@ -64,15 +65,8 @@ export async function storeUserEventV1(msg) {
         if (msg?.ua?.os?.version) tags.uaOsVersion = msg?.ua?.os?.version;
 
         // Add custom tags from config file to payload
-        if (
-            globals.config.has('Butler-SOS.userEvents.tags') &&
-            globals.config.get('Butler-SOS.userEvents.tags') !== null &&
-            globals.config.get('Butler-SOS.userEvents.tags').length > 0
-        ) {
-            const configTags = globals.config.get('Butler-SOS.userEvents.tags');
-            for (const item of configTags) {
-                tags[item.name] = item.value;
-            }
+        for (const item of getConfigArray(globals.config, 'Butler-SOS.userEvents.tags')) {
+            tags[item.name] = item.value;
         }
 
         const datapoint = [

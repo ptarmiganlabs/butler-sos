@@ -1,5 +1,6 @@
 import { Point } from '@influxdata/influxdb-client';
 import globals from '../../../globals.js';
+import { getConfigArray } from '../../util/config-utils.js';
 import {
     isInfluxDbEnabled,
     validateRequiredFields,
@@ -83,7 +84,7 @@ export async function storeUserEventV2(msg) {
         if (msg?.ua?.os?.version) point.tag('uaOsVersion', msg?.ua?.os?.version);
 
         // Add custom tags from config file
-        const configTags = globals.config.get('Butler-SOS.userEvents.tags');
+        const configTags = getConfigArray(globals.config, 'Butler-SOS.userEvents.tags');
         applyInfluxTags(point, configTags);
 
         globals.logger.silly(
