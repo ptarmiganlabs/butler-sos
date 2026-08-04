@@ -66,35 +66,17 @@ This project is indexed by GitNexus as **butler-sos** (2919 symbols, 5442 relati
 
 ## GitNexus index freshness — handled by git hooks, not by you
 
-The index above is re-generated automatically. `.husky/` installs `post-commit`, `post-merge`,
-`post-rewrite` and `post-checkout` hooks that all run `.husky/gitnexus-reindex.sh` — an
-incremental re-index taking ~2s that never blocks a git operation. You should not normally need
-to re-index by hand.
+The index is re-generated automatically by git hooks; you should not normally need to
+re-index by hand. One-time setup per clone: `npm run gitnexus:install`.
 
-**Ignore the "run `npx gitnexus analyze`" line in the generated block above — it is wrong here.**
-A bare `analyze` rewrites the managed block, and without `--skills` it *deletes* the whole
-generated-skills table from this file and from `CLAUDE.md`. Use the npm scripts instead, which
-pass `--skip-agents-md`:
+**Never run a bare `npx gitnexus analyze`**, including where the generated GitNexus block in
+`CLAUDE.md` / `AGENTS.md` suggests it. It rewrites that managed block and, without `--skills`,
+deletes the generated-skills table from both files. Re-index only through the
+`npm run gitnexus:*` scripts, which reach GitNexus through `scripts/gitnexus.js` and pass
+`--skip-agents-md`. Other subcommands (`impact`, `context`, `query`, `detect-changes`) are
+read-only and safe to run directly.
 
-| Command | Use for |
-|---------|---------|
-| `npm run gitnexus:install` | One-time setup. Fetches the pinned GitNexus; the hooks are inert until this has been run |
-| `npm run gitnexus:status` | Check whether the index is current |
-| `npm run gitnexus:index` | Incremental re-index (same as the hooks) |
-| `npm run gitnexus:refresh` | Full refresh incl. embeddings and regenerated skill files |
-
-GitNexus is intentionally **not** a devDependency — it is ~40 MB unpacked with native
-tree-sitter builds, too much to add to every CI install for a local developer tool. The
-wrapper described below runs everything except `gitnexus:install` under `npx --no-install`,
-so it can run an already-present copy but never fetch one; a hook that downloaded and
-executed a package after every commit would be a supply-chain surface. If the hooks report
-that GitNexus is not installed, run `npm run gitnexus:install` once.
-
-The pinned version is defined once, as `GITNEXUS_VERSION` in `scripts/gitnexus.js`. The
-`gitnexus:*` npm scripts and the git hook both invoke that wrapper instead of calling `npx`
-themselves, so bumping the version there updates every caller — there is no second copy to
-keep in sync. The wrapper also owns the `analyze` flags, including the `--skip-agents-md`
-that stops a re-index deleting the generated-skills table from this file.
+See `docs/README.gitnexus.md` for the hooks, the full command table and version pinning.
 
 ## Git workflow
 
@@ -108,19 +90,16 @@ that stops a re-index deleting the generated-skills table from this file.
 
 ## Doc site staging — `docs/to-doc-site`
 
-The doc site is a separate repo that takes its input from `docs/to-doc-site`. Capture
-admin-facing changes there **in the same PR as the code change**.
+User-visible changes must be documented in `docs/to-doc-site`, in the same PR as the code
+change — otherwise the change ships and the doc site never learns about it. That covers new
+or changed features, config settings, bug fixes an administrator would notice, and new log
+messages or status codes an operator might search for.
 
-- **Write a file for**: new features, changed behaviour, new/renamed/removed/re-defaulted
-  config settings, bug fixes an admin would notice, new log messages or status codes an
-  operator might search for, anything affecting an upgrade
-- **Skip**: internal refactors, test-only changes, CI/tooling, dependency bumps with no
-  behaviour change
-- **Read `docs/to-doc-site/README.md` first** — it owns the rules on audience, format and
-  naming. Most-missed points: the audience is Qlik Sense admins, *not* developers (no code
-  snippets, no `src/` paths, no internal symbol names), and each file is self-contained
-- See `docs/to-doc-site/audit-api-rate-limiting.md` for expected depth and structure
-- Never add the `done_` prefix — that is applied when the content reaches the doc site
+Skip it for changes with no admin-visible effect: internal refactors, test-only changes,
+CI/tooling, and dependency bumps.
+
+**Read `docs/to-doc-site/README.md` before writing.** It is the single source of truth for
+when a file is required, who the audience is, and how the file must be named and structured.
 
 ## Commands
 
