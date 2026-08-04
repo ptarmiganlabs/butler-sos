@@ -23,6 +23,15 @@ const mockCertUtils = {
     getCertificates: jest.fn(),
 };
 
+// node:fs (sync) is used in audit-screenshots.js for exactly one purpose: writing the
+// pre-crop / composite debug images. Mocking it lets the debug-gating tests below assert
+// on whether those writes happen at all.
+const mockFsSync = {
+    existsSync: jest.fn(),
+    mkdirSync: jest.fn(),
+    writeFileSync: jest.fn(),
+};
+
 jest.unstable_mockModule('axios', () => ({
     default: mockAxios,
 }));
@@ -40,6 +49,13 @@ jest.unstable_mockModule('../../globals.js', () => ({
 jest.unstable_mockModule('../cert-utils.js', () => ({
     createCertificateOptions: mockCertUtils.createCertificateOptions,
     getCertificates: mockCertUtils.getCertificates,
+}));
+
+jest.unstable_mockModule('node:fs', () => ({
+    default: mockFsSync,
+    existsSync: mockFsSync.existsSync,
+    mkdirSync: mockFsSync.mkdirSync,
+    writeFileSync: mockFsSync.writeFileSync,
 }));
 
 describe('audit-screenshots', () => {
@@ -480,6 +496,114 @@ describe('audit-screenshots', () => {
             logger.info.mock.calls.some(([message]) => String(message).includes('SESSION123'))
         ).toBe(false);
         expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    describe('debug image writes are gated on debug log level', () => {
+        /**
+         * Builds a PNG larger than the crop rectangle, so cropPngBuffer does real work.
+         *
+         * @returns {Buffer} Encoded PNG buffer.
+         */
+        function makeOversizedPng() {
+            const png = new PNG({ width: 40, height: 40 });
+            for (let i = 0; i < png.data.length; i += 4) {
+                png.data[i] = 10;
+                png.data[i + 1] = 10;
+                png.data[i + 2] = 10;
+                png.data[i + 3] = 255;
+            }
+            return PNG.sync.write(png);
+        }
+
+        /**
+         * Downloads a screenshot that triggers the crop path.
+         *
+         * @param {object} logger Logger double to pass through to downloadScreenshot.
+         * @returns {Promise<void>} Resolves when the download has completed.
+         */
+        async function downloadWithCrop(logger) {
+            const { downloadScreenshot } = await import('../audit-screenshots.js');
+
+            mockAxios.request.mockResolvedValue({
+                status: 200,
+                headers: { 'content-type': 'image/png' },
+                data: makeOversizedPng(),
+            });
+
+            await downloadScreenshot(
+                'https://example.com/screenshot.png',
+                {
+                    timestamp: '2025-12-22T12:34:56.000Z',
+                    eventId: 'evt-crop',
+                    correlationId: 'corr-crop',
+                    payload: {
+                        event: {
+                            screenshotUrl: 'https://example.com/screenshot.png',
+                            crop: { top: 0, left: 0, width: 20, height: 20 },
+                        },
+                    },
+                },
+                {
+                    enable: true,
+                    downloadTimeoutMs: 15000,
+                    storageTargets: [
+                        { enable: true, type: 'flat', directory: 'screenshots/audit' },
+                    ],
+                },
+                logger
+            );
+        }
+
+        test('writes no debug image when the log level is above debug', async () => {
+            // A real winston logger is always passed in production, so the old `if (logger)`
+            // guard was always true: every cropped screenshot wrote PNGs to disk at any log
+            // level. isLevelEnabled reporting false must suppress that entirely.
+            const logger = {
+                debug: jest.fn(),
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+                isLevelEnabled: jest.fn().mockReturnValue(false),
+            };
+
+            await downloadWithCrop(logger);
+
+            expect(mockFsSync.writeFileSync).not.toHaveBeenCalled();
+            expect(mockFsSync.mkdirSync).not.toHaveBeenCalled();
+            expect(logger.isLevelEnabled).toHaveBeenCalledWith('debug');
+        });
+
+        test('writes the pre-crop debug image when debug is enabled', async () => {
+            const logger = {
+                debug: jest.fn(),
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+                isLevelEnabled: jest.fn().mockReturnValue(true),
+            };
+            mockFsSync.existsSync.mockReturnValue(false);
+
+            await downloadWithCrop(logger);
+
+            expect(mockFsSync.writeFileSync).toHaveBeenCalled();
+            const writtenPath = mockFsSync.writeFileSync.mock.calls[0][0];
+            expect(writtenPath).toContain('pre-crop-');
+            expect(writtenPath).toContain('.png');
+        });
+
+        test('writes no debug image when the logger cannot report its level', async () => {
+            // Test doubles and partially initialised loggers must fail closed, not open.
+            const logger = {
+                debug: jest.fn(),
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+            };
+
+            await downloadWithCrop(logger);
+
+            expect(mockFsSync.writeFileSync).not.toHaveBeenCalled();
+        });
     });
 
     test('adds metadata header to PNG screenshot when enabled', async () => {

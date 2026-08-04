@@ -511,6 +511,24 @@ function debugLog(logger, message) {
 }
 
 /**
+ * Reports whether debug-level diagnostics should be produced.
+ *
+ * Use this to guard work that only exists to feed a debug log — writing a debug image,
+ * scanning a buffer to compute a value that is only ever logged. `debugLog` alone is not
+ * enough for those: it suppresses the *message* but the caller has already paid for the
+ * argument. Mirrors the `isLevelEnabled('debug')` guard used in `audit-events-api.js`.
+ *
+ * Falls back to false when the logger cannot answer, so a test double or a partially
+ * initialised logger silently disables diagnostics rather than enabling them.
+ *
+ * @param {Logger} logger Logger.
+ * @returns {boolean} True when the logger is emitting at debug level or below.
+ */
+function isDebugEnabled(logger) {
+    return typeof logger?.isLevelEnabled === 'function' && logger.isLevelEnabled('debug') === true;
+}
+
+/**
  * Returns a URL string with any qlikTicket query value redacted.
  *
  * @param {string} rawUrl URL to redact.
@@ -933,7 +951,14 @@ export function buildScreenshotFilename(envelope, url, contentType) {
 function cropPngBuffer(buffer, crop, logger) {
     let src = PNG.sync.read(buffer);
 
-    if (logger) {
+    // Every diagnostic below is gated on debug being enabled, not merely on a logger being
+    // present. A real logger is always passed, so `if (logger)` was always true: at any log
+    // level, every cropped screenshot wrote PNGs into <cwd>/audit-events/debug/ and ran the
+    // O(width x height) scan below purely to produce one number for a log line nobody would
+    // see. Cheap to compute once here and reuse for the later blocks.
+    const debugEnabled = isDebugEnabled(logger);
+
+    if (debugEnabled) {
         // Scan from the bottom to find the last row that contains non-white pixels.
         // This tells us where the actual table content ends in the rendered image.
         let contentBottomY = 0;
@@ -968,7 +993,7 @@ function cropPngBuffer(buffer, crop, logger) {
             }
             const debugFile = path.join(debugDir, `pre-crop-${src.width}x${src.height}.png`);
             fsSync.writeFileSync(debugFile, buffer);
-            logger.verbose(`AUDIT API: Saved pre-crop debug image to ${debugFile}`);
+            logger.debug(`AUDIT API: Saved pre-crop debug image to ${debugFile}`);
         } catch (dbgErr) {
             logger.debug(`AUDIT API: Failed to save debug image: ${dbgErr.message}`);
         }
@@ -991,8 +1016,8 @@ function cropPngBuffer(buffer, crop, logger) {
         const regionBHeight = src.height - skipEnd; // visible scroll content
         const compositeHeight = regionAHeight + regionBHeight;
 
-        if (logger) {
-            logger.info(
+        if (debugEnabled) {
+            logger.debug(
                 `AUDIT API: Scroll composite: titleRegion=0..${regionAHeight} skip=${scrollAreaOffsetY}..${skipEnd} visibleRegion=${skipEnd}..${src.height} compositeHeight=${compositeHeight}`
             );
         }
@@ -1017,16 +1042,19 @@ function cropPngBuffer(buffer, crop, logger) {
         src = composite;
         buffer = PNG.sync.write(composite);
 
-        if (logger) {
+        if (debugEnabled) {
             // Save debug composite image
             try {
                 const debugDir = path.join(process.cwd(), 'audit-events', 'debug');
+                if (!fsSync.existsSync(debugDir)) {
+                    fsSync.mkdirSync(debugDir, { recursive: true });
+                }
                 const debugFile = path.join(
                     debugDir,
                     `composite-${src.width}x${compositeHeight}.png`
                 );
                 fsSync.writeFileSync(debugFile, buffer);
-                logger.info(`AUDIT API: Saved composite debug image to ${debugFile}`);
+                logger.debug(`AUDIT API: Saved composite debug image to ${debugFile}`);
             } catch (dbgErr) {
                 logger.debug(`AUDIT API: Failed to save composite debug image: ${dbgErr.message}`);
             }
@@ -1130,8 +1158,8 @@ function cropPngBuffer(buffer, crop, logger) {
             const keepBelow = src.height - gridLineY; // gridLine row + margin below
             const overflowCompositeHeight = keepAbove + keepBelow;
 
-            if (logger) {
-                logger.info(
+            if (debugEnabled) {
+                logger.debug(
                     `AUDIT API: Overflow composite: gridLineY=${gridLineY} overflow=${renderingOverflow} keepAbove=${keepAbove} keepBelow=${keepBelow} compositeHeight=${overflowCompositeHeight}`
                 );
             }
@@ -1155,7 +1183,7 @@ function cropPngBuffer(buffer, crop, logger) {
             src = ovComp;
             buffer = PNG.sync.write(ovComp);
 
-            if (logger) {
+            if (debugEnabled) {
                 try {
                     const debugDir = path.join(process.cwd(), 'audit-events', 'debug');
                     if (!fsSync.existsSync(debugDir)) {
@@ -1166,15 +1194,15 @@ function cropPngBuffer(buffer, crop, logger) {
                         `overflow-composite-${src.width}x${overflowCompositeHeight}.png`
                     );
                     fsSync.writeFileSync(debugFile, buffer);
-                    logger.info(`AUDIT API: Saved overflow composite debug image to ${debugFile}`);
+                    logger.debug(`AUDIT API: Saved overflow composite debug image to ${debugFile}`);
                 } catch (dbgErr) {
                     logger.debug(
                         `AUDIT API: Failed to save overflow composite debug image: ${dbgErr.message}`
                     );
                 }
             }
-        } else if (logger) {
-            logger.info(
+        } else if (debugEnabled) {
+            logger.debug(
                 `AUDIT API: Overflow composite skipped — grid line not found (gridLineY=${gridLineY}, overflow=${renderingOverflow})`
             );
         }
