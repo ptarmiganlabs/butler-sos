@@ -442,6 +442,10 @@ describe('auditEvents schema', () => {
 
     test.each([
         ['ttlSeconds below one', { enable: true, ttlSeconds: 0, maxEntries: 100 }],
+        [
+            'ttlSeconds above the largest schedulable timer delay',
+            { enable: true, ttlSeconds: 2147484, maxEntries: 100 },
+        ],
         ['maxEntries below one', { enable: true, ttlSeconds: 120, maxEntries: 0 }],
         ['maxEntries not integer', { enable: true, ttlSeconds: 120, maxEntries: 1.5 }],
         [

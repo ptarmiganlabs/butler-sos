@@ -153,10 +153,15 @@ describe('audit-screenshot-session-cache', () => {
         );
     });
 
+    // 16.1 and 2.01 are the important cases: they look like ordinary settings but cannot be
+    // represented exactly, so multiplying by 1000 lands just short of a whole millisecond.
     test.each([
+        ['one decimal that cannot be represented exactly', 16.1, 16100],
+        ['two decimals that cannot be represented exactly', 2.01, 2010],
         ['sub-millisecond precision', 1.0005, 1001],
         ['many decimals', 2.33333, 2333],
         ['below one millisecond', 0.0001, 1],
+        ['above the largest schedulable timer', 3000000, 2147483647],
     ])('caches with a fractional ttlSeconds (%s)', (_name, ttlSeconds, expectedTtlMs) => {
         const fractionalTtlAuthConfig = {
             ...authConfig,
@@ -171,8 +176,9 @@ describe('audit-screenshot-session-cache', () => {
             logger
         );
 
-        // A non-integer ttl in milliseconds is rejected by the LRU cache, and a ttl of 0
-        // means "never expires" there, so both are normalized away before it is used.
+        // A non-integer ttl in milliseconds is rejected by the LRU cache, a ttl of 0 means
+        // "never expires" there, and a ttl above the largest schedulable timer delay leaves
+        // the expiry timer rearming forever. All three are normalized away before use.
         expect(stored).not.toBeNull();
         expect(stored.expiresAt - stored.createdAt).toBe(expectedTtlMs);
         expect(cacheModule.getScreenshotSessionCacheStats()).toMatchObject({
