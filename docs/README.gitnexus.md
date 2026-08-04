@@ -29,6 +29,12 @@ a git operation — every failure path exits 0:
 
 - No `.gitnexus` directory in the checkout: a full build is too slow for a hook, so it prints a
   notice pointing at `npm run gitnexus:refresh` and stops.
+- No `node` or no `npx` on `PATH`: exits silently, because such an environment cannot act on any
+  advice the hook could print.
+- `scripts/gitnexus.js` not present in the checkout: prints a notice saying so and stops. Every
+  commit made before the wrapper existed is such a checkout, and `post-checkout` fires on exactly
+  those — this is deliberately *not* reported as GitNexus being missing, because
+  `npm run gitnexus:install` would not fix it.
 - GitNexus not installed: prints a notice pointing at `npm run gitnexus:install` and stops.
 - Write fails: retried once after a short pause. The KuzuDB index is held open by the GitNexus
   MCP server while an agent session is running, and a write from a hook can lose that lock race.
@@ -46,10 +52,20 @@ checkouts, which would otherwise re-index for nothing.
 | `npm run gitnexus:index` | Incremental re-index (same as the hooks) |
 | `npm run gitnexus:refresh` | Full refresh incl. embeddings and regenerated skill files |
 
+Arguments after the script name are forwarded to GitNexus, so
+`npm run gitnexus:index -- --embeddings` works.
+
+## Everything routes through `scripts/gitnexus.js`
+
+None of the commands above invoke `npx` themselves, and neither does the git hook. All of them
+run `scripts/gitnexus.js`, which owns the pinned version, the `analyze` flags and the `npx`
+invocation. That is what keeps the version in one place rather than in every caller, and it is
+where to look when a command behaves unexpectedly.
+
 ## Never run a bare `npx gitnexus analyze`
 
-Always go through the `npm run gitnexus:*` scripts. They pass `--skip-agents-md`, which stops
-GitNexus rewriting the managed block bracketed by `<!-- gitnexus:start -->` and
+Always go through the `npm run gitnexus:*` scripts. The wrapper passes `--skip-agents-md`, which
+stops GitNexus rewriting the managed block bracketed by `<!-- gitnexus:start -->` and
 `<!-- gitnexus:end -->` in `CLAUDE.md` and `AGENTS.md`.
 
 A bare `analyze` rewrites that block, and without `--skills` it does not merely regenerate it but
@@ -69,21 +85,22 @@ for hand-written content.
 GitNexus is ~40 MB unpacked with native tree-sitter builds — too much to add to every CI install
 for what is a local developer convenience.
 
-Everything except `gitnexus:install` uses `npx --no-install`, so it runs an already-present copy
-and never fetches one. `npx --yes` would download a package on demand and run its lifecycle
-scripts; doing that automatically after every commit would turn routine git activity into a
-package install from the network (SonarCloud `shell:S6505`). `gitnexus:install` is the single
-place `--yes` appears, and it is only ever invoked by hand.
+For every command except `gitnexus:install`, the wrapper invokes `npx --no-install`, so it runs
+an already-present copy and never fetches one. `npx --yes` would download a package on demand and
+run its lifecycle scripts; doing that automatically after every commit would turn routine git
+activity into a package install from the network (SonarCloud `shell:S6505`). `install` is the
+single command that passes `--yes`, and it is only ever invoked by hand.
 
 ## Version pinning
 
-The pinned version lives in **two places that must stay in sync**:
+The pinned version is defined in **exactly one place**: `GITNEXUS_VERSION` in
+`scripts/gitnexus.js`. Every npm script and the git hook reach GitNexus through that wrapper, so
+changing the constant there updates all of them at once.
 
-- `GITNEXUS_VERSION` in `.husky/gitnexus-reindex.sh`
-- the `gitnexus:*` scripts in `package.json`
-
-Read the current version from either of those, not from here — a version number repeated in prose
-is a third copy waiting to go stale.
+Read the current version from that constant, not from here — a version number repeated in prose
+is a second copy waiting to go stale. For the same reason, do not reintroduce the version into
+`package.json` or the hook: `scripts/__tests__/gitnexus-wrapper.test.js` fails if a second copy
+appears, or if any caller stops going through the wrapper.
 
 The pin is deliberate: the hooks run automatically after routine git operations, so an unpinned
 `npx gitnexus` would execute whatever the registry serves at that moment — a new major, or a

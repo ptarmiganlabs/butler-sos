@@ -70,8 +70,9 @@ re-index by hand. One-time setup per clone: `npm run gitnexus:install`.
 **Never run a bare `npx gitnexus analyze`**, including where the generated GitNexus block in
 `CLAUDE.md` / `AGENTS.md` suggests it. It rewrites that managed block and, without `--skills`,
 deletes the generated-skills table from both files. Re-index only through the
-`npm run gitnexus:*` scripts, which pass `--skip-agents-md`. Other subcommands
-(`impact`, `context`, `query`, `detect-changes`) are read-only and safe to run directly.
+`npm run gitnexus:*` scripts, which reach GitNexus through `scripts/gitnexus.js` and pass
+`--skip-agents-md`. Other subcommands (`impact`, `context`, `query`, `detect-changes`) are
+read-only and safe to run directly.
 
 See `docs/README.gitnexus.md` for the hooks, the full command table and version pinning.
 
