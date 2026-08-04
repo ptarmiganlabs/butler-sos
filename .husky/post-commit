@@ -1,0 +1,4 @@
+# Runs after every commit — the most frequent way the working tree changes.
+# Without this the index goes stale the moment you commit, which is exactly the
+# gap that left it pinned at b9838d0 while master moved on.
+exec "$(dirname "$0")/gitnexus-reindex.sh"

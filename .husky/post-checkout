@@ -1,0 +1,11 @@
+# Runs after `git checkout` / `git switch`.
+#
+# Git passes: $1 = previous HEAD, $2 = new HEAD, $3 = 1 for a branch checkout and
+# 0 for a file checkout. Only branch checkouts move the tree enough to matter, and
+# re-indexing on every `git checkout -- <file>` would be pure noise.
+[ "${3:-0}" = "1" ] || exit 0
+
+# Same commit on both sides (e.g. `git checkout -b` from HEAD) changes nothing.
+[ "${1:-}" != "${2:-}" ] || exit 0
+
+exec "$(dirname "$0")/gitnexus-reindex.sh"
