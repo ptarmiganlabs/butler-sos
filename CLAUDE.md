@@ -64,32 +64,15 @@ This project is indexed by GitNexus as **butler-sos** (2919 symbols, 5442 relati
 
 ## GitNexus index freshness — handled by git hooks, not by you
 
-The index above is re-generated automatically. `.husky/` installs `post-commit`, `post-merge`,
-`post-rewrite` and `post-checkout` hooks that all run `.husky/gitnexus-reindex.sh` — an
-incremental re-index taking ~2s that never blocks a git operation. You should not normally need
-to re-index by hand.
+The index is re-generated automatically by git hooks; you should not normally need to
+re-index by hand. One-time setup per clone: `npm run gitnexus:install`.
 
-**Ignore the "run `npx gitnexus analyze`" line in the generated block above — it is wrong here.**
-A bare `analyze` rewrites the managed block, and without `--skills` it *deletes* the whole
-generated-skills table from this file and from `AGENTS.md`. Use the npm scripts instead, which
-pass `--skip-agents-md`:
+**Never run a bare `npx gitnexus analyze`**, including where the generated GitNexus block in
+`CLAUDE.md` / `AGENTS.md` suggests it. It rewrites that managed block and, without `--skills`,
+deletes the generated-skills table from both files. Always go through the
+`npm run gitnexus:*` scripts, which pass `--skip-agents-md`.
 
-| Command | Use for |
-|---------|---------|
-| `npm run gitnexus:install` | One-time setup. Fetches the pinned GitNexus; the hooks are inert until this has been run |
-| `npm run gitnexus:status` | Check whether the index is current |
-| `npm run gitnexus:index` | Incremental re-index (same as the hooks) |
-| `npm run gitnexus:refresh` | Full refresh incl. embeddings and regenerated skill files |
-
-GitNexus is intentionally **not** a devDependency — it is ~40 MB unpacked with native
-tree-sitter builds, too much to add to every CI install for a local developer tool. Everything
-except `gitnexus:install` uses `npx --no-install`, so it can run an already-present copy but
-never fetch one; a hook that downloaded and executed a package after every commit would be a
-supply-chain surface. If the hooks report that GitNexus is not installed, run
-`npm run gitnexus:install` once.
-
-The pinned version lives in two places that must stay in sync: `GITNEXUS_VERSION` in
-`.husky/gitnexus-reindex.sh` and the `gitnexus:*` scripts in `package.json`.
+See `docs/README.gitnexus.md` for the hooks, the full command table and version pinning.
 
 ## Git workflow
 
@@ -104,34 +87,16 @@ The pinned version lives in two places that must stay in sync: `GITNEXUS_VERSION
 
 ## Doc site staging — `docs/to-doc-site`
 
-The Butler SOS documentation site lives in a separate repo and takes its input from
-`docs/to-doc-site`. Anything an administrator would need to know about must be captured
-there, in the same PR as the code change — otherwise the change ships and the doc site
-never learns about it.
+User-visible changes must be documented in `docs/to-doc-site`, in the same PR as the code
+change — otherwise the change ships and the doc site never learns about it. That covers new
+or changed features, config settings, bug fixes an administrator would notice, and new log
+messages or status codes an operator might search for.
 
-**Write a file when the change is user-visible**, including:
+Skip it for changes with no admin-visible effect: internal refactors, test-only changes,
+CI/tooling, and dependency bumps.
 
-- a new feature, or a change to how an existing one behaves
-- a new, renamed, removed or re-defaulted config setting
-- a bug fix an admin would notice (wrong data, a silent failure that now surfaces)
-- new or changed log messages, error codes or HTTP status codes an operator might search for
-- anything that changes what an admin must do when upgrading
-
-**Do not write a file** for changes with no admin-visible effect: internal refactors,
-test-only changes, CI/tooling, or dependency bumps that change no behaviour.
-
-**Read `docs/to-doc-site/README.md` before writing** — it is the authority on audience,
-file format and naming, and this section deliberately does not restate its rules. The two
-things most often got wrong:
-
-- The audience is **Qlik Sense administrators, not Node.js developers**. Do not include code
-  snippets, internal function or variable names, or paths inside `src/`.
-- Each file is self-contained. One topic per file, kebab-case name, no cross-references to
-  other staging files.
-
-`docs/to-doc-site/audit-api-rate-limiting.md` is a good worked example of the expected depth
-and structure. Never add the `done_` prefix yourself — that is applied by whoever migrates
-the content to the doc site.
+**Read `docs/to-doc-site/README.md` before writing.** It is the single source of truth for
+when a file is required, who the audience is, and how the file must be named and structured.
 
 ## OpenWiki
 
