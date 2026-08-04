@@ -4,7 +4,7 @@ Files in this folder are the source of truth for updates to the Butler SOS docum
 
 ## Purpose
 
-This folder serves as a staging area for documentation that should eventually appear on the Butler SOS doc site (`butler-sos.com` or similar). It is the single place where documentation is authored outside of the doc site's own repository.
+This folder serves as a staging area for documentation that should eventually appear on the Butler SOS doc site `butler-sos.ptarmiganlabs.com`. It is the single place where documentation is authored outside of the doc site's own repository.
 
 ## Audience
 
