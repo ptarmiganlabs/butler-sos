@@ -4,6 +4,7 @@ import { jest, describe, test, beforeEach, afterEach } from '@jest/globals';
 jest.unstable_mockModule('fs', () => ({
     default: {
         readFileSync: jest.fn(),
+        statSync: jest.fn(),
     },
 }));
 
@@ -28,8 +29,11 @@ const fs = (await import('fs')).default;
 const globals = (await import('../../globals.js')).default;
 
 // Import modules under test
-const { getCertificates: getCertificatesUtil, createCertificateOptions } =
-    await import('../cert-utils.js');
+const {
+    getCertificates: getCertificatesUtil,
+    createCertificateOptions,
+    clearCertificateCache,
+} = await import('../cert-utils.js');
 
 describe('Certificate loading', () => {
     const mockCertificateOptions = {
@@ -42,14 +46,22 @@ describe('Certificate loading', () => {
     const mockKeyData = '-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFA...';
     const mockCaData = '-----BEGIN CERTIFICATE-----\nMIICIjANBgkqhkiG9w0BAQEFA...';
 
+    /** Stat result standing in for an unchanged file on disk. */
+    const stableStat = { size: 100, mtimeMs: 1000 };
+
     beforeEach(() => {
         jest.clearAllMocks();
+        // Certificates are cached across calls, so every test must start from a cold cache
+        // or it would see the previous test's certificates and never reach readFileSync.
+        clearCertificateCache();
+        fs.statSync.mockReturnValue(stableStat);
         // Reset globals.isSea to default
         globals.isSea = false;
     });
 
     afterEach(() => {
         jest.clearAllMocks();
+        clearCertificateCache();
         // Reset globals.isSea to default
         globals.isSea = false;
     });
@@ -86,6 +98,132 @@ describe('Certificate loading', () => {
             expect(globals.logger.debug).toHaveBeenCalledWith(
                 'Loading certificates from disk. ca=/path/to/ca.crt'
             );
+        });
+
+        test('reads from disk only once when nothing on disk has changed', () => {
+            // getCertificates is reached from the health-metrics and proxy-session polling
+            // loops, so before caching this was three file reads per server per poll.
+            fs.readFileSync
+                .mockReturnValueOnce(mockCertData)
+                .mockReturnValueOnce(mockKeyData)
+                .mockReturnValueOnce(mockCaData);
+
+            const first = getCertificatesUtil(mockCertificateOptions);
+            const second = getCertificatesUtil(mockCertificateOptions);
+            const third = getCertificatesUtil(mockCertificateOptions);
+
+            expect(fs.readFileSync).toHaveBeenCalledTimes(3);
+            expect(second).toEqual(first);
+            expect(third).toEqual(first);
+        });
+
+        test('re-reads when a certificate is rotated (mtime changes)', () => {
+            fs.readFileSync
+                .mockReturnValueOnce(mockCertData)
+                .mockReturnValueOnce(mockKeyData)
+                .mockReturnValueOnce(mockCaData)
+                .mockReturnValueOnce('rotated-cert')
+                .mockReturnValueOnce('rotated-key')
+                .mockReturnValueOnce('rotated-ca');
+
+            const before = getCertificatesUtil(mockCertificateOptions);
+            expect(before.cert).toBe(mockCertData);
+
+            // Certificate rotated on disk. There is no config-reload hook in Butler SOS, so
+            // the stat guard is the only thing that can notice this.
+            fs.statSync.mockReturnValue({ size: 100, mtimeMs: 2000 });
+
+            const after = getCertificatesUtil(mockCertificateOptions);
+
+            expect(fs.readFileSync).toHaveBeenCalledTimes(6);
+            expect(after.cert).toBe('rotated-cert');
+        });
+
+        test('re-reads when a certificate changes size but keeps its mtime', () => {
+            fs.readFileSync
+                .mockReturnValueOnce(mockCertData)
+                .mockReturnValueOnce(mockKeyData)
+                .mockReturnValueOnce(mockCaData)
+                .mockReturnValueOnce('resized-cert')
+                .mockReturnValueOnce('resized-key')
+                .mockReturnValueOnce('resized-ca');
+
+            getCertificatesUtil(mockCertificateOptions);
+            fs.statSync.mockReturnValue({ size: 200, mtimeMs: 1000 });
+
+            const after = getCertificatesUtil(mockCertificateOptions);
+
+            expect(fs.readFileSync).toHaveBeenCalledTimes(6);
+            expect(after.cert).toBe('resized-cert');
+        });
+
+        test('re-reads when the configured certificate paths change', () => {
+            fs.readFileSync.mockReturnValue('data');
+
+            getCertificatesUtil(mockCertificateOptions);
+            getCertificatesUtil({
+                Certificate: '/other/client.crt',
+                CertificateKey: '/other/client.key',
+                CertificateCA: '/other/ca.crt',
+            });
+
+            expect(fs.readFileSync).toHaveBeenCalledTimes(6);
+            expect(fs.readFileSync).toHaveBeenCalledWith('/other/client.crt');
+        });
+
+        test("does not cache when a certificate file cannot be stat'd", () => {
+            // Falling back to an uncached read keeps the existing error handling in charge
+            // rather than surfacing a stat failure callers have never had to deal with.
+            fs.statSync.mockImplementation(() => {
+                throw new Error('ENOENT');
+            });
+            fs.readFileSync.mockReturnValue('data');
+
+            getCertificatesUtil(mockCertificateOptions);
+            getCertificatesUtil(mockCertificateOptions);
+
+            expect(fs.readFileSync).toHaveBeenCalledTimes(6);
+        });
+
+        test('drops the cached entry when a later read fails', () => {
+            fs.readFileSync
+                .mockReturnValueOnce(mockCertData)
+                .mockReturnValueOnce(mockKeyData)
+                .mockReturnValueOnce(mockCaData);
+
+            getCertificatesUtil(mockCertificateOptions);
+
+            // File replaced with something unreadable. Serving the previously cached
+            // certificate here would hide a real problem from the operator.
+            fs.statSync.mockReturnValue({ size: 100, mtimeMs: 3000 });
+            fs.readFileSync.mockImplementation(() => {
+                throw new Error('EACCES');
+            });
+
+            expect(() => getCertificatesUtil(mockCertificateOptions)).toThrow(
+                'Failed to load certificates from filesystem'
+            );
+
+            // Cache was cleared, so the next call tries the filesystem again rather than
+            // silently succeeding from stale state.
+            fs.statSync.mockReturnValue(stableStat);
+            expect(() => getCertificatesUtil(mockCertificateOptions)).toThrow(
+                'Failed to load certificates from filesystem'
+            );
+        });
+
+        test('returns a copy so callers cannot mutate the cache', () => {
+            fs.readFileSync
+                .mockReturnValueOnce(mockCertData)
+                .mockReturnValueOnce(mockKeyData)
+                .mockReturnValueOnce(mockCaData);
+
+            const first = getCertificatesUtil(mockCertificateOptions);
+            first.cert = 'tampered';
+
+            const second = getCertificatesUtil(mockCertificateOptions);
+
+            expect(second.cert).toBe(mockCertData);
         });
 
         test('should throw error when certificate paths are undefined', () => {

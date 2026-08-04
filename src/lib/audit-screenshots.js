@@ -511,6 +511,95 @@ function debugLog(logger, message) {
 }
 
 /**
+ * Reports whether debug-level diagnostics should be produced.
+ *
+ * Use this to guard work that only exists to feed a debug log — writing a debug image,
+ * scanning a buffer to compute a value that is only ever logged. `debugLog` alone is not
+ * enough for those: it suppresses the *message* but the caller has already paid for the
+ * argument. Mirrors the `isLevelEnabled('debug')` guard used in `audit-events-api.js`.
+ *
+ * Falls back to false when the logger cannot answer, so a test double or a partially
+ * initialised logger silently disables diagnostics rather than enabling them.
+ *
+ * @param {Logger} logger Logger.
+ * @returns {boolean} True when the logger is emitting at debug level or below.
+ */
+function isDebugEnabled(logger) {
+    return typeof logger?.isLevelEnabled === 'function' && logger.isLevelEnabled('debug') === true;
+}
+
+/**
+ * Returns a copy of a crop rectangle with every geometry field floored to a whole pixel.
+ *
+ * The AJV `crop` sub-schema bounds these values but deliberately accepts fractional ones,
+ * because browser geometry is fractional and rejecting it would drop real screenshots. This
+ * is the other half of that decision: fractional offsets are meaningless once they reach
+ * `Buffer.copy` and `new PNG({ width, height })`, so they are squared off here, at the only
+ * place that actually does arithmetic with them.
+ *
+ * Non-numeric and negative values floor to 0 rather than propagating: the caller has already
+ * checked that width and height are positive numbers, and the branch guards below treat 0 as
+ * "this step does not apply".
+ *
+ * @param {object} crop - Crop rectangle as received from the browser extension.
+ * @returns {object} Crop rectangle with whole-pixel geometry.
+ */
+function normalizeCrop(crop) {
+    /**
+     * Floors one field to a non-negative whole number of pixels.
+     *
+     * @param {unknown} value - Raw field value.
+     * @returns {number} Floored, non-negative value; 0 when not a finite number.
+     */
+    const toPixels = (value) =>
+        typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+
+    return {
+        ...crop,
+        top: toPixels(crop.top),
+        left: toPixels(crop.left),
+        width: toPixels(crop.width),
+        height: toPixels(crop.height),
+        scrollTop: toPixels(crop.scrollTop),
+        scrollAreaOffsetY: toPixels(crop.scrollAreaOffsetY),
+        renderingOverflow: toPixels(crop.renderingOverflow),
+    };
+}
+
+/** PNG file signature: the first eight bytes of every PNG. */
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/**
+ * Reads image dimensions straight out of a PNG's IHDR header.
+ *
+ * The spec fixes the layout of the first 24 bytes: an 8-byte signature, then the IHDR chunk
+ * length and type, then width and height as big-endian 32-bit integers at offsets 16 and 20.
+ * Reading them costs nothing, whereas a full decode allocates and inflates the entire pixel
+ * buffer — tens to hundreds of milliseconds of blocked event loop for a large screenshot.
+ *
+ * This is a cheap pre-check, not a validator. It returns null whenever the buffer does not
+ * look like a PNG or the dimensions are not sensible, and callers must fall back to the real
+ * decoder in that case rather than treating null as "no work needed".
+ *
+ * @param {Buffer} buffer - Candidate PNG buffer.
+ * @returns {{width: number, height: number}|null} Dimensions, or null if they cannot be read.
+ */
+function readPngHeaderDimensions(buffer) {
+    if (!Buffer.isBuffer(buffer) || buffer.length < 24) return null;
+    if (!buffer.subarray(0, 8).equals(PNG_SIGNATURE)) return null;
+    if (buffer.toString('ascii', 12, 16) !== 'IHDR') return null;
+
+    const width = buffer.readUInt32BE(16);
+    const height = buffer.readUInt32BE(20);
+
+    if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
+        return null;
+    }
+
+    return { width, height };
+}
+
+/**
  * Returns a URL string with any qlikTicket query value redacted.
  *
  * @param {string} rawUrl URL to redact.
@@ -931,9 +1020,54 @@ export function buildScreenshotFilename(envelope, url, contentType) {
  * @returns {Buffer} Cropped PNG buffer, or the original buffer if cropping is unnecessary.
  */
 function cropPngBuffer(buffer, crop, logger) {
+    // Work from whole pixels. Browser geometry is fractional -- scrollTop in particular comes
+    // straight from Element.scrollTop, a double that really is fractional at non-100% zoom --
+    // and fractional values have no meaning as buffer offsets or PNG dimensions. Floor here
+    // rather than rejecting them upstream, which would drop legitimate screenshots.
+    crop = normalizeCrop(crop);
+
+    const debugEnabledEarly = isDebugEnabled(logger);
+
+    // Fast path: decide from the 24-byte PNG header whether any pixel work is needed at all.
+    //
+    // Decoding is expensive and fully blocks the event loop -- measured at ~19 ms for a
+    // 1920x1080 sheet and ~62 ms for a tall pivot table, before any re-encode. The common
+    // case is that the Printing Service rendered exactly the requested size, so every branch
+    // below is skipped and the function returns the original buffer untouched. Paying for a
+    // full decode to discover that is pure waste.
+    //
+    // The conditions mirror the branch guards below exactly: no scroll composite, no overflow
+    // composite, and the standard crop's own early return. Debug mode is excluded because it
+    // scans pixels, which needs the decode.
+    if (!debugEnabledEarly) {
+        const header = readPngHeaderDimensions(buffer);
+
+        if (header !== null) {
+            const scrollTopEarly = crop.scrollTop || 0;
+            const scrollAreaOffsetYEarly = crop.scrollAreaOffsetY || 0;
+            const wouldScrollComposite =
+                scrollTopEarly > 0 &&
+                scrollAreaOffsetYEarly >= 0 &&
+                scrollAreaOffsetYEarly + scrollTopEarly < header.height;
+            const wouldOverflowComposite = (crop.renderingOverflow || 0) > 0;
+            const wouldCrop = header.width > crop.width || header.height > crop.height;
+
+            if (!wouldScrollComposite && !wouldOverflowComposite && !wouldCrop) {
+                return buffer;
+            }
+        }
+    }
+
     let src = PNG.sync.read(buffer);
 
-    if (logger) {
+    // Every diagnostic below is gated on debug being enabled, not merely on a logger being
+    // present. A real logger is always passed, so `if (logger)` was always true: at any log
+    // level, every cropped screenshot wrote PNGs into <cwd>/audit-events/debug/ and ran the
+    // O(width x height) scan below purely to produce one number for a log line nobody would
+    // see.
+    const debugEnabled = debugEnabledEarly;
+
+    if (debugEnabled) {
         // Scan from the bottom to find the last row that contains non-white pixels.
         // This tells us where the actual table content ends in the rendered image.
         let contentBottomY = 0;
@@ -968,7 +1102,7 @@ function cropPngBuffer(buffer, crop, logger) {
             }
             const debugFile = path.join(debugDir, `pre-crop-${src.width}x${src.height}.png`);
             fsSync.writeFileSync(debugFile, buffer);
-            logger.verbose(`AUDIT API: Saved pre-crop debug image to ${debugFile}`);
+            logger.debug(`AUDIT API: Saved pre-crop debug image to ${debugFile}`);
         } catch (dbgErr) {
             logger.debug(`AUDIT API: Failed to save debug image: ${dbgErr.message}`);
         }
@@ -991,8 +1125,8 @@ function cropPngBuffer(buffer, crop, logger) {
         const regionBHeight = src.height - skipEnd; // visible scroll content
         const compositeHeight = regionAHeight + regionBHeight;
 
-        if (logger) {
-            logger.info(
+        if (debugEnabled) {
+            logger.debug(
                 `AUDIT API: Scroll composite: titleRegion=0..${regionAHeight} skip=${scrollAreaOffsetY}..${skipEnd} visibleRegion=${skipEnd}..${src.height} compositeHeight=${compositeHeight}`
             );
         }
@@ -1017,16 +1151,19 @@ function cropPngBuffer(buffer, crop, logger) {
         src = composite;
         buffer = PNG.sync.write(composite);
 
-        if (logger) {
+        if (debugEnabled) {
             // Save debug composite image
             try {
                 const debugDir = path.join(process.cwd(), 'audit-events', 'debug');
+                if (!fsSync.existsSync(debugDir)) {
+                    fsSync.mkdirSync(debugDir, { recursive: true });
+                }
                 const debugFile = path.join(
                     debugDir,
                     `composite-${src.width}x${compositeHeight}.png`
                 );
                 fsSync.writeFileSync(debugFile, buffer);
-                logger.info(`AUDIT API: Saved composite debug image to ${debugFile}`);
+                logger.debug(`AUDIT API: Saved composite debug image to ${debugFile}`);
             } catch (dbgErr) {
                 logger.debug(`AUDIT API: Failed to save composite debug image: ${dbgErr.message}`);
             }
@@ -1130,8 +1267,8 @@ function cropPngBuffer(buffer, crop, logger) {
             const keepBelow = src.height - gridLineY; // gridLine row + margin below
             const overflowCompositeHeight = keepAbove + keepBelow;
 
-            if (logger) {
-                logger.info(
+            if (debugEnabled) {
+                logger.debug(
                     `AUDIT API: Overflow composite: gridLineY=${gridLineY} overflow=${renderingOverflow} keepAbove=${keepAbove} keepBelow=${keepBelow} compositeHeight=${overflowCompositeHeight}`
                 );
             }
@@ -1155,7 +1292,7 @@ function cropPngBuffer(buffer, crop, logger) {
             src = ovComp;
             buffer = PNG.sync.write(ovComp);
 
-            if (logger) {
+            if (debugEnabled) {
                 try {
                     const debugDir = path.join(process.cwd(), 'audit-events', 'debug');
                     if (!fsSync.existsSync(debugDir)) {
@@ -1166,15 +1303,15 @@ function cropPngBuffer(buffer, crop, logger) {
                         `overflow-composite-${src.width}x${overflowCompositeHeight}.png`
                     );
                     fsSync.writeFileSync(debugFile, buffer);
-                    logger.info(`AUDIT API: Saved overflow composite debug image to ${debugFile}`);
+                    logger.debug(`AUDIT API: Saved overflow composite debug image to ${debugFile}`);
                 } catch (dbgErr) {
                     logger.debug(
                         `AUDIT API: Failed to save overflow composite debug image: ${dbgErr.message}`
                     );
                 }
             }
-        } else if (logger) {
-            logger.info(
+        } else if (debugEnabled) {
+            logger.debug(
                 `AUDIT API: Overflow composite skipped — grid line not found (gridLineY=${gridLineY}, overflow=${renderingOverflow})`
             );
         }

@@ -738,9 +738,58 @@ function createPayloadValidators() {
     addFormats(ajv);
 
     /**
+     * Upper bound for every pixel dimension and offset in a `crop` object.
+     *
+     * 32767 is the maximum canvas dimension browsers will render, so it is also the largest
+     * a genuine screenshot from the extension can be. A value above it cannot describe a real
+     * rendered image, and only serves to drive absurd buffer offsets and PNG allocations.
+     */
+    const MAX_CROP_PIXELS = 32767;
+
+    /**
+     * Schema for the `crop` rectangle sent by the browser extension.
+     *
+     * `crop` is the one part of the screenshot payload that reaches arithmetic without passing
+     * through AJV: the download path checks only that `width` and `height` are positive
+     * numbers, then feeds `top`, `left`, `scrollTop`, `scrollAreaOffsetY` and
+     * `renderingOverflow` straight into buffer offset calculations and PNG allocation. The
+     * consequences were bounded -- range errors are caught and the uncropped image is used --
+     * but the work was wasted and the values were attacker-controlled.
+     *
+     * Every field is bounded to a non-negative pixel count no larger than a renderable image.
+     * Those bounds are where the value is: they stop absurd magnitudes and negative offsets
+     * reaching buffer arithmetic.
+     *
+     * Deliberately `number` rather than `integer`. Browser geometry is fractional -- the
+     * extension takes `scrollTop` straight from `Element.scrollTop`, which the CSSOM spec
+     * defines as a double and which really is fractional at non-100% browser zoom and on
+     * fractional-DPI displays. Requiring integers here would reject those perfectly legitimate
+     * events with a 422 and silently drop the screenshot for any user who happens to be
+     * zoomed in. Integrality is enforced where it actually matters instead, by flooring the
+     * values before they are used in offset arithmetic.
+     *
+     * `additionalProperties` stays true, as everywhere else in these payload schemas, so a
+     * future extension release can add fields without being rejected by an older Butler SOS.
+     */
+    const cropSchema = {
+        type: 'object',
+        properties: {
+            top: { type: 'number', minimum: 0, maximum: MAX_CROP_PIXELS },
+            left: { type: 'number', minimum: 0, maximum: MAX_CROP_PIXELS },
+            width: { type: 'number', exclusiveMinimum: 0, maximum: MAX_CROP_PIXELS },
+            height: { type: 'number', exclusiveMinimum: 0, maximum: MAX_CROP_PIXELS },
+            scrollTop: { type: 'number', minimum: 0, maximum: MAX_CROP_PIXELS },
+            scrollAreaOffsetY: { type: 'number', minimum: 0, maximum: MAX_CROP_PIXELS },
+            renderingOverflow: { type: 'number', minimum: 0, maximum: MAX_CROP_PIXELS },
+        },
+        required: ['width', 'height'],
+        additionalProperties: true,
+    };
+
+    /**
      * Payload schema for screenshot.url.received.
      *
-     * Expected shape: { event: { screenshotUrl: string, objectId?: string } }
+     * Expected shape: { event: { screenshotUrl: string, objectId?: string, crop?: object } }
      */
     const screenshotUrlReceivedPayloadSchema = {
         type: 'object',
@@ -763,6 +812,7 @@ function createPayloadValidators() {
                     screenshotUrl: { type: 'string', minLength: 1, maxLength: 2048, format: 'uri' },
                     objectId: { type: ['string', 'null'], maxLength: 64 },
                     selectionTxnId: { type: 'string', minLength: 1, maxLength: 36, format: 'uuid' },
+                    crop: cropSchema,
                 },
                 required: ['screenshotUrl', 'selectionTxnId'],
                 additionalProperties: true,
