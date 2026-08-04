@@ -89,3 +89,40 @@ export function buildSecretKeyValueRegex() {
 export function buildSecretJsonPairRegex() {
     return new RegExp(`["'](${SECRET_KEYWORD_SOURCE})["']\\s*:\\s*["'][^"']+["']`, 'gi');
 }
+
+/**
+ * Applies best-effort redaction of common sensitive patterns to a string.
+ *
+ * Covers URLs with embedded credentials, bearer/basic/token authorization headers, and the
+ * `key=value` and JSON-pair forms of the keywords above. Best-effort only: it cannot
+ * guarantee every secret is removed, especially when errors embed unusual formats.
+ *
+ * Used both by `crash-dump.js`, before error text is persisted to a dump file, and by
+ * `process-safety-net.js`, before an escaped error is written to the log or stderr. Error
+ * messages from HTTP and database clients routinely carry credentials — a connection URL
+ * with an embedded password, or an echoed Authorization header — so the two paths must
+ * scrub identically. Redacting in only one of them was a real gap: the same error was
+ * sanitised in the crash dump and disclosed in the log file.
+ *
+ * @param {string|undefined} text - The text to redact.
+ * @returns {string} Text with common sensitive patterns replaced.
+ */
+export function redactSensitivePatterns(text) {
+    if (!text) return '';
+
+    let result = text;
+
+    // 1. URLs with embedded credentials: protocol://user:pass@host
+    result = result.replace(/([\w+.-]+:\/\/)[^@\s]+@/g, '$1[REDACTED]@');
+
+    // 2. Bearer / Basic / Token authorization headers
+    result = result.replace(/\b(Bearer|Basic|Token)\s+[A-Za-z0-9+/=._-]{8,}/gi, '$1 [REDACTED]');
+
+    // 3. Common key=value secret patterns (query strings, connection strings, etc.)
+    result = result.replace(buildSecretKeyValueRegex(), '$1=[REDACTED]');
+
+    // 4. JSON-style quoted key/value pairs for the same patterns
+    result = result.replace(buildSecretJsonPairRegex(), '"$1": "[REDACTED]"');
+
+    return result;
+}

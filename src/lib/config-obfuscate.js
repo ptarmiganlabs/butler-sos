@@ -29,6 +29,14 @@ const SECRET_KEY_REGEX = SECRET_KEY_NAME_REGEX;
 const FULL_MASK_PATHS = new Set([
     'newRelic.event.header[].value',
     'newRelic.metric.header[].value',
+    // Every value under a server's custom headers, whatever the header is called. These
+    // headers exist to authenticate to Qlik Sense — `getServerHeaders` forwards them verbatim
+    // on every outbound request — and the schema declares them `additionalProperties: true`,
+    // so the header names are operator-chosen and cannot be enumerated. Names like
+    // `Authorization`, `Cookie` and `X-Subscription-Key` do not match SECRET_KEY_REGEX, so
+    // without this rule they fall through to a partial mask that discloses the first
+    // characters of a live credential. The header *names* stay readable.
+    'serversToMonitor.servers[].headers.*',
 ]);
 
 /** Replacement used for fully masked values. */
@@ -71,7 +79,6 @@ const PARTIAL_MASK_RULES = new Map([
     ['serversToMonitor.servers[].host', 3],
     ['serversToMonitor.servers[].userSessions.host', 3],
     ['serversToMonitor.servers[].userSessions.virtualProxies[].virtualProxy', 3],
-    ['serversToMonitor.servers[].headers.*', 5],
 ]);
 
 /**
@@ -158,10 +165,11 @@ function obfuscateNode(node, path) {
 
     const isArray = Array.isArray(node);
 
-    // Wildcard rule for objects whose keys are operator-defined and so cannot be listed
+    // Wildcard rules for objects whose keys are operator-defined and so cannot be listed
     // ahead of time — currently `serversToMonitor.servers[].headers`. Resolved from the
     // parent path rather than by string-splitting the child path, so keys containing dots
     // (legal in HTTP header names) still match.
+    const wildcardFullMask = FULL_MASK_PATHS.has(`${path}.*`);
     const wildcardKeepChars = PARTIAL_MASK_RULES.get(`${path}.*`);
 
     for (const [key, value] of Object.entries(node)) {
@@ -173,7 +181,9 @@ function obfuscateNode(node, path) {
         // check is skipped for array elements, whose keys are meaningless numeric indices —
         // an array under a secret-named key is already handled by maskSubtree at the parent.
         const isCredential =
-            (!isArray && SECRET_KEY_REGEX.test(key)) || FULL_MASK_PATHS.has(childPath);
+            (!isArray && SECRET_KEY_REGEX.test(key)) ||
+            FULL_MASK_PATHS.has(childPath) ||
+            wildcardFullMask;
 
         if (isCredential) {
             node[key] = maskSubtree(value);

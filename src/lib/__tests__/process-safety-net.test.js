@@ -191,6 +191,99 @@ describe('process safety net - uncaughtException', () => {
 
         expect(exitSpy).toHaveBeenCalledWith(1);
     });
+
+    // A winston transport with a full disk or a closed file handle throws synchronously.
+    // Before the logger call was isolated, that skipped both the stderr write and the crash
+    // dump, leaving the exit code as the only evidence the daemon had died.
+    test('still writes the crash dump and stderr when the logger throws', async () => {
+        const explodingLogger = {
+            /**
+             * Logger that always fails, simulating a broken transport.
+             *
+             * @returns {void}
+             */
+            error() {
+                throw new Error('transport closed');
+            },
+        };
+        setGlobalsRef(makeGlobals(explodingLogger));
+
+        await handleUncaughtException(new Error('fatal with broken logger'));
+
+        expect(writeCrashDump).toHaveBeenCalledTimes(1);
+        expect(consoleErrorSpy.mock.calls.flat().join(' ')).toContain('fatal with broken logger');
+        expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    test('still writes the crash dump when the error formatter throws', async () => {
+        setGlobalsRef({
+            logger: { error: jest.fn() },
+            /**
+             * Formatter that always fails.
+             *
+             * @returns {string} Never returns.
+             */
+            getErrorMessage() {
+                throw new Error('formatter exploded');
+            },
+        });
+
+        await handleUncaughtException(new Error('fatal with broken formatter'));
+
+        expect(writeCrashDump).toHaveBeenCalledTimes(1);
+        expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+});
+
+// crash-dump.js redacts these patterns before writing a dump file. Without the same
+// treatment here, the identical error was sanitised on disk and disclosed in the log.
+describe('process safety net - secret redaction in logged errors', () => {
+    let consoleErrorSpy;
+
+    beforeEach(() => {
+        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        consoleErrorSpy.mockRestore();
+        setGlobalsRef(null);
+    });
+
+    test.each([
+        ['key=value secret', 'Connection failed: password=hunter2', 'hunter2'],
+        [
+            'bearer token',
+            'Request rejected: Authorization: Bearer abcdef1234567890',
+            'abcdef1234567890',
+        ],
+        [
+            'credentials in a URL',
+            'connect ECONNREFUSED https://admin:s3cr3t@influx.example.com',
+            's3cr3t',
+        ],
+    ])('redacts a %s from a rejection before logging', (_name, message, secret) => {
+        const logger = { error: jest.fn() };
+        setGlobalsRef({ logger, getErrorMessage: (err) => err.message });
+
+        handleUnhandledRejection(new Error(message));
+
+        expect(logger.error).toHaveBeenCalledTimes(1);
+        expect(logger.error.mock.calls[0][0]).not.toContain(secret);
+        expect(logger.error.mock.calls[0][0]).toContain('[REDACTED]');
+    });
+
+    test('redacts a secret from a fatal error before logging', async () => {
+        const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
+        const logger = { error: jest.fn() };
+        setGlobalsRef({ logger, getErrorMessage: (err) => err.message });
+
+        await handleUncaughtException(new Error('fatal: api_key=super-secret-value'));
+
+        expect(logger.error.mock.calls[0][0]).not.toContain('super-secret-value');
+        expect(consoleErrorSpy.mock.calls.flat().join(' ')).not.toContain('super-secret-value');
+
+        exitSpy.mockRestore();
+    });
 });
 
 describe('registerProcessSafetyNet', () => {

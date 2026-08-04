@@ -367,11 +367,40 @@ describe('configObfuscate', () => {
             expect(include.appName).toBe('Sales**********');
         });
 
-        test('masks operator-defined header values, including dotted header names', () => {
+        test('fully masks operator-defined header values, including dotted header names', () => {
             const server = configObfuscate(buildConfig())['Butler-SOS'].serversToMonitor.servers[0];
 
-            expect(server.headers['X-Qlik-User']).toBe('UserD**********');
-            expect(server.headers['X-Custom.Dotted']).toBe('some-**********');
+            // Header values are fully masked, not prefix-masked. These headers exist to
+            // authenticate to Qlik Sense and their names are operator-chosen
+            // (additionalProperties: true), so names like Authorization, Cookie or
+            // X-Subscription-Key never match SECRET_KEY_REGEX. A prefix mask on an arbitrary
+            // header value discloses the opening characters of a live credential.
+            expect(server.headers['X-Qlik-User']).toBe('**********');
+            expect(server.headers['X-Custom.Dotted']).toBe('**********');
+
+            // Header names stay readable, so an operator can still see which are configured.
+            expect(Object.keys(server.headers).sort()).toEqual([
+                'X-Api-Key',
+                'X-Custom.Dotted',
+                'X-Qlik-User',
+            ]);
+        });
+
+        test('fully masks header names that no keyword rule would catch', () => {
+            const config = buildConfig();
+            config['Butler-SOS'].serversToMonitor.servers[0].headers = {
+                Authorization: 'Bearer SECRET-bearer-value',
+                Cookie: 'SECRET-session-cookie',
+                'X-Subscription-Key': 'SECRET-subscription-key',
+            };
+
+            const server = configObfuscate(config)['Butler-SOS'].serversToMonitor.servers[0];
+
+            expect(server.headers).toEqual({
+                Authorization: '**********',
+                Cookie: '**********',
+                'X-Subscription-Key': '**********',
+            });
         });
 
         test('preserves the userSessions object while masking its host and virtual proxies', () => {

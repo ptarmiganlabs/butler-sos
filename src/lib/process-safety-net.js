@@ -13,6 +13,7 @@
 
 import { writeCrashDump } from './crash-dump.js';
 import sea from './sea-wrapper.js';
+import { redactSensitivePatterns } from './secret-patterns.js';
 
 /** @type {object|null} */
 let globalsRef = null;
@@ -58,17 +59,51 @@ function toError(reason) {
  * @returns {string} Formatted error message.
  */
 function formatError(err) {
+    let text;
+
     if (typeof globalsRef?.getErrorMessage === 'function') {
-        return globalsRef.getErrorMessage(err);
+        text = globalsRef.getErrorMessage(err);
+    } else if (sea.isSea()) {
+        // globals (and therefore its SEA detection) is not available yet. sea.isSea() is safe
+        // to call at any time — it falls back to a heuristic before sea.initialize() runs.
+        text = err?.message || String(err);
+    } else {
+        text = err?.stack || err?.message || String(err);
     }
 
-    // globals (and therefore its SEA detection) is not available yet. sea.isSea() is safe to
-    // call at any time — it falls back to a heuristic before sea.initialize() runs.
-    if (sea.isSea()) {
-        return err?.message || String(err);
+    // Scrub before the text reaches the logger or stderr. Error messages from HTTP and
+    // database clients routinely carry credentials — a connection URL with an embedded
+    // password, an echoed Authorization header, a `token=...` query string. crash-dump.js
+    // already redacts these before writing a dump file; without the same treatment here the
+    // identical error would be sanitised on disk and disclosed in the log.
+    return redactSensitivePatterns(text);
+}
+
+/**
+ * Logs a message through the globals logger when available, always mirroring to stderr.
+ *
+ * A logger call can throw — a winston transport with a full disk or a closed file handle
+ * does exactly that. Isolating it here means a broken transport cannot take out the rest of
+ * the fatal path (the stderr write and the crash dump), which is the one moment diagnostics
+ * matter most.
+ *
+ * @param {string} message - Already-formatted, already-redacted message.
+ * @returns {void}
+ */
+function reportToLoggerAndStderr(message) {
+    try {
+        if (typeof globalsRef?.logger?.error === 'function') {
+            globalsRef.logger.error(message);
+        }
+    } catch {
+        // Broken logger transport. stderr below is the fallback.
     }
 
-    return err?.stack || err?.message || String(err);
+    try {
+        console.error(message);
+    } catch {
+        // Nothing further we can safely do.
+    }
 }
 
 /**
@@ -117,15 +152,17 @@ export async function handleUncaughtException(err) {
         // Butler-SOS.crashFile.enable is false, and its write failures are swallowed by
         // design (an unwritable crash_dumps directory is common — the Docker image runs as
         // USER node), so this may be the only record of why the process died.
-        const detail = formatError(err);
-
-        if (typeof globalsRef?.logger?.error === 'function') {
-            globalsRef.logger.error(`FATAL: Uncaught exception: ${detail}`);
+        //
+        // formatError and the logger are each isolated: neither a globals-supplied formatter
+        // nor a broken logger transport may prevent the crash dump from being attempted.
+        let detail;
+        try {
+            detail = formatError(err);
+        } catch {
+            detail = err?.message ?? 'unformattable error';
         }
 
-        // Always mirror to stderr: the logger may be absent (this handler is registered
-        // before globals init) or configured to a file the operator is not watching.
-        console.error(`FATAL: Uncaught exception – writing crash dump… ${detail}`);
+        reportToLoggerAndStderr(`FATAL: Uncaught exception – writing crash dump… ${detail}`);
 
         await writeCrashDump(err, 'uncaughtException');
     } catch {
