@@ -90,8 +90,11 @@ never fetch one; a hook that downloaded and executed a package after every commi
 supply-chain surface. If the hooks report that GitNexus is not installed, run
 `npm run gitnexus:install` once.
 
-The pinned version lives in two places that must stay in sync: `GITNEXUS_VERSION` in
-`.husky/gitnexus-reindex.sh` and the `gitnexus:*` scripts in `package.json`.
+The pinned version is defined once, as `GITNEXUS_VERSION` in `scripts/gitnexus.js`. The
+`gitnexus:*` npm scripts and the git hook both invoke that wrapper instead of calling `npx`
+themselves, so bumping the version there updates every caller — there is no second copy to
+keep in sync. The wrapper also owns the `analyze` flags, including the `--skip-agents-md`
+that stops a re-index deleting the generated-skills table from this file.
 
 ## Git workflow
 
