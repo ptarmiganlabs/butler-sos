@@ -82,6 +82,9 @@ The pinned version lives in **two places that must stay in sync**:
 - `GITNEXUS_VERSION` in `.husky/gitnexus-reindex.sh`
 - the `gitnexus:*` scripts in `package.json`
 
-Both are currently `1.6.5`. The pin is deliberate: the hooks run automatically after routine git
-operations, so an unpinned `npx gitnexus` would execute whatever the registry serves at that
-moment — a new major, or a compromised release — with no repository change and no review.
+Read the current version from either of those, not from here — a version number repeated in prose
+is a third copy waiting to go stale.
+
+The pin is deliberate: the hooks run automatically after routine git operations, so an unpinned
+`npx gitnexus` would execute whatever the registry serves at that moment — a new major, or a
+compromised release — with no repository change and no review.

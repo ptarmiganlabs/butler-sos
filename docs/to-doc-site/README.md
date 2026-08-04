@@ -40,7 +40,8 @@ When in doubt, err on the side of explaining more rather than less. Use plain la
 - One topic per file
 - File names should be descriptive and kebab-case (e.g., `audit-api-return-codes.md`)
 - Include all information relevant to the doc site in a single file — do not split topics across files or assume readers will cross-reference multiple files
-- Do not include internal implementation details (code snippets, internal variable names, file paths in the codebase) unless they are directly relevant to an administrator configuring or operating Butler SOS
+- Never include internal implementation details: no source-code snippets, no internal function, variable or module names, and no paths inside `src/`. There is no "unless it seems relevant" exception — if the reader would only encounter it by opening the codebase, it does not belong here
+- Configuration examples, API request and response bodies, log excerpts and diagrams are not internal details. Include them freely; they are usually what makes a page useful
 
 ## A worked example
 
@@ -53,7 +54,9 @@ Files in this folder can also carry a status prefix in their file name:
 - Files without a prefix are still pending review or migration to the doc site.
 - Files starting with `done_` have already been incorporated into the Butler SOS doc site, or their content has been verified to already exist there.
 
-When marking a file as processed, keep the original file name after the prefix:
+**Never add the `done_` prefix to a file you are writing.** The prefix is applied only by whoever migrates the content to the doc site. A new staging file is always unprefixed, however confident its author is that the content has already landed there.
+
+When migrating a file, keep the original file name after the prefix:
 
 - `audit-api-return-codes.md` becomes `done_audit-api-return-codes.md`
 
