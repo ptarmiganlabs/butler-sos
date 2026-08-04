@@ -62,6 +62,17 @@ This project is indexed by GitNexus as **butler-sos** (2919 symbols, 5442 relati
 
 <!-- gitnexus:end -->
 
+## Git workflow
+
+- **Branch names MUST be prefixed with `claude/`.** When creating a branch for ongoing work,
+  name it `claude/<short-description>` — for example `claude/fix-udp-source-validation` or
+  `claude/add-influxdb-v3-retry`. This keeps agent-created branches clearly namespaced and
+  easy to filter or bulk-clean.
+- Never commit directly to `master`. Branch first, then open a PR.
+- Commits follow Conventional Commits — release-please derives the changelog and version bump
+  from the commit type. Types with a changelog section are defined in
+  `release-please-config.json`: `feat`, `fix`, `chore`, `refactor`, `docs`, `build`, `test`.
+
 ## OpenWiki
 
 This repository has documentation located in the /openwiki directory.
