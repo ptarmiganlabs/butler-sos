@@ -38,33 +38,16 @@ When working in this repository, read the OpenWiki quickstart first, then follow
 
 ## 📝 Doc Site Staging (`docs/to-doc-site`)
 
-The Butler SOS documentation site lives in a separate repository and takes its input from
-`docs/to-doc-site`. When a change is user-visible, capture it there **in the same pull
-request as the code change** — otherwise the change ships and the doc site never learns
-about it.
+User-visible changes must be documented in `docs/to-doc-site`, in the same PR as the code
+change — otherwise the change ships and the doc site never learns about it. That covers new
+or changed features, config settings, bug fixes an administrator would notice, and new log
+messages or status codes an operator might search for.
 
-Write a file when the change involves:
+Skip it for changes with no admin-visible effect: internal refactors, test-only changes,
+CI/tooling, and dependency bumps.
 
-- a new feature, or a change to how an existing one behaves
-- a new, renamed, removed or re-defaulted configuration setting
-- a bug fix an administrator would notice (wrong data, a silent failure that now surfaces)
-- new or changed log messages, error codes or HTTP status codes an operator might search for
-- anything that changes what an administrator must do when upgrading
-
-Do **not** write a file for internal refactors, test-only changes, CI/tooling work, or
-dependency bumps that change no behaviour.
-
-**Read `docs/to-doc-site/README.md` before writing.** It is the authority on audience, file
-format and naming, and is deliberately not restated here. The two rules most often got wrong:
-
-- The audience is **Qlik Sense administrators, not Node.js developers**. No code snippets, no
-  internal function or variable names, no paths inside `src/`.
-- Each file is self-contained: one topic per file, kebab-case file name, no cross-references
-  to other staging files.
-
-`docs/to-doc-site/audit-api-rate-limiting.md` is a good worked example of the expected depth
-and structure. Never add the `done_` prefix yourself — that is applied by whoever migrates
-the content to the doc site.
+**Read `docs/to-doc-site/README.md` before writing.** It is the single source of truth for
+when a file is required, who the audience is, and how the file must be named and structured.
 
 ## ✅ Quality Gates
 
@@ -85,24 +68,17 @@ If any check fails, fix the issues and run checks again.
 
 This repo is indexed in GitNexus as `butler-sos`. In this multi-repo workspace, always include `-r butler-sos` on GitNexus CLI commands. GitNexus MCP tools may not be available in VS Code/Copilot chats, so use the CLI unless a `gitnexus_*` tool is actually exposed.
 
-The index is kept current automatically by git hooks (`.husky/post-commit`, `post-merge`,
-`post-rewrite`, `post-checkout`), so you should not normally need to re-index by hand.
+The index is re-generated automatically by git hooks; you should not normally need to
+re-index by hand. One-time setup per clone: `npm run gitnexus:install`.
 
-Start by checking index freshness:
+**Never run a bare `npx gitnexus analyze`**, including where the generated GitNexus block in
+`CLAUDE.md` / `AGENTS.md` suggests it. It rewrites that managed block and, without `--skills`,
+deletes the generated-skills table from both files. Re-index only through the
+`npm run gitnexus:*` scripts, which reach GitNexus through `scripts/gitnexus.js` and pass
+`--skip-agents-md`. Other subcommands (`impact`, `context`, `query`, `detect-changes`) are
+read-only and safe to run directly.
 
-```bash
-npm run gitnexus:status
-```
-
-If the index is stale, rebuild it before relying on impact analysis:
-
-```bash
-npm run gitnexus:index
-```
-
-Always go through the npm scripts, never a bare `npx gitnexus analyze`. The scripts pass
-`--skip-agents-md`; a bare `analyze` rewrites the managed GitNexus block in `CLAUDE.md` and
-`AGENTS.md` and, without `--skills`, deletes the generated-skills table from both.
+See `docs/README.gitnexus.md` for the hooks, the full command table and version pinning.
 
 Before modifying a function, class, or method, run upstream impact analysis and report the blast radius to the user:
 
