@@ -66,40 +66,58 @@ const COMMANDS = {
     refresh: { args: ['analyze', ...ANALYZE_FLAGS, '--embeddings', '--skills'] },
 };
 
-// Anything after the subcommand is forwarded to gitnexus untouched, so
-// `npm run gitnexus:index -- --embeddings` keeps working the way it did when the npm
-// scripts called npx directly. Dropping these silently would leave the caller
-// believing a flag took effect when it never reached the tool.
-const [, , name, ...passthrough] = process.argv;
-const command = Object.hasOwn(COMMANDS, name) ? COMMANDS[name] : undefined;
+/**
+ * Resolves the subcommand and runs it.
+ *
+ * Returns the exit code rather than calling process.exit() itself — see the note at
+ * the bottom of the file for why that distinction matters.
+ *
+ * @returns {number} Exit code to report to the shell.
+ */
+function main() {
+    // Anything after the subcommand is forwarded to gitnexus untouched, so
+    // `npm run gitnexus:index -- --embeddings` keeps working the way it did when the npm
+    // scripts called npx directly. Dropping these silently would leave the caller
+    // believing a flag took effect when it never reached the tool.
+    const [, , name, ...passthrough] = process.argv;
+    const command = Object.hasOwn(COMMANDS, name) ? COMMANDS[name] : undefined;
 
-if (!command) {
-    console.error(`Usage: node scripts/gitnexus.js <${Object.keys(COMMANDS).join('|')}> [...args]`);
-    process.exit(1);
-}
-
-// npx is a .cmd shim on Windows and spawn() will not find it without the extension.
-// Resolving it here keeps `shell: true` — and the quoting hazards that come with it —
-// out of the picture.
-const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-
-const result = spawnSync(
-    npx,
-    [
-        command.fetch ? '--yes' : '--no-install',
-        `gitnexus@${GITNEXUS_VERSION}`,
-        ...command.args,
-        ...passthrough,
-    ],
-    { stdio: command.quiet ? 'ignore' : 'inherit' }
-);
-
-if (result.error) {
-    if (!command.quiet) {
-        console.error(`gitnexus: could not run npx: ${result.error.message}`);
+    if (!command) {
+        console.error(
+            `Usage: node scripts/gitnexus.js <${Object.keys(COMMANDS).join('|')}> [...args]`
+        );
+        return 1;
     }
-    process.exit(1);
+
+    // npx is a .cmd shim on Windows and spawn() will not find it without the extension.
+    // Resolving it here keeps `shell: true` — and the quoting hazards that come with it —
+    // out of the picture.
+    const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+
+    const result = spawnSync(
+        npx,
+        [
+            command.fetch ? '--yes' : '--no-install',
+            `gitnexus@${GITNEXUS_VERSION}`,
+            ...command.args,
+            ...passthrough,
+        ],
+        { stdio: command.quiet ? 'ignore' : 'inherit' }
+    );
+
+    if (result.error) {
+        if (!command.quiet) {
+            console.error(`gitnexus: could not run npx: ${result.error.message}`);
+        }
+        return 1;
+    }
+
+    // null status means the child was killed by a signal; treat that as a failure.
+    return result.status ?? 1;
 }
 
-// null status means the child was killed by a signal; treat that as a failure.
-process.exit(result.status ?? 1);
+// Setting exitCode lets Node exit on its own once stderr has drained. process.exit()
+// terminates before pending asynchronous stdio writes complete, and writes to a pipe
+// are asynchronous while writes to a TTY are not — so the messages above would survive
+// an interactive run and could be lost under `... 2>&1 | tee log` or on a CI runner.
+process.exitCode = main();

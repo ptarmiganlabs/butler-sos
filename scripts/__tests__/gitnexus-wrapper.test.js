@@ -40,6 +40,22 @@ describe('GitNexus version pinning', () => {
         }
     );
 
+    test('the wrapper sets exitCode rather than calling process.exit()', () => {
+        // process.exit() terminates before pending asynchronous stdio writes complete.
+        // stderr is asynchronous when it is a pipe, so the usage and error messages
+        // could be lost under `... 2>&1 | tee log` while looking fine interactively.
+        //
+        // Comments are stripped first: the wrapper explains this hazard in prose, and
+        // matching that prose would fail the test for describing the very thing it
+        // forbids.
+        const code = readRepoFile('scripts/gitnexus.js')
+            .replace(/\/\*[\s\S]*?\*\//g, '')
+            .replace(/^\s*\/\/.*$/gm, '');
+
+        expect(code).not.toMatch(/process\.exit\(/);
+        expect(code).toMatch(/process\.exitCode = /);
+    });
+
     test('every gitnexus npm script routes through the wrapper', () => {
         const { scripts } = JSON.parse(readRepoFile('package.json'));
         const gitnexusScripts = Object.entries(scripts).filter(([scriptName]) =>
