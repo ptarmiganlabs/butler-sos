@@ -158,7 +158,7 @@ export function setCachedScreenshotSession(auth, qps, sessionCookie, cleanup, lo
         cookieValue: sessionCookie.value,
         cookieHeader: `${sessionCookie.name}=${sessionCookie.value}`,
         createdAt: now,
-        expiresAt: now + cacheConfig.ttlSeconds * 1000,
+        expiresAt: now + toTtlMs(cacheConfig.ttlSeconds),
         cleanup,
     };
 
@@ -239,7 +239,7 @@ function getOrCreateSessionCache(auth, logger) {
         return null;
     }
 
-    const ttlMs = cacheConfig.ttlSeconds * 1000;
+    const ttlMs = toTtlMs(cacheConfig.ttlSeconds);
     const optionsKey = `${cacheConfig.maxEntries}:${ttlMs}`;
 
     if (sessionCache && sessionCacheOptionsKey !== optionsKey) {
@@ -319,6 +319,19 @@ function normalizeKeyPart(value) {
  */
 function normalizeVirtualProxyForKey(value) {
     return normalizeKeyPart(value).replace(/^\/+|\/+$/g, '');
+}
+
+/**
+ * Converts a TTL in seconds to the whole-millisecond value the LRU cache requires.
+ *
+ * Settings allow fractional seconds, but the LRU cache rejects a non-integer ttl and
+ * treats 0 as "never expires", so round to whole milliseconds and keep at least one.
+ *
+ * @param {number} ttlSeconds Maximum session age in seconds.
+ * @returns {number} TTL in whole milliseconds, never below 1.
+ */
+function toTtlMs(ttlSeconds) {
+    return Math.max(1, Math.round(ttlSeconds * 1000));
 }
 
 /**
