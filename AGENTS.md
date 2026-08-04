@@ -78,11 +78,19 @@ pass `--skip-agents-md`:
 
 | Command | Use for |
 |---------|---------|
+| `npm run gitnexus:install` | One-time setup. Fetches the pinned GitNexus; the hooks are inert until this has been run |
 | `npm run gitnexus:status` | Check whether the index is current |
 | `npm run gitnexus:index` | Incremental re-index (same as the hooks) |
 | `npm run gitnexus:refresh` | Full refresh incl. embeddings and regenerated skill files |
 
-The pinned GitNexus version lives in two places that must stay in sync: `GITNEXUS_VERSION` in
+GitNexus is intentionally **not** a devDependency — it is ~40 MB unpacked with native
+tree-sitter builds, too much to add to every CI install for a local developer tool. Everything
+except `gitnexus:install` uses `npx --no-install`, so it can run an already-present copy but
+never fetch one; a hook that downloaded and executed a package after every commit would be a
+supply-chain surface. If the hooks report that GitNexus is not installed, run
+`npm run gitnexus:install` once.
+
+The pinned version lives in two places that must stay in sync: `GITNEXUS_VERSION` in
 `.husky/gitnexus-reindex.sh` and the `gitnexus:*` scripts in `package.json`.
 
 ## Git workflow

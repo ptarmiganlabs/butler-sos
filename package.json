@@ -32,9 +32,10 @@
         "license:full": "npm run license:summary && npm run license:check && npm run license:report",
         "knip": "knip",
         "prepare": "husky || echo 'husky not installed - git hooks inactive (expected for --omit=dev installs)'",
-        "gitnexus:status": "npx --yes gitnexus@1.6.5 status",
-        "gitnexus:index": "npx --yes gitnexus@1.6.5 analyze --no-stats --skip-agents-md",
-        "gitnexus:refresh": "npx --yes gitnexus@1.6.5 analyze --no-stats --skip-agents-md --embeddings --skills"
+        "gitnexus:install": "npx --yes gitnexus@1.6.5 --version",
+        "gitnexus:status": "npx --no-install gitnexus@1.6.5 status",
+        "gitnexus:index": "npx --no-install gitnexus@1.6.5 analyze --no-stats --skip-agents-md",
+        "gitnexus:refresh": "npx --no-install gitnexus@1.6.5 analyze --no-stats --skip-agents-md --embeddings --skills"
     },
     "repository": {
         "type": "git",
