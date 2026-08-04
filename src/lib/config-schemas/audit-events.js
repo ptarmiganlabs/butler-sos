@@ -384,6 +384,9 @@ export const auditEventsSchema = {
                                                 type: 'number',
                                                 default: 120,
                                                 minimum: 1,
+                                                // Above this the expiry timer cannot be
+                                                // scheduled and sessions never expire.
+                                                maximum: 2147483,
                                             },
                                             maxEntries: {
                                                 type: 'integer',

@@ -3,6 +3,10 @@ import { LRUCache } from 'lru-cache';
 const DEFAULT_TTL_SECONDS = 120;
 const DEFAULT_MAX_ENTRIES = 100;
 
+// Largest delay a timer accepts. Above this a timer fires after 1 ms instead, which turns
+// the cache's expiry timer into a rearming loop that never expires anything.
+const MAX_TTL_MS = 2147483647;
+
 let sessionCache = null;
 let sessionCacheOptionsKey = null;
 let suppressDisposal = false;
@@ -158,7 +162,7 @@ export function setCachedScreenshotSession(auth, qps, sessionCookie, cleanup, lo
         cookieValue: sessionCookie.value,
         cookieHeader: `${sessionCookie.name}=${sessionCookie.value}`,
         createdAt: now,
-        expiresAt: now + cacheConfig.ttlSeconds * 1000,
+        expiresAt: now + toTtlMs(cacheConfig.ttlSeconds),
         cleanup,
     };
 
@@ -239,7 +243,7 @@ function getOrCreateSessionCache(auth, logger) {
         return null;
     }
 
-    const ttlMs = cacheConfig.ttlSeconds * 1000;
+    const ttlMs = toTtlMs(cacheConfig.ttlSeconds);
     const optionsKey = `${cacheConfig.maxEntries}:${ttlMs}`;
 
     if (sessionCache && sessionCacheOptionsKey !== optionsKey) {
@@ -319,6 +323,25 @@ function normalizeKeyPart(value) {
  */
 function normalizeVirtualProxyForKey(value) {
     return normalizeKeyPart(value).replace(/^\/+|\/+$/g, '');
+}
+
+/**
+ * Converts a TTL in seconds to the whole-millisecond value the LRU cache requires.
+ *
+ * Settings allow fractional seconds, but the LRU cache rejects a non-integer ttl and
+ * treats 0 as "never expires". Rounding to whole milliseconds also absorbs values that
+ * simply cannot be represented exactly, such as 16.1 seconds. The upper bound is the
+ * largest delay a timer accepts: anything above it silently fires after 1 ms instead,
+ * leaving the expiry timer rearming in a loop while the entry never expires.
+ *
+ * Settings validation rejects out-of-range values before they get here; this is the
+ * backstop for callers that bypass it.
+ *
+ * @param {number} ttlSeconds Maximum session age in seconds.
+ * @returns {number} TTL in whole milliseconds, from 1 to MAX_TTL_MS.
+ */
+function toTtlMs(ttlSeconds) {
+    return Math.min(MAX_TTL_MS, Math.max(1, Math.round(ttlSeconds * 1000)));
 }
 
 /**
