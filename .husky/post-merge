@@ -1,0 +1,3 @@
+# Runs after `git pull` and after a local merge — the point where the largest
+# batches of code change arrive, so the index is most likely to be stale.
+exec "$(dirname "$0")/gitnexus-reindex.sh"

@@ -64,6 +64,35 @@ This project is indexed by GitNexus as **butler-sos** (2919 symbols, 5442 relati
 
 ## Butler SOS — Agent Guide
 
+## GitNexus index freshness — handled by git hooks, not by you
+
+The index above is re-generated automatically. `.husky/` installs `post-commit`, `post-merge`,
+`post-rewrite` and `post-checkout` hooks that all run `.husky/gitnexus-reindex.sh` — an
+incremental re-index taking ~2s that never blocks a git operation. You should not normally need
+to re-index by hand.
+
+**Ignore the "run `npx gitnexus analyze`" line in the generated block above — it is wrong here.**
+A bare `analyze` rewrites the managed block, and without `--skills` it *deletes* the whole
+generated-skills table from this file and from `CLAUDE.md`. Use the npm scripts instead, which
+pass `--skip-agents-md`:
+
+| Command | Use for |
+|---------|---------|
+| `npm run gitnexus:install` | One-time setup. Fetches the pinned GitNexus; the hooks are inert until this has been run |
+| `npm run gitnexus:status` | Check whether the index is current |
+| `npm run gitnexus:index` | Incremental re-index (same as the hooks) |
+| `npm run gitnexus:refresh` | Full refresh incl. embeddings and regenerated skill files |
+
+GitNexus is intentionally **not** a devDependency — it is ~40 MB unpacked with native
+tree-sitter builds, too much to add to every CI install for a local developer tool. Everything
+except `gitnexus:install` uses `npx --no-install`, so it can run an already-present copy but
+never fetch one; a hook that downloaded and executed a package after every commit would be a
+supply-chain surface. If the hooks report that GitNexus is not installed, run
+`npm run gitnexus:install` once.
+
+The pinned version lives in two places that must stay in sync: `GITNEXUS_VERSION` in
+`.husky/gitnexus-reindex.sh` and the `gitnexus:*` scripts in `package.json`.
+
 ## Git workflow
 
 - **Branch names MUST be prefixed with `claude/`.** When creating a branch for ongoing work,

@@ -119,7 +119,7 @@ describe('process safety net - unhandledRejection', () => {
             /**
              * Throws on stringification, as a Proxy or exotic object might.
              *
-             * @returns {string} Never returns.
+             * @throws {Error} Always.
              */
             toString() {
                 throw new Error('toString exploded');
@@ -221,7 +221,7 @@ describe('process safety net - uncaughtException', () => {
             /**
              * Formatter that always fails.
              *
-             * @returns {string} Never returns.
+             * @throws {Error} Always.
              */
             getErrorMessage() {
                 throw new Error('formatter exploded');
