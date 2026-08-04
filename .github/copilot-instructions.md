@@ -24,6 +24,18 @@ OpenWiki includes repository overview, architecture notes, workflows, domain con
 
 When working in this repository, read the OpenWiki quickstart first, then follow its links to the relevant architecture, workflow, domain, operation, and testing notes.
 
+## 🌿 Git Workflow
+
+- **Branch names MUST be prefixed with `claude/`.** When creating a branch for ongoing work,
+  name it `claude/<short-description>` — for example `claude/fix-udp-source-validation` or
+  `claude/add-influxdb-v3-retry`. This applies to every agent working in this repo, so that
+  agent-created branches stay clearly namespaced and are easy to filter or bulk-clean.
+- Never commit directly to `master`. Create a branch first, then open a pull request.
+- Commits must follow **Conventional Commits**. release-please derives the changelog and the
+  version bump from the commit type, so the type matters: `feat` triggers a minor bump, `fix`
+  a patch. The types that appear in the changelog are defined in `release-please-config.json`:
+  `feat`, `fix`, `chore`, `refactor`, `docs`, `build`, `test`.
+
 ## ✅ Quality Gates
 
 When writing code, Copilot must not finish until all of these succeed:

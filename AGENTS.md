@@ -64,6 +64,16 @@ This project is indexed by GitNexus as **butler-sos** (2919 symbols, 5442 relati
 
 ## Butler SOS — Agent Guide
 
+## Git workflow
+
+- **Branch names MUST be prefixed with `claude/`.** When creating a branch for ongoing work,
+  name it `claude/<short-description>` — e.g. `claude/fix-udp-source-validation`. This keeps
+  agent-created branches clearly namespaced and easy to filter or bulk-clean.
+- Never commit directly to `master` — branch first, then open a PR
+- Conventional Commits required; release-please derives the changelog and version bump from
+  the commit type. Sections defined in `release-please-config.json`: `feat`, `fix`, `chore`,
+  `refactor`, `docs`, `build`, `test`
+
 ## Commands
 
 - `npm ci` — install deps
