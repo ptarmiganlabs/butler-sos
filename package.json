@@ -30,7 +30,12 @@
         "license:summary": "license-checker-rseidelsohn --summary",
         "license:json": "license-checker-rseidelsohn --json --out licenses.json",
         "license:full": "npm run license:summary && npm run license:check && npm run license:report",
-        "knip": "knip"
+        "knip": "knip",
+        "prepare": "husky || echo 'husky not installed - git hooks inactive (expected for --omit=dev installs)'",
+        "gitnexus:install": "npx --yes gitnexus@1.6.5 --version",
+        "gitnexus:status": "npx --no-install gitnexus@1.6.5 status",
+        "gitnexus:index": "npx --no-install gitnexus@1.6.5 analyze --no-stats --skip-agents-md",
+        "gitnexus:refresh": "npx --no-install gitnexus@1.6.5 analyze --no-stats --skip-agents-md --embeddings --skills"
     },
     "repository": {
         "type": "git",
@@ -71,7 +76,7 @@
         "fastify": "^5.11.2",
         "fastify-healthcheck": "^5.1.0",
         "fastify-metrics": "^13.2.1",
-        "fastify-plugin": "^5.1.0",
+        "fastify-plugin": "^6.0.0",
         "fs-extra": "^11.4.0",
         "handlebars": "^4.7.8",
         "hyparquet-writer": "^0.16.5",
@@ -106,14 +111,14 @@
         "eslint-plugin-jsdoc": "^63.3.3",
         "eslint-plugin-prettier": "^5.5.6",
         "globals": "^17.9.0",
+        "husky": "^9.1.7",
         "jest": "^30.4.2",
         "jsdoc-to-markdown": "^9.1.3",
         "knip": "^6.31.0",
         "license-checker-rseidelsohn": "^5.0.1",
         "lockfile-lint": "^5.0.0",
-        "npm-check-updates": "^22.2.9",
+        "npm-check-updates": "^23.0.1",
         "prettier": "^3.9.6",
-        "snyk": "^1.1306.2",
-        "typescript": "^6.0.3"
+        "snyk": "^1.1306.2"
     }
 }
