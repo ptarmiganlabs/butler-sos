@@ -206,17 +206,19 @@ export async function setupConfigVisServer(logger, config) {
 
         configVisServer.get('/', async (request, reply) => {
             try {
-                // Obfuscate the config object before sending it to the client
-                // First get clean copy of the config object
-                let newConfig = JSON.parse(JSON.stringify(globals.config));
+                // Obfuscate the config file before presenting it to the user, to avoid
+                // leaking sensitive information to users who should not have access to it.
+                //
+                // configObfuscate() does its own JSON round-trip, which both deep-copies and
+                // strips the node-config prototype, so no pre-copy is needed on this branch.
+                // The un-obfuscated branch still needs its own round-trip for the same
+                // prototype-stripping reason before yaml.dump() sees the object.
+                let newConfig;
 
                 if (globals.config.get('Butler-SOS.configVisualisation.obfuscate')) {
-                    // Obfuscate config file before presenting it to the user
-                    // This is done to avoid leaking sensitive information
-                    // to users who should not have access to it.
-                    // The obfuscation is done by replacing parts of the
-                    // config file with masked strings.
-                    newConfig = configObfuscate(newConfig);
+                    newConfig = configObfuscate(globals.config);
+                } else {
+                    newConfig = JSON.parse(JSON.stringify(globals.config));
                 }
 
                 // Convert the (potentially obfuscated) config object to YAML format (=string)

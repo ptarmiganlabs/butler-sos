@@ -397,7 +397,10 @@ describe('v2/queue-metrics', () => {
             globals.config.get.mockImplementation((path) => {
                 if (path.includes('org')) return 'test-org';
                 if (path.includes('bucket')) return 'test-bucket';
-                if (path === 'Butler-SOS.userEvents.udpServerConfig.queueMetrics.influxdb.measurementName')
+                if (
+                    path ===
+                    'Butler-SOS.userEvents.udpServerConfig.queueMetrics.influxdb.measurementName'
+                )
                     return 'user_events_queue';
                 if (path === 'Butler-SOS.userEvents.udpServerConfig.queueMetrics.influxdb.tags')
                     return [{ name: 'env', value: 'prod' }];
@@ -452,7 +455,10 @@ describe('v2/queue-metrics', () => {
             globals.config.get.mockImplementation((path) => {
                 if (path.includes('org')) return 'test-org';
                 if (path.includes('bucket')) return 'test-bucket';
-                if (path === 'Butler-SOS.logEvents.udpServerConfig.queueMetrics.influxdb.measurementName')
+                if (
+                    path ===
+                    'Butler-SOS.logEvents.udpServerConfig.queueMetrics.influxdb.measurementName'
+                )
                     return 'log_events_queue';
                 if (path === 'Butler-SOS.logEvents.udpServerConfig.queueMetrics.influxdb.tags')
                     return [{ name: 'env', value: 'prod' }];

@@ -233,6 +233,7 @@ export function applyTagsToPoint3(point, tags) {
  * @param {string} context - Description of what's being written (for logging)
  * @param {string} version - InfluxDB version ('v1', 'v2', or 'v3')
  * @param {string} errorCategory - Error category for tracking (e.g., server name or component)
+ * @param {object} metadata - Additional context passed through to the error tracker
  * @param {object} options - Retry options
  * @param {number} options.maxRetries - Maximum number of retry attempts (default: 3)
  * @param {number} options.initialDelayMs - Initial delay before first retry in ms (default: 1000)

@@ -369,7 +369,8 @@ describe('writeCrashDump', () => {
 
     test('sanitizes absolute paths from stack traces in JSON dump', async () => {
         const err = new Error('stack test');
-        err.stack = 'Error: stack test\n    at Function.foo (/Users/goran/code/butler-sos/src/lib/foo.js:42:5)\n    at Module._compile (node:internal/modules/cjs:456:8)';
+        err.stack =
+            'Error: stack test\n    at Function.foo (/Users/goran/code/butler-sos/src/lib/foo.js:42:5)\n    at Module._compile (node:internal/modules/cjs:456:8)';
 
         await writeCrashDump(err, 'uncaughtException');
 
@@ -383,7 +384,8 @@ describe('writeCrashDump', () => {
 
     test('sanitizes absolute paths from stack traces in TXT dump', async () => {
         const err = new Error('stack txt test');
-        err.stack = 'Error: stack txt test\n    at Object.<anonymous> (/home/runner/work/butler-sos/src/butler-sos.js:100:3)';
+        err.stack =
+            'Error: stack txt test\n    at Object.<anonymous> (/home/runner/work/butler-sos/src/butler-sos.js:100:3)';
 
         mockConfigGet.mockImplementation((key) => {
             switch (key) {
@@ -428,7 +430,9 @@ describe('writeCrashDump', () => {
     });
 
     test('redacts Bearer tokens from error message', async () => {
-        const err = new Error('Request failed: Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.abc');
+        const err = new Error(
+            'Request failed: Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.abc'
+        );
 
         await writeCrashDump(err, 'uncaughtException');
 
@@ -456,8 +460,7 @@ describe('writeCrashDump', () => {
 
     test('redacts sensitive patterns from stack traces', async () => {
         const err = new Error('api_key=my-very-secret-key in stack');
-        err.stack =
-            'Error: api_key=my-very-secret-key in stack\n    at src/lib/foo.js:10:5';
+        err.stack = 'Error: api_key=my-very-secret-key in stack\n    at src/lib/foo.js:10:5';
 
         await writeCrashDump(err, 'uncaughtException');
 
@@ -493,7 +496,9 @@ describe('writeCrashDump', () => {
             }
         });
 
-        await expect(writeCrashDump(new Error('write fail'), 'uncaughtException')).resolves.toBeUndefined();
+        await expect(
+            writeCrashDump(new Error('write fail'), 'uncaughtException')
+        ).resolves.toBeUndefined();
     });
 
     // -----------------------------------------------------------------------
@@ -575,7 +580,9 @@ describe('writeCrashDump', () => {
             }
         });
 
-        await expect(writeCrashDump(new Error('empty dir'), 'uncaughtException')).resolves.toBeUndefined();
+        await expect(
+            writeCrashDump(new Error('empty dir'), 'uncaughtException')
+        ).resolves.toBeUndefined();
     });
 
     // -----------------------------------------------------------------------

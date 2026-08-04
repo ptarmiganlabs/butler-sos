@@ -42,7 +42,9 @@ export async function storeEventCountV2() {
         const measurementName = globals.config.get(
             'Butler-SOS.qlikSenseEvents.eventCount.influxdb.measurementName'
         );
-        const configTags = globals.config.get('Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags');
+        const configTags = globals.config.get(
+            'Butler-SOS.qlikSenseEvents.eventCount.influxdb.tags'
+        );
 
         const points = [];
 
@@ -185,7 +187,9 @@ export async function storeRejectedEventCountV2() {
             globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
         );
 
-        globals.logger.verbose('REJECTED EVENT COUNT V2: Sent rejected event count data to InfluxDB');
+        globals.logger.verbose(
+            'REJECTED EVENT COUNT V2: Sent rejected event count data to InfluxDB'
+        );
     } catch (err) {
         await globals.errorTracker.incrementError(
             'INFLUXDB_V2_WRITE',

@@ -47,7 +47,8 @@ describe('audit-screenshots', () => {
         jest.clearAllMocks();
         jest.useRealTimers();
 
-        const { clearScreenshotSessionCache } = await import('../audit-screenshot-session-cache.js');
+        const { clearScreenshotSessionCache } =
+            await import('../audit-screenshot-session-cache.js');
         clearScreenshotSessionCache({ cleanup: false });
 
         mockGlobals.config.get.mockImplementation((key) => {
@@ -350,7 +351,9 @@ describe('audit-screenshots', () => {
         expect(getCalls).toHaveLength(2);
         expect(deleteCalls).toHaveLength(0);
         expect(getCalls[0][0].url).toContain('qlikTicket=TICKET123');
-        expect(getCalls[1][0].url).toBe('https://qlik.example.com/sense/app/screenshot.png?foo=bar');
+        expect(getCalls[1][0].url).toBe(
+            'https://qlik.example.com/sense/app/screenshot.png?foo=bar'
+        );
         expect(getCalls[1][0].headers).toEqual({ Cookie: 'X-Qlik-Session-qlik=SESSION123' });
         expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(2);
         expect(
@@ -408,7 +411,9 @@ describe('audit-screenshots', () => {
                 status: 200,
                 headers: {
                     'content-type': 'image/png',
-                    'set-cookie': [`X-Qlik-Session-qlik=SESSION${ticketCounter}23; Path=/; HttpOnly`],
+                    'set-cookie': [
+                        `X-Qlik-Session-qlik=SESSION${ticketCounter}23; Path=/; HttpOnly`,
+                    ],
                 },
                 data: Buffer.from('png-bytes'),
             };
@@ -717,7 +722,8 @@ describe('audit-screenshots', () => {
                     },
                     event: {
                         objectId: 'obj-1',
-                        screenshotUrl: 'https://qlik.example.com/tempcontent/screenshot.png?foo=bar',
+                        screenshotUrl:
+                            'https://qlik.example.com/tempcontent/screenshot.png?foo=bar',
                     },
                 },
             },
@@ -965,7 +971,8 @@ describe('audit-screenshots SSRF protection', () => {
     beforeEach(async () => {
         jest.clearAllMocks();
 
-        const { clearScreenshotSessionCache } = await import('../audit-screenshot-session-cache.js');
+        const { clearScreenshotSessionCache } =
+            await import('../audit-screenshot-session-cache.js');
         clearScreenshotSessionCache({ cleanup: false });
     });
 
@@ -1152,7 +1159,11 @@ describe('audit-screenshots SSRF protection', () => {
 
         const result = await downloadScreenshot(
             'https://qliksense.example.com/screenshot.png',
-            { eventId: 'evt-redirect-blocked', correlationId: 'corr-redirect-blocked', payload: { event: {} } },
+            {
+                eventId: 'evt-redirect-blocked',
+                correlationId: 'corr-redirect-blocked',
+                payload: { event: {} },
+            },
             { ...baseConfig, allowedImageDownloadHosts: ['qliksense.example.com'] },
             logger
         );

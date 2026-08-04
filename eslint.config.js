@@ -63,4 +63,14 @@ export default [
             'jsdoc/require-returns-type': 'error',
         },
     },
+    {
+        // Test files document themselves through their test names. Requiring JSDoc on the
+        // inline arrow functions used for mocks and stubs produces noise, not documentation,
+        // and the autofixer's response is to insert empty comment blocks that are themselves
+        // lint errors. Everything else — including all JSDoc correctness rules — still applies.
+        files: ['**/__tests__/**/*.js', '**/*.test.js'],
+        rules: {
+            'jsdoc/require-jsdoc': 'off',
+        },
+    },
 ];

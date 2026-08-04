@@ -17,7 +17,7 @@ import globals from '../../../globals.js';
  */
 export function publishToDestinations(eventData, eventType, publishers) {
     const configBase = `Butler-SOS.${eventType}`;
-    
+
     // Format event type for logging: 'logEvents' -> 'LOG EVENT', 'log event'
     // Remove trailing 's' to make singular, then split camelCase
     const eventTypeSingular = eventType.replace(/s$/, '');
