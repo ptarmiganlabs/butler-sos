@@ -10,6 +10,9 @@
  * through this file, so there is no second copy of either to keep in sync.
  *
  * Run via: npm run gitnexus:install | gitnexus:status | gitnexus:index | gitnexus:refresh
+ *
+ * Extra arguments are forwarded to gitnexus, so `npm run gitnexus:index -- --embeddings`
+ * behaves as it did before this wrapper existed.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -63,11 +66,15 @@ const COMMANDS = {
     refresh: { args: ['analyze', ...ANALYZE_FLAGS, '--embeddings', '--skills'] },
 };
 
-const name = process.argv[2];
+// Anything after the subcommand is forwarded to gitnexus untouched, so
+// `npm run gitnexus:index -- --embeddings` keeps working the way it did when the npm
+// scripts called npx directly. Dropping these silently would leave the caller
+// believing a flag took effect when it never reached the tool.
+const [, , name, ...passthrough] = process.argv;
 const command = Object.hasOwn(COMMANDS, name) ? COMMANDS[name] : undefined;
 
 if (!command) {
-    console.error(`Usage: node scripts/gitnexus.js <${Object.keys(COMMANDS).join('|')}>`);
+    console.error(`Usage: node scripts/gitnexus.js <${Object.keys(COMMANDS).join('|')}> [...args]`);
     process.exit(1);
 }
 
@@ -78,7 +85,12 @@ const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
 const result = spawnSync(
     npx,
-    [command.fetch ? '--yes' : '--no-install', `gitnexus@${GITNEXUS_VERSION}`, ...command.args],
+    [
+        command.fetch ? '--yes' : '--no-install',
+        `gitnexus@${GITNEXUS_VERSION}`,
+        ...command.args,
+        ...passthrough,
+    ],
     { stdio: command.quiet ? 'ignore' : 'inherit' }
 );
 

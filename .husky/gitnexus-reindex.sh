@@ -20,12 +20,24 @@ if [ ! -d ".gitnexus" ]; then
     exit 0
 fi
 
+# node runs the wrapper, npx runs GitNexus itself. Both are checked, and both exit
+# silently: an environment without them cannot act on any advice we could print.
 command -v node >/dev/null 2>&1 || exit 0
+command -v npx >/dev/null 2>&1 || exit 0
 
 # The pinned version, the analyze flags and the npx invocation all live in
 # scripts/gitnexus.js — one definition shared by this hook and the gitnexus:* npm
 # scripts, so there is no second copy to keep in sync.
 #
+# The wrapper is absent from every commit made before it was introduced, and
+# post-checkout fires on exactly those. That is not the same as GitNexus being
+# missing, so it does not get the same message: `npm run gitnexus:install` would
+# not fix it, and telling someone to run it wastes their time.
+if [ ! -f scripts/gitnexus.js ]; then
+    echo "gitnexus: scripts/gitnexus.js not in this checkout — skipping re-index." >&2
+    exit 0
+fi
+
 # `check` probes for an already-installed copy without fetching one. Nothing on this
 # path may download: a hook that installed and executed a package after every commit
 # would be a supply-chain surface (SonarCloud shell:S6505, and a fair point). GitNexus
