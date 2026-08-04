@@ -1176,6 +1176,19 @@ describe('audit-events-api envelope constraint validation', () => {
         });
 
         test.each([
+            // Browser geometry is genuinely fractional. Element.scrollTop is a double and is
+            // fractional at non-100% zoom, so rejecting these would drop real screenshots
+            // for any zoomed-in user. They are floored before use instead.
+            ['fractional scrollTop', { width: 10, height: 10, scrollTop: 12.5 }],
+            ['fractional height', { width: 10, height: 10.5 }],
+            ['fractional top and left', { width: 10, height: 10, top: 0.5, left: 1.25 }],
+        ])('accepts crop with %s', async (_label, crop) => {
+            const res = await postCrop(crop);
+
+            expect(res.statusCode).toBe(202);
+        });
+
+        test.each([
             ['negative top', { width: 10, height: 10, top: -1 }],
             ['negative left', { width: 10, height: 10, left: -5 }],
             ['negative scrollTop', { width: 10, height: 10, scrollTop: -1 }],
@@ -1187,7 +1200,6 @@ describe('audit-events-api envelope constraint validation', () => {
             ['oversized height', { width: 10, height: 40000 }],
             ['oversized top', { width: 10, height: 10, top: 99999 }],
             ['oversized scrollTop', { width: 10, height: 10, scrollTop: 99999 }],
-            ['fractional height', { width: 10, height: 10.5 }],
             ['non-numeric width', { width: '10', height: 10 }],
             ['missing width', { height: 10 }],
             ['missing height', { width: 10 }],

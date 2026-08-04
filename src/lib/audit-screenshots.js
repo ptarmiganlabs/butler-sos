@@ -528,6 +528,44 @@ function isDebugEnabled(logger) {
     return typeof logger?.isLevelEnabled === 'function' && logger.isLevelEnabled('debug') === true;
 }
 
+/**
+ * Returns a copy of a crop rectangle with every geometry field floored to a whole pixel.
+ *
+ * The AJV `crop` sub-schema bounds these values but deliberately accepts fractional ones,
+ * because browser geometry is fractional and rejecting it would drop real screenshots. This
+ * is the other half of that decision: fractional offsets are meaningless once they reach
+ * `Buffer.copy` and `new PNG({ width, height })`, so they are squared off here, at the only
+ * place that actually does arithmetic with them.
+ *
+ * Non-numeric and negative values floor to 0 rather than propagating: the caller has already
+ * checked that width and height are positive numbers, and the branch guards below treat 0 as
+ * "this step does not apply".
+ *
+ * @param {object} crop - Crop rectangle as received from the browser extension.
+ * @returns {object} Crop rectangle with whole-pixel geometry.
+ */
+function normalizeCrop(crop) {
+    /**
+     * Floors one field to a non-negative whole number of pixels.
+     *
+     * @param {unknown} value - Raw field value.
+     * @returns {number} Floored, non-negative value; 0 when not a finite number.
+     */
+    const toPixels = (value) =>
+        typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+
+    return {
+        ...crop,
+        top: toPixels(crop.top),
+        left: toPixels(crop.left),
+        width: toPixels(crop.width),
+        height: toPixels(crop.height),
+        scrollTop: toPixels(crop.scrollTop),
+        scrollAreaOffsetY: toPixels(crop.scrollAreaOffsetY),
+        renderingOverflow: toPixels(crop.renderingOverflow),
+    };
+}
+
 /** PNG file signature: the first eight bytes of every PNG. */
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -982,6 +1020,12 @@ export function buildScreenshotFilename(envelope, url, contentType) {
  * @returns {Buffer} Cropped PNG buffer, or the original buffer if cropping is unnecessary.
  */
 function cropPngBuffer(buffer, crop, logger) {
+    // Work from whole pixels. Browser geometry is fractional -- scrollTop in particular comes
+    // straight from Element.scrollTop, a double that really is fractional at non-100% zoom --
+    // and fractional values have no meaning as buffer offsets or PNG dimensions. Floor here
+    // rather than rejecting them upstream, which would drop legitimate screenshots.
+    crop = normalizeCrop(crop);
+
     const debugEnabledEarly = isDebugEnabled(logger);
 
     // Fast path: decide from the 24-byte PNG header whether any pixel work is needed at all.

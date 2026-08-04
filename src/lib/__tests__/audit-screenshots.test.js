@@ -689,6 +689,24 @@ describe('audit-screenshots', () => {
             expect(out.height).toBe(20);
         });
 
+        test('handles a fractional scrollTop without throwing', async () => {
+            // Element.scrollTop is a double; at non-100% browser zoom it is fractional.
+            // Fractional values are floored rather than rejected, so this must still crop.
+            const stored = await downloadAndGetStored(40, 40, {
+                top: 0.5,
+                left: 0.25,
+                width: 20,
+                height: 20,
+                scrollTop: 10.75,
+                scrollAreaOffsetY: 5.5,
+            });
+
+            const out = PNG.sync.read(stored);
+            expect(Number.isInteger(out.width)).toBe(true);
+            expect(Number.isInteger(out.height)).toBe(true);
+            expect(out.width).toBeLessThanOrEqual(20);
+        });
+
         test('still composites when scrollTop is set', async () => {
             const stored = await downloadAndGetStored(40, 40, {
                 top: 0,
