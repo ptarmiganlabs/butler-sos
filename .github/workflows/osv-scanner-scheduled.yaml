@@ -9,17 +9,31 @@ on:
     push:
         branches: [master]
 
-permissions:
-    # Required to upload SARIF file to CodeQL. See: https://github.com/github/codeql-action/issues/2117
-    actions: read
-    # Require writing security events to upload SARIF file to security tab
-    security-events: write
-    # Only need to read contents
-    contents: read
+# A scheduled run is routinely delayed under load, so it can overlap a push run and finish
+# second while scanning the older commit — its SARIF would then become the current state for
+# master, silently reopening alerts the merge just fixed.
+concurrency:
+    group: osv-scanner-${{ github.ref }}
+    cancel-in-progress: false
+
+# Granted per job below rather than here, matching every other workflow in this repo. A
+# workflow-scoped grant is silently inherited by any job added later.
+permissions: {}
 
 jobs:
     scan-scheduled:
         runs-on: ubuntu-latest
+        # F9: a hung scan would otherwise burn the 360-minute default.
+        timeout-minutes: 20
+        # Forks do not need to run this, and it would upload SARIF they cannot use.
+        if: github.repository_owner == 'ptarmiganlabs'
+        permissions:
+            # Required to upload SARIF file to CodeQL. See: https://github.com/github/codeql-action/issues/2117
+            actions: read
+            # Require writing security events to upload SARIF file to security tab
+            security-events: write
+            # Only need to read contents
+            contents: read
         steps:
             - name: Checkout repository
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -55,6 +69,9 @@ jobs:
                   name: SARIF file
                   path: results.sarif
                   retention-days: 5
+                  # Default is `warn`, which reports success when the scan died before writing
+                  # the file — making the troubleshooter step below unreachable.
+                  if-no-files-found: error
 
             - name: Upload to code-scanning
               if: ${{ !cancelled() }}

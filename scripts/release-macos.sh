@@ -52,7 +52,7 @@ cp "$(node -p 'process.execPath')" "${DIST_FILE_NAME}"
 codesign --remove-signature ${DIST_FILE_NAME}
 
 # Inject the blob
-npx postject ${DIST_FILE_NAME} NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 --macho-segment-name NODE_SEA
+npx --no-install postject ${DIST_FILE_NAME} NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 --macho-segment-name NODE_SEA
 
 security delete-keychain "${KEYCHAIN_PATH}" >/dev/null 2>&1 || true
 rm -f "${KEYCHAIN_PATH}"
@@ -99,11 +99,11 @@ echo "DEBUG: Importing certificate into keychain"
 security import certificate.p12 -k "${KEYCHAIN_PATH}" -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign -A
 
 echo "DEBUG: Importing Apple Developer ID G2 intermediate CA"
-curl --proto '=https' --proto-redir '=https' --tlsv1.2 -f -L -sS -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+curl --proto-redir '=https' -f -L -sS -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
 security import DeveloperIDG2CA.cer -k "${KEYCHAIN_PATH}"
 
 echo "DEBUG: Importing Apple Root CA into temporary keychain"
-curl --proto '=https' --proto-redir '=https' --tlsv1.2 -f -L -sS -o AppleIncRootCertificate.cer https://www.apple.com/appleca/AppleIncRootCertificate.cer
+curl --proto-redir '=https' -f -L -sS -o AppleIncRootCertificate.cer https://www.apple.com/appleca/AppleIncRootCertificate.cer
 security import AppleIncRootCertificate.cer -k "${KEYCHAIN_PATH}" || true
 
 echo "DEBUG: Setting keychain timeout to prevent locking"

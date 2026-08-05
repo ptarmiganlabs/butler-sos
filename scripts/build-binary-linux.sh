@@ -30,7 +30,7 @@ echo "Step 3: Copy Node.js executable..."
 cp "$(node -e "process.stdout.write(process.execPath)")" "${DIST_FILE_NAME}"
 
 echo "Step 4: Inject blob into binary..."
-npx postject "${DIST_FILE_NAME}" NODE_SEA_BLOB sea-prep.blob \
+npx --no-install postject "${DIST_FILE_NAME}" NODE_SEA_BLOB sea-prep.blob \
     --sentinel-fuse "${SENTINEL_FUSE}"
 
 echo "Step 5: Make binary executable..."

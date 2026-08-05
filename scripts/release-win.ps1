@@ -30,7 +30,7 @@ if ($process.ExitCode -ne 0) {
   throw "signtool remove failed with exit code $($process.ExitCode)"
 }
 
-npx postject "${env:DIST_FILE_NAME}.exe" NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
+npx --no-install postject "${env:DIST_FILE_NAME}.exe" NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
 
 # -------------------
 # Sign the executable

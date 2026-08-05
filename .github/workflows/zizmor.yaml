@@ -9,7 +9,7 @@ permissions: {}
 
 jobs:
   zizmor:
-    name: zizmor latest via PyPI
+    name: zizmor via PyPI
     runs-on: ubuntu-latest
     permissions:
       security-events: write # Required for upload-sarif (used by zizmor-action) to upload SARIF files.
@@ -25,7 +25,7 @@ jobs:
         uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
 
       - name: Run zizmor 🌈
-        run: uvx --no-config zizmor@1.29.0 --format=sarif . > results.sarif 
+        run: uvx --no-build zizmor@1.29.0 --no-config --format=sarif . > results.sarif
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
 

@@ -33,7 +33,7 @@ echo "Step 4: Remove existing code signature from Node.js binary..."
 codesign --remove-signature "./${DIST_FILE_NAME}"
 
 echo "Step 5: Inject blob into binary..."
-npx postject "${DIST_FILE_NAME}" NODE_SEA_BLOB sea-prep.blob \
+npx --no-install postject "${DIST_FILE_NAME}" NODE_SEA_BLOB sea-prep.blob \
     --sentinel-fuse "${SENTINEL_FUSE}" \
     --macho-segment-name NODE_SEA
 
