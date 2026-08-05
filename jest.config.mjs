@@ -35,12 +35,15 @@ const config = {
     coverageProvider: 'v8',
 
     // A list of reporter names that Jest uses when writing coverage reports
-    // coverageReporters: [
-    //   "json",
-    //   "text",
-    //   "lcov",
-    //   "clover"
-    // ],
+    //
+    // `lcov` is what SonarCloud consumes (sonar.javascript.lcov.reportPaths in
+    // sonar-project.properties). Without it Sonar receives no coverage at all and its
+    // "Coverage on New Code" gate reports 0.0% on every pull request, including ones that
+    // are nothing but tests — a green condition with nothing behind it.
+    //
+    // `text-summary` rather than the default `text` keeps the local run readable: the
+    // per-file table is hundreds of lines and buries the test results above it.
+    coverageReporters: ['lcov', 'text-summary'],
 
     // An object that configures minimum threshold enforcement for coverage results
     // coverageThreshold: undefined,
