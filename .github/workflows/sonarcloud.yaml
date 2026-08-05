@@ -1,0 +1,75 @@
+name: SonarCloud analysis with coverage
+
+# CI-based analysis, which exists for one reason: SonarCloud's Automatic Analysis cannot
+# import coverage reports. While the project runs on Automatic Analysis, the "Coverage on New
+# Code" quality-gate condition evaluates to 0.0% on every pull request no matter what it
+# contains — a passing-looking signal that measures nothing.
+#
+# TWO MANUAL STEPS ARE REQUIRED before this does anything:
+#
+#   1. Add a repository secret named SONAR_TOKEN, generated at
+#      https://sonarcloud.io/account/security. Until it exists the scan step below is
+#      skipped, so this workflow is inert rather than red.
+#   2. Turn OFF Automatic Analysis in the SonarCloud project
+#      (Administration -> Analysis Method). The two modes are mutually exclusive; leaving
+#      both on makes the scanner fail with "You are running CI analysis while Automatic
+#      Analysis is enabled".
+#
+# Coverage itself is produced by `npm test` — jest.config.mjs sets collectCoverage and the
+# lcov reporter, and sonar-project.properties points Sonar at coverage/lcov.info.
+
+on:
+    push:
+        branches: [master]
+    pull_request:
+
+permissions: {}
+
+concurrency:
+    group: sonarcloud-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    sonarcloud:
+        name: Analyse with coverage
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        if: github.repository_owner == 'ptarmiganlabs'
+        permissions:
+            contents: read
+        env:
+            # Only a boolean at job scope, never the token itself. A job-level secret is in the
+            # environment of every step, including `npm test` — which runs test code from the
+            # pull request, and same-repository PRs do receive secrets. That would let a PR read
+            # the token straight out of process.env. The `secrets` context is not available in a
+            # step-level `if:`, which is why the condition needs an env var at all; this way the
+            # thing exposed to the test run is "true"/"false" rather than a credential.
+            HAS_SONAR_TOKEN: ${{ secrets.SONAR_TOKEN != '' }}
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  # Sonar needs full history to attribute new code to the right commits.
+                  fetch-depth: 0
+                  persist-credentials: false
+
+            - name: Setup Node.js
+              uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+              with:
+                  node-version: 24
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci --ignore-scripts
+
+            - name: Test with coverage
+              run: npm test
+
+            - name: SonarCloud scan
+              # Skipped rather than failed when the secret is absent, so this workflow stays
+              # green until step 1 above is done.
+              if: env.HAS_SONAR_TOKEN == 'true'
+              env:
+                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+              uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
