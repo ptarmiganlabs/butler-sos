@@ -21,6 +21,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install gh-aw extension
-        uses: github/gh-aw-actions/setup-cli@efa55847f72aadb03490d955263ff911bf758700 # v0.74.8
+        # Kept in step with the version the generated workflows pin. This file is hand-written,
+        # so `gh aw compile` does not update it — when the generated lock files move to a new
+        # gh-aw version, this pin has to follow by hand or the two drift apart.
+        uses: github/gh-aw-actions/setup-cli@32d9b58ee2cb05ad425047708d978e258d7b09ac # v0.85.0
         with:
-          version: v0.74.8
+          version: v0.85.0
