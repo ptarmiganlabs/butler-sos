@@ -3,6 +3,7 @@ import axios from 'axios';
 
 import globals from '../globals.js';
 import { logError } from './log-error.js';
+import { getConfigArray } from './util/config-utils.js';
 
 // const sessionAppPrefix = 'SessionApp';
 
@@ -94,14 +95,11 @@ export async function postHealthMetricsToNewRelic(_host, body, tags) {
         const ts = new Date().getTime(); // Timestamp in millisec
 
         // Add static fields to attributes
-        if (globals.config.has('Butler-SOS.newRelic.metric.attribute.static')) {
-            const staticAttributes = globals.config.get(
-                'Butler-SOS.newRelic.metric.attribute.static'
-            );
-
-            for (const item of staticAttributes) {
-                attributes[item.name] = item.value;
-            }
+        for (const item of getConfigArray(
+            globals.config,
+            'Butler-SOS.newRelic.metric.attribute.static'
+        )) {
+            attributes[item.name] = item.value;
         }
 
         // Add Butler SOS version to attributes
@@ -287,15 +285,8 @@ export async function postHealthMetricsToNewRelic(_host, body, tags) {
             'Content-Type': 'application/json',
         };
 
-        if (
-            globals.config.has('Butler-SOS.newRelic.metric.header') &&
-            globals.config.get('Butler-SOS.newRelic.metric.header') !== null &&
-            globals.config.get('Butler-SOS.newRelic.metric.header').length > 0
-        ) {
-            const configHeaders = globals.config.get('Butler-SOS.newRelic.metric.header');
-            for (const header of configHeaders) {
-                headers[header.name] = header.value;
-            }
+        for (const header of getConfigArray(globals.config, 'Butler-SOS.newRelic.metric.header')) {
+            headers[header.name] = header.value;
         }
 
         //
@@ -311,7 +302,8 @@ export async function postHealthMetricsToNewRelic(_host, body, tags) {
             `HEALTH METRICS NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
 
-        for (const accountName of globals.config.get(
+        for (const accountName of getConfigArray(
+            globals.config,
             'Butler-SOS.userEvents.sendToNewRelic.destinationAccount'
         )) {
             globals.logger.debug(
@@ -399,14 +391,11 @@ export async function postProxySessionsToNewRelic(userSessions) {
         };
 
         // Add static fields to attributes
-        if (globals.config.has('Butler-SOS.newRelic.metric.attribute.static')) {
-            const staticAttributes = globals.config.get(
-                'Butler-SOS.newRelic.metric.attribute.static'
-            );
-
-            for (const item of staticAttributes) {
-                attributes[item.name] = item.value;
-            }
+        for (const item of getConfigArray(
+            globals.config,
+            'Butler-SOS.newRelic.metric.attribute.static'
+        )) {
+            attributes[item.name] = item.value;
         }
 
         // Add Butler SOS version to attributes
@@ -456,15 +445,8 @@ export async function postProxySessionsToNewRelic(userSessions) {
             'Content-Type': 'application/json',
         };
 
-        if (
-            globals.config.has('Butler-SOS.newRelic.metric.header') &&
-            globals.config.get('Butler-SOS.newRelic.metric.header') !== null &&
-            globals.config.get('Butler-SOS.newRelic.metric.header').length > 0
-        ) {
-            const configHeaders = globals.config.get('Butler-SOS.newRelic.metric.header');
-            for (const header of configHeaders) {
-                headers[header.name] = header.value;
-            }
+        for (const header of getConfigArray(globals.config, 'Butler-SOS.newRelic.metric.header')) {
+            headers[header.name] = header.value;
         }
 
         //
@@ -479,7 +461,8 @@ export async function postProxySessionsToNewRelic(userSessions) {
             `PROXY SESSIONS NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
 
-        for (const accountName of globals.config.get(
+        for (const accountName of getConfigArray(
+            globals.config,
             'Butler-SOS.userEvents.sendToNewRelic.destinationAccount'
         )) {
             globals.logger.debug(
@@ -566,18 +549,11 @@ export async function postButlerSOSUptimeToNewRelic(fields) {
         const ts = new Date().getTime(); // Timestamp in millisec
 
         // Add static fields to attributes if they exist
-        if (
-            globals.config.has('Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static') &&
-            globals.config.get('Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static') !== null
-        ) {
-            const staticAttributes = globals.config.get(
-                'Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static'
-            );
-
-            // staticAttributes is an array of objects. Null
-            for (const item of staticAttributes) {
-                attributes[item.name] = item.value;
-            }
+        for (const item of getConfigArray(
+            globals.config,
+            'Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static'
+        )) {
+            attributes[item.name] = item.value;
         }
 
         // Add version to attributes
@@ -655,7 +631,9 @@ export async function postButlerSOSUptimeToNewRelic(fields) {
             'Content-Type': 'application/json',
         };
 
-        for (const header of globals.config.get('Butler-SOS.newRelic.metric.header')) {
+        // Unlike the other newRelic.metric.header reads in this file, this one carried no
+        // null check at all — and the header block ships commented out in the template.
+        for (const header of getConfigArray(globals.config, 'Butler-SOS.newRelic.metric.header')) {
             headers[header.name] = header.value;
         }
 
@@ -671,7 +649,8 @@ export async function postButlerSOSUptimeToNewRelic(fields) {
             `UPTIME NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
 
-        for (const accountName of globals.config.get(
+        for (const accountName of getConfigArray(
+            globals.config,
             'Butler-SOS.uptimeMonitor.storeNewRelic.destinationAccount'
         )) {
             globals.logger.debug(
@@ -779,15 +758,8 @@ export async function postUserEventToNewRelic(msg) {
         if (msg?.ua?.os?.version) attributes.qs_uaOsVersion = msg.ua.os.version;
 
         // Add custom tags from config file to payload
-        if (
-            globals.config.has('Butler-SOS.userEvents.tags') &&
-            globals.config.get('Butler-SOS.userEvents.tags') !== null &&
-            globals.config.get('Butler-SOS.userEvents.tags').length > 0
-        ) {
-            const configTags = globals.config.get('Butler-SOS.userEvents.tags');
-            for (const item of configTags) {
-                attributes[item.name] = item.value;
-            }
+        for (const item of getConfigArray(globals.config, 'Butler-SOS.userEvents.tags')) {
+            attributes[item.name] = item.value;
         }
 
         // Build final payload
@@ -807,15 +779,8 @@ export async function postUserEventToNewRelic(msg) {
             'Content-Type': 'application/json',
         };
 
-        if (
-            globals.config.has('Butler-SOS.newRelic.event.header') &&
-            globals.config.get('Butler-SOS.newRelic.event.header') !== null &&
-            globals.config.get('Butler-SOS.newRelic.event.header').length > 0
-        ) {
-            const configHeaders = globals.config.get('Butler-SOS.newRelic.event.header');
-            for (const header of configHeaders) {
-                headers[header.name] = header.value;
-            }
+        for (const header of getConfigArray(globals.config, 'Butler-SOS.newRelic.event.header')) {
+            headers[header.name] = header.value;
         }
 
         //
@@ -830,7 +795,8 @@ export async function postUserEventToNewRelic(msg) {
             `USER EVENT NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
         );
 
-        for (const accountName of globals.config.get(
+        for (const accountName of getConfigArray(
+            globals.config,
             'Butler-SOS.userEvents.sendToNewRelic.destinationAccount'
         )) {
             globals.logger.debug(
@@ -1050,27 +1016,16 @@ export async function postLogEventToNewRelic(msg) {
             };
 
             // Att log event tags as attributes
-            if (
-                globals.config.has('Butler-SOS.logEvents.tags') &&
-                globals.config.get('Butler-SOS.logEvents.tags') !== null &&
-                globals.config.get('Butler-SOS.logEvents.tags').length > 0
-            ) {
-                const configTags = globals.config.get('Butler-SOS.logEvents.tags');
-                for (const item of configTags) {
-                    attributes[item.name] = item.value;
-                }
+            for (const item of getConfigArray(globals.config, 'Butler-SOS.logEvents.tags')) {
+                attributes[item.name] = item.value;
             }
 
             // Add New Relic specific attributes
-            if (
-                globals.config.has('Butler-SOS.newRelic.event.attribute.static') &&
-                globals.config.get('Butler-SOS.newRelic.event.attribute.static') !== null &&
-                globals.config.get('Butler-SOS.newRelic.event.attribute.static').length > 0
-            ) {
-                const configTags = globals.config.get('Butler-SOS.newRelic.event.attribute.static');
-                for (const item of configTags) {
-                    attributes[item.name] = item.value;
-                }
+            for (const item of getConfigArray(
+                globals.config,
+                'Butler-SOS.newRelic.event.attribute.static'
+            )) {
+                attributes[item.name] = item.value;
             }
 
             // Add dynamic, New Relic specifc attributes
@@ -1104,15 +1059,11 @@ export async function postLogEventToNewRelic(msg) {
                 'Content-Type': 'application/json',
             };
 
-            if (
-                globals.config.has('Butler-SOS.newRelic.event.header') &&
-                globals.config.get('Butler-SOS.newRelic.event.header') !== null &&
-                globals.config.get('Butler-SOS.newRelic.event.header').length > 0
-            ) {
-                const configHeaders = globals.config.get('Butler-SOS.newRelic.event.header');
-                for (const header of configHeaders) {
-                    headers[header.name] = header.value;
-                }
+            for (const header of getConfigArray(
+                globals.config,
+                'Butler-SOS.newRelic.event.header'
+            )) {
+                headers[header.name] = header.value;
             }
 
             //
@@ -1127,7 +1078,8 @@ export async function postLogEventToNewRelic(msg) {
                 `LOG EVENT NEW RELIC: Complete New Relic config=${JSON.stringify(nrAccounts)}`
             );
 
-            for (const accountName of globals.config.get(
+            for (const accountName of getConfigArray(
+                globals.config,
                 'Butler-SOS.logEvents.sendToNewRelic.destinationAccount'
             )) {
                 globals.logger.debug(

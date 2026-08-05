@@ -4,6 +4,7 @@ import { default as Ajv } from 'ajv';
 
 import configFileSchema from './config-file-schema.js';
 import { verifyHost } from './host-utils.js';
+import { getConfigArray } from './util/config-utils.js';
 
 /**
  * Creates a modified schema that only validates sections when their associated features are enabled.
@@ -209,31 +210,13 @@ export async function verifyAppConfig(cfg) {
             return false;
         }
 
-        // Validate and set default for maxBatchSize
-        const maxBatchSizePath = `Butler-SOS.influxdbConfig.maxBatchSize`;
-
-        if (cfg.has(maxBatchSizePath)) {
-            const maxBatchSize = cfg.get(maxBatchSizePath);
-
-            // Validate maxBatchSize is a number in valid range
-            if (
-                typeof maxBatchSize !== 'number' ||
-                isNaN(maxBatchSize) ||
-                maxBatchSize < 1 ||
-                maxBatchSize > 10000
-            ) {
-                console.warn(
-                    `VERIFY CONFIG FILE WARNING: ${maxBatchSizePath}=${maxBatchSize} is invalid. Must be a number between 1 and 10000. Using default value 1000.`
-                );
-                cfg.set(maxBatchSizePath, 1000);
-            }
-        } else {
-            // Set default if not specified
-            console.info(
-                `VERIFY CONFIG FILE INFO: ${maxBatchSizePath} not specified. Using default value 1000.`
-            );
-            cfg.set(maxBatchSizePath, 1000);
-        }
+        // maxBatchSize validation and defaulting happens in config-loader.js, at load time.
+        // It used to be here and called cfg.set(), which node-config does not implement. It
+        // also belongs at load time because invalid values reach startup through routes this
+        // function never sees: --skipConfigVerification skips it entirely, node-config merges
+        // extra layers (local.yaml, NODE_CONFIG) that file verification never validates, and
+        // the conditional schema stops checking this section once influxdbConfig.enable is
+        // false.
     }
 
     // Verify that telemetry and system info settings are compatible
@@ -249,6 +232,84 @@ export async function verifyAppConfig(cfg) {
         return false;
     }
 
+    // Warn about settings that leave a feature switched on but with nothing to act on.
+    //
+    // These used to announce themselves by crashing: iterating a null list threw, the caller
+    // logged an error, and the administrator at least had something to search for. Now that a
+    // null list is read as an empty list, the same configurations run quietly and simply
+    // produce no data — which is harder to diagnose, not easier. These warnings replace the
+    // signal that the crash used to provide.
+    // An empty servers list is legitimate — Butler SOS can run purely as a UDP sink for Qlik
+    // Sense log and user events — so it is not automatically a problem, and there is no
+    // reliable "server polling intended" signal to gate on: health-metrics polling has no
+    // enable flag of its own (it simply polls whatever servers are listed), and an earlier
+    // gate on pollingInterval was vacuous because the schema requires that key to exist.
+    //
+    // So, two levels. Session extraction explicitly enabled with no servers is a feature
+    // switched on with nothing to act on — warn, like the New Relic checks below. Otherwise
+    // just state the fact at info level, for the administrator wondering where their server
+    // data went, without training UDP-only operators to ignore warnings.
+    if (getConfigArray(cfg, 'Butler-SOS.serversToMonitor.servers').length === 0) {
+        const sessionExtractEnabled =
+            cfg.has('Butler-SOS.userSessions.enableSessionExtract') &&
+            cfg.get('Butler-SOS.userSessions.enableSessionExtract') === true;
+
+        if (sessionExtractEnabled) {
+            console.warn(
+                'VERIFY CONFIG FILE WARNING: Butler-SOS.userSessions.enableSessionExtract is true, but Butler-SOS.serversToMonitor.servers is empty. No user sessions will be collected and no Qlik Sense servers will be monitored.'
+            );
+        } else {
+            console.info(
+                'VERIFY CONFIG FILE INFO: Butler-SOS.serversToMonitor.servers is empty. No Qlik Sense servers will be monitored.'
+            );
+        }
+    }
+
+    // Each destination-account list is keyed to the enable flags that actually cause it to be
+    // READ, not to the flag that shares its name. Those are not the same thing:
+    // `userEvents.sendToNewRelic.destinationAccount` is read by three functions, and only one of
+    // them is gated on `userEvents.sendToNewRelic.enable` —
+    //   - postUserEventToNewRelic       gated on userEvents.sendToNewRelic.enable
+    //   - postHealthMetricsToNewRelic   gated on newRelic.enable (healthmetrics.js)
+    //   - postProxySessionsToNewRelic   gated on newRelic.enable + metric.dynamic.proxy.sessions
+    // An earlier version of this warning keyed it to the matching name only, so the two largest
+    // consumers stayed silent — exactly the case the warning exists to catch.
+    //
+    // Note also that `Butler-SOS.newRelic.metric.destinationAccount` is required by the schema
+    // and read by no production code; health and proxy metrics use the userEvents list instead.
+    // That routing looks wrong but predates this change, so it is left alone here rather than
+    // silently rerouted under anyone's running configuration.
+    for (const { enablePaths, accountPath, label } of [
+        {
+            enablePaths: [
+                'Butler-SOS.userEvents.sendToNewRelic.enable',
+                'Butler-SOS.newRelic.enable',
+            ],
+            accountPath: 'Butler-SOS.userEvents.sendToNewRelic.destinationAccount',
+            label: 'User events, health metrics and/or proxy sessions',
+        },
+        {
+            enablePaths: ['Butler-SOS.logEvents.sendToNewRelic.enable'],
+            accountPath: 'Butler-SOS.logEvents.sendToNewRelic.destinationAccount',
+            label: 'Log events',
+        },
+        {
+            enablePaths: ['Butler-SOS.uptimeMonitor.storeNewRelic.enable'],
+            accountPath: 'Butler-SOS.uptimeMonitor.storeNewRelic.destinationAccount',
+            label: 'Uptime monitor data',
+        },
+    ]) {
+        const anyEnabled = enablePaths.some(
+            (enablePath) => cfg.has(enablePath) && cfg.get(enablePath) === true
+        );
+
+        if (anyEnabled && getConfigArray(cfg, accountPath).length === 0) {
+            console.warn(
+                `VERIFY CONFIG FILE WARNING: ${label} are set to be sent to New Relic, but ${accountPath} is empty. No data will be sent to New Relic.`
+            );
+        }
+    }
+
     // Verify that server tags are correctly defined
     // In the config file section `Butler-SOS.serversToMonitor.serverTagsDefinition` it's possible to define zero or more tags that can be set for each server that is to be monitored.
     // When Butler SOS is started, do the following checks:
@@ -256,42 +317,76 @@ export async function verifyAppConfig(cfg) {
     // 2. The tags specified for each server in `SOS.serversToMonitor.servers[].serverTags` must be present in `Butler-SOS.serversToMonitor.serverTagsDefinition`
     // If either of the conditions above is false, an error should be logged and Butler SOS should not start.
     try {
-        // Loop over all defined server tags
-        const serverTagsDefinition = cfg.get('Butler-SOS.serversToMonitor.serverTagsDefinition');
+        // Both of these are declared as ['array', 'null'] in the schema, and the shipped
+        // production_template.yaml leaves serverTagsDefinition with every entry commented out
+        // — which YAML parses as null. Reading them through getConfigArray() means "no tags
+        // defined" is an empty list rather than a TypeError. See issue #1450, and #276 before
+        // it.
+        const serverTagsDefinition = getConfigArray(
+            cfg,
+            'Butler-SOS.serversToMonitor.serverTagsDefinition'
+        );
+        const servers = getConfigArray(cfg, 'Butler-SOS.serversToMonitor.servers');
+
+        // 1. Every tag in serverTagsDefinition must be set on every monitored server
         for (const tag of serverTagsDefinition) {
-            // Check that all servers have this tag
-            const servers = cfg.get('Butler-SOS.serversToMonitor.servers');
             for (const server of servers) {
-                // Check if server.serverTags.tag is defined
-                if (server?.serverTags === null || !server?.serverTags[tag]) {
+                const serverTags = server?.serverTags ?? {};
+
+                // Test for presence, not truthiness. Tag values are unconstrained by the
+                // schema (serverTags is additionalProperties: true), so `false`, `0` and ``
+                // are all legitimate values — every InfluxDB version stringifies them — and a
+                // truthiness test rejected them with "is not defined", refusing to start on a
+                // schema-valid config.
+                //
+                // Object.hasOwn, not `in`: `in` walks the prototype chain, so a tag named
+                // `constructor`, `toString` or `valueOf` would pass this check on a server that
+                // does not define it. getServerTags builds the tag set from Object.entries —
+                // own enumerable keys only — so such a tag would be declared, accepted here,
+                // and then silently missing from every data point. Check 2 below uses for...in,
+                // which is also own-enumerable, so this keeps the two checks in agreement.
+                if (!Object.hasOwn(serverTags, tag)) {
                     console.error(
-                        `VERIFY CONFIG FILE: Server tag "${tag}" is not defined for server "${server.serverName}". Exiting.`
+                        `VERIFY CONFIG FILE: Server tag "${tag}" is not defined for server "${server?.serverName}". Exiting.`
                     );
                     return false;
-                } else {
-                    // The tag is defined for this server
+                }
+
+                // A tag key present with no value (`myTag:` and nothing after it) parses as
+                // null, and the InfluxDB versions disagree about what that means: v1 writes the
+                // literal string "null", while v2 and v3 drop the tag entirely. That is a
+                // config typo rather than an intent, so reject it here instead of writing
+                // different data depending on which InfluxDB version is configured.
+                if (serverTags[tag] === null) {
+                    console.error(
+                        `VERIFY CONFIG FILE: Server tag "${tag}" for server "${server?.serverName}" has no value. Give it a value or remove it. Exiting.`
+                    );
+                    return false;
                 }
             }
         }
 
-        // Now ensure that the tags defined for each server are valid and that there are no extra tags there
-        const servers = cfg.get('Butler-SOS.serversToMonitor.servers');
+        // 2. Every tag set on a server must exist in serverTagsDefinition
         for (const server of servers) {
-            for (const tag in server.serverTags) {
+            for (const tag in server?.serverTags) {
                 if (!serverTagsDefinition.includes(tag)) {
                     console.error(
-                        `VERIFY CONFIG FILE: Server tag "${tag}" for server "${server.serverName}" is not defined in Butler-SOS.serversToMonitor.serverTagsDefinition. Exiting.`
+                        `VERIFY CONFIG FILE: Server tag "${tag}" for server "${server?.serverName}" is not defined in Butler-SOS.serversToMonitor.serverTagsDefinition. Exiting.`
                     );
                     return false;
-                } else {
-                    // The tag is defined in Butler-SOS.serversToMonitor.serverTagsDefinition
                 }
             }
         }
 
         return true;
     } catch (err) {
-        console.error(`VERIFY CONFIG FILE: Server tags verification failed. ${err}`);
+        // Reaching here means an unanticipated shape in the serversToMonitor section. Name the
+        // section being checked: the previous message reported a bare TypeError immediately
+        // after telling the user their config was "correctly formatted, good work!", which
+        // gave an administrator nothing to act on.
+        console.error(
+            `VERIFY CONFIG FILE: Server tags verification failed while checking Butler-SOS.serversToMonitor. ${err}`
+        );
         return false;
     }
 }

@@ -3,6 +3,8 @@ import fs from 'fs-extra';
 import { fileURLToPath } from 'url';
 import sea from '../sea-wrapper.js';
 import { verifyConfigFileSchema, verifyAppConfig } from '../config-file-verify.js';
+import configFileSchema from '../config-file-schema.js';
+import { normalizeNullableArrays, applySchemaDefaults } from '../util/config-utils.js';
 
 /**
  * Initializes the configuration by loading and verifying the config file.
@@ -103,6 +105,40 @@ export async function initConfig(settings) {
         if (!settings.isSea) {
             console.error(`MAIN: Failed to load config file: ${err.message}`);
             process.exit(1);
+        }
+    }
+
+    // Turn every null list into an empty list, once, before anything reads the config.
+    //
+    // The schema declares ~40 settings as ['array', 'null'], and the shipped template leaves
+    // many of them with all entries commented out — which YAML parses as null. Iterating one
+    // of those threw "X is not iterable" and stopped startup (issue #1450, and #276 twice
+    // before it). Normalising here means no read site anywhere can encounter null, so the
+    // problem class cannot come back through a read site somebody forgot to guard.
+    //
+    // Placement is load-bearing, but not for the reason it first appears: node-config's
+    // immutability is disabled here, because butler-sos.js sets ALLOW_CONFIG_MUTATIONS before
+    // importing globals.js. The real constraint is simply that any reader running earlier would
+    // see the un-normalised value. verifyAppConfig below is the first reader, so this must stay
+    // above it — and above the skipConfigVerification branch, so it runs in that mode too.
+    const normalizedPaths = normalizeNullableArrays(settings.config, configFileSchema);
+    if (normalizedPaths.length > 0) {
+        console.info(
+            `MAIN: Treating ${normalizedPaths.length} empty config setting(s) as empty lists: ${normalizedPaths.join(', ')}`
+        );
+    }
+
+    // Fill in schema-declared defaults for the few settings whose absence or malformation would
+    // break a reader at runtime. Defaults, types and bounds all come from the schema itself, so
+    // there is nothing here to drift out of step with it. This covers values that file
+    // verification never sees: --skip-config-verification, node-config merge layers
+    // (local.yaml, NODE_CONFIG), and sections the conditional schema stops validating once
+    // their enable flag is false.
+    for (const { level, message } of applySchemaDefaults(settings.config, configFileSchema)) {
+        if (level === 'warn') {
+            console.warn(`MAIN: ${message}`);
+        } else {
+            console.info(`MAIN: ${message}`);
         }
     }
 

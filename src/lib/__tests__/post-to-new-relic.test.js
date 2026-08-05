@@ -116,6 +116,21 @@ describe('post-to-new-relic', () => {
 
         // Import the module under test
         newRelic = await import('../post-to-new-relic.js');
+
+        // Keep has() consistent with get(). The mock previously answered false for every
+        // path, including ones its own get() returned values for — a combination real
+        // node-config never produces, since has() is false only when a path is absent
+        // entirely. Deriving it here also means the per-test get() overrides below are
+        // reflected automatically. Set after clearAllMocks() so it survives every test.
+        //
+        // Call the current implementation directly rather than the mock itself: invoking
+        // globals.config.get(path) here would record an extra call and, worse, consume any
+        // mockImplementationOnce a test had queued — so the value under test would silently
+        // be swallowed by the has() probe instead of reaching the code being exercised.
+        globals.config.has.mockImplementation((path) => {
+            const getImpl = globals.config.get.getMockImplementation();
+            return getImpl ? getImpl(path) !== undefined : false;
+        });
     });
 
     describe('postProxySessionsToNewRelic', () => {
@@ -478,7 +493,10 @@ describe('post-to-new-relic', () => {
                 if (path === 'Butler-SOS.newRelic.metric.attribute.dynamic.butlerSosVersion.enable')
                     return true;
                 if (path === 'Butler-SOS.newRelic.metric.header') return false;
-                return false;
+                // Fall back to agreeing with get(): a path is absent only when get() has no
+                // answer for it. A blanket false contradicts this test's own get() mock and
+                // hides configured values such as the destinationAccount list.
+                return globals.config.get(path) !== undefined;
             });
 
             // Mock successful axios response
@@ -521,7 +539,10 @@ describe('post-to-new-relic', () => {
 
             globals.config.has.mockImplementation((path) => {
                 if (path === 'Butler-SOS.newRelic.metric.header') return true;
-                return false;
+                // Fall back to agreeing with get(): a path is absent only when get() has no
+                // answer for it. A blanket false contradicts this test's own get() mock and
+                // hides configured values such as the destinationAccount list.
+                return globals.config.get(path) !== undefined;
             });
 
             axios.post.mockResolvedValue({ status: 200 });
@@ -572,7 +593,10 @@ describe('post-to-new-relic', () => {
                 if (path === 'Butler-SOS.newRelic.metric.header') return false;
                 if (path === 'Butler-SOS.newRelic.metric.attribute.static') return false;
                 if (path === 'Butler-SOS.newRelic.metric.attribute.dynamic') return false;
-                return false;
+                // Fall back to agreeing with get(): a path is absent only when get() has no
+                // answer for it. A blanket false contradicts this test's own get() mock and
+                // hides configured values such as the destinationAccount list.
+                return globals.config.get(path) !== undefined;
             });
 
             // Mock axios to throw error
@@ -655,7 +679,10 @@ describe('post-to-new-relic', () => {
             globals.config.has.mockImplementation((path) => {
                 if (path === 'Butler-SOS.uptimeMonitor.storeNewRelic.attribute.static') return true;
                 if (path === 'Butler-SOS.newRelic.metric.header') return true;
-                return false;
+                // Fall back to agreeing with get(): a path is absent only when get() has no
+                // answer for it. A blanket false contradicts this test's own get() mock and
+                // hides configured values such as the destinationAccount list.
+                return globals.config.get(path) !== undefined;
             });
 
             // Mock successful axios response
@@ -764,7 +791,10 @@ describe('post-to-new-relic', () => {
             globals.config.has.mockImplementation((path) => {
                 if (path === 'Butler-SOS.newRelic.event.attribute.static') return true;
                 if (path === 'Butler-SOS.newRelic.event.header') return false;
-                return false;
+                // Fall back to agreeing with get(): a path is absent only when get() has no
+                // answer for it. A blanket false contradicts this test's own get() mock and
+                // hides configured values such as the destinationAccount list.
+                return globals.config.get(path) !== undefined;
             });
 
             // Mock successful axios response
@@ -868,7 +898,10 @@ describe('post-to-new-relic', () => {
             globals.config.has.mockImplementation((path) => {
                 if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
                     return true;
-                return false;
+                // Fall back to agreeing with get(): a path is absent only when get() has no
+                // answer for it. A blanket false contradicts this test's own get() mock and
+                // hides configured values such as the destinationAccount list.
+                return globals.config.get(path) !== undefined;
             });
 
             axios.post.mockResolvedValue({ status: 200, statusText: 'OK' });
@@ -910,7 +943,10 @@ describe('post-to-new-relic', () => {
                 if (path === 'Butler-SOS.newRelic.event.attribute.static') return true;
                 if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
                     return true;
-                return false;
+                // Fall back to agreeing with get(): a path is absent only when get() has no
+                // answer for it. A blanket false contradicts this test's own get() mock and
+                // hides configured values such as the destinationAccount list.
+                return globals.config.get(path) !== undefined;
             });
 
             axios.post.mockResolvedValue({ status: 200 });
@@ -953,7 +989,10 @@ describe('post-to-new-relic', () => {
                 if (path === 'Butler-SOS.logEvents.tags') return true;
                 if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
                     return true;
-                return false;
+                // Fall back to agreeing with get(): a path is absent only when get() has no
+                // answer for it. A blanket false contradicts this test's own get() mock and
+                // hides configured values such as the destinationAccount list.
+                return globals.config.get(path) !== undefined;
             });
 
             axios.post.mockResolvedValue({ status: 200 });
@@ -1035,7 +1074,10 @@ describe('post-to-new-relic', () => {
             globals.config.has.mockImplementation((path) => {
                 if (path === 'Butler-SOS.logEvents.sendToNewRelic.source.engine.logLevel.error')
                     return true;
-                return false;
+                // Fall back to agreeing with get(): a path is absent only when get() has no
+                // answer for it. A blanket false contradicts this test's own get() mock and
+                // hides configured values such as the destinationAccount list.
+                return globals.config.get(path) !== undefined;
             });
 
             // Mock axios to throw error

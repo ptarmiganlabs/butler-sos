@@ -1,4 +1,5 @@
 import globals from '../../../globals.js';
+import { getConfigArray } from '../../util/config-utils.js';
 import { isInfluxDbEnabled, writeBatchToInfluxV1 } from '../shared/utils.js';
 
 /**
@@ -180,23 +181,11 @@ export async function storeRejectedEventCountV1() {
                 }
 
                 // Add static tags from config file
-                if (
-                    globals.config.has(
-                        'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.tags'
-                    ) &&
-                    globals.config.get(
-                        'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.tags'
-                    ) !== null &&
-                    globals.config.get(
-                        'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.tags'
-                    ).length > 0
-                ) {
-                    const configTags = globals.config.get(
-                        'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.tags'
-                    );
-                    for (const item of configTags) {
-                        tags[item.name] = item.value;
-                    }
+                for (const item of getConfigArray(
+                    globals.config,
+                    'Butler-SOS.logEvents.enginePerformanceMonitor.trackRejectedEvents.tags'
+                )) {
+                    tags[item.name] = item.value;
                 }
 
                 const fields = {

@@ -1,5 +1,6 @@
 import globals from '../globals.js';
 import { logError } from './log-error.js';
+import { getConfigArray } from './util/config-utils.js';
 
 /**
  * Categorizes log events based on configured rules.
@@ -33,7 +34,10 @@ export function categoriseLogEvent(logLevel, logMessage) {
 
         // Loop over all rules in the config file
 
-        for (const rule of globals.config.get('Butler-SOS.logEvents.categorise.rules')) {
+        for (const rule of getConfigArray(
+            globals.config,
+            'Butler-SOS.logEvents.categorise.rules'
+        )) {
             // Check if the log event matches any of the rule's log levels (which are found in the array 'logLevel' property)
             // Make the check case insensitive
             if (rule.logLevel.map((x) => x.toLowerCase()).includes(logLevel.toLowerCase())) {
@@ -110,9 +114,13 @@ export function categoriseLogEvent(logLevel, logMessage) {
             match === false &&
             globals.config.get('Butler-SOS.logEvents.categorise.ruleDefault.enable') === true
         ) {
-            // Deep copy the categories from the default rule to the log event
+            // Deep copy the categories from the default rule to the log event.
+            // Spreading is the same trap as iterating: `...null` throws "null is not iterable".
             uniqueCategories.push(
-                ...globals.config.get('Butler-SOS.logEvents.categorise.ruleDefault.category')
+                ...getConfigArray(
+                    globals.config,
+                    'Butler-SOS.logEvents.categorise.ruleDefault.category'
+                )
             );
         }
 
