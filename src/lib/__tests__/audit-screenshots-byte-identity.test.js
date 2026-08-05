@@ -74,24 +74,47 @@ jest.unstable_mockModule('node:fs', () => ({
  * @param {number} w - Width in pixels.
  * @param {number} h - Height in pixels.
  * @param {number} [gridLineY] - Row index to render as a uniform grey line, or -1 for none.
- * @param {boolean} [colourCodedRowAbove] - Render the row above the grid line with a constant
- *   red channel and varying green/blue, as a colour-coded measure column does.
+ * @param {'noise'|'red-constant'|'blue-varies'|'uniform-bright'|'uniform-similar'} [rowAbove]
+ *   How to render the row directly above the grid line. Each mode reaches a different arm of
+ *   the detector's "is the row above uniform?" decision.
  * @returns {Buffer} Encoded PNG.
  */
-function makeSourcePng(w, h, gridLineY = -1, colourCodedRowAbove = false) {
+function makeSourcePng(w, h, gridLineY = -1, rowAbove = 'noise') {
     const png = new PNG({ width: w, height: h });
+    const refX = Math.floor(w / 4);
     for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
             const i = (y * w + x) * 4;
-            if (colourCodedRowAbove && y === gridLineY - 1) {
-                // A heat-mapped measure row: constant RED, varying green and blue. The
-                // gridline detector's "is the row above uniform?" scan used to compare red
-                // alone, so it called this row uniform, fell through to the brightness
-                // fallback and rejected the gridline. The reference pixel it samples
-                // (x = width/4) is deliberately neutral grey so that fallback rejects.
-                png.data[i] = 200;
-                png.data[i + 1] = x === Math.floor(w / 4) ? 200 : (x * 23) % 160;
-                png.data[i + 2] = x === Math.floor(w / 4) ? 200 : (x * 31) % 160;
+            if (rowAbove !== 'noise' && y === gridLineY - 1) {
+                // The row the detector inspects to decide whether a uniform row below it is a
+                // real grid line. Each mode drives a different arm of that decision.
+                if (rowAbove === 'red-constant') {
+                    // A heat-mapped measure row: constant RED, varying green and blue. The
+                    // scan used to compare red alone, so it called this uniform, fell through
+                    // to the brightness fallback and rejected the grid line. The reference
+                    // pixel it samples (x = width/4) is neutral grey so that fallback rejects.
+                    png.data[i] = 200;
+                    png.data[i + 1] = x === refX ? 200 : (x * 23) % 160;
+                    png.data[i + 2] = x === refX ? 200 : (x * 31) % 160;
+                } else if (rowAbove === 'blue-varies') {
+                    // Constant red AND green, varying blue — so only the blue term of the
+                    // three-channel comparison can see this row is not uniform.
+                    png.data[i] = 200;
+                    png.data[i + 1] = 200;
+                    png.data[i + 2] = x === refX ? 200 : (x * 31) % 160;
+                } else if (rowAbove === 'uniform-bright') {
+                    // Genuinely uniform and much brighter than the grid line: a white data
+                    // cell above a rule. Reaches the brightness fallback and is accepted.
+                    png.data[i] = 255;
+                    png.data[i + 1] = 255;
+                    png.data[i + 2] = 255;
+                } else if (rowAbove === 'uniform-similar') {
+                    // Uniform but nearly the same brightness as the grid line: a border band
+                    // rather than a data row. Reaches the fallback and is rejected.
+                    png.data[i] = 203;
+                    png.data[i + 1] = 203;
+                    png.data[i + 2] = 203;
+                }
             } else if (y === gridLineY) {
                 // A uniform mid-grey row, which is what the overflow-composite detector
                 // scans for: brightness inside its 160-245 window, constant across x, with
@@ -705,15 +728,21 @@ describe('grid-line detection is not fooled by colour-coded rows', () => {
      * Runs one download of a 240x120 render whose row above the grid line is colour-coded.
      *
      * @param {number} renderingOverflow - Overflow rows reported by the extension.
+     * @param {string} [rowAbove] - Row-above mode passed to makeSourcePng.
+     * @param {number} [gridLineY] - Row to render as the uniform grid line.
      * @returns {Promise<Buffer>} The bytes passed to writeFile.
      */
-    async function storedWithOverflow(renderingOverflow) {
+    async function storedWithOverflow(
+        renderingOverflow,
+        rowAbove = 'red-constant',
+        gridLineY = 100
+    ) {
         const { downloadScreenshot } = await import('../audit-screenshots.js');
 
         mockAxios.request.mockResolvedValue({
             status: 200,
             headers: { 'content-type': 'image/png' },
-            data: makeSourcePng(240, 120, 100, true),
+            data: makeSourcePng(240, 120, gridLineY, rowAbove),
         });
 
         await downloadScreenshot(
@@ -768,6 +797,52 @@ describe('grid-line detection is not fooled by colour-coded rows', () => {
         // Both runs cropped successfully, so any difference is the composite doing its job.
         expect(Buffer.compare(composited, plainCrop)).not.toBe(0);
         expect(PNG.sync.read(composited).height).toBe(115);
+    });
+
+    test('a row varying only in blue is still seen as varied content', async () => {
+        // Isolates the blue term of the three-channel comparison: red and green are constant
+        // across this row, so blue is the only channel that can reveal it is not uniform.
+        // Drop that term and the row reads as uniform, the brightness fallback rejects it
+        // against its neutral-grey reference pixel, and no composite runs at all.
+        const composited = await storedWithOverflow(5, 'blue-varies');
+        expect(gridLineWarn).not.toHaveBeenCalled();
+
+        await resetMocks();
+        gridLineWarn = jest.fn();
+        const plainCrop = await storedWithOverflow(0, 'blue-varies');
+
+        expect(Buffer.compare(composited, plainCrop)).not.toBe(0);
+    });
+
+    test('a uniform but much brighter row above is accepted by the brightness fallback', async () => {
+        // The fallback's accept arm: a white data cell sitting on a rule. The row above is
+        // genuinely uniform, so the non-uniform shortcut does not fire and the decision falls
+        // through to `aboveBrightness - brightness > 8` (255 - 200 = 55).
+        const composited = await storedWithOverflow(5, 'uniform-bright');
+        expect(gridLineWarn).not.toHaveBeenCalled();
+
+        await resetMocks();
+        gridLineWarn = jest.fn();
+        const plainCrop = await storedWithOverflow(0, 'uniform-bright');
+
+        expect(Buffer.compare(composited, plainCrop)).not.toBe(0);
+    });
+
+    test('a uniform row above of similar brightness is rejected as a border band', async () => {
+        // The fallback's reject arm: 203 - 200 = 3, below the threshold, so this is treated as
+        // an adjacent border band rather than a data row and the scan moves on.
+        //
+        // The grid line sits at h/2, the last row the scan visits, so rejection is terminal —
+        // no later candidate can mask it. With no grid line found the overflow composite is
+        // skipped entirely, which makes the two runs below byte-identical.
+        const composited = await storedWithOverflow(5, 'uniform-similar', 60);
+        expect(gridLineWarn).not.toHaveBeenCalled();
+
+        await resetMocks();
+        gridLineWarn = jest.fn();
+        const plainCrop = await storedWithOverflow(0, 'uniform-similar', 60);
+
+        expect(Buffer.compare(composited, plainCrop)).toBe(0);
     });
 });
 
