@@ -1017,7 +1017,15 @@ export function buildScreenshotFilename(envelope, url, contentType) {
  * @param {Buffer} buffer - The original PNG image buffer.
  * @param {{ top: number, left: number, width: number, height: number, scrollTop?: number, scrollAreaOffsetY?: number }} crop - Crop rectangle with optional scroll metadata.
  * @param {Logger} [logger] Logger.
- * @returns {Buffer} Cropped PNG buffer, or the original buffer if cropping is unnecessary.
+ * @returns {{ bytes: Buffer, decoded: { width: number, height: number, data: Buffer } | null }}
+ *   `bytes` is the cropped PNG, or the original buffer if cropping was unnecessary. `decoded`
+ *   is that same image already decoded, for a caller that needs pixels next — null when the
+ *   header fast path returned without decoding anything.
+ *
+ *   Deliberately typed structurally, not as `pngjs.PNG`: `PNG.sync.read` returns pngjs's plain
+ *   metaData object, which is NOT a PNG instance and has no methods, while the composite and
+ *   crop branches return a real `new PNG`. Consumers may read width/height/data and nothing
+ *   else — `decoded.bitblt(...)` works on some branches and throws on others.
  */
 function cropPngBuffer(buffer, crop, logger) {
     // Work from whole pixels. Browser geometry is fractional -- scrollTop in particular comes
@@ -1030,11 +1038,15 @@ function cropPngBuffer(buffer, crop, logger) {
 
     // Fast path: decide from the 24-byte PNG header whether any pixel work is needed at all.
     //
-    // Decoding is expensive and fully blocks the event loop -- measured at ~19 ms for a
-    // 1920x1080 sheet and ~62 ms for a tall pivot table, before any re-encode. The common
-    // case is that the Printing Service rendered exactly the requested size, so every branch
-    // below is skipped and the function returns the original buffer untouched. Paying for a
-    // full decode to discover that is pure waste.
+    // Decoding is expensive and fully blocks the event loop. Cost scales with how well the
+    // image compresses, not just its dimensions, so a single "cost at 1920x1080" figure is
+    // misleading. Measured at that size: a mostly-flat sheet decodes in ~17-31 ms,
+    // incompressible content in ~65-76 ms; the re-encode afterwards is roughly twice either
+    // figure. A tall pivot table sits between.
+    //
+    // The common case is that the Printing Service rendered exactly the requested size, so
+    // every branch below is skipped and the function returns the original buffer untouched.
+    // Paying for a full decode to discover that is pure waste.
     //
     // The conditions mirror the branch guards below exactly: no scroll composite, no overflow
     // composite, and the standard crop's own early return. Debug mode is excluded because it
@@ -1053,12 +1065,69 @@ function cropPngBuffer(buffer, crop, logger) {
             const wouldCrop = header.width > crop.width || header.height > crop.height;
 
             if (!wouldScrollComposite && !wouldOverflowComposite && !wouldCrop) {
-                return buffer;
+                // `decoded: null` is the honest answer: nothing was decoded, so a downstream
+                // stage that needs pixels has to pay for its own decode.
+                return { bytes: buffer, decoded: null };
             }
         }
     }
 
+    // This decode blocks the event loop for its whole duration. See the cost figures on the
+    // fast path above; the encode below is roughly twice as expensive again.
+    //
+    // An asynchronous decode via pngjs's `parse()` was tried here and reverted. pngjs reports
+    // some decode failures on internal streams a caller cannot reach without depending on
+    // private fields: a PNG whose IHDR overstates its height — which `PNG.sync.read` decodes
+    // without complaint — left the promise unsettled and then killed the process from the
+    // threadpool. Containing it needs a listener on `png._parser._filter`, and a pngjs bump
+    // renaming that would silently reintroduce a process kill.
+    //
+    // It was also the smaller half of the problem. The encoding is what dominated: the
+    // composite branches below used to encode images that the final crop then discarded, so
+    // the worst case paid three encodes where one would do. Encoding lazily instead (see
+    // `setSrc` / `encodedCurrent` below) took the worst-case stall at 1920x1080 from ~512 ms
+    // to ~215 ms on incompressible content. An async decode would have saved a further
+    // ~65-76 ms of that remainder — the decode figure quoted on the fast path above.
     let src = PNG.sync.read(buffer);
+
+    // A valid encoding of the CURRENT `src`, or null if there isn't one yet.
+    //
+    // Seeded with the caller's own bytes, which really are an encoding of what was just
+    // decoded from them. That is what makes the no-composite case free: the early return
+    // below hands `buffer` straight back rather than burning an encode to produce different
+    // bytes for identical pixels. Seeding also avoids holding the original decode alive as a
+    // separate identity anchor, which doubled peak RGBA memory on every composite path.
+    let srcBytes = buffer;
+
+    /**
+     * Replaces the working image, dropping any cached encoding of the previous one.
+     *
+     * The cache and the image it describes are only ever changed together, through here. That
+     * is the point: the alternative — a bare `src = composite` next to a hand-written
+     * `srcBytes = null` — put the invariant in the programmer's head, where a third composite
+     * stage could quietly forget it and ship a screenshot showing the *previous* stage's
+     * pixels. No crash, no log line, wrong evidence in an audit trail.
+     *
+     * Note this guards replacement only. It cannot protect against a stage that mutates the
+     * pixels of the object `src` already points at — every stage must produce a new PNG.
+     *
+     * @param {{ width: number, height: number, data: Buffer }} next - The new working image.
+     */
+    const setSrc = (next) => {
+        src = next;
+        srcBytes = null;
+    };
+
+    /**
+     * Encodes the current `src`, at most once.
+     *
+     * Both consumers — the debug image write and the early return — go through here, so a
+     * composite that is both dumped for debugging and returned early is encoded a single time
+     * rather than twice.
+     *
+     * @returns {Buffer} PNG bytes for the current `src`.
+     */
+    const encodedCurrent = () => (srcBytes ??= PNG.sync.write(src));
 
     // Every diagnostic below is gated on debug being enabled, not merely on a logger being
     // present. A real logger is always passed, so `if (logger)` was always true: at any log
@@ -1148,11 +1217,24 @@ function cropPngBuffer(buffer, crop, logger) {
         }
 
         // Use composite as the new source for the standard crop step
-        src = composite;
-        buffer = PNG.sync.write(composite);
+        setSrc(composite);
 
         if (debugEnabled) {
-            // Save debug composite image
+            // Save debug composite image. The encode is deferred to here rather than run on
+            // every pass: the final crop replaces this image on the common path, and encoding
+            // it first was pure waste. It is shared with the early returns via encodedCurrent().
+            //
+            // Deliberately outside the try below. A failing encoder is a fault in the image
+            // pipeline, not a debug-image problem, so it must reach the caller's warn-level
+            // handler rather than be swallowed as a debug-level "failed to save debug image"
+            // line while the operator is watching.
+            //
+            // This is narrower than the pre-change guarantee, not equal to it: the old code
+            // encoded every composite unconditionally, so an encoder fault surfaced at any log
+            // level. Now, with debug off and a final crop following, the composite is never
+            // encoded at all and such a fault simply does not occur here.
+            const debugBytes = encodedCurrent();
+
             try {
                 const debugDir = path.join(process.cwd(), 'audit-events', 'debug');
                 if (!fsSync.existsSync(debugDir)) {
@@ -1162,7 +1244,7 @@ function cropPngBuffer(buffer, crop, logger) {
                     debugDir,
                     `composite-${src.width}x${compositeHeight}.png`
                 );
-                fsSync.writeFileSync(debugFile, buffer);
+                fsSync.writeFileSync(debugFile, debugBytes);
                 logger.debug(`AUDIT API: Saved composite debug image to ${debugFile}`);
             } catch (dbgErr) {
                 logger.debug(`AUDIT API: Failed to save composite debug image: ${dbgErr.message}`);
@@ -1234,11 +1316,22 @@ function cropPngBuffer(buffer, crop, logger) {
                     const aboveRefB = src.data[aboveRefIdx + 2];
                     const aboveBrightness = (aboveRefR + aboveRefG + aboveRefB) / 3;
 
-                    // Check if row above is non-uniform (has varied cell content)
+                    // Check if row above is non-uniform (has varied cell content).
+                    //
+                    // All three channels, matching the primary scan above. Testing red alone
+                    // called a colour-coded measure row "uniform" whenever its shading varied
+                    // only in green and blue — a heat-mapped column in a pivot table is exactly
+                    // that — which sent the candidate to the brightness fallback below, got it
+                    // rejected against a ~204 grid line, and silently skipped the overflow
+                    // composite the row was meant to trigger.
                     let aboveUniform = true;
                     for (let x = margin; x < src.width - margin; x += 10) {
                         const idx = ((y - 1) * src.width + x) * 4;
-                        if (Math.abs(src.data[idx] - aboveRefR) > 5) {
+                        if (
+                            Math.abs(src.data[idx] - aboveRefR) > 5 ||
+                            Math.abs(src.data[idx + 1] - aboveRefG) > 5 ||
+                            Math.abs(src.data[idx + 2] - aboveRefB) > 5
+                        ) {
                             aboveUniform = false;
                             break;
                         }
@@ -1289,10 +1382,13 @@ function cropPngBuffer(buffer, crop, logger) {
                 src.data.copy(ovComp.data, dstOff, srcOff, srcOff + src.width * 4);
             }
 
-            src = ovComp;
-            buffer = PNG.sync.write(ovComp);
+            setSrc(ovComp);
 
             if (debugEnabled) {
+                // Encoded outside the try for the same reason as the scroll composite above:
+                // only the filesystem work is diagnostics-only.
+                const debugBytes = encodedCurrent();
+
                 try {
                     const debugDir = path.join(process.cwd(), 'audit-events', 'debug');
                     if (!fsSync.existsSync(debugDir)) {
@@ -1302,7 +1398,7 @@ function cropPngBuffer(buffer, crop, logger) {
                         debugDir,
                         `overflow-composite-${src.width}x${overflowCompositeHeight}.png`
                     );
-                    fsSync.writeFileSync(debugFile, buffer);
+                    fsSync.writeFileSync(debugFile, debugBytes);
                     logger.debug(`AUDIT API: Saved overflow composite debug image to ${debugFile}`);
                 } catch (dbgErr) {
                     logger.debug(
@@ -1318,15 +1414,17 @@ function cropPngBuffer(buffer, crop, logger) {
     }
 
     // Standard crop: trim to the target dimensions (handles overflow at bottom edge)
-    if (src.width <= crop.width && src.height <= crop.height) {
-        return buffer;
-    }
-
+    //
+    // Nothing left to trim, or nothing left to trim to. Either way the current image is the
+    // result, and encodedCurrent() hands back the caller's own bytes unless a composite
+    // replaced them. Encoding here rather than up in the composite branches is the whole
+    // point: on the far more common path that continues to the crop below, this encode never
+    // happens at all.
     const cropW = Math.min(crop.width, src.width - crop.left);
     const cropH = Math.min(crop.height, src.height - crop.top);
 
-    if (cropW <= 0 || cropH <= 0) {
-        return buffer;
+    if ((src.width <= crop.width && src.height <= crop.height) || cropW <= 0 || cropH <= 0) {
+        return { bytes: encodedCurrent(), decoded: src };
     }
 
     const dst = new PNG({ width: cropW, height: cropH });
@@ -1337,7 +1435,7 @@ function cropPngBuffer(buffer, crop, logger) {
         src.data.copy(dst.data, dstOffset, srcOffset, srcOffset + cropW * 4);
     }
 
-    return PNG.sync.write(dst);
+    return { bytes: PNG.sync.write(dst), decoded: dst };
 }
 
 /**
@@ -1784,6 +1882,9 @@ export async function downloadScreenshot(url, envelope, config, logger) {
             // on screen (e.g. pivot tables with buffered rows beyond the viewport).
             const ext = extensionFromContentType(contentType) || extensionFromUrl(url);
             const crop = envelope?.payload?.event?.crop;
+            // Decoded pixels handed over by cropPngBuffer, if it decoded anything. Stays null
+            // when no crop ran or the crop threw, in which case the metadata step decodes.
+            let croppedDecoded = null;
             const evtWidth = envelope?.payload?.event?.width;
             const evtHeight = envelope?.payload?.event?.height;
             logger.debug(
@@ -1799,7 +1900,11 @@ export async function downloadScreenshot(url, envelope, config, logger) {
             ) {
                 try {
                     const beforeLen = buffer.length;
-                    buffer = cropPngBuffer(buffer, crop, logger);
+                    const cropped = cropPngBuffer(buffer, crop, logger);
+                    buffer = cropped.bytes;
+                    // Carried to addTextHeaderToPng below so it does not decode bytes that were
+                    // just encoded here. Null on the header fast path, where nothing was decoded.
+                    croppedDecoded = cropped.decoded;
                     logger.debug(
                         `AUDIT API: Cropped screenshot PNG to ${crop.width}x${crop.height} (top=${crop.top ?? 0}, left=${crop.left ?? 0}). selectionTxnId=${selectionTxnId} beforeBytes=${beforeLen} afterBytes=${buffer.length}`
                     );
@@ -1826,6 +1931,7 @@ export async function downloadScreenshot(url, envelope, config, logger) {
             if (shouldAddMetadata && metadataLines.length > 0) {
                 try {
                     metadataBuffer = addTextHeaderToPng(buffer, metadataLines, {
+                        decoded: croppedDecoded,
                         valueMaxChars: 160,
                     });
                 } catch (err) {
@@ -1837,6 +1943,14 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                     metadataBuffer = undefined;
                 }
             }
+
+            // Released before the storage loop. `croppedDecoded` is a full uncompressed RGBA
+            // frame — 8.3 MB at 1920x1080, 33 MB at 4K, typically 5-20x the encoded buffer
+            // beside it — and holding it in scope across every `await` below kept it alive
+            // through all the disk I/O. Since addInImageMetadata is off by default, on the
+            // shipped configuration it was never read at all, so a burst of concurrent
+            // downloads pinned that much dead heap for nothing.
+            croppedDecoded = null;
 
             /** @type {string[]} */
             const savedPaths = [];
