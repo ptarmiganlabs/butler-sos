@@ -5,7 +5,7 @@ WORKDIR /nodeapp
 
 # Install app dependencies
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts
 
 # Stage 2: Runtime
 FROM node:24-bookworm-slim

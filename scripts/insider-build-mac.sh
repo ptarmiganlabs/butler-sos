@@ -108,11 +108,11 @@ echo "DEBUG: Importing certificate into keychain"
 security import certificate.p12 -k "${KEYCHAIN_PATH}" -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign -A
 
 echo "DEBUG: Importing Apple Developer ID G2 intermediate CA"
-curl -f -L -sS -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+curl --proto '=https' --proto-redir '=https' --tlsv1.2 -f -L -sS -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
 security import DeveloperIDG2CA.cer -k "${KEYCHAIN_PATH}"
 
 echo "DEBUG: Importing Apple Root CA into temporary keychain"
-curl -f -L -sS -o AppleIncRootCertificate.cer https://www.apple.com/appleca/AppleIncRootCertificate.cer
+curl --proto '=https' --proto-redir '=https' --tlsv1.2 -f -L -sS -o AppleIncRootCertificate.cer https://www.apple.com/appleca/AppleIncRootCertificate.cer
 security import AppleIncRootCertificate.cer -k "${KEYCHAIN_PATH}" || true
 
 echo "DEBUG: Setting keychain timeout to prevent locking"

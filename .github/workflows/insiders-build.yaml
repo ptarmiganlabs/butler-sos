@@ -52,7 +52,7 @@ jobs:
 
             - name: Install dependencies
               run: |
-                  npm ci
+                  npm ci --ignore-scripts
 
             - name: Run Snyk to check for vulnerabilities
               # Snyk can be used to break the build when it detects security issues.
