@@ -41,7 +41,7 @@ Write-Output "Step 3: Copy Node.js executable..."
 node -e "require('fs').copyFileSync(process.execPath, '${DIST_FILE_NAME}.exe')"
 
 Write-Output "Step 4: Inject blob into binary..."
-npx postject "${DIST_FILE_NAME}.exe" NODE_SEA_BLOB sea-prep.blob `
+npx --no-install postject "${DIST_FILE_NAME}.exe" NODE_SEA_BLOB sea-prep.blob `
     --sentinel-fuse $SENTINEL_FUSE
 
 Write-Output "=== Build complete: .\${DIST_FILE_NAME}.exe ==="

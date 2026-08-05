@@ -9,20 +9,38 @@ on:
     push:
         branches: [master]
 
-permissions:
-    # Required to upload SARIF file to CodeQL. See: https://github.com/github/codeql-action/issues/2117
-    actions: read
-    # Require writing security events to upload SARIF file to security tab
-    security-events: write
-    # Only need to read contents
-    contents: read
+# A scheduled run is routinely delayed under load, so it can overlap a push run and finish
+# second while scanning the older commit — its SARIF would then become the current state for
+# master, silently reopening alerts the merge just fixed.
+concurrency:
+    group: osv-scanner-${{ github.ref }}
+    cancel-in-progress: false
+
+# Granted per job below rather than here, matching every other workflow in this repo. A
+# workflow-scoped grant is silently inherited by any job added later.
+permissions: {}
 
 jobs:
     scan-scheduled:
         runs-on: ubuntu-latest
+        # F9: a hung scan would otherwise burn the 360-minute default.
+        timeout-minutes: 20
+        # Forks do not need to run this, and it would upload SARIF they cannot use.
+        if: github.repository_owner == 'ptarmiganlabs'
+        permissions:
+            # Required to upload SARIF file to CodeQL. See: https://github.com/github/codeql-action/issues/2117
+            actions: read
+            # Require writing security events to upload SARIF file to security tab
+            security-events: write
+            # Only need to read contents
+            contents: read
         steps:
             - name: Checkout repository
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  # Nothing here pushes, so the checkout token should not be left behind in
+                  # .git/config where later steps (or an artifact upload) could pick it up.
+                  persist-credentials: false
 
             - name: Run scanner
               uses: google/osv-scanner-action/osv-scanner-action@c5996e0193a3df57d695c1b8a1dec2a4c62e8730 # v2.3.3
@@ -51,6 +69,9 @@ jobs:
                   name: SARIF file
                   path: results.sarif
                   retention-days: 5
+                  # Default is `warn`, which reports success when the scan died before writing
+                  # the file — making the troubleshooter step below unreachable.
+                  if-no-files-found: error
 
             - name: Upload to code-scanning
               if: ${{ !cancelled() }}
@@ -60,9 +81,16 @@ jobs:
 
             - name: Print Code Scanning URL
               if: ${{ !cancelled() }}
+              # Context values are passed through the environment rather than expanded into the
+              # script. A branch name is attacker-controllable, and direct `${{ }}` expansion
+              # inside `run:` splices it into the shell before the shell ever sees it.
+              env:
+                  SERVER_URL: ${{ github.server_url }}
+                  REPOSITORY: ${{ github.repository }}
+                  REF_NAME: ${{ github.ref_name }}
               run: |
                   echo "View the OSV-Scanner results in the 'Security' tab, using the following link:"
-                  echo "${{ github.server_url }}/${{ github.repository }}/security/code-scanning?query=is%3Aopen+branch%3A${{ github.ref_name }}+tool%3Aosv-scanner"
+                  echo "${SERVER_URL}/${REPOSITORY}/security/code-scanning?query=is%3Aopen+branch%3A${REF_NAME}+tool%3Aosv-scanner"
 
             - name: Error troubleshooter
               if: ${{ always() && steps.upload_artifact.outcome == 'failure' }}
