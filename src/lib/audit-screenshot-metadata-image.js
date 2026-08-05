@@ -26,7 +26,8 @@ const { PNG } = pngjs;
  * Rendering options for {@link addTextHeaderToPng}.
  *
  * @typedef {{
- *   valueMaxChars?: number
+ *   valueMaxChars?: number,
+ *   decoded?: { width: number, height: number, data: Buffer }
  * }} AddTextHeaderOptions
  */
 
@@ -147,9 +148,32 @@ function normalizeToRenderableAscii(text) {
  */
 function capValue(value, maxChars = 160) {
     if (typeof value !== 'string') return 'N/A';
-    if (value.length <= maxChars) return value;
-    if (maxChars <= 3) return value.slice(0, maxChars);
-    return `${value.slice(0, maxChars - 3)}...`;
+
+    // Capped on the RENDERED form, not the raw one. Both the width measurement and the glyph
+    // renderer run normalizeToRenderableAscii first, and NFKD can expand a single code point
+    // into as many as 18 (U+FDFA), so bounding raw code units left the output canvas
+    // effectively unbounded: a 160-character app name of U+FDFA produced a 17050px-wide,
+    // 15.4 MB image and ~140 ms of synchronous encoding. These values come from user-supplied
+    // app and sheet names, so the bound has to hold for arbitrary input.
+    const rendered = normalizeToRenderableAscii(value);
+    if (rendered.length <= maxChars) return value;
+    if (maxChars <= 3) return rendered.slice(0, maxChars);
+    return `${rendered.slice(0, maxChars - 3)}...`;
+}
+
+/**
+ * Reads width and height from a PNG's 24-byte header, without decoding pixels.
+ *
+ * @param {Buffer} buffer Candidate PNG bytes.
+ * @returns {{ width: number, height: number } | null} Dimensions, or null if not a PNG.
+ */
+function readPngHeaderDimensions(buffer) {
+    if (!Buffer.isBuffer(buffer) || buffer.length < 24) return null;
+    if (buffer.readUInt32BE(0) !== 0x89504e47 || buffer.readUInt32BE(4) !== 0x0d0a1a0a) {
+        return null;
+    }
+    if (buffer.toString('ascii', 12, 16) !== 'IHDR') return null;
+    return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
 }
 
 /**
@@ -270,16 +294,19 @@ function measureTextWidthPx(text) {
  * @param {Buffer} pngBuffer Original PNG bytes.
  * @param {MetadataLine[]} lines Key/value lines to render.
  * @param {AddTextHeaderOptions} [options] Rendering options.
+ * @param {{ width: number, height: number, data: Buffer }} [options.decoded] Already-decoded
+ *   form of `pngBuffer`, to skip a redundant decode. Its dimensions are cross-checked against
+ *   `pngBuffer`'s header. Typed structurally because `PNG.sync.read` returns pngjs's plain
+ *   metaData object, not a `PNG` instance.
  * @returns {Buffer} New PNG bytes with header.
- * @throws {Error} If the input buffer is not a valid PNG or encoding fails.
+ * @throws {Error} If the input buffer is not a valid PNG, if `options.decoded` does not match
+ *   its dimensions, or if encoding fails.
  */
 export function addTextHeaderToPng(pngBuffer, lines, options = {}) {
     const valueMaxChars =
         typeof options.valueMaxChars === 'number' && options.valueMaxChars > 0
             ? options.valueMaxChars
             : 160;
-
-    const src = PNG.sync.read(pngBuffer);
 
     const renderedLines = (Array.isArray(lines) ? lines : [])
         .filter((l) => l && typeof l.key === 'string')
@@ -288,9 +315,39 @@ export function addTextHeaderToPng(pngBuffer, lines, options = {}) {
             return `${l.key}: ${safeValue}`;
         });
 
+    // Validated from the 24-byte header rather than by decoding, so this still costs nothing
+    // — but it keeps the `@throws` contract true on every path. Moving the decode below the
+    // short-circuit had quietly removed the only check on the empty-lines path, so a non-PNG
+    // buffer (an HTML error page served as image/png, say) came straight back out.
+    const header = readPngHeaderDimensions(pngBuffer);
+    if (header === null) {
+        throw new Error('addTextHeaderToPng: input buffer is not a valid PNG');
+    }
+
     if (renderedLines.length === 0) {
         return pngBuffer;
     }
+
+    // `options.decoded` lets the caller hand over pixels it already has. The screenshot
+    // pipeline runs this immediately after cropPngBuffer, which had the very same image
+    // decoded a moment earlier and encoded it purely to return a Buffer — decoding those
+    // bytes straight back cost a measured 30 ms (flat) to 60 ms (incompressible) at
+    // 1920x1080, and 76-232 ms at 4K, all of it blocking the event loop that also serves the
+    // health-metric and user-session timers.
+    //
+    // Cross-checked against the header above. Once `decoded` is accepted, `pngBuffer` is never
+    // read again — the whole output is built from `src` — so a mismatched pair would silently
+    // render one image while the caller writes the other to disk under a single event's name.
+    if (
+        options.decoded &&
+        (options.decoded.width !== header.width || options.decoded.height !== header.height)
+    ) {
+        throw new Error(
+            `addTextHeaderToPng: options.decoded is ${options.decoded.width}x${options.decoded.height} but pngBuffer is ${header.width}x${header.height}`
+        );
+    }
+
+    const src = options.decoded ?? PNG.sync.read(pngBuffer);
 
     const lineHeight = FONT_HEIGHT + LINE_SPACING;
     const headerHeight =
