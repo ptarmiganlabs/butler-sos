@@ -12,3 +12,22 @@ updates:
     cooldown:
       default-days: 7
 
+  # The Dockerfile pins its base image by digest, which is only safe if something keeps that
+  # digest current — otherwise the published image silently stops receiving base-OS security
+  # updates. This is that something.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+
+  # Workflows pin every action to a commit SHA, which had the same staleness problem: nothing
+  # was updating them.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+
