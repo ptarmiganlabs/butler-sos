@@ -93,14 +93,35 @@ still miss the point.
 
 ## Git workflow
 
+- **STOP when the solution is done. Do not commit, push, open a PR, or merge until Göran says
+  so.** Finish the work, leave it in the working tree, and report what changed and what you
+  verified. This is not a gate you can decide you have satisfied. Only an explicit instruction
+  releases it, and it releases only the step named — "commit this" is not permission to push,
+  and "push" is not permission to merge.
 - **Branch names MUST be prefixed with `claude/`.** When creating a branch for ongoing work,
   name it `claude/<short-description>` — for example `claude/fix-udp-source-validation` or
   `claude/add-influxdb-v3-retry`. This keeps agent-created branches clearly namespaced and
   easy to filter or bulk-clean.
 - Never commit directly to `master`. Branch first, then open a PR.
+- **One topic per commit.** Group changes by the subject they address, not by the order you
+  happened to make them. Work that touches three unrelated things is three commits, and often
+  three branches. A commit message that needs the word "and" to describe itself is usually two
+  commits. An unrelated fix noticed in passing does not belong in the current commit.
 - Commits follow Conventional Commits — release-please derives the changelog and version bump
-  from the commit type. Types with a changelog section are defined in
+  from the commit type, so the type is load-bearing, not decoration. Format the subject as
+  `<type>: <imperative summary>`. Types with a changelog section are defined in
   `release-please-config.json`: `feat`, `fix`, `chore`, `refactor`, `docs`, `build`, `test`.
+
+## Finish by recommending what is worth doing next
+
+Every time you hand work back, close with what remains and what it is worth. Rank the remaining
+items by value against cost — not by the order you happened to find them — and say which one you
+would do next, and why. State explicitly anything you chose not to do, and what it would take.
+
+Be willing to recommend against work. "Not worth doing" is a useful answer; an exhaustive list of
+everything technically possible is not. If the most valuable next step is outside the current
+task — a different file, a different branch, or a decision only Göran can make — say so rather
+than filling the space with what happens to be nearby.
 
 ## Doc site staging — `docs/to-doc-site`
 
