@@ -78,6 +78,21 @@ read-only and safe to run directly.
 
 See `docs/README.gitnexus.md` for the hooks, the full command table and version pinning.
 
+## Ask before building when the goal is unclear
+
+**Ask up to four clarifying questions before starting** whenever anything about the intended
+goal, the requirements, which files to touch, or the existing conventions is ambiguous. Ask them
+up front, together, not one at a time mid-task.
+
+Ambiguous means two readings would lead to materially different work. It does not mean every
+judgement call — if the repo, the code or an obvious default settles it, settle it and say which
+way you went. The test is whether being wrong would waste the work.
+
+Ask especially about **what the change is meant to prevent or achieve**, not just what to build.
+A task framed only as an implementation invites verification that confirms the code does what it
+says, rather than that it solves the problem — which is how a change can pass every check and
+still miss the point.
+
 ## Git workflow
 
 - **Branch names MUST be prefixed with `claude/`.** When creating a branch for ongoing work,
