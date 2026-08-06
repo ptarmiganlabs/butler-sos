@@ -154,10 +154,15 @@ jobs:
           github.repository_owner == 'ptarmiganlabs'
         with:
           context: .
+          # linux/arm/v7 removed: it does not exist for this base image, and asking for it
+          # failed the whole multi-platform build — so NO image published at all, for any
+          # architecture, from v15.0.0 onward. v14.0.0 built from node:22-bullseye-slim, which
+          # does publish an arm/v7 manifest; node:24 does not, because Node dropped 32-bit ARM.
+          # Restoring arm/v7 would mean pinning the base back to Node 22, which package.json's
+          # `engines.node: ">=24"` rules out.
           platforms: |
             linux/amd64
             linux/arm64
-            linux/arm/v7
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
