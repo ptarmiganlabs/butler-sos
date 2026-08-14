@@ -1,5 +1,110 @@
 # Changelog
 
+## [15.1.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.0.1...butler-sos-v15.1.0) (2026-08-14)
+
+
+### Features
+
+* Add AI-generated wiki explaining the Butler SOS codebase ([2f5430c](https://github.com/ptarmiganlabs/butler-sos/commit/2f5430cd29cc16844b054109bc1ccd24382445c9))
+* Add initial documentation and configuration files for Butler SOS OpenWiki ([d0a3b6f](https://github.com/ptarmiganlabs/butler-sos/commit/d0a3b6fbdaf9e97978de7a61a2e62bfdc12c8a84))
+* **audit:** enhance rate limit feature of audit API, incl of for rate limit violations ([b0ee993](https://github.com/ptarmiganlabs/butler-sos/commit/b0ee9931781ebd6863c38b3d0482cb2d3114dac5))
+* Improve error handling for InfluxDB v2 ([ae01582](https://github.com/ptarmiganlabs/butler-sos/commit/ae01582c9e27cc58a857d5030a181ea3f2eb20a0))
+* make the Node.js metrics endpoint host and port configurable ([5ecc731](https://github.com/ptarmiganlabs/butler-sos/commit/5ecc7314c489a75ac4b63182b9fcfe164b9df994))
+
+
+### Bug Fixes
+
+* accept fractional crop geometry from zoomed browsers ([a51fed6](https://github.com/ptarmiganlabs/butler-sos/commit/a51fed6013f545060881720151cab0a0756f478e))
+* accept fractional ttlSeconds in screenshot session cache ([0d40ecd](https://github.com/ptarmiganlabs/butler-sos/commit/0d40ecdf4c87627df72bc0b1b875cee974aefc0e))
+* add logging for DNS lookup failures in host-utils ([60b230f](https://github.com/ptarmiganlabs/butler-sos/commit/60b230f0c197779eb2c14ea59c9814e1bb552390))
+* address CodeQL and SonarCloud findings on the new CI and test code ([4c29c59](https://github.com/ptarmiganlabs/butler-sos/commit/4c29c59ddb55209e594d61935170c9ee2f08ae66))
+* close three credential-disclosure gaps found in review ([a0a7853](https://github.com/ptarmiganlabs/butler-sos/commit/a0a78539514f54dc07387b17a867bf09a79579ee))
+* correct and bound screenshot session cache TTL handling ([9171061](https://github.com/ptarmiganlabs/butler-sos/commit/917106103f7658439c6b2bf5db109ab9db240c80))
+* correct the hook's diagnostics and restore argument passthrough ([e29ea8d](https://github.com/ptarmiganlabs/butler-sos/commit/e29ea8df4d371b37f9f8479d493e11c7e4a954f9))
+* correct two JSDoc tags flagged by eslint-plugin-jsdoc 63.3.3 ([2cdf734](https://github.com/ptarmiganlabs/butler-sos/commit/2cdf73431b6a3b26de0d461256eabf062dfc3920))
+* **deps:** resolve security advisories and declare undeclared dependencies ([ad6c6de](https://github.com/ptarmiganlabs/butler-sos/commit/ad6c6de8695e5e1a639fdd1778a19449b5937907))
+* keep the Sonar token out of the test step's environment ([fb28a1c](https://github.com/ptarmiganlabs/butler-sos/commit/fb28a1c74b8f79f2fe8864074f72ea53d935147a))
+* let stderr drain before the wrapper exits ([f023147](https://github.com/ptarmiganlabs/butler-sos/commit/f02314704cc310d370e0a2df3435eb67540d9fad))
+* lock the build-time postject dependency and harden the OSV workflow ([636bb75](https://github.com/ptarmiganlabs/butler-sos/commit/636bb752eacef95dcd91e19dd90369c87b5ad2a0))
+* log unhandled promise rejections instead of discarding them ([da9d1b9](https://github.com/ptarmiganlabs/butler-sos/commit/da9d1b91ba8f77e9ca67e48e4a21cfb78b376bb2))
+* mask all credentials in the config visualisation UI ([6d8db7f](https://github.com/ptarmiganlabs/butler-sos/commit/6d8db7fb470ad657a75e09838bef04fbdff0639a))
+* reject and clamp out-of-range screenshot session cache TTLs ([13bc34d](https://github.com/ptarmiganlabs/butler-sos/commit/13bc34d3301c584acf0e0fc5f126c4d8643441d4))
+* resolve the four deferred P2 audit findings ([7935d83](https://github.com/ptarmiganlabs/butler-sos/commit/7935d83f0845077bff6818950621bf15f7c12076))
+* restore Docker image publishing and close the ncu supply-chain path ([ef2bdac](https://github.com/ptarmiganlabs/butler-sos/commit/ef2bdac48f81277ec4095c49d3170ebc60a00538))
+* restore Docker image publishing and close the ncu supply-chain path ([de8ff7c](https://github.com/ptarmiganlabs/butler-sos/commit/de8ff7cbf33da80de1cb3c0b55ed3e8885735c3a))
+* restrict appNames host validation to IPv4 ([ecc2253](https://github.com/ptarmiganlabs/butler-sos/commit/ecc2253245b3b6cc17d4224302abf650ef5d1b8e))
+* security and stability audit remediation ([bf234d9](https://github.com/ptarmiganlabs/butler-sos/commit/bf234d9d37c99cd193094aa3f6091f113e276cdc))
+* start cleanly when optional config lists are left empty ([01abf3c](https://github.com/ptarmiganlabs/butler-sos/commit/01abf3c69dea841ccffa5d6cde36f1e1ed97399c))
+* start cleanly when optional config lists are left empty ([ee1aff1](https://github.com/ptarmiganlabs/butler-sos/commit/ee1aff103a2eee6733a05b2adb8fb5549023ab68))
+* stop the GitNexus hook installing packages on demand ([da0f6da](https://github.com/ptarmiganlabs/butler-sos/commit/da0f6da58d056d5def736b6cb52a429584aa10bd))
+* stop writing screenshot debug images at every log level ([6b75771](https://github.com/ptarmiganlabs/butler-sos/commit/6b75771b7e6a818b33c1c3cde036b4fc5a05d4d4))
+* trim partial rows on screenshots of colour-coded Sense tables ([f4bbee5](https://github.com/ptarmiganlabs/butler-sos/commit/f4bbee5a24773181e5419719b8cd97509404590b))
+* trim partial rows on screenshots of colour-coded Sense tables ([d9070e6](https://github.com/ptarmiganlabs/butler-sos/commit/d9070e615896d49952e5919bf7535f720046c66e))
+* validate screenshot crop geometry from the browser extension ([c03ea36](https://github.com/ptarmiganlabs/butler-sos/commit/c03ea36e9f552f29bc4cc0ed494071aa0ae185bb))
+
+
+### Miscellaneous
+
+* add mocked dns.lookup tests for hostname resolution path ([ed28d2b](https://github.com/ptarmiganlabs/butler-sos/commit/ed28d2bbeb31fd14ad163a802fffefe9c3dfba66))
+* add the missing audit-ci config so deps:audit can run ([bd08281](https://github.com/ptarmiganlabs/butler-sos/commit/bd08281a1577db97babb8c169b61cfcdfc8b5938))
+* automate GitNexus index freshness, backfill doc-site staging for [#1439](https://github.com/ptarmiganlabs/butler-sos/issues/1439) ([32cf454](https://github.com/ptarmiganlabs/butler-sos/commit/32cf45429a688c46c47fece90b8475b84a6c372f))
+* bump pinned GitNexus to 1.6.9 ([c85998e](https://github.com/ptarmiganlabs/butler-sos/commit/c85998e1a670c0d7e8683ccf2b7544f0f6c2bb77))
+* cache npm downloads in the build jobs ([c741f2c](https://github.com/ptarmiganlabs/butler-sos/commit/c741f2c12f55284e1fd64e4690e1020cfc5ec867))
+* close out most open medium code-scanning alerts and CI housekeeping ([077386e](https://github.com/ptarmiganlabs/butler-sos/commit/077386e7c0db2e6f19bb509230f6a8d774473189))
+* close out the open medium code-scanning alerts and CI housekeeping ([a0b3a09](https://github.com/ptarmiganlabs/butler-sos/commit/a0b3a09b7284015e52c3e69a742c08b74aa9a8ad))
+* close three gaps in the GitNexus guard tests ([29f7442](https://github.com/ptarmiganlabs/butler-sos/commit/29f7442c85a625be64e76120a932c2a0a738ef1d))
+* cover the grid-line brightness fallback and the blue channel ([9c8d968](https://github.com/ptarmiganlabs/butler-sos/commit/9c8d9688181762a5da9d4a5b8dc5a04438cf868d))
+* **deps-dev:** bump npm-check-updates from 22.2.9 to 23.0.1 ([b114520](https://github.com/ptarmiganlabs/butler-sos/commit/b114520db7e0c79633e13fbbc8b6ffd2edb80c0d))
+* **deps-dev:** remove the unused typescript dependency ([a6b5a84](https://github.com/ptarmiganlabs/butler-sos/commit/a6b5a84a6ddce7cf6c87469d61791055aa7984d8))
+* **deps:** bump 20 dependencies to latest minor/patch ([eff55fc](https://github.com/ptarmiganlabs/butler-sos/commit/eff55fc821873e7c5173783d90c0a02199745295))
+* **deps:** bump config from 4.4.2 to 5.0.0 ([6ded0df](https://github.com/ptarmiganlabs/butler-sos/commit/6ded0df11bd755d084e1b32a1d265946d5a32735))
+* **deps:** bump config from 4.4.2 to 5.0.0 ([5583361](https://github.com/ptarmiganlabs/butler-sos/commit/55833617af41ef7743df36b7948c0fdf6e317cb4))
+* **deps:** bump fastify-plugin from 5.1.0 to 6.0.0 ([494d5ad](https://github.com/ptarmiganlabs/butler-sos/commit/494d5addb9d2198213435f0e6763bd190c501344))
+* **deps:** resolve three of the four held-back major updates ([8805453](https://github.com/ptarmiganlabs/butler-sos/commit/88054537c93cdf4d3117431295db2dc112d61f9c))
+* give SonarCloud a coverage report to read ([3536a4f](https://github.com/ptarmiganlabs/butler-sos/commit/3536a4f621edb89a2690d835fcd282f4e37ba545))
+* guard the schema-walk path helpers against prototype pollution ([b977a0a](https://github.com/ptarmiganlabs/butler-sos/commit/b977a0a0cbf093e3dfa3a2336a10345bdb15c72f))
+* keep the GitNexus index fresh with git hooks ([11512dd](https://github.com/ptarmiganlabs/butler-sos/commit/11512dd1d2762e44364be1737f9084a08265e01f))
+* make the SonarCloud coverage gate real, plus CI and test-coverage cleanup ([64f090a](https://github.com/ptarmiganlabs/butler-sos/commit/64f090ab74034c3f4cfa774e24e4c5c3d15dacc5))
+* regenerate GitNexus skill files for 1.6.9 ([8931be9](https://github.com/ptarmiganlabs/butler-sos/commit/8931be95ca3435355c13b7d57b57f5bbff10a45e))
+* remove dead commented-out MQTT notification steps ([77285a6](https://github.com/ptarmiganlabs/butler-sos/commit/77285a6766a4e2322050e63459bcfb7a18291374))
+* run lint, tests and dependency audit in CI ([f4656ae](https://github.com/ptarmiganlabs/butler-sos/commit/f4656aed9b71ce7ac9d5e7b6b0a488e78b0a9445))
+* update @fastify/rate-limit and js-yaml dependencies ([50988fa](https://github.com/ptarmiganlabs/butler-sos/commit/50988fa6292a44bcb69ce7c4302f075f15ca810a))
+* update @types/node to version 26.1.0 in package.json and package-lock.json ([65e3f7f](https://github.com/ptarmiganlabs/butler-sos/commit/65e3f7fe2b17f5d4980d0017a30a0dcaece3f2f2))
+* update dependencies and fix associated tests ([98a377f](https://github.com/ptarmiganlabs/butler-sos/commit/98a377fe361c2b47f5bbb6b268c1d8fed742b414))
+* update dependencies in package.json ([0c855b3](https://github.com/ptarmiganlabs/butler-sos/commit/0c855b3313a183f85d0dd1ef4c3a63818124d149))
+* upgrade gh-aw to v0.85.0 to fix workflow template injection ([79c858e](https://github.com/ptarmiganlabs/butler-sos/commit/79c858e312646164d80c9d024f2fc0dcd0d1eaca))
+* upgrade gh-aw to v0.85.0 to fix workflow template injection ([9ff63e2](https://github.com/ptarmiganlabs/butler-sos/commit/9ff63e20434eaddfeb5a543c57c9b3791ffa9b09))
+
+
+### Refactoring
+
+* Centralize event publishing to enabled destinations ([b9838d0](https://github.com/ptarmiganlabs/butler-sos/commit/b9838d0da6bd46d20d21b1d21ec25def19d3bad4))
+* define the pinned GitNexus version in one place ([51b8986](https://github.com/ptarmiganlabs/butler-sos/commit/51b89864dbc2a4fff1a2b279a693836178b47c99))
+* define the pinned GitNexus version in one place ([7111f8c](https://github.com/ptarmiganlabs/butler-sos/commit/7111f8cc6e236e4cf92310a823ae75ed5bdded40))
+* Improve startup validation of hosts specified in config  file ([1523e4d](https://github.com/ptarmiganlabs/butler-sos/commit/1523e4de21feab2a83367b30ff0273c2a0057ada))
+* Improve validation of incoming user event UDP messages ([e9d8847](https://github.com/ptarmiganlabs/butler-sos/commit/e9d88474b0e0f2bd5940140bac088eca2586cb27))
+* simplify DNS check during startup ([a0b303d](https://github.com/ptarmiganlabs/butler-sos/commit/a0b303d2cd4d873b480e1e381c96b89da13d9314))
+
+
+### Documentation
+
+* collapse duplicated agent instructions into single sources of truth ([8180972](https://github.com/ptarmiganlabs/butler-sos/commit/8180972d930f600658e4ee7644724f443914e4b0))
+* collapse duplicated agent instructions into single sources of truth ([5b36d54](https://github.com/ptarmiganlabs/butler-sos/commit/5b36d54598151c8c4cbb0d0f8658b7ab1c4630e1))
+* describe the GitNexus wrapper in the file that now owns the subject ([3cc7255](https://github.com/ptarmiganlabs/butler-sos/commit/3cc7255658e1478f6b4fb97830edde24296e3047))
+* require a claude/ prefix on agent-created branch names ([7f6fd8c](https://github.com/ptarmiganlabs/butler-sos/commit/7f6fd8caf9ffc6b37c695e7c7c858890c8f1907a))
+* require a claude/ prefix on agent-created branch names ([25c6b21](https://github.com/ptarmiganlabs/butler-sos/commit/25c6b219719aab5f2fa6f16ceeeb18870ea5b21d))
+* require agents to stop before committing and to group commits by topic ([5eb0bec](https://github.com/ptarmiganlabs/butler-sos/commit/5eb0bec027e98c15710660951b5ed6b273f4b790))
+* require agents to stop before committing and to group commits by topic ([3030794](https://github.com/ptarmiganlabs/butler-sos/commit/3030794adc3fc7459c52be8635f2ee9211c70824))
+* require doc-site staging content for user-visible changes ([d8be316](https://github.com/ptarmiganlabs/butler-sos/commit/d8be31669ab4ffeee14dd0b31021efe366df68a1))
+* require doc-site staging content for user-visible changes ([05dcddb](https://github.com/ptarmiganlabs/butler-sos/commit/05dcddb61becdaa59e0224b7d90058352a13ba4f))
+* require up-front clarifying questions when the goal is ambiguous ([bba10a7](https://github.com/ptarmiganlabs/butler-sos/commit/bba10a7289fa7da8150cfb6d8497be8a24b9b8c7))
+* require up-front clarifying questions when the goal is ambiguous ([17a15a9](https://github.com/ptarmiganlabs/butler-sos/commit/17a15a930f8477249fa3f72e128e60da811e7936))
+* restore two rules lost in the de-duplication, scope two others ([f36c366](https://github.com/ptarmiganlabs/butler-sos/commit/f36c366198426a594220804ef54fd6bc664a1991))
+* stage doc-site content for the non-zero startup exit code ([c007baa](https://github.com/ptarmiganlabs/butler-sos/commit/c007baa877be69385b86b48f6cfe21a9faac2b84))
+* stage doc-site content for the Prometheus Node.js metrics endpoint ([71c40fc](https://github.com/ptarmiganlabs/butler-sos/commit/71c40fc7978ae9f8b6bc345ec1418814466ffd0c))
+* stage doc-site content for the screenshot debug image change ([0e1fa39](https://github.com/ptarmiganlabs/butler-sos/commit/0e1fa398dca0877cc029dbe54c4cfa57a2229ec5))
+* stage doc-site content for the wider config visualisation masking ([8c49ecd](https://github.com/ptarmiganlabs/butler-sos/commit/8c49ecd5854892bdad3507023c89a2054b602709))
+
 ## [15.0.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.0.0...butler-sos-v15.0.1) (2026-06-09)
 
 
