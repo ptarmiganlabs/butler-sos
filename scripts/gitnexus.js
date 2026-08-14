@@ -27,7 +27,7 @@ import { spawnSync } from 'node:child_process';
  * This constant is the only place the version appears. Bumping it here updates the
  * hook and every npm script at once.
  */
-const GITNEXUS_VERSION = '1.6.5';
+const GITNEXUS_VERSION = '1.6.9';
 
 /**
  * Flags shared by every `analyze` run.
