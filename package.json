@@ -123,6 +123,6 @@
         "npm-check-updates": "^23.0.1",
         "postject": "1.0.0-alpha.6",
         "prettier": "^3.9.6",
-        "snyk": "^1.1306.2"
+        "snyk": "^1.1306.3"
     }
 }
