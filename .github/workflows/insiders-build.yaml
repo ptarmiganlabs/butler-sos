@@ -114,6 +114,7 @@ jobs:
               with:
                   name: ${{ matrix.artifact_insider }}
                   path: ${{ matrix.artifact_insider }}
+                  retention-days: 7
 
     deploy-windows-insider:
         permissions: {}
