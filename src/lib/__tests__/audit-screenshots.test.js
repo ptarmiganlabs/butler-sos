@@ -621,7 +621,7 @@ describe('audit-screenshots', () => {
          *
          * @param {number} w - Source image width.
          * @param {number} h - Source image height.
-         * @param {object} crop - Crop rectangle to send on the payload.
+         * @param {object|null} crop - Crop rectangle to send on the payload.
          * @param {object} [logger] - Logger handed to downloadScreenshot.
          * @param {(png: Buffer) => Buffer} [transform] - Applied to the encoded PNG before it
          *   is served as the download.
@@ -717,6 +717,47 @@ describe('audit-screenshots', () => {
             expect(Number.isInteger(out.width)).toBe(true);
             expect(Number.isInteger(out.height)).toBe(true);
             expect(out.width).toBeLessThanOrEqual(20);
+        });
+
+        test('stores the screenshot uncropped when crop is null', async () => {
+            // Audit.qs sends crop: null from its fallback capture paths. That means "no crop",
+            // like an absent field -- not a malformed rectangle that makes the crop throw.
+            // This pins download behaviour the schema change relies on; it passed before the
+            // schema accepted null, and the API tests are what cover the change itself.
+            const logger = quietLogger();
+            const stored = await downloadAndGetStored(40, 40, null, logger);
+
+            const out = PNG.sync.read(stored);
+            expect(out.width).toBe(40);
+            expect(out.height).toBe(40);
+            expect(logger.warn).not.toHaveBeenCalled();
+        });
+
+        test('skips the scroll composite when scrollTop lies beyond the rendered image', async () => {
+            // Audit.qs makes the render taller by the scroll offset, so a scrollTop beyond the
+            // image only arrives when the Printing Service returned less than was asked for.
+            // The composite is then skipped and the standard crop still applies. Like the
+            // null-crop test above, this pins existing behaviour that accepting large scroll
+            // offsets relies on.
+            const logger = quietLogger();
+            const stored = await downloadAndGetStored(
+                40,
+                40,
+                {
+                    top: 0,
+                    left: 0,
+                    width: 20,
+                    height: 20,
+                    scrollTop: 1797798,
+                    scrollAreaOffsetY: 5,
+                },
+                logger
+            );
+
+            const out = PNG.sync.read(stored);
+            expect(out.width).toBe(20);
+            expect(out.height).toBe(20);
+            expect(logger.warn).not.toHaveBeenCalled();
         });
 
         test.each([
