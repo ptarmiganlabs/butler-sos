@@ -69,17 +69,23 @@ the property panel shows **Connection Successful** instead of the warning.
 
 ## Checking a Butler SOS server by hand
 
-The connection test can also be run without Qlik Sense. Replace the host and port with those
-of your Butler SOS audit events API, the token with the API token from the Butler SOS config
-file, and the version with the Audit.qs version you plan to deploy:
+The connection test can also be run without Qlik Sense, from a bash or zsh shell. Replace
+the host and port with those of your Butler SOS audit events API, and the version with the
+Audit.qs version you plan to deploy:
 
 ```bash
-curl -sS -H "Authorization: Bearer <your API token>" -H "X-Audit-QS-Version: 0.5.0" https://butler-sos.example.com:9090/api/v1/test-connection
+printf 'Butler SOS API token: '; read -rs TOKEN; echo
+printf 'header = "Authorization: Bearer %s"\n' "$TOKEN" | curl -sS -K - -H "X-Audit-QS-Version: 0.5.0" https://butler-sos.example.com:9090/api/v1/test-connection
+unset TOKEN
 ```
 
-Leave out the `Authorization` header only if no API token is configured. An answer with
-status 401 and the reason `Unauthorized` means the token is missing or wrong; it says
-nothing about whether the versions are compatible.
+The first line asks for the API token from the Butler SOS config file without showing it as
+you type; if no API token is configured, just press Enter. The token is handed to `curl` on
+its standard input rather than on the command line, so it does not end up in your shell
+history or in the process list while `curl` runs.
+
+An answer with status 401 and the reason `Unauthorized` means the token is missing or wrong;
+it says nothing about whether the versions are compatible.
 
 The answer includes `"compatible": true` when that Audit.qs version is accepted:
 
@@ -87,7 +93,7 @@ The answer includes `"compatible": true` when that Audit.qs version is accepted:
 {
     "status": "ok",
     "message": "Butler SOS Audit API is reachable",
-    "timestamp": "2026-10-06T09:15:42.118Z",
+    "timestamp": "2026-10-05T09:15:42.118Z",
     "butlerSosVersion": "15.1.0",
     "auditQsVersion": "0.5.0",
     "compatible": true
