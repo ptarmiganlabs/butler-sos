@@ -17,7 +17,7 @@ import {
     setCachedScreenshotSession,
 } from './audit-screenshot-session-cache.js';
 import { createCertificateOptions, getCertificates } from './cert-utils.js';
-import { addTextHeaderToPng } from './audit-screenshot-metadata-image.js';
+import { addTextHeaderToPng, assertDecodable } from './audit-screenshot-metadata-image.js';
 import { extractVirtualProxyFromSessionCookieName } from './util/qlik-session-utils.js';
 import { parseQlikUserIdentity } from './util/user-identity.js';
 
@@ -1088,6 +1088,11 @@ function cropPngBuffer(buffer, crop, logger) {
     // `setSrc` / `encodedCurrent` below) took the worst-case stall at 1920x1080 from ~512 ms
     // to ~215 ms on incompressible content. An async decode would have saved a further
     // ~65-76 ms of that remainder — the decode figure quoted on the fast path above.
+    //
+    // The decode is also unbounded in memory, whatever the download size, so the chunk headers
+    // are checked first (see assertDecodable). An image refused here throws before anything is
+    // allocated for its pixels, and the caller stores it uncropped.
+    assertDecodable(buffer, 'cropPngBuffer');
     let src = PNG.sync.read(buffer);
 
     // A valid encoding of the CURRENT `src`, or null if there isn't one yet.

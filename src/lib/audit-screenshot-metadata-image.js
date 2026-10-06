@@ -162,6 +162,80 @@ function capValue(value, maxChars = 160) {
 }
 
 /**
+ * Largest image, in pixels, that the screenshot pipeline decodes or builds.
+ *
+ * A pngjs decode runs synchronously on the event loop and peaks at roughly four times the
+ * decoded RGBA size, because the inflated, unfiltered and final buffers are alive together.
+ * Measured on Node 24 with pngjs 7, from a baseline of about 50 MB: 1920 x 1080 decodes in
+ * 22 ms at 95 MB; 20 million pixels in 170 ms at 366 MB (802 ms and 521 MB with the metadata
+ * header); 40 million in 327 ms at 673 MB (1.6 s and 981 MB). The compressed size says little
+ * about any of this: a flat table render compresses so well that the 50 MB download cap
+ * admits images that decode to gigabytes.
+ *
+ * Audit.qs asks the Printing service for an object at its on-screen size, plus at most about
+ * 150 px of scroll for legacy tables and pivots (measured), so real screenshots sit far below
+ * the budget: a whole 4K screen is 8.3 million pixels, 5K 14.7 million. What exceeds it is a
+ * render Audit.qs made taller by an sn-table's absolute scroll offset (measured at about
+ * 1.8 million px for 71,923 rows), or a crafted file.
+ */
+export const MAX_DECODED_PIXELS = 20 * 1000 * 1000;
+
+/**
+ * Throws unless a PNG can be decoded within MAX_DECODED_PIXELS.
+ *
+ * Reads chunk headers only, never pixel data, so it is cheap to run before every decode. It
+ * refuses what pngjs would otherwise trust to size its work:
+ * - a zero width or height, which passes a pixel count while pngjs still sizes its inflate
+ *   limit from the other dimension (a 16 KB file with a 0 x 4294967295 header ran Node out of
+ *   memory);
+ * - an interlaced image, which pngjs inflates with no output limit at all;
+ * - a second IHDR chunk, which pngjs lets replace the first, so the size checked here would
+ *   not be the size decoded;
+ * - more than MAX_DECODED_PIXELS pixels.
+ *
+ * @param {Buffer} buffer Candidate PNG bytes.
+ * @param {string} caller Name of the calling function, for the error message.
+ * @throws {Error} If the buffer is not a PNG this pipeline will decode.
+ */
+export function assertDecodable(buffer, caller) {
+    // Signature (8) + IHDR length and type (8) + IHDR data (13) + CRC (4).
+    if (
+        !Buffer.isBuffer(buffer) ||
+        buffer.length < 33 ||
+        readPngHeaderDimensions(buffer) === null
+    ) {
+        throw new Error(`${caller}: not a PNG; not decoded`);
+    }
+    if (buffer.readUInt32BE(8) !== 13) {
+        throw new Error(`${caller}: PNG header chunk has the wrong length; not decoded`);
+    }
+    const { width, height } = readPngHeaderDimensions(buffer);
+    if (width < 1 || height < 1) {
+        throw new Error(`${caller}: PNG header gives ${width}x${height}; not decoded`);
+    }
+    // The interlace method is the last byte of the IHDR data.
+    if (buffer[28] !== 0) {
+        throw new Error(`${caller}: interlaced PNG; not decoded`);
+    }
+    // Every chunk is length (4), type (4), data, CRC (4). A length that runs past the end
+    // just ends the walk; pngjs reports the truncation itself.
+    for (let offset = 33; offset + 8 <= buffer.length;) {
+        const type = buffer.toString('ascii', offset + 4, offset + 8);
+        if (type === 'IHDR') {
+            throw new Error(`${caller}: PNG has a second IHDR chunk; not decoded`);
+        }
+        if (type === 'IEND') break;
+        offset += 12 + buffer.readUInt32BE(offset);
+    }
+    const pixels = width * height;
+    if (pixels > MAX_DECODED_PIXELS) {
+        throw new Error(
+            `${caller}: image is ${width}x${height} (${pixels} pixels), above the decode budget of ${MAX_DECODED_PIXELS} pixels; not decoded`
+        );
+    }
+}
+
+/**
  * Reads width and height from a PNG's 24-byte header, without decoding pixels.
  *
  * @param {Buffer} buffer Candidate PNG bytes.
@@ -347,7 +421,9 @@ export function addTextHeaderToPng(pngBuffer, lines, options = {}) {
         );
     }
 
-    const src = options.decoded ?? PNG.sync.read(pngBuffer);
+    // Run even when pixels are handed over: those came from a buffer that passed the same check
+    // in cropPngBuffer, so here it only re-reads chunk headers.
+    assertDecodable(pngBuffer, 'addTextHeaderToPng');
 
     const lineHeight = FONT_HEIGHT + LINE_SPACING;
     const headerHeight =
@@ -358,8 +434,18 @@ export function addTextHeaderToPng(pngBuffer, lines, options = {}) {
         requiredWidth = Math.max(requiredWidth, measureTextWidthPx(line));
     }
 
-    const outWidth = Math.max(src.width, DEFAULT_PADDING_X * 2 + requiredWidth);
-    const outHeight = src.height + headerHeight;
+    // Sized from the header, which matches any handed-over pixels (checked above), so an output
+    // too large to build is refused before the decode. The text can widen a narrow image far
+    // past its own size: a 100 x 400,000 image within a 40-million budget became 1012 x 400,096.
+    const outWidth = Math.max(header.width, DEFAULT_PADDING_X * 2 + requiredWidth);
+    const outHeight = header.height + headerHeight;
+    if (outWidth * outHeight > MAX_DECODED_PIXELS) {
+        throw new Error(
+            `addTextHeaderToPng: output would be ${outWidth}x${outHeight} (${outWidth * outHeight} pixels), above the decode budget of ${MAX_DECODED_PIXELS} pixels; not built`
+        );
+    }
+
+    const src = options.decoded ?? PNG.sync.read(pngBuffer);
 
     const out = new PNG({ width: outWidth, height: outHeight });
 

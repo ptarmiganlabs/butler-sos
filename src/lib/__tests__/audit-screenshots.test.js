@@ -58,6 +58,21 @@ jest.unstable_mockModule('node:fs', () => ({
     writeFileSync: mockFsSync.writeFileSync,
 }));
 
+/**
+ * Builds a logger whose level checks report debug as disabled.
+ *
+ * @returns {object} Logger with jest.fn() methods.
+ */
+function quietLogger() {
+    return {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        isLevelEnabled: jest.fn().mockReturnValue(false),
+    };
+}
+
 describe('audit-screenshots', () => {
     beforeEach(async () => {
         jest.clearAllMocks();
@@ -558,13 +573,7 @@ describe('audit-screenshots', () => {
             // A real winston logger is always passed in production, so the old `if (logger)`
             // guard was always true: every cropped screenshot wrote PNGs to disk at any log
             // level. isLevelEnabled reporting false must suppress that entirely.
-            const logger = {
-                debug: jest.fn(),
-                info: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn(),
-                isLevelEnabled: jest.fn().mockReturnValue(false),
-            };
+            const logger = quietLogger();
 
             await downloadWithCrop(logger);
 
@@ -613,9 +622,18 @@ describe('audit-screenshots', () => {
          * @param {number} w - Source image width.
          * @param {number} h - Source image height.
          * @param {object} crop - Crop rectangle to send on the payload.
+         * @param {object} [logger] - Logger handed to downloadScreenshot.
+         * @param {(png: Buffer) => Buffer} [transform] - Applied to the encoded PNG before it
+         *   is served as the download.
          * @returns {Promise<Buffer>} The buffer that was written to storage.
          */
-        async function downloadAndGetStored(w, h, crop) {
+        async function downloadAndGetStored(
+            w,
+            h,
+            crop,
+            logger = quietLogger(),
+            transform = (png) => png
+        ) {
             const { downloadScreenshot } = await import('../audit-screenshots.js');
 
             const png = new PNG({ width: w, height: h });
@@ -625,7 +643,7 @@ describe('audit-screenshots', () => {
                 png.data[i + 2] = 90;
                 png.data[i + 3] = 255;
             }
-            const srcBuffer = PNG.sync.write(png);
+            const srcBuffer = transform(PNG.sync.write(png));
 
             mockAxios.request.mockResolvedValue({
                 status: 200,
@@ -650,13 +668,7 @@ describe('audit-screenshots', () => {
                         { enable: true, type: 'flat', directory: 'screenshots/audit' },
                     ],
                 },
-                {
-                    debug: jest.fn(),
-                    info: jest.fn(),
-                    warn: jest.fn(),
-                    error: jest.fn(),
-                    isLevelEnabled: jest.fn().mockReturnValue(false),
-                }
+                logger
             );
 
             return mockFsPromises.writeFile.mock.calls[0][1];
@@ -707,6 +719,44 @@ describe('audit-screenshots', () => {
             expect(out.width).toBeLessThanOrEqual(20);
         });
 
+        test.each([
+            // A flat render compresses far below the 50 MB download cap yet can decode to
+            // gigabytes. Just over the budget, so a decode attempt (were the check missing)
+            // stays affordable.
+            [
+                'above the decode budget',
+                5000,
+                4001,
+                'cropPngBuffer: image is 5000x4001 (20005000 pixels), above the decode budget',
+            ],
+            // A zero dimension passes a pixel count; pngjs would still size its inflate limit
+            // from the other dimension.
+            ['with a zero width', 0, 20, 'cropPngBuffer: PNG header gives 0x20; not decoded'],
+        ])(
+            'stores an image %s as downloaded, without decoding it',
+            async (_label, width, height, message) => {
+                // The chunk headers are checked first, so the crop is refused by that check,
+                // not by the decode -- which here would fail on the stale header CRC instead.
+                const logger = quietLogger();
+                let served;
+                const stored = await downloadAndGetStored(
+                    20,
+                    20,
+                    { top: 0, left: 0, width: 10, height: 10 },
+                    logger,
+                    (png) => {
+                        served = Buffer.from(png);
+                        served.writeUInt32BE(width, 16);
+                        served.writeUInt32BE(height, 20);
+                        return served;
+                    }
+                );
+
+                expect(Buffer.compare(stored, served)).toBe(0);
+                expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining(message));
+            }
+        );
+
         test('still composites when scrollTop is set', async () => {
             const stored = await downloadAndGetStored(40, 40, {
                 top: 0,
@@ -722,6 +772,57 @@ describe('audit-screenshots', () => {
             const out = PNG.sync.read(stored);
             expect(out.height).toBeLessThan(40);
         });
+    });
+
+    test('stores an image above the decode budget without a metadata copy', async () => {
+        // With crop: null the crop step never runs, so the metadata step is the only decode, and
+        // it must refuse by the budget: the main file is stored as downloaded, and the separate
+        // _metadata copy is not written.
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+        const logger = quietLogger();
+
+        const src = new PNG({ width: 20, height: 10 });
+        src.data.fill(255);
+        const served = Buffer.from(PNG.sync.write(src));
+        served.writeUInt32BE(5000, 16);
+        served.writeUInt32BE(4001, 20);
+
+        mockAxios.request.mockResolvedValue({
+            status: 200,
+            headers: { 'content-type': 'image/png' },
+            data: served,
+        });
+
+        await downloadScreenshot(
+            'https://example.com/screenshot.png',
+            {
+                timestamp: '2025-12-22T12:34:56.000Z',
+                eventId: 'evt-budget',
+                correlationId: 'corr-budget',
+                payload: {
+                    event: {
+                        screenshotUrl: 'https://example.com/screenshot.png',
+                        crop: null,
+                    },
+                },
+            },
+            {
+                enable: true,
+                downloadTimeoutMs: 15000,
+                addInImageMetadata: { enable: true, fields: { date: true, eventId: true } },
+                storageTargets: [{ enable: true, type: 'flat', directory: 'screenshots/audit' }],
+            },
+            logger
+        );
+
+        expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(1);
+        expect(mockFsPromises.writeFile.mock.calls[0][0]).not.toContain('_metadata');
+        expect(Buffer.compare(mockFsPromises.writeFile.mock.calls[0][1], served)).toBe(0);
+        expect(logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining(
+                'addTextHeaderToPng: image is 5000x4001 (20005000 pixels), above the decode budget'
+            )
+        );
     });
 
     test('adds metadata header to PNG screenshot when enabled', async () => {
