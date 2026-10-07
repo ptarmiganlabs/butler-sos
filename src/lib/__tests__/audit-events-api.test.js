@@ -1129,9 +1129,9 @@ describe('audit-events-api envelope constraint validation', () => {
 
     describe('screenshot crop geometry validation', () => {
         /**
-         * Posts a screenshot.url.received envelope carrying the given crop object.
+         * Posts a screenshot.url.received envelope carrying the given crop value.
          *
-         * @param {object|undefined} crop - Crop rectangle to place on the event payload.
+         * @param {unknown} crop - Crop value to place on the event payload; undefined omits it.
          * @returns {Promise<object>} Fastify inject response.
          */
         async function postCrop(crop) {
@@ -1175,6 +1175,47 @@ describe('audit-events-api envelope constraint validation', () => {
             expect(res.statusCode).toBe(202);
         });
 
+        test('accepts crop: null and still downloads and stores the screenshot', async () => {
+            // Audit.qs sends `crop: null` whenever the screenshot came from a fallback capture
+            // path instead of the Printing REST API. null means "no crop", like an absent field.
+            const { downloadScreenshot } = await import('../audit-screenshots.js');
+            downloadScreenshot.mockResolvedValue({ savedPaths: ['/path/to/screenshot.png'] });
+            const screenshotsKey = 'Butler-SOS.auditEvents.destination.screenshots';
+            mockGlobals.config.has.mockImplementation(
+                (key) =>
+                    key === `${screenshotsKey}.enable` ||
+                    key === `${screenshotsKey}.allowedImageDownloadHosts`
+            );
+            mockGlobals.config.get.mockImplementation((key) => {
+                if (key === `${screenshotsKey}.enable`) return true;
+                if (key === `${screenshotsKey}.allowedImageDownloadHosts`) return ['example.com'];
+                if (key === `${screenshotsKey}.storageTargets`) return ['local'];
+                return null;
+            });
+
+            const res = await postCrop(null);
+
+            expect(res.statusCode).toBe(202);
+            expect(downloadScreenshot).toHaveBeenCalledTimes(1);
+            expect(downloadScreenshot.mock.calls[0][1].payload.event.crop).toBeNull();
+
+            const { writeAuditEventToDestinations } =
+                await import('../audit-destinations/index.js');
+            expect(writeAuditEventToDestinations).toHaveBeenCalledTimes(1);
+            expect(writeAuditEventToDestinations.mock.calls[0][0].payload.event.crop).toBeNull();
+        });
+
+        test.each([
+            // An sn-table's scroller is as tall as all of its rows. Measured on Sense May 2026,
+            // a 71,923-row sn-table scrolled to the bottom reports this scrollTop.
+            ['a deep scrollTop from a large sn-table', 1797798],
+            ['scrollTop at the largest browser layout size', 33554432],
+        ])('accepts crop with %s', async (_label, scrollTop) => {
+            const res = await postCrop({ width: 800, height: 600, scrollTop });
+
+            expect(res.statusCode).toBe(202);
+        });
+
         test.each([
             // Browser geometry is genuinely fractional. Element.scrollTop is a double and is
             // fractional at non-100% zoom, so rejecting these would drop real screenshots
@@ -1199,10 +1240,20 @@ describe('audit-events-api envelope constraint validation', () => {
             ['oversized width', { width: 40000, height: 10 }],
             ['oversized height', { width: 10, height: 40000 }],
             ['oversized top', { width: 10, height: 10, top: 99999 }],
-            ['oversized scrollTop', { width: 10, height: 10, scrollTop: 99999 }],
+            [
+                'scrollTop above the largest browser layout size',
+                { width: 10, height: 10, scrollTop: 33554433 },
+            ],
+            ['absurd scrollTop', { width: 10, height: 10, scrollTop: 1e15 }],
+            ['oversized scrollAreaOffsetY', { width: 10, height: 10, scrollAreaOffsetY: 99999 }],
             ['non-numeric width', { width: '10', height: 10 }],
             ['missing width', { height: 10 }],
             ['missing height', { width: 10 }],
+            // Only null widens the type; every other non-object is still refused.
+            ['a string', 'crop'],
+            ['a number', 0],
+            ['a boolean', false],
+            ['an array', [{ width: 10, height: 10 }]],
         ])('rejects crop with %s', async (_label, crop) => {
             const res = await postCrop(crop);
 
