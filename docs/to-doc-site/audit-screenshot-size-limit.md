@@ -18,7 +18,9 @@ its size, so a single very large one could stall Butler SOS for seconds or exhau
 
 ## The limit
 
-Butler SOS unpacks screenshots of up to **20 million pixels**. For comparison:
+Butler SOS unpacks screenshots of up to **20 million pixels**. An image stored with 16 bits per
+colour channel, rather than the usual 8, counts double, because unpacking it takes twice the
+memory. For comparison:
 
 | Image                 | Pixels       |
 | --------------------- | ------------ |
@@ -28,11 +30,15 @@ Butler SOS unpacks screenshots of up to **20 million pixels**. For comparison:
 
 Screenshots of ordinary sheets and objects are far below the limit. At the limit, unpacking
 takes about 0.2 seconds and roughly 320 MB of extra memory; writing the `_metadata` copy as
-well takes about 0.8 seconds and roughly 470 MB. These figures were measured on Node.js 24.
+well takes about 0.8 seconds and roughly 470 MB. A 16-bit image at the limit (10 million
+pixels, counted as 20 million) takes about the same memory but about 0.5 seconds. These
+figures were measured on Node.js 24.
 
 Some files are never unpacked, whatever their size, because they are not normal screenshots
-and unpacking them could use unbounded memory: images with a width or height of zero,
-interlaced images, and images with more than one header.
+and unpacking them could use unbounded memory: images with a width or height of zero, images
+with more than one header, and images whose header describes a format PNG does not allow.
+Interlaced images are unpacked only after Butler SOS has checked that their data does not
+unpack to more than their header says.
 
 ---
 
@@ -42,25 +48,35 @@ interlaced images, and images with more than one header.
 - The separate `_metadata` copy is not written.
 - The audit event itself is stored as normal, in every destination.
 
-Butler SOS logs a warning that names the image size. When the screenshot needed trimming, or
-Butler SOS is logging at debug level, the warning looks like this:
+Butler SOS logs one warning per screenshot, naming the reason. When the screenshot needed
+trimming, or Butler SOS is logging at debug level, it looks like this (the words "and without
+its \_metadata copy" appear only when the metadata header is switched on):
 
 ```text
-AUDIT API: Failed to crop screenshot PNG. selectionTxnId=... error=Error message='cropPngBuffer: image is 800x1800354 (1440283200 pixels), above the decode budget of 20000000 pixels; not decoded' ...
+AUDIT API: Screenshot stored as downloaded, untrimmed and without its _metadata copy: image is 800x1800354 (1440283200 pixels), above the decode budget of 20000000 pixels; not decoded. selectionTxnId=... eventId=...
 ```
 
-When the metadata header is switched on, there is also a warning starting
-`AUDIT API: Failed to add metadata header to screenshot PNG.`, with the same size text. A
-screenshot within the limit whose metadata copy would exceed it, because a long header line
-makes a narrow image much wider, gives this instead:
+When the screenshot needed no trimming but the metadata header is switched on, the warning
+reads instead:
 
 ```text
-... message='addTextHeaderToPng: output would be 1012x199106 (201495272 pixels), above the decode budget of 20000000 pixels; not built' ...
+AUDIT API: Screenshot _metadata copy not written: image is 800x1800354 (1440283200 pixels), above the decode budget of 20000000 pixels; not decoded. selectionTxnId=... eventId=...
 ```
 
-The files that are never unpacked give one of these instead of the size text:
-`PNG header gives 0x...`, `interlaced PNG`, `PNG has a second IHDR chunk`, `not a PNG` or
+The same `_metadata copy not written` warning appears for a screenshot within the limit whose
+metadata copy would exceed it, because a long header line makes a narrow image much wider:
+`output would be 1012x199106 (201495272 pixels), above the decode budget of 20000000 pixels;
+not built`.
+
+The files that are never unpacked give one of these reasons instead of the size:
+`PNG header gives 0x...`, `PNG has a second IHDR chunk`,
+`PNG colour type ... with bit depth ... is not a valid combination`,
+`interlaced PNG data unpacks to more than its ... header allows`, `not a PNG` or
 `PNG header chunk has the wrong length`.
+
+None of these is an error. A warning that starts `AUDIT API: Failed to crop screenshot PNG` or
+`AUDIT API: Failed to add metadata header to screenshot PNG` is different: it means the image
+could not be processed at all, for example because the file is damaged.
 
 ---
 

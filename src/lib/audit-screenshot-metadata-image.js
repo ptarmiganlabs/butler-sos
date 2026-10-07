@@ -1,3 +1,5 @@
+import zlib from 'node:zlib';
+
 import pngjs from 'pngjs';
 
 const { PNG } = pngjs;
@@ -162,15 +164,18 @@ function capValue(value, maxChars = 160) {
 }
 
 /**
- * Largest image, in pixels, that the screenshot pipeline decodes or builds.
+ * Largest image, in pixels, that the screenshot pipeline decodes or builds. A 16-bit image
+ * counts double, because pngjs holds its pixels in a 16-bit array before scaling them down.
  *
  * A pngjs decode runs synchronously on the event loop and peaks at roughly four times the
  * decoded RGBA size, because the inflated, unfiltered and final buffers are alive together.
- * Measured on Node 24 with pngjs 7, from a baseline of about 50 MB: 1920 x 1080 decodes in
- * 22 ms at 95 MB; 20 million pixels in 170 ms at 366 MB (802 ms and 521 MB with the metadata
- * header); 40 million in 327 ms at 673 MB (1.6 s and 981 MB). The compressed size says little
- * about any of this: a flat table render compresses so well that the 50 MB download cap
- * admits images that decode to gigabytes.
+ * Measured on Node 24 with pngjs 7, from a baseline of about 50 MB:
+ * - 1920 x 1080: 22 ms, 95 MB;
+ * - 20 million pixels, 8-bit: 170 ms, 366 MB (802 ms and 521 MB with the metadata header);
+ * - 20 million pixels, 16-bit: 953 ms, 672 MB, which is why it counts double;
+ * - 10 million pixels, 16-bit (counted as 20 million): 482 ms, 403 MB.
+ * The compressed size says little about any of this: a flat table render compresses so well
+ * that the 50 MB download cap admits images that decode to gigabytes.
  *
  * Audit.qs asks the Printing service for an object at its on-screen size, plus at most about
  * 150 px of scroll for legacy tables and pivots (measured), so real screenshots sit far below
@@ -181,73 +186,183 @@ function capValue(value, maxChars = 160) {
 export const MAX_DECODED_PIXELS = 20 * 1000 * 1000;
 
 /**
- * Throws unless a PNG can be decoded within MAX_DECODED_PIXELS.
+ * Thrown when a PNG is refused before decoding, or an output image before building it.
  *
- * Reads chunk headers only, never pixel data, so it is cheap to run before every decode. It
- * refuses what pngjs would otherwise trust to size its work:
- * - a zero width or height, which passes a pixel count while pngjs still sizes its inflate
- *   limit from the other dimension (a 16 KB file with a 0 x 4294967295 header ran Node out of
- *   memory);
- * - an interlaced image, which pngjs inflates with no output limit at all;
- * - a second IHDR chunk, which pngjs lets replace the first, so the size checked here would
- *   not be the size decoded;
- * - more than MAX_DECODED_PIXELS pixels.
- *
- * @param {Buffer} buffer Candidate PNG bytes.
- * @param {string} caller Name of the calling function, for the error message.
- * @throws {Error} If the buffer is not a PNG this pipeline will decode.
+ * Callers tell it apart from a real failure: it is a deliberate decision, and the screenshot
+ * is still stored as downloaded.
  */
-export function assertDecodable(buffer, caller) {
-    // Signature (8) + IHDR length and type (8) + IHDR data (13) + CRC (4).
-    if (
-        !Buffer.isBuffer(buffer) ||
-        buffer.length < 33 ||
-        readPngHeaderDimensions(buffer) === null
-    ) {
-        throw new Error(`${caller}: not a PNG; not decoded`);
-    }
-    if (buffer.readUInt32BE(8) !== 13) {
-        throw new Error(`${caller}: PNG header chunk has the wrong length; not decoded`);
-    }
-    const { width, height } = readPngHeaderDimensions(buffer);
-    if (width < 1 || height < 1) {
-        throw new Error(`${caller}: PNG header gives ${width}x${height}; not decoded`);
-    }
-    // The interlace method is the last byte of the IHDR data.
-    if (buffer[28] !== 0) {
-        throw new Error(`${caller}: interlaced PNG; not decoded`);
-    }
-    // Every chunk is length (4), type (4), data, CRC (4). A length that runs past the end
-    // just ends the walk; pngjs reports the truncation itself.
-    for (let offset = 33; offset + 8 <= buffer.length;) {
-        const type = buffer.toString('ascii', offset + 4, offset + 8);
-        if (type === 'IHDR') {
-            throw new Error(`${caller}: PNG has a second IHDR chunk; not decoded`);
-        }
-        if (type === 'IEND') break;
-        offset += 12 + buffer.readUInt32BE(offset);
-    }
-    const pixels = width * height;
-    if (pixels > MAX_DECODED_PIXELS) {
-        throw new Error(
-            `${caller}: image is ${width}x${height} (${pixels} pixels), above the decode budget of ${MAX_DECODED_PIXELS} pixels; not decoded`
-        );
+export class PngNotDecodedError extends Error {
+    /**
+     * Creates the error, with the caller's name in front of the reason in its message.
+     *
+     * @param {string} caller Name of the function that refused the image.
+     * @param {string} reason What was refused and why, for the log.
+     */
+    constructor(caller, reason) {
+        super(`${caller}: ${reason}`);
+        this.name = 'PngNotDecodedError';
+        this.reason = reason;
     }
 }
 
 /**
- * Reads width and height from a PNG's 24-byte header, without decoding pixels.
+ * Reads a PNG's IHDR fields without decoding any pixels.
+ *
+ * The one header reader for the screenshot pipeline: both the crop fast path and
+ * assertDecodable use it. It checks only that the buffer starts like a PNG and returns every
+ * field as stored, zero dimensions included; each caller decides what it accepts.
  *
  * @param {Buffer} buffer Candidate PNG bytes.
- * @returns {{ width: number, height: number } | null} Dimensions, or null if not a PNG.
+ * @returns {{ length: number, width: number, height: number, bitDepth: number, colorType: number, interlace: number } | null}
+ *   The IHDR fields, or null if the buffer does not start with a PNG signature and IHDR chunk.
  */
-function readPngHeaderDimensions(buffer) {
-    if (!Buffer.isBuffer(buffer) || buffer.length < 24) return null;
+export function readPngHeader(buffer) {
+    // Signature (8) + IHDR length and type (8) + IHDR data (13) + CRC (4).
+    if (!Buffer.isBuffer(buffer) || buffer.length < 33) return null;
     if (buffer.readUInt32BE(0) !== 0x89504e47 || buffer.readUInt32BE(4) !== 0x0d0a1a0a) {
         return null;
     }
     if (buffer.toString('ascii', 12, 16) !== 'IHDR') return null;
-    return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+    return {
+        length: buffer.readUInt32BE(8),
+        width: buffer.readUInt32BE(16),
+        height: buffer.readUInt32BE(20),
+        bitDepth: buffer[24],
+        colorType: buffer[25],
+        interlace: buffer[28],
+    };
+}
+
+/** Channels per pixel for each PNG colour type. */
+const CHANNELS_BY_COLOR_TYPE = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 };
+
+/** Bit depths the PNG specification allows for each colour type. */
+const BIT_DEPTHS_BY_COLOR_TYPE = {
+    0: [1, 2, 4, 8, 16],
+    2: [8, 16],
+    3: [1, 2, 4, 8],
+    4: [8, 16],
+    6: [8, 16],
+};
+
+/** The seven Adam7 interlace passes: [x start, y start, x step, y step]. */
+const ADAM7_PASSES = [
+    [0, 0, 8, 8],
+    [4, 0, 8, 8],
+    [0, 4, 4, 8],
+    [2, 0, 4, 4],
+    [0, 2, 2, 4],
+    [1, 0, 2, 2],
+    [0, 1, 1, 2],
+];
+
+/**
+ * Size in bytes of an interlaced image's data once inflated: every Adam7 pass, each row with
+ * its filter byte.
+ *
+ * @param {number} width Image width.
+ * @param {number} height Image height.
+ * @param {number} bitsPerPixel Channels times bit depth.
+ * @returns {number} Expected inflated size.
+ */
+function interlacedDataSize(width, height, bitsPerPixel) {
+    let size = 0;
+    for (const [x0, y0, dx, dy] of ADAM7_PASSES) {
+        const passWidth = width > x0 ? Math.ceil((width - x0) / dx) : 0;
+        const passHeight = height > y0 ? Math.ceil((height - y0) / dy) : 0;
+        if (passWidth > 0 && passHeight > 0) {
+            size += passHeight * (1 + Math.ceil((passWidth * bitsPerPixel) / 8));
+        }
+    }
+    return size;
+}
+
+/**
+ * Throws unless a PNG can be decoded within MAX_DECODED_PIXELS, and returns its header.
+ *
+ * Reads chunk headers, never pixel data, so it is cheap to run before every decode. It refuses
+ * what pngjs would otherwise trust to size its work:
+ * - a zero width or height, which passes a pixel count while pngjs still sizes its inflate
+ *   limit from the other dimension (a 16 KB file with a 0 x 4294967295 header ran Node out of
+ *   memory);
+ * - a colour type and bit depth the PNG specification does not allow together;
+ * - a second IHDR chunk, which pngjs lets replace the first, so the size checked here would
+ *   not be the size decoded;
+ * - more than MAX_DECODED_PIXELS pixels, a 16-bit image counting double.
+ *
+ * pngjs inflates an interlaced image with no output limit at all, so for one of those the
+ * image data is inflated here first, limited to the size its header allows, and refused if it
+ * would unpack to more. That inflate is the one place this check reads pixel data, and it
+ * costs one extra inflate for interlaced images only.
+ *
+ * @param {Buffer} buffer Candidate PNG bytes.
+ * @param {string} caller Name of the calling function, for the error message.
+ * @returns {{ length: number, width: number, height: number, bitDepth: number, colorType: number, interlace: number }}
+ *   The PNG header.
+ * @throws {PngNotDecodedError} If the buffer is not a PNG this pipeline will decode.
+ */
+export function assertDecodable(buffer, caller) {
+    const header = readPngHeader(buffer);
+    if (header === null) {
+        throw new PngNotDecodedError(caller, 'not a PNG; not decoded');
+    }
+    if (header.length !== 13) {
+        throw new PngNotDecodedError(caller, 'PNG header chunk has the wrong length; not decoded');
+    }
+    const { width, height, bitDepth, colorType, interlace } = header;
+    if (width < 1 || height < 1) {
+        throw new PngNotDecodedError(caller, `PNG header gives ${width}x${height}; not decoded`);
+    }
+    const channels = CHANNELS_BY_COLOR_TYPE[colorType];
+    if (channels === undefined || !BIT_DEPTHS_BY_COLOR_TYPE[colorType].includes(bitDepth)) {
+        throw new PngNotDecodedError(
+            caller,
+            `PNG colour type ${colorType} with bit depth ${bitDepth} is not a valid combination; not decoded`
+        );
+    }
+    // Every chunk is length (4), type (4), data, CRC (4). A length that runs past the end just
+    // ends the walk; pngjs reports the truncation itself.
+    const imageData = [];
+    for (let offset = 33; offset + 8 <= buffer.length;) {
+        const length = buffer.readUInt32BE(offset);
+        const type = buffer.toString('ascii', offset + 4, offset + 8);
+        if (type === 'IHDR') {
+            throw new PngNotDecodedError(caller, 'PNG has a second IHDR chunk; not decoded');
+        }
+        if (type === 'IEND') break;
+        if (type === 'IDAT') {
+            imageData.push(
+                buffer.subarray(offset + 8, Math.min(offset + 8 + length, buffer.length))
+            );
+        }
+        offset += 12 + length;
+    }
+    const pixels = width * height * (bitDepth === 16 ? 2 : 1);
+    if (pixels > MAX_DECODED_PIXELS) {
+        const size =
+            bitDepth === 16
+                ? `${width}x${height} at 16 bits per channel (counts as ${pixels} pixels)`
+                : `${width}x${height} (${pixels} pixels)`;
+        throw new PngNotDecodedError(
+            caller,
+            `image is ${size}, above the decode budget of ${MAX_DECODED_PIXELS} pixels; not decoded`
+        );
+    }
+    if (interlace !== 0) {
+        const expected = interlacedDataSize(width, height, channels * bitDepth);
+        try {
+            zlib.inflateSync(Buffer.concat(imageData), { maxOutputLength: expected });
+        } catch (err) {
+            if (err && err.code === 'ERR_BUFFER_TOO_LARGE') {
+                throw new PngNotDecodedError(
+                    caller,
+                    `interlaced PNG data unpacks to more than its ${width}x${height} header allows; not decoded`
+                );
+            }
+            // Corrupt data: pngjs stops at the same point and reports it.
+        }
+    }
+    return header;
 }
 
 /**
@@ -393,8 +508,7 @@ export function addTextHeaderToPng(pngBuffer, lines, options = {}) {
     // — but it keeps the `@throws` contract true on every path. Moving the decode below the
     // short-circuit had quietly removed the only check on the empty-lines path, so a non-PNG
     // buffer (an HTML error page served as image/png, say) came straight back out.
-    const header = readPngHeaderDimensions(pngBuffer);
-    if (header === null) {
+    if (readPngHeader(pngBuffer) === null) {
         throw new Error('addTextHeaderToPng: input buffer is not a valid PNG');
     }
 
@@ -412,6 +526,10 @@ export function addTextHeaderToPng(pngBuffer, lines, options = {}) {
     // Cross-checked against the header above. Once `decoded` is accepted, `pngBuffer` is never
     // read again — the whole output is built from `src` — so a mismatched pair would silently
     // render one image while the caller writes the other to disk under a single event's name.
+    //
+    // assertDecodable runs even when pixels are handed over: those came from a buffer that
+    // passed the same check in cropPngBuffer, so here it only re-reads chunk headers.
+    const header = assertDecodable(pngBuffer, 'addTextHeaderToPng');
     if (
         options.decoded &&
         (options.decoded.width !== header.width || options.decoded.height !== header.height)
@@ -420,10 +538,6 @@ export function addTextHeaderToPng(pngBuffer, lines, options = {}) {
             `addTextHeaderToPng: options.decoded is ${options.decoded.width}x${options.decoded.height} but pngBuffer is ${header.width}x${header.height}`
         );
     }
-
-    // Run even when pixels are handed over: those came from a buffer that passed the same check
-    // in cropPngBuffer, so here it only re-reads chunk headers.
-    assertDecodable(pngBuffer, 'addTextHeaderToPng');
 
     const lineHeight = FONT_HEIGHT + LINE_SPACING;
     const headerHeight =
@@ -440,8 +554,9 @@ export function addTextHeaderToPng(pngBuffer, lines, options = {}) {
     const outWidth = Math.max(header.width, DEFAULT_PADDING_X * 2 + requiredWidth);
     const outHeight = header.height + headerHeight;
     if (outWidth * outHeight > MAX_DECODED_PIXELS) {
-        throw new Error(
-            `addTextHeaderToPng: output would be ${outWidth}x${outHeight} (${outWidth * outHeight} pixels), above the decode budget of ${MAX_DECODED_PIXELS} pixels; not built`
+        throw new PngNotDecodedError(
+            'addTextHeaderToPng',
+            `output would be ${outWidth}x${outHeight} (${outWidth * outHeight} pixels), above the decode budget of ${MAX_DECODED_PIXELS} pixels; not built`
         );
     }
 

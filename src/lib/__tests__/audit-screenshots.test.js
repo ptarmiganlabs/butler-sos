@@ -768,11 +768,16 @@ describe('audit-screenshots', () => {
                 'above the decode budget',
                 5000,
                 4001,
-                'cropPngBuffer: image is 5000x4001 (20005000 pixels), above the decode budget',
+                'AUDIT API: Screenshot stored as downloaded, untrimmed: image is 5000x4001 (20005000 pixels), above the decode budget',
             ],
             // A zero dimension passes a pixel count; pngjs would still size its inflate limit
             // from the other dimension.
-            ['with a zero width', 0, 20, 'cropPngBuffer: PNG header gives 0x20; not decoded'],
+            [
+                'with a zero width',
+                0,
+                20,
+                'AUDIT API: Screenshot stored as downloaded, untrimmed: PNG header gives 0x20; not decoded',
+            ],
         ])(
             'stores an image %s as downloaded, without decoding it',
             async (_label, width, height, message) => {
@@ -794,6 +799,8 @@ describe('audit-screenshots', () => {
                 );
 
                 expect(Buffer.compare(stored, served)).toBe(0);
+                // One warning, worded as the deliberate refusal it is, not as a failure.
+                expect(logger.warn).toHaveBeenCalledTimes(1);
                 expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining(message));
             }
         );
@@ -859,9 +866,60 @@ describe('audit-screenshots', () => {
         expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(1);
         expect(mockFsPromises.writeFile.mock.calls[0][0]).not.toContain('_metadata');
         expect(Buffer.compare(mockFsPromises.writeFile.mock.calls[0][1], served)).toBe(0);
+        expect(logger.warn).toHaveBeenCalledTimes(1);
         expect(logger.warn).toHaveBeenCalledWith(
             expect.stringContaining(
-                'addTextHeaderToPng: image is 5000x4001 (20005000 pixels), above the decode budget'
+                'AUDIT API: Screenshot _metadata copy not written: image is 5000x4001 (20005000 pixels), above the decode budget'
+            )
+        );
+    });
+
+    test('logs one refusal when an oversized image needed both a crop and a metadata copy', async () => {
+        // The crop step refuses first. The metadata step would refuse the same bytes for the
+        // same reason, so it is skipped and the one warning says the copy was not written.
+        const { downloadScreenshot } = await import('../audit-screenshots.js');
+        const logger = quietLogger();
+
+        const src = new PNG({ width: 20, height: 10 });
+        src.data.fill(255);
+        const served = Buffer.from(PNG.sync.write(src));
+        served.writeUInt32BE(5000, 16);
+        served.writeUInt32BE(4001, 20);
+
+        mockAxios.request.mockResolvedValue({
+            status: 200,
+            headers: { 'content-type': 'image/png' },
+            data: served,
+        });
+
+        await downloadScreenshot(
+            'https://example.com/screenshot.png',
+            {
+                timestamp: '2025-12-22T12:34:56.000Z',
+                eventId: 'evt-budget-both',
+                correlationId: 'corr-budget-both',
+                payload: {
+                    event: {
+                        screenshotUrl: 'https://example.com/screenshot.png',
+                        crop: { top: 0, left: 0, width: 10, height: 10 },
+                    },
+                },
+            },
+            {
+                enable: true,
+                downloadTimeoutMs: 15000,
+                addInImageMetadata: { enable: true, fields: { date: true, eventId: true } },
+                storageTargets: [{ enable: true, type: 'flat', directory: 'screenshots/audit' }],
+            },
+            logger
+        );
+
+        expect(mockFsPromises.writeFile).toHaveBeenCalledTimes(1);
+        expect(Buffer.compare(mockFsPromises.writeFile.mock.calls[0][1], served)).toBe(0);
+        expect(logger.warn).toHaveBeenCalledTimes(1);
+        expect(logger.warn).toHaveBeenCalledWith(
+            expect.stringContaining(
+                'AUDIT API: Screenshot stored as downloaded, untrimmed and without its _metadata copy: image is 5000x4001 (20005000 pixels), above the decode budget'
             )
         );
     });
