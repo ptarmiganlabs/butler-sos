@@ -242,6 +242,48 @@ describe('addTextHeaderToPng', () => {
     });
 });
 
+/** The eight bytes every PNG starts with. */
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/**
+ * Builds one PNG chunk with a correct CRC.
+ *
+ * @param {string} type - Four-letter chunk type.
+ * @param {Buffer} data - Chunk data.
+ * @returns {Buffer} Length, type, data and CRC.
+ */
+function pngChunk(type, data) {
+    const head = Buffer.alloc(8);
+    head.writeUInt32BE(data.length, 0);
+    head.write(type, 4, 'ascii');
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(zlib.crc32(Buffer.concat([head.subarray(4), data])), 0);
+    return Buffer.concat([head, data, crc]);
+}
+
+/**
+ * Builds a valid 8-bit palette PNG of 10 x 10 pixels, all of palette index 0, with the given
+ * PLTE chunks (one, normally).
+ *
+ * @param {Buffer[]} palettes - Data of each PLTE chunk to include.
+ * @returns {Buffer} Encoded PNG.
+ */
+function makePalettePng(palettes) {
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(10, 0);
+    ihdr.writeUInt32BE(10, 4);
+    ihdr[8] = 8; // bit depth
+    ihdr[9] = 3; // palette
+    return Buffer.concat([
+        PNG_SIGNATURE,
+        pngChunk('IHDR', ihdr),
+        ...palettes.map((data) => pngChunk('PLTE', data)),
+        // Each row: filter byte 0, then ten palette indexes of 0.
+        pngChunk('IDAT', zlib.deflateSync(Buffer.alloc(10 * 11))),
+        pngChunk('IEND', Buffer.alloc(0)),
+    ]);
+}
+
 /**
  * Builds a valid, interlaced 8-bit RGBA PNG of a single grey colour, with correct CRCs.
  *
@@ -274,14 +316,6 @@ function makeInterlacedPng(width, height, extra) {
             rows.push(row);
         }
     }
-    const chunk = (type, data) => {
-        const head = Buffer.alloc(8);
-        head.writeUInt32BE(data.length, 0);
-        head.write(type, 4, 'ascii');
-        const crc = Buffer.alloc(4);
-        crc.writeUInt32BE(zlib.crc32(Buffer.concat([head.subarray(4), data])), 0);
-        return Buffer.concat([head, data, crc]);
-    };
     const ihdr = Buffer.alloc(13);
     ihdr.writeUInt32BE(width, 0);
     ihdr.writeUInt32BE(height, 4);
@@ -289,10 +323,10 @@ function makeInterlacedPng(width, height, extra) {
     ihdr[9] = 6; // RGBA
     ihdr[12] = 1; // Adam7
     return Buffer.concat([
-        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-        chunk('IHDR', ihdr),
-        chunk('IDAT', zlib.deflateSync(Buffer.concat([...rows, extra]))),
-        chunk('IEND', Buffer.alloc(0)),
+        PNG_SIGNATURE,
+        pngChunk('IHDR', ihdr),
+        pngChunk('IDAT', zlib.deflateSync(Buffer.concat([...rows, extra]))),
+        pngChunk('IEND', Buffer.alloc(0)),
     ]);
 }
 
@@ -393,6 +427,38 @@ describe('decode budget', () => {
         expect(() => assertDecodable(withEmptyChunks(MAX_PNG_CHUNKS - 3), 'test')).not.toThrow();
         expect(() => assertDecodable(withEmptyChunks(MAX_PNG_CHUNKS - 2), 'test')).toThrow(
             'test: PNG has more than 100000 chunks; not decoded'
+        );
+    });
+
+    test('decodes a palette PNG with a full 256-entry palette', () => {
+        const png = makePalettePng([Buffer.alloc(768, 7)]);
+
+        expect(assertDecodable(png, 'test')).toMatchObject({ colorType: 3, width: 10 });
+        const out = PNG.sync.read(addTextHeaderToPng(png, LINES));
+        expect(out.height).toBe(10 + BAND_FOR_3_LINES);
+    });
+
+    test.each([
+        ['257 entries', 771],
+        ['no entries', 0],
+        ['a partial entry', 4],
+    ])('refuses a palette chunk with %s', (_label, length) => {
+        // pngjs turns every 3 palette bytes into its own array, with no limit: a 10 x 10 image
+        // with a 6 MB palette took 199 MB of heap to decode.
+        const png = makePalettePng([Buffer.alloc(length, 7)]);
+
+        expect(() => assertDecodable(png, 'test')).toThrow(
+            `test: PNG palette chunk is ${length} bytes, not 3 to 768 in steps of 3; not decoded`
+        );
+    });
+
+    test('refuses a second palette chunk', () => {
+        // pngjs appends every PLTE chunk to the same palette, so repeating a valid one is the
+        // other way to grow it without limit.
+        const png = makePalettePng([Buffer.alloc(768, 7), Buffer.alloc(768, 7)]);
+
+        expect(() => assertDecodable(png, 'test')).toThrow(
+            'test: PNG has more than one palette chunk; not decoded'
         );
     });
 

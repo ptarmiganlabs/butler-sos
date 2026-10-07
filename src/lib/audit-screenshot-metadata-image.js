@@ -290,6 +290,31 @@ export const MAX_PNG_CHUNKS = 100 * 1000;
 const CHUNK_IHDR = 0x49484452;
 const CHUNK_IDAT = 0x49444154;
 const CHUNK_IEND = 0x49454e44;
+const CHUNK_PLTE = 0x504c5445;
+
+/**
+ * Throws unless a palette chunk is one the PNG specification allows: the only one in the file,
+ * with 1 to 256 entries of 3 bytes each.
+ *
+ * pngjs enforces none of this. It turns every 3 bytes of every PLTE chunk into its own
+ * 4-element array, so a 10 x 10 image with a 6 MB palette took 199 MB of heap to decode.
+ *
+ * @param {number} length Length of the PLTE chunk's data.
+ * @param {boolean} seenBefore Whether an earlier PLTE chunk was found.
+ * @param {string} caller Name of the calling function, for the error message.
+ * @throws {PngNotDecodedError} If the palette is not allowed.
+ */
+function assertValidPalette(length, seenBefore, caller) {
+    if (seenBefore) {
+        throw new PngNotDecodedError(caller, 'PNG has more than one palette chunk; not decoded');
+    }
+    if (length === 0 || length > 768 || length % 3 !== 0) {
+        throw new PngNotDecodedError(
+            caller,
+            `PNG palette chunk is ${length} bytes, not 3 to 768 in steps of 3; not decoded`
+        );
+    }
+}
 
 /**
  * Walks the chunks after the IHDR and returns how many bytes of image data they hold.
@@ -301,11 +326,13 @@ const CHUNK_IEND = 0x49454e44;
  * @param {Buffer} buffer PNG bytes whose header has been checked.
  * @param {string} caller Name of the calling function, for the error message.
  * @returns {number} Total bytes of IDAT data.
- * @throws {PngNotDecodedError} On a second IHDR chunk, or more than MAX_PNG_CHUNKS chunks.
+ * @throws {PngNotDecodedError} On a second IHDR chunk, an invalid or repeated palette, or more
+ *   than MAX_PNG_CHUNKS chunks.
  */
 function measureImageData(buffer, caller) {
     let chunks = 1;
     let imageDataBytes = 0;
+    let paletteSeen = false;
     for (let offset = 33; offset + 8 <= buffer.length;) {
         chunks += 1;
         if (chunks > MAX_PNG_CHUNKS) {
@@ -322,6 +349,10 @@ function measureImageData(buffer, caller) {
         if (type === CHUNK_IEND) break;
         if (type === CHUNK_IDAT) {
             imageDataBytes += Math.min(length, buffer.length - offset - 8);
+        }
+        if (type === CHUNK_PLTE) {
+            assertValidPalette(length, paletteSeen, caller);
+            paletteSeen = true;
         }
         offset += 12 + length;
     }
@@ -385,6 +416,8 @@ function assertInterlacedDataFits(buffer, header, bitsPerPixel, imageDataBytes, 
  * - more than MAX_DECODED_PIXELS pixels, a 16-bit image counting double;
  * - a second IHDR chunk, which pngjs lets replace the first, so the size checked here would
  *   not be the size decoded;
+ * - a palette that is repeated, empty, larger than 256 entries or not a whole number of
+ *   entries (see assertValidPalette);
  * - more than MAX_PNG_CHUNKS chunks.
  *
  * For an interlaced image it also inflates the image data once, limited to the size the
