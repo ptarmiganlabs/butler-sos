@@ -7,6 +7,7 @@ import {
     addTextHeaderToPng,
     assertDecodable,
     MAX_DECODED_PIXELS,
+    MAX_PNG_CHUNKS,
     PngNotDecodedError,
     readPngHeader,
 } from '../audit-screenshot-metadata-image.js';
@@ -370,6 +371,28 @@ describe('decode budget', () => {
 
         expect(() => assertDecodable(png, 'test')).toThrow(
             'test: interlaced PNG data unpacks to more than its 10x10 header allows; not decoded'
+        );
+    });
+
+    test('allows MAX_PNG_CHUNKS chunks and refuses one more, without keeping any per chunk', () => {
+        // pngjs keeps a Buffer per IDAT chunk while decoding: a 48 MB file of four million empty
+        // IDAT chunks took over 500 MB of heap just to list. IHDR and IEND count too.
+        expect(MAX_PNG_CHUNKS).toBe(100000);
+        const png = makeSourcePng(4, 4);
+        const ihdrEnd = 8 + 8 + 13 + 4;
+        const emptyIdat = Buffer.from([0, 0, 0, 0, 0x49, 0x44, 0x41, 0x54, 0x35, 0xaf, 0x06, 0x1e]);
+        const iend = png.subarray(png.length - 12);
+        const withEmptyChunks = (count) =>
+            Buffer.concat([
+                png.subarray(0, ihdrEnd),
+                Buffer.concat(Array(count).fill(emptyIdat)),
+                png.subarray(ihdrEnd, png.length - 12),
+                iend,
+            ]);
+        // The 4 x 4 source has one IDAT of its own, so IHDR + IDAT + IEND is 3 chunks.
+        expect(() => assertDecodable(withEmptyChunks(MAX_PNG_CHUNKS - 3), 'test')).not.toThrow();
+        expect(() => assertDecodable(withEmptyChunks(MAX_PNG_CHUNKS - 2), 'test')).toThrow(
+            'test: PNG has more than 100000 chunks; not decoded'
         );
     });
 

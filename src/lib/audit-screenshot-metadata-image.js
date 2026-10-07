@@ -278,6 +278,102 @@ function interlacedDataSize(width, height, bitsPerPixel) {
 }
 
 /**
+ * Most chunks a PNG may have before this pipeline refuses it. pngjs keeps one Buffer for every
+ * IDAT chunk while it decodes, so a file of nothing but tiny chunks costs memory per chunk
+ * whatever its pixel count: a 48 MB file of four million empty IDAT chunks, with a 10 x 10
+ * header, took over 500 MB of heap just to list them. Real encoders write image data in chunks
+ * of 8 KB and up, which puts even a 50 MB screenshot at a few thousand chunks.
+ */
+export const MAX_PNG_CHUNKS = 100 * 1000;
+
+/** Chunk types, as the big-endian 32-bit integers they are stored as. */
+const CHUNK_IHDR = 0x49484452;
+const CHUNK_IDAT = 0x49444154;
+const CHUNK_IEND = 0x49454e44;
+
+/**
+ * Walks the chunks after the IHDR and returns how many bytes of image data they hold.
+ *
+ * Every chunk is length (4), type (4), data, CRC (4). Nothing is kept per chunk, and types are
+ * compared as integers, so the walk allocates nothing whatever the file holds. A length that
+ * runs past the end just ends the walk; pngjs reports the truncation itself.
+ *
+ * @param {Buffer} buffer PNG bytes whose header has been checked.
+ * @param {string} caller Name of the calling function, for the error message.
+ * @returns {number} Total bytes of IDAT data.
+ * @throws {PngNotDecodedError} On a second IHDR chunk, or more than MAX_PNG_CHUNKS chunks.
+ */
+function measureImageData(buffer, caller) {
+    let chunks = 1;
+    let imageDataBytes = 0;
+    for (let offset = 33; offset + 8 <= buffer.length;) {
+        chunks += 1;
+        if (chunks > MAX_PNG_CHUNKS) {
+            throw new PngNotDecodedError(
+                caller,
+                `PNG has more than ${MAX_PNG_CHUNKS} chunks; not decoded`
+            );
+        }
+        const length = buffer.readUInt32BE(offset);
+        const type = buffer.readUInt32BE(offset + 4);
+        if (type === CHUNK_IHDR) {
+            throw new PngNotDecodedError(caller, 'PNG has a second IHDR chunk; not decoded');
+        }
+        if (type === CHUNK_IEND) break;
+        if (type === CHUNK_IDAT) {
+            imageDataBytes += Math.min(length, buffer.length - offset - 8);
+        }
+        offset += 12 + length;
+    }
+    return imageDataBytes;
+}
+
+/**
+ * Throws if an interlaced PNG's image data would unpack to more than its header allows.
+ *
+ * pngjs inflates interlaced data with no output limit at all. Here the IDAT data is copied once
+ * into a single buffer of the size measureImageData found, and inflated with the limit its
+ * Adam7 passes allow, so the inflate stops as soon as the data runs past it.
+ *
+ * @param {Buffer} buffer PNG bytes whose header and chunks have been checked.
+ * @param {{ width: number, height: number }} header The PNG header.
+ * @param {number} bitsPerPixel Channels times bit depth.
+ * @param {number} imageDataBytes Total bytes of IDAT data.
+ * @param {string} caller Name of the calling function, for the error message.
+ * @throws {PngNotDecodedError} If the data would unpack to more than the header allows.
+ */
+function assertInterlacedDataFits(buffer, header, bitsPerPixel, imageDataBytes, caller) {
+    const imageData = Buffer.allocUnsafe(imageDataBytes);
+    let filled = 0;
+    for (let offset = 33; offset + 8 <= buffer.length;) {
+        const length = buffer.readUInt32BE(offset);
+        const type = buffer.readUInt32BE(offset + 4);
+        if (type === CHUNK_IEND) break;
+        if (type === CHUNK_IDAT) {
+            filled += buffer.copy(
+                imageData,
+                filled,
+                offset + 8,
+                Math.min(offset + 8 + length, buffer.length)
+            );
+        }
+        offset += 12 + length;
+    }
+    const limit = interlacedDataSize(header.width, header.height, bitsPerPixel);
+    try {
+        zlib.inflateSync(imageData, { maxOutputLength: limit });
+    } catch (err) {
+        if (err?.code === 'ERR_BUFFER_TOO_LARGE') {
+            throw new PngNotDecodedError(
+                caller,
+                `interlaced PNG data unpacks to more than its ${header.width}x${header.height} header allows; not decoded`
+            );
+        }
+        // Corrupt data: pngjs stops at the same point and reports it.
+    }
+}
+
+/**
  * Throws unless a PNG can be decoded within MAX_DECODED_PIXELS, and returns its header.
  *
  * Reads chunk headers, never pixel data, so it is cheap to run before every decode. It refuses
@@ -286,14 +382,14 @@ function interlacedDataSize(width, height, bitsPerPixel) {
  *   limit from the other dimension (a 16 KB file with a 0 x 4294967295 header ran Node out of
  *   memory);
  * - a colour type and bit depth the PNG specification does not allow together;
+ * - more than MAX_DECODED_PIXELS pixels, a 16-bit image counting double;
  * - a second IHDR chunk, which pngjs lets replace the first, so the size checked here would
  *   not be the size decoded;
- * - more than MAX_DECODED_PIXELS pixels, a 16-bit image counting double.
+ * - more than MAX_PNG_CHUNKS chunks.
  *
- * pngjs inflates an interlaced image with no output limit at all, so for one of those the
- * image data is inflated here first, limited to the size its header allows, and refused if it
- * would unpack to more. That inflate is the one place this check reads pixel data, and it
- * costs one extra inflate for interlaced images only.
+ * For an interlaced image it also inflates the image data once, limited to the size the
+ * header allows (see assertInterlacedDataFits). That is the one place it reads pixel data, and
+ * it costs one extra inflate for interlaced images only.
  *
  * @param {Buffer} buffer Candidate PNG bytes.
  * @param {string} caller Name of the calling function, for the error message.
@@ -320,23 +416,7 @@ export function assertDecodable(buffer, caller) {
             `PNG colour type ${colorType} with bit depth ${bitDepth} is not a valid combination; not decoded`
         );
     }
-    // Every chunk is length (4), type (4), data, CRC (4). A length that runs past the end just
-    // ends the walk; pngjs reports the truncation itself.
-    const imageData = [];
-    for (let offset = 33; offset + 8 <= buffer.length;) {
-        const length = buffer.readUInt32BE(offset);
-        const type = buffer.toString('ascii', offset + 4, offset + 8);
-        if (type === 'IHDR') {
-            throw new PngNotDecodedError(caller, 'PNG has a second IHDR chunk; not decoded');
-        }
-        if (type === 'IEND') break;
-        if (type === 'IDAT') {
-            imageData.push(
-                buffer.subarray(offset + 8, Math.min(offset + 8 + length, buffer.length))
-            );
-        }
-        offset += 12 + length;
-    }
+    // The budget is checked from the header alone, before any walk over the chunks.
     const pixels = width * height * (bitDepth === 16 ? 2 : 1);
     if (pixels > MAX_DECODED_PIXELS) {
         const size =
@@ -348,19 +428,9 @@ export function assertDecodable(buffer, caller) {
             `image is ${size}, above the decode budget of ${MAX_DECODED_PIXELS} pixels; not decoded`
         );
     }
+    const imageDataBytes = measureImageData(buffer, caller);
     if (interlace !== 0) {
-        const expected = interlacedDataSize(width, height, channels * bitDepth);
-        try {
-            zlib.inflateSync(Buffer.concat(imageData), { maxOutputLength: expected });
-        } catch (err) {
-            if (err && err.code === 'ERR_BUFFER_TOO_LARGE') {
-                throw new PngNotDecodedError(
-                    caller,
-                    `interlaced PNG data unpacks to more than its ${width}x${height} header allows; not decoded`
-                );
-            }
-            // Corrupt data: pngjs stops at the same point and reports it.
-        }
+        assertInterlacedDataFits(buffer, header, channels * bitDepth, imageDataBytes, caller);
     }
     return header;
 }

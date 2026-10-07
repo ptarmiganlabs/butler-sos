@@ -36,7 +36,9 @@ figures were measured on Node.js 24.
 
 Some files are never unpacked, whatever their size, because they are not normal screenshots
 and unpacking them could use unbounded memory: images with a width or height of zero, images
-with more than one header, and images whose header describes a format PNG does not allow.
+with more than one header, images whose header describes a format PNG does not allow, and
+images split into more than 100,000 pieces (chunks). Real screenshots use a few thousand at
+most.
 Interlaced images are unpacked only after Butler SOS has checked that their data does not
 unpack to more than their header says.
 
@@ -71,7 +73,8 @@ not built`.
 The files that are never unpacked give one of these reasons instead of the size:
 `PNG header gives 0x...`, `PNG has a second IHDR chunk`,
 `PNG colour type ... with bit depth ... is not a valid combination`,
-`interlaced PNG data unpacks to more than its ... header allows`, `not a PNG` or
+`interlaced PNG data unpacks to more than its ... header allows`,
+`PNG has more than 100000 chunks`, `not a PNG` or
 `PNG header chunk has the wrong length`.
 
 None of these is an error. A warning that starts `AUDIT API: Failed to crop screenshot PNG` or
