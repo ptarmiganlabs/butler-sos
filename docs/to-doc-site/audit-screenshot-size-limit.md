@@ -50,9 +50,13 @@ unpack to more than their header says.
 - The separate `_metadata` copy is not written.
 - The audit event itself is stored as normal, in every destination.
 
-Butler SOS logs one warning per screenshot, naming the reason. When the screenshot needed
-trimming, or Butler SOS is logging at debug level, it looks like this (the words "and without
-its \_metadata copy" appear only when the metadata header is switched on):
+Butler SOS checks a screenshot only when it has to unpack it: to trim it, to write the
+`_metadata` copy, or because it is logging at debug level. A screenshot that needs none of
+these is stored as downloaded without being unpacked, and nothing is logged, whatever its size.
+
+When an unpack is refused, Butler SOS logs one warning naming the reason. When the screenshot
+needed trimming, or Butler SOS is logging at debug level, it looks like this (the words "and
+without its \_metadata copy" appear only when the metadata header is switched on):
 
 ```text
 AUDIT API: Screenshot stored as downloaded, untrimmed and without its _metadata copy: image is 800x1800354 (1440283200 pixels), above the decode budget of 20000000 pixels; not decoded. selectionTxnId=... eventId=...
