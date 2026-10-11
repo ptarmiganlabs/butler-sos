@@ -113,6 +113,29 @@ still miss the point.
   `<type>: <imperative summary>`. Sections defined in `release-please-config.json`: `feat`,
   `fix`, `chore`, `refactor`, `docs`, `build`, `test`
 
+## Releases
+
+- **Releases are drafts, tagged as they are made** (`"draft": true` and
+  `"force-tag-creation": true` in `release-please-config.json`). Merging the release pull
+  request creates the draft and the tag `butler-sos-vX.Y.Z` together, and ci's build jobs
+  attach the SBOM and the Linux, macOS and Windows zips. So a tag does not mean a release is
+  out; ask the release: `gh release view butler-sos-vX.Y.Z --json isDraft`.
+- **Publishing the draft is what ships it.** `docker-image-build.yaml` (Docker Hub, including
+  `latest`) and `virus-scan.yaml` run on `release: published`. Keep them there: moved to a tag
+  push, they would run for a draft nobody has published.
+- **Why the tag comes with the draft.** release-please finds the previous release by its tag,
+  and the run that creates a release goes straight on to build the next release pull request.
+  Before this setting a draft had no tag, so release-please found no previous release, took
+  the last 200 commits, and proposed a new version repeating everything already released: the
+  15.1.0 run opened #1514 (15.2.0, 115 entries, none of them new) that way. A release pull
+  request carrying more than the commits since the last release means the tag was not found.
+- **Check the draft before publishing it:** four assets, `manifest.spdx.json` and the
+  `linux-x64`, `macos-arm64` and `win` zips. The first 15.1.0 draft had only the Linux zip and
+  the SBOM.
+- **List release pull requests by their branch, not by search:**
+  `gh pr list --state all --head release-please--branches--master--components--butler-sos`.
+  GitHub's search index lags.
+
 ## Finish by recommending what is worth doing next
 
 Every time you hand work back, close with what remains and what it is worth. Rank the remaining
