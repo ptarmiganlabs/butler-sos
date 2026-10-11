@@ -81,7 +81,7 @@
         "fastify-metrics": "^13.2.1",
         "fastify-plugin": "^6.0.0",
         "fs-extra": "^11.4.0",
-        "handlebars": "^4.7.8",
+        "handlebars": "^4.7.10",
         "hyparquet-writer": "^0.16.5",
         "influx": "^5.12.0",
         "js-yaml": "^5.2.1",
