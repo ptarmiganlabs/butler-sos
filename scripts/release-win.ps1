@@ -1,18 +1,29 @@
 # Platform: Windows only
 # Requires: Node.js, the npm dependencies (npm ci), PowerShell, Windows SDK (signtool.exe)
 #
-# Builds the unsigned Windows release binary, butler-sos.exe, and a SHA-256 digest of it,
-# butler-sos.exe.sha256, in the repository root. Signing happens elsewhere.
+#   .\scripts\release-win.ps1          # what CI runs
+#   .\scripts\release-win.ps1 -Zip     # also zip it, unsigned, in the release layout
 #
-# In a release, ci.yaml's build-win64 job runs this script, sign-win64 signs the result through
-# Azure Artifact Signing, and publish-win64 zips it with the config templates and attaches the zip
-# to the release. sign-win64 holds the signing credential and runs none of this code, which is why
-# this script stops at an unsigned binary. The digest is how sign-win64 knows that the file it signs
-# is the file this built.
+# Builds the unsigned Windows release binary, butler-sos.exe, and a SHA-256 digest of it,
+# butler-sos.exe.sha256, in the repository root, and stages the files that ship beside it in
+# win64-extras/. Signing happens elsewhere.
+#
+# In a release, ci.yaml's build-win64 job runs this script, sign-win64 signs the binary through
+# Azure Artifact Signing, and publish-win64 zips the signed binary with win64-extras/ and attaches
+# the zip to the release. sign-win64 holds the signing credential and runs none of this code, which
+# is why this script stops at an unsigned binary. The digest is how sign-win64 knows that the file
+# it signs is the file this built.
+param(
+    # Also write butler-sos-<version>-win.zip, as a release has it but unsigned. For local builds:
+    # CI never uses it, because a release must ship the signed binary.
+    [switch]$Zip
+)
 $ErrorActionPreference = 'Stop'
 
-$name = if ($env:DIST_FILE_NAME) { $env:DIST_FILE_NAME } else { 'butler-sos' }
+# Fixed rather than configurable: ci.yaml's Windows jobs and the release asset name use it too.
+$name = 'butler-sos'
 $binary = "./$name.exe"
+$extras = './win64-extras'
 
 # -------------------
 # Bundle the app into one file, and turn that into the blob the executable carries.
@@ -42,11 +53,13 @@ if ($LASTEXITCODE -ne 0) { throw "postject failed with exit code $LASTEXITCODE" 
 
 # -------------------
 # Smoke-test it. A binary that cannot start is not worth signing, and this is the cheapest check
-# that postject produced something that runs. It must also report the version being built.
+# that postject produced something that runs. Some line of its output must be the version being
+# built and nothing else: a bare substring match would also accept 15.1.10 for 15.1.1, or an error
+# message that happens to mention the version.
 $expected = node -p "require('./package.json').version"
 $reported = (& $binary --version | Out-String).Trim()
 if ($LASTEXITCODE -ne 0) { throw "The built binary failed to run: --version exited $LASTEXITCODE." }
-if ($reported -notmatch [regex]::Escape($expected)) {
+if ($reported -notmatch "(?m)^\s*v?$([regex]::Escape($expected))\s*$") {
     throw "The built binary reports version '$reported', expected '$expected'."
 }
 Write-Host "smoke test: --version reports $reported"
@@ -61,4 +74,21 @@ if ($status -ne 'NotSigned') { throw "The built binary should carry no signature
 $hash = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash
 Set-Content -LiteralPath "$binary.sha256" -Value $hash -Encoding ascii
 Write-Host "unsigned SHA256: $hash"
+
+# -------------------
+# Stage what ships beside the binary, laid out as it is in the release zip. This is the one place
+# that layout is defined; publish-win64 zips the signed binary with whatever is staged here.
+if (Test-Path $extras) { Remove-Item -LiteralPath $extras -Recurse -Force }
+New-Item -ItemType Directory -Path "$extras/config" -Force | Out-Null
+Copy-Item -Path ./src/config/log_appender_xml -Destination "$extras/config/" -Recurse
+Copy-Item -Path ./src/config/production_template.yaml -Destination "$extras/config/"
+Copy-Item -Path ./THIRD-PARTY-NOTICES.md -Destination "$extras/"
+
+if ($Zip) {
+    $zipName = "./$name-$expected-win.zip"
+    Compress-Archive -Path $binary, "$extras/*" -DestinationPath $zipName -Force
+    Write-Host "unsigned zip: $zipName"
+}
+
 Get-ChildItem $binary, "$binary.sha256"
+Get-ChildItem $extras -Recurse | Select-Object -ExpandProperty FullName

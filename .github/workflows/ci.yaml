@@ -79,9 +79,12 @@ jobs:
       DIST_FILE_NAME: butler-sos
 
     steps:
-      - name: Checkout repository
+      - name: Checkout the released commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          # The commit release-please released, not github.sha, so that every asset of a release
+          # is built from the same commit as the Windows binary is.
+          ref: ${{ needs.release-please.outputs.release_sha }}
           persist-credentials: false
 
       - name: Setup Node.js
@@ -160,9 +163,12 @@ jobs:
           echo "version    : ${{ needs.release-please.outputs.release_version }}"
           echo "upload_url : ${{ needs.release-please.outputs.release_upload_url }}"
 
-      - name: Checkout repository
+      - name: Checkout the released commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          # The commit release-please released, not github.sha, so that every asset of a release
+          # is built from the same commit as the Windows binary is.
+          ref: ${{ needs.release-please.outputs.release_sha }}
           persist-credentials: false
 
       - name: Setup Node.js
@@ -269,7 +275,8 @@ jobs:
         run: npm ci --ignore-scripts
 
       # scripts/release-win.ps1 builds, smoke-tests and checks the binary carries no signature,
-      # then records the digest sign-win64 checks against.
+      # records the digest sign-win64 checks against, and stages what ships beside the binary in
+      # win64-extras/. The script, not this file, defines the zip's layout.
       - name: Build the unsigned binary
         shell: pwsh
         run: |
@@ -277,16 +284,10 @@ jobs:
           $hash = Get-Content -LiteralPath ./butler-sos.exe.sha256
           Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value "Unsigned Windows binary SHA256: ``$hash``"
 
-      # What goes in the zip beside the executable, laid out as it is in the zip. It goes straight
-      # to publish-win64 and never through sign-win64, which handles one file and nothing else.
-      - name: Stage the files that ship beside the binary
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path win64-extras/config -Force | Out-Null
-          Copy-Item -Path src/config/log_appender_xml -Destination win64-extras/config/ -Recurse
-          Copy-Item -Path src/config/production_template.yaml -Destination win64-extras/config/
-          Copy-Item -Path THIRD-PARTY-NOTICES.md -Destination win64-extras/
-
+      # Kept 30 days for a release, which is as long as GitHub lets a job be re-run. A failed
+      # sign-win64 or publish-win64 can only be recovered with "Re-run failed jobs", and that needs
+      # these artifacts still to exist: "Re-run all jobs" builds nothing, because release-please
+      # then finds the release already made and reports no new one. A rehearsal needs three days.
       - name: Upload the unsigned binary
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
@@ -294,15 +295,16 @@ jobs:
           path: |
             butler-sos.exe
             butler-sos.exe.sha256
-          retention-days: 1
+          retention-days: ${{ inputs.rehearse_signing && 3 || 30 }}
           if-no-files-found: error
 
+      # Straight to publish-win64, never through sign-win64, which handles one file and nothing else.
       - name: Upload the files that ship beside it
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: win64-extras
           path: win64-extras/
-          retention-days: 1
+          retention-days: ${{ inputs.rehearse_signing && 3 || 30 }}
           if-no-files-found: error
 
   sign-win64:
@@ -385,7 +387,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Signature verification failed." }
           $sig = Get-AuthenticodeSignature -LiteralPath to-sign\butler-sos.exe
           if ($sig.Status -ne 'Valid') { throw "Windows reads the signature as $($sig.Status): $($sig.StatusMessage)" }
-          if ($sig.SignerCertificate.Subject -notmatch 'CN=Ptarmigan Labs AB') {
+          # Anchored to a whole CN attribute, so that a subject merely containing the name, such
+          # as "CN=Ptarmigan Labs AB Holding", does not pass.
+          if ($sig.SignerCertificate.Subject -notmatch '(^|,\s*)CN=Ptarmigan Labs AB(,|$)') {
             throw "Signed by an unexpected certificate: $($sig.SignerCertificate.Subject)"
           }
           Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value @(
@@ -398,9 +402,10 @@ jobs:
         with:
           name: win64-signed
           path: to-sign/butler-sos.exe
-          # A day is enough for publish-win64. A rehearsal's binary is the one somebody might want
-          # to try on a real machine, so it stays three days.
-          retention-days: ${{ github.event_name == 'workflow_dispatch' && inputs.rehearse_signing && 3 || 1 }}
+          # 30 days for a release, so that a failed publish-win64 can still be re-run on its own;
+          # see the uploads in build-win64. A rehearsal's binary stays three days, for anyone who
+          # wants to try it on a real machine.
+          retention-days: ${{ inputs.rehearse_signing && 3 || 30 }}
           if-no-files-found: error
 
   publish-win64:
@@ -436,18 +441,16 @@ jobs:
         with:
           subject-path: package/butler-sos.exe
 
-      # The same layout earlier releases had: the executable at the top, the config templates
-      # under config/, and the third-party notices beside them.
+      # The signed executable at the top, and everything scripts/release-win.ps1 staged beside
+      # it, as it staged it. The layout is the script's to define, not this step's.
       - name: Zip it
         env:
           ZIP_NAME: butler-sos-${{ needs.release-please.outputs.release_version }}-win.zip
         run: |
           set -euo pipefail
           cd package
-          for f in butler-sos.exe config/production_template.yaml config/log_appender_xml THIRD-PARTY-NOTICES.md; do
-            test -e "$f" || { echo "::error::$f is missing from what build-win64 and sign-win64 produced"; exit 1; }
-          done
-          zip -r -9 "../$ZIP_NAME" butler-sos.exe config THIRD-PARTY-NOTICES.md
+          test -f butler-sos.exe || { echo "::error::butler-sos.exe is missing from what sign-win64 produced"; exit 1; }
+          zip -r -9 "../$ZIP_NAME" .
           cd ..
           unzip -l "$ZIP_NAME"
 
@@ -487,9 +490,12 @@ jobs:
       #     echo "version    : ${{ needs.release-please.outputs.release_version }}"
       #     echo "upload_url : ${{ needs.release-please.outputs.release_upload_url }}"
 
-      - name: Checkout repository
+      - name: Checkout the released commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          # The commit release-please released, not github.sha, so that every asset of a release
+          # is built from the same commit as the Windows binary is.
+          ref: ${{ needs.release-please.outputs.release_sha }}
           persist-credentials: false
 
       - name: Setup Node.js

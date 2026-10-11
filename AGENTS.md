@@ -138,6 +138,10 @@ still miss the point.
   `publish-win64` zips and attaches it. Never add a checkout, npm or `./scripts` step to
   `sign-win64`. To prove signing works without releasing anything:
   `gh workflow run ci.yaml --ref master -f rehearse_signing=true`.
+- **If a release job fails, use "Re-run failed jobs", within 30 days.** "Re-run all jobs" builds
+  nothing: release-please finds the release already made and reports no new one, so every job
+  that waits for it is skipped. The Windows artifacts are kept 30 days on release runs so that
+  `sign-win64` and `publish-win64` can still be re-run on their own.
 - **Never re-run a release job after the release is published** unless its upload step sets
   `omitDraftDuringUpdate: true`. One that sets only `draft: true` turns the release back into a
   draft.
