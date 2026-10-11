@@ -20,6 +20,10 @@ test_data
 build.cjs
 butler-sos
 butler-sos.exe
+# scripts/release-win.ps1 output besides the executable
+butler-sos.exe.sha256
+win64-extras/
+butler-sos-*-win.zip
 butler-sos--local--*
 sea-prep.blob
 src/config/production_vac.yaml

@@ -132,6 +132,19 @@ still miss the point.
 - **Check the draft before publishing it:** four assets, `manifest.spdx.json` and the
   `linux-x64`, `macos-arm64` and `win` zips. The first 15.1.0 draft had only the Linux zip and
   the SBOM.
+- **The Windows binary is signed through Azure Artifact Signing**, in three ci jobs on
+  GitHub-hosted runners: `build-win64` builds it unsigned, `sign-win64` signs it and holds the
+  only credential (the `release-signing` environment, which admits `master` alone), and
+  `publish-win64` zips and attaches it. Never add a checkout, npm or `./scripts` step to
+  `sign-win64`. To prove signing works without releasing anything:
+  `gh workflow run ci.yaml --ref master -f rehearse_signing=true`.
+- **If a release job fails, use "Re-run failed jobs", within 30 days.** "Re-run all jobs" builds
+  nothing: release-please finds the release already made and reports no new one, so every job
+  that waits for it is skipped. The Windows artifacts are kept 30 days on release runs so that
+  `sign-win64` and `publish-win64` can still be re-run on their own.
+- **Never re-run a release job after the release is published** unless its upload step sets
+  `omitDraftDuringUpdate: true`. One that sets only `draft: true` turns the release back into a
+  draft.
 - **List release pull requests by their branch, not by search:**
   `gh pr list --state all --head release-please--branches--master--components--butler-sos`.
   GitHub's search index lags.

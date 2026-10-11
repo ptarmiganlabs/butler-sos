@@ -165,7 +165,8 @@ Builds a Butler SOS binary for Linux release distribution.
 
 ### release-win.ps1
 
-Builds a Butler SOS binary for Windows release distribution (PowerShell script).
+Builds the unsigned Windows release binary (PowerShell script). In CI it is the build step of
+the Windows release; signing and packaging happen in later CI jobs that run none of this code.
 
 **Platform:** Windows only
 
@@ -173,7 +174,25 @@ Builds a Butler SOS binary for Windows release distribution (PowerShell script).
 
 ```powershell
 .\scripts\release-win.ps1
+.\scripts\release-win.ps1 -Zip
 ```
+
+**Output:**
+
+- `butler-sos.exe` and `butler-sos.exe.sha256` (its SHA-256 digest) in the repository root.
+- `win64-extras/`: the files that ship beside the executable in the release zip
+  (`config/log_appender_xml/`, `config/production_template.yaml`, `THIRD-PARTY-NOTICES.md`).
+  The script is the one place that layout is defined.
+- With `-Zip`, also `butler-sos-<version>-win.zip` in the release layout, but unsigned.
+
+**Notes:**
+
+- Requires `signtool.exe` from the Windows SDK, to remove the signature `node.exe` arrives with
+  before the app is injected. It is found by search, so any installed SDK version works.
+- Fails unless the binary runs, reports the version in `package.json`, and carries no signature.
+- Signs nothing. In a release, CI's `sign-win64` job signs the binary through Azure Artifact
+  Signing, and `publish-win64` zips the signed binary with `win64-extras/`. A zip made with
+  `-Zip` is for local use only: a release must ship the signed binary.
 
 ---
 
