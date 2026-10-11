@@ -132,6 +132,12 @@ still miss the point.
 - **Check the draft before publishing it:** four assets, `manifest.spdx.json` and the
   `linux-x64`, `macos-arm64` and `win` zips. The first 15.1.0 draft had only the Linux zip and
   the SBOM.
+- **The Windows binary is signed through Azure Artifact Signing**, in three ci jobs on
+  GitHub-hosted runners: `build-win64` builds it unsigned, `sign-win64` signs it and holds the
+  only credential (the `release-signing` environment, which admits `master` alone), and
+  `publish-win64` zips and attaches it. Never add a checkout, npm or `./scripts` step to
+  `sign-win64`. To prove signing works without releasing anything:
+  `gh workflow run ci.yaml --ref master -f rehearse_signing=true`.
 - **Never re-run a release job after the release is published** unless its upload step sets
   `omitDraftDuringUpdate: true`. One that sets only `draft: true` turns the release back into a
   draft.
