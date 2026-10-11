@@ -387,10 +387,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Signature verification failed." }
           $sig = Get-AuthenticodeSignature -LiteralPath to-sign\butler-sos.exe
           if ($sig.Status -ne 'Valid') { throw "Windows reads the signature as $($sig.Status): $($sig.StatusMessage)" }
-          # Anchored to a whole CN attribute, so that a subject merely containing the name, such
-          # as "CN=Ptarmigan Labs AB Holding", does not pass.
-          if ($sig.SignerCertificate.Subject -notmatch '(^|,\s*)CN=Ptarmigan Labs AB(,|$)') {
-            throw "Signed by an unexpected certificate: $($sig.SignerCertificate.Subject)"
+          # The certificate's own parsed common name, compared exactly and case-sensitively. Not a
+          # pattern over the subject string, which "Ptarmigan Labs ABC", "Ptarmigan Labs AB
+          # Holding" or quoting in the distinguished name could get past.
+          $signer = $sig.SignerCertificate.GetNameInfo([System.Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false)
+          if ($signer -cne 'Ptarmigan Labs AB') {
+            throw "Signed by an unexpected certificate: '$signer' ($($sig.SignerCertificate.Subject))"
           }
           Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value @(
             "Signed by: ``$($sig.SignerCertificate.Subject)``",
