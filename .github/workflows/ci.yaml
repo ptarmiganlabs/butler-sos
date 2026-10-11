@@ -438,10 +438,24 @@ jobs:
 
       # Lets anyone check, with `gh attestation verify`, that a given copy of the signed binary came
       # out of this workflow at this commit. Available because the repository is public.
+      #
+      # Only when this run's commit is the released commit. The attestation takes its source commit
+      # from the run's OIDC token, which is github.sha, while build-win64 built release_sha. The two
+      # differ when a later push's run is the one that creates the release, and an attestation that
+      # names the wrong source commit is worse than none.
       - name: Generate build provenance
+        if: needs.release-please.outputs.release_sha == github.sha
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: package/butler-sos.exe
+
+      - name: Say why there is no build provenance
+        if: needs.release-please.outputs.release_sha != github.sha
+        env:
+          RELEASE_SHA: ${{ needs.release-please.outputs.release_sha }}
+          RUN_SHA: ${{ github.sha }}
+        run: |
+          echo "::warning::No build provenance attestation for the Windows binary: this run started at $RUN_SHA, but the release and its binary are from $RELEASE_SHA, and the attestation would name the wrong commit."
 
       # The signed executable at the top, and everything scripts/release-win.ps1 staged beside
       # it, as it staged it. The layout is the script's to define, not this step's.

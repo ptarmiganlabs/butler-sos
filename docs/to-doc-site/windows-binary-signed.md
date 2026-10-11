@@ -43,14 +43,18 @@ Get-AuthenticodeSignature .\butler-sos.exe | Format-List Status, SignerCertifica
 certificate is issued through Microsoft's identity-verified code-signing service, and the
 signature carries a timestamp, so it remains valid after the certificate itself expires.
 
-**Optionally, check where the file was built.** Each signed Windows executable also has a
-published record showing that it was built and signed by Butler SOS's own release process on
+**Optionally, check where the file was built.** A signed Windows executable normally also has
+a published record showing that it was built and signed by Butler SOS's own release process on
 GitHub, from the source code of that release. With the GitHub command-line tool (`gh`) installed
 and signed in to a GitHub account, you can check a downloaded copy against that record:
 
 ```bash
 gh attestation verify butler-sos.exe --repo ptarmiganlabs/butler-sos
 ```
+
+Occasionally a release is published without this record, when it could not have named the right
+source commit. The command then reports that it found no attestation. The digital signature
+described above is unaffected and still identifies the file.
 
 ---
 
