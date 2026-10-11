@@ -132,6 +132,9 @@ still miss the point.
 - **Check the draft before publishing it:** four assets, `manifest.spdx.json` and the
   `linux-x64`, `macos-arm64` and `win` zips. The first 15.1.0 draft had only the Linux zip and
   the SBOM.
+- **Never re-run a release job after the release is published** unless its upload step sets
+  `omitDraftDuringUpdate: true`. One that sets only `draft: true` turns the release back into a
+  draft.
 - **List release pull requests by their branch, not by search:**
   `gh pr list --state all --head release-please--branches--master--components--butler-sos`.
   GitHub's search index lags.

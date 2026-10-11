@@ -118,6 +118,8 @@ jobs:
           omitNameDuringUpdate: true
           # artifactContentType: raw
           draft: true
+          # Leaves the draft state alone on update, so a re-run after publishing keeps it published.
+          omitDraftDuringUpdate: true
           artifacts: './build/**/*.spdx.json'
           token: ${{ github.token }}
           tag: ${{ needs.release-please.outputs.release_tag_name }}
@@ -187,6 +189,8 @@ jobs:
           artifactContentType: raw
           # artifactContentType: application/zip
           draft: true
+          # Leaves the draft state alone on update, so a re-run after publishing keeps it published.
+          omitDraftDuringUpdate: true
           tag: ${{ needs.release-please.outputs.release_tag_name }}
           artifacts: ./butler-sos-${{ needs.release-please.outputs.release_version }}-macos-arm64.zip
           token: ${{ github.token }}
@@ -512,6 +516,8 @@ jobs:
           artifactContentType: raw
           # artifactContentType: application/zip
           draft: true
+          # Leaves the draft state alone on update, so a re-run after publishing keeps it published.
+          omitDraftDuringUpdate: true
           tag: ${{ needs.release-please.outputs.release_tag_name }}
           artifacts: ./butler-sos-${{ needs.release-please.outputs.release_version }}-linux-x64.zip
           token: ${{ github.token }}
