@@ -19,11 +19,12 @@ RUN npm ci --omit=dev --ignore-scripts
 
 # Stage 2: Runtime
 #
-# Plain Debian, with only the Node.js binary and the official image's entrypoint copied in from
-# the build stage. The Node.js image also carries npm, npx, corepack and yarn, which Butler SOS
-# never runs: its dependencies are installed above, and CMD and HEALTHCHECK call node directly.
-# Deleting them from a Node.js-based runtime stage would only hide them, because their files stay
-# in the base image's layers underneath; starting from Debian keeps them out of the image.
+# Plain Debian, with only the Node.js binary, its license and the official image's entrypoint
+# copied in from the build stage. The Node.js image also carries npm, npx, corepack and yarn,
+# which Butler SOS never runs: its dependencies are installed above, and CMD and HEALTHCHECK call
+# node directly. Deleting them from a Node.js-based runtime stage would only hide them, because
+# their files stay in the base image's layers underneath; starting from Debian keeps them out of
+# the image.
 #
 # The Node.js binary needs only Debian's C and C++ runtime libraries (libc6, libstdc++6 and
 # libgcc-s1), which every slim image has. Keep both stages on the same Debian release, bookworm.
@@ -43,6 +44,10 @@ RUN groupadd --gid 1000 node \
 
 COPY --from=build /usr/local/bin/node /usr/local/bin/node
 COPY --from=build /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+# The license terms and copyright notices of Node.js and the components it bundles, which
+# redistributing the binary requires and which THIRD-PARTY-NOTICES.md does not repeat. Same path
+# as in the Node.js image.
+COPY --from=build /usr/local/LICENSE /usr/local/LICENSE
 
 WORKDIR /nodeapp
 
