@@ -16,6 +16,7 @@
 .prettierrc
 .prettierrc.yaml
 .snyk
+.trivyignore
 .cache_ggshield
 .pre-commit-config.yaml
 
