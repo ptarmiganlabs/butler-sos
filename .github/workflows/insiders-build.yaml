@@ -20,19 +20,19 @@ jobs:
         permissions:
             security-events: write
         concurrency:
-            group: ${{ matrix.os == 'mac-build2' && 'butler-sos-macos-signing-mac-build2' || format('butler-sos-insiders-build-{0}-{1}', github.ref, matrix.os) }}
+            group: ${{ format('butler-sos-insiders-build-{0}-{1}', github.ref, matrix.os) }}
             cancel-in-progress: false
         strategy:
             matrix:
-                os: [win-code-sign, mac-build2, ubuntu-latest]
+                os: [win-code-sign, macos-15, ubuntu-latest]
                 include:
                     - os: win-code-sign
                       # artifact_release_name: release-binaries-win
                       # artifact_release_path: release-binaries-win/*
                       artifact_insider: butler-sos--win-x64--${{ github.sha }}.zip
                     
-                    # Arm64 build
-                    - os: mac-build2
+                    # Arm64 build, on a GitHub-hosted runner (see release-macos-arm64 in ci.yaml)
+                    - os: macos-15
                       artifact_insider: butler-sos--macos-arm64--${{ github.sha }}.zip
                     
                     - os: ubuntu-latest
@@ -89,7 +89,7 @@ jobs:
               run: ./scripts/insider-build-win.ps1
 
             - name: Create binaries (macOS)
-              if: matrix.os == 'mac-build2'
+              if: matrix.os == 'macos-15'
               env:
                   DIST_FILE_NAME: butler-sos
                   GITHUB_TOKEN: ${{ secrets.PAT }}

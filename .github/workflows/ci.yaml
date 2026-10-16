@@ -134,14 +134,16 @@ jobs:
           path: './build/'
           retention-days: 3
 
+  # On a GitHub-hosted runner: butler-sos is public, so it costs nothing, and the self-hosted
+  # runner groups do not admit public repositories (the 15.1.0 macOS build waited for mac-build2
+  # until one was opened by hand). Each run gets a VM of its own, so the temporary keychain and
+  # decoded certificate that scripts/release-macos.sh creates go with it, and the release and
+  # insiders builds no longer need a shared concurrency group to keep them apart.
   release-macos-arm64:
     permissions:
       contents: write
     needs: release-please
-    runs-on: mac-build2
-    concurrency:
-      group: butler-sos-macos-signing-mac-build2
-      cancel-in-progress: false
+    runs-on: macos-15
     # timeout-minutes: 15
 
     if: needs.release-please.outputs.releases_created == 'true'
