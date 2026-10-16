@@ -596,4 +596,102 @@ describe('setupErrorCounterReset', () => {
         );
         expect(messages).toContain('ERROR TRACKER: Reset all error counters');
     });
+
+    describe('when errors arrive around midnight', () => {
+        /**
+         * Reads the summary lines logged so far.
+         *
+         * @returns {number[]} The Total= value of each summary line logged, in order
+         */
+        const summaryTotals = () =>
+            mockLogger.info.mock.calls
+                .map(([message]) => message)
+                .filter((message) => message.includes('ERROR TRACKER: Error counts today (UTC)'))
+                .map((message) => Number(message.match(/Total=(\d+)/)[1]));
+
+        /**
+         * Counts the counter resets logged so far.
+         *
+         * @returns {number} How many times the counters were reset
+         */
+        const resetCount = () =>
+            mockLogger.info.mock.calls.filter(
+                ([message]) => message === 'ERROR TRACKER: Reset all error counters'
+            ).length;
+
+        /**
+         * Sets the clock to 23:59:00 UTC, starts the midnight reset cycle, and counts three
+         * errors before midnight. The one at 23:59:30 is logged at once. The ones at 23:59:45
+         * and 23:59:59 wait for the pending running summary, due at 00:00:30.
+         *
+         * @returns {Promise<ErrorTracker>} The tracker, also set as globals.errorTracker
+         */
+        async function countErrorsUntilJustBeforeMidnight() {
+            const { setupErrorCounterReset } = await import('../error-tracker.js');
+            const globals = (await import('../../globals.js')).default;
+
+            // logSummary.enable absent from config, so summary logging defaults to enabled
+            mockConfigHas.mockReturnValue(false);
+            mockConfigGet.mockReturnValue(undefined);
+            mockIsInfluxDbEnabled.mockReturnValue(false);
+            jest.setSystemTime(new Date('2026-10-16T23:59:00.000Z'));
+
+            const tracker = new ErrorTracker(mockLogger);
+            globals.errorTracker = tracker;
+            setupErrorCounterReset();
+
+            jest.advanceTimersByTime(30 * 1000); // 23:59:30
+            await tracker.incrementError('API_1', 'Server_1');
+            jest.advanceTimersByTime(15 * 1000); // 23:59:45
+            await tracker.incrementError('API_1', 'Server_1');
+            jest.advanceTimersByTime(14 * 1000); // 23:59:59
+            await tracker.incrementError('API_1', 'Server_1');
+
+            expect(summaryTotals()).toEqual([1]);
+            return tracker;
+        }
+
+        test('an error just after midnight, before the midnight timer runs, closes the previous day once', async () => {
+            const tracker = await countErrorsUntilJustBeforeMidnight();
+
+            // The clock passes midnight, but the midnight timer has not run yet, as on a busy
+            // event loop. An error arrives first.
+            jest.setSystemTime(new Date('2026-10-17T00:00:00.003Z'));
+            await tracker.incrementError('API_1', 'Server_1');
+
+            // Then the late midnight timer runs, and the old pending summary's time passes
+            await jest.advanceTimersByTimeAsync(60 * 1000);
+
+            // The 23:59:30 running total, the final total for 2026-10-16 with all three of its
+            // errors, and the new day's first error. Nothing logged twice, nothing lost.
+            expect(summaryTotals()).toEqual([1, 3, 1]);
+            expect(resetCount()).toBe(1);
+            expect(tracker.lastResetDate).toBe('2026-10-17');
+            expect(await tracker.getErrorCounts()).toEqual([
+                { apiType: 'API_1', serverName: 'Server_1', count: 1 },
+            ]);
+        });
+
+        test('the midnight timer running first closes the previous day once, and the next error starts the new one', async () => {
+            const tracker = await countErrorsUntilJustBeforeMidnight();
+
+            // Midnight passes and the timer runs on time
+            await jest.advanceTimersByTimeAsync(1000);
+            expect(summaryTotals()).toEqual([1, 3]);
+
+            // The new day's first error is logged at once, as the new day's total
+            jest.advanceTimersByTime(10);
+            await tracker.incrementError('API_1', 'Server_1');
+            expect(summaryTotals()).toEqual([1, 3, 1]);
+
+            // The running summary that was pending at midnight does not log again
+            await jest.advanceTimersByTimeAsync(60 * 1000);
+            expect(summaryTotals()).toEqual([1, 3, 1]);
+            expect(resetCount()).toBe(1);
+            expect(tracker.lastResetDate).toBe('2026-10-17');
+            expect(await tracker.getErrorCounts()).toEqual([
+                { apiType: 'API_1', serverName: 'Server_1', count: 1 },
+            ]);
+        });
+    });
 });

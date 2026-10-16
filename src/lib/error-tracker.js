@@ -104,14 +104,14 @@ export class ErrorTracker {
         const release = await this.errorMutex.acquire();
 
         try {
-            // Check if we need to reset counters (new day in UTC)
+            // Check if we need to reset counters (new day in UTC). This error can arrive before
+            // the midnight timer has run, so it may be the one that closes the previous day.
             const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD in UTC
-            if (currentDate !== this.lastResetDate) {
+            if (currentDate > this.lastResetDate) {
                 this.logger.debug(
                     `ERROR TRACKER: Date changed from ${this.lastResetDate} to ${currentDate}, resetting counters`
                 );
-                await this.resetCounters();
-                this.lastResetDate = currentDate;
+                await this._rollOverDay(currentDate);
             }
 
             const found = this.errorCounts.find((element) => {
@@ -374,6 +374,33 @@ export class ErrorTracker {
     }
 
     /**
+     * Ends the tracking day: logs the day's final totals (if summary logging is enabled), then
+     * resets the counters and starts the new day.
+     *
+     * Both the midnight timer and the first error of a new day can get here, in either order,
+     * so callers check lastResetDate first. That way each day's totals are logged once, and an
+     * error from the new day is never logged or reset as part of the old one.
+     *
+     * @param {string} newDate - The UTC date (YYYY-MM-DD) of the day that is starting
+     * @returns {Promise<void>}
+     */
+    async _rollOverDay(newDate) {
+        // Note: Caller must hold the mutex before calling this method
+        if (isLogSummaryEnabled()) {
+            await this.logErrorSummary();
+        }
+
+        // The final summary covers any running summary still waiting to be logged. Dropping it
+        // also keeps it from logging the new day's totals on the old day's schedule.
+        clearTimeout(this.summaryLogTimer);
+        this.summaryLogTimer = null;
+        this.lastSummaryLogTime = 0;
+
+        await this.resetCounters();
+        this.lastResetDate = newDate;
+    }
+
+    /**
      * Gets current error statistics grouped by API type.
      *
      * @returns {object} Object with API types as keys, each containing total count and server breakdown
@@ -462,6 +489,7 @@ export function setupErrorCounterReset() {
         const nextMidnight = new Date(now);
         nextMidnight.setUTCHours(24, 0, 0, 0);
         const msUntilMidnight = nextMidnight - now;
+        const newDate = nextMidnight.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
 
         globals.logger.info(
             `ERROR TRACKER: Scheduled next error counter reset at ${nextMidnight.toISOString()} (in ${Math.round(msUntilMidnight / 1000 / 60)} minutes)`
@@ -473,11 +501,15 @@ export function setupErrorCounterReset() {
             // Log final daily summary before reset
             const release = await globals.errorTracker.errorMutex.acquire();
             try {
-                if (isLogSummaryEnabled()) {
-                    await globals.errorTracker.logErrorSummary();
+                // An error that arrived just after midnight, before this timer ran, has already
+                // logged the final summary and reset the counters for the new day
+                if (newDate > globals.errorTracker.lastResetDate) {
+                    await globals.errorTracker._rollOverDay(newDate);
+                } else {
+                    globals.logger.debug(
+                        `ERROR TRACKER: Error counters already reset for ${newDate}, nothing to do`
+                    );
                 }
-                await globals.errorTracker.resetCounters();
-                globals.errorTracker.lastResetDate = new Date().toISOString().split('T')[0];
             } finally {
                 release();
             }
