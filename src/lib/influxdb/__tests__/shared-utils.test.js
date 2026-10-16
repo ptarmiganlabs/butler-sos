@@ -1,4 +1,4 @@
-import { jest, describe, test, expect, beforeEach } from '@jest/globals';
+import { jest, describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 
 // Mock globals
 const mockGlobals = {
@@ -538,6 +538,197 @@ describe('Shared Utils - writeBatchToInfluxV1', () => {
         expect(globals.logger.verbose).toHaveBeenCalledWith(
             expect.stringContaining('No points to write')
         );
+    });
+});
+
+describe('Shared Utils - skipErrorTracking write option', () => {
+    let utils;
+    let globals;
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        globals = (await import('../../../globals.js')).default;
+        globals.errorTracker = { incrementError: jest.fn().mockResolvedValue(undefined) };
+        utils = await import('../shared/utils.js');
+    });
+
+    afterEach(() => {
+        delete globals.errorTracker;
+        globals.influx = null;
+    });
+
+    describe('writeToInfluxWithRetry', () => {
+        const nonRetryableError = () => new Error('400 Bad Request: field type conflict');
+        const retryableError = () => new Error('connect ECONNREFUSED 127.0.0.1:8086');
+        const fastRetries = { maxRetries: 1, initialDelayMs: 1 };
+
+        test('tracks a non-retryable failure by default', async () => {
+            const writeFn = jest.fn().mockRejectedValue(nonRetryableError());
+
+            await expect(
+                utils.writeToInfluxWithRetry(writeFn, 'test', 'v2', 'server1')
+            ).rejects.toThrow('400 Bad Request');
+
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledTimes(1);
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'INFLUXDB_V2_WRITE',
+                'server1',
+                {},
+                expect.any(Error)
+            );
+        });
+
+        test('does not track a non-retryable failure when skipErrorTracking is set', async () => {
+            const writeFn = jest.fn().mockRejectedValue(nonRetryableError());
+
+            await expect(
+                utils.writeToInfluxWithRetry(
+                    writeFn,
+                    'test',
+                    'v2',
+                    'server1',
+                    {},
+                    {
+                        skipErrorTracking: true,
+                    }
+                )
+            ).rejects.toThrow('400 Bad Request');
+
+            expect(writeFn).toHaveBeenCalledTimes(1);
+            expect(globals.errorTracker.incrementError).not.toHaveBeenCalled();
+            // The failure is still logged
+            expect(globals.logger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('Non-retryable error')
+            );
+        });
+
+        test('tracks a failure that outlasts all retries by default', async () => {
+            const writeFn = jest.fn().mockRejectedValue(retryableError());
+
+            await expect(
+                utils.writeToInfluxWithRetry(writeFn, 'test', 'v3', 'server1', {}, fastRetries)
+            ).rejects.toThrow('ECONNREFUSED');
+
+            expect(writeFn).toHaveBeenCalledTimes(2);
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledTimes(1);
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                'INFLUXDB_V3_WRITE',
+                'server1',
+                {},
+                expect.any(Error)
+            );
+        });
+
+        test('does not track a failure that outlasts all retries when skipErrorTracking is set', async () => {
+            const writeFn = jest.fn().mockRejectedValue(retryableError());
+
+            await expect(
+                utils.writeToInfluxWithRetry(
+                    writeFn,
+                    'test',
+                    'v3',
+                    'server1',
+                    {},
+                    {
+                        ...fastRetries,
+                        skipErrorTracking: true,
+                    }
+                )
+            ).rejects.toThrow('ECONNREFUSED');
+
+            expect(writeFn).toHaveBeenCalledTimes(2);
+            expect(globals.errorTracker.incrementError).not.toHaveBeenCalled();
+            expect(globals.logger.error).toHaveBeenCalledWith(
+                expect.stringContaining('All 2 attempts failed')
+            );
+        });
+    });
+
+    // Each batch writer, with an InfluxDB client whose writes all fail non-retryably
+    const batchWriters = [
+        {
+            version: 'v1',
+            setup: (writeMock) => {
+                globals.influx = { writePoints: writeMock };
+            },
+            write: (options) =>
+                utils.writeBatchToInfluxV1(
+                    [{ measurement: 'test', fields: { value: 1 } }],
+                    'test_data',
+                    'server1',
+                    1000,
+                    options
+                ),
+        },
+        {
+            version: 'v2',
+            setup: (writeMock) => {
+                globals.influx = {
+                    getWriteApi: jest.fn(() => ({
+                        writePoints: writeMock,
+                        close: jest.fn().mockResolvedValue(undefined),
+                    })),
+                };
+            },
+            write: (options) =>
+                utils.writeBatchToInfluxV2(
+                    [{}],
+                    'my-org',
+                    'my-bucket',
+                    'test_data',
+                    'server1',
+                    1000,
+                    options
+                ),
+        },
+        {
+            version: 'v3',
+            setup: (writeMock) => {
+                globals.influx = { write: writeMock };
+            },
+            write: (options) =>
+                utils.writeBatchToInfluxV3(
+                    [{ toLineProtocol: () => 'test value=1' }],
+                    'my-db',
+                    'test_data',
+                    'server1',
+                    1000,
+                    options
+                ),
+        },
+    ];
+
+    describe.each(batchWriters)('writeBatchToInflux $version', ({ version, setup, write }) => {
+        let writeMock;
+
+        beforeEach(() => {
+            writeMock = jest.fn().mockRejectedValue(new Error('400 Bad Request'));
+            setup(writeMock);
+        });
+
+        test('tracks failed writes by default', async () => {
+            await expect(write()).rejects.toThrow(
+                'Failed to write batch after trying all progressive sizes'
+            );
+
+            expect(globals.errorTracker.incrementError).toHaveBeenCalled();
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+                `INFLUXDB_${version.toUpperCase()}_WRITE`,
+                'server1',
+                {},
+                expect.any(Error)
+            );
+        });
+
+        test('does not track failed writes when skipErrorTracking is set', async () => {
+            await expect(write({ skipErrorTracking: true })).rejects.toThrow(
+                'Failed to write batch after trying all progressive sizes'
+            );
+
+            // Every batch size was tried, and none of the failures was tracked
+            expect(writeMock.mock.calls.length).toBeGreaterThan(1);
+            expect(globals.errorTracker.incrementError).not.toHaveBeenCalled();
+        });
     });
 });
 

@@ -239,6 +239,10 @@ export function applyTagsToPoint3(point, tags) {
  * @param {number} options.initialDelayMs - Initial delay before first retry in ms (default: 1000)
  * @param {number} options.maxDelayMs - Maximum delay between retries in ms (default: 10000)
  * @param {number} options.backoffMultiplier - Multiplier for exponential backoff (default: 2)
+ * @param {boolean} options.skipErrorTracking - When true, a failed write is logged and thrown but
+ *   not counted by the error tracker (default: false). The error tracker sets this for its own
+ *   error-event writes: tracking their failures would schedule another error-event write, which
+ *   fails the same way, and the writes would multiply.
  *
  * @returns {Promise<void>} Promise that resolves when write succeeds or rejects after all retries fail
  *
@@ -257,6 +261,7 @@ export async function writeToInfluxWithRetry(
         initialDelayMs = 1000,
         maxDelayMs = 10000,
         backoffMultiplier = 2,
+        skipErrorTracking = false,
     } = options;
 
     let lastError;
@@ -307,12 +312,14 @@ export async function writeToInfluxWithRetry(
                 );
 
                 // Track error immediately for non-retryable errors
-                await globals.errorTracker.incrementError(
-                    `INFLUXDB_${versionTag}_WRITE`,
-                    errorCategory,
-                    metadata,
-                    err
-                );
+                if (!skipErrorTracking) {
+                    await globals.errorTracker.incrementError(
+                        `INFLUXDB_${versionTag}_WRITE`,
+                        errorCategory,
+                        metadata,
+                        err
+                    );
+                }
 
                 throw err;
             }
@@ -338,12 +345,14 @@ export async function writeToInfluxWithRetry(
                 );
 
                 // Track error count (final failure after all retries)
-                await globals.errorTracker.incrementError(
-                    `INFLUXDB_${versionTag}_WRITE`,
-                    errorCategory,
-                    metadata,
-                    err
-                );
+                if (!skipErrorTracking) {
+                    await globals.errorTracker.incrementError(
+                        `INFLUXDB_${versionTag}_WRITE`,
+                        errorCategory,
+                        metadata,
+                        err
+                    );
+                }
             }
         }
     }
@@ -424,10 +433,21 @@ export function validateUnsignedField(value, measurement, field, serverContext) 
  * @param {string} context - Description of what's being written
  * @param {string} errorCategory - Error category for tracking
  * @param {number} maxBatchSize - Maximum batch size from config
+ * @param {object} [options] - Write options
+ * @param {boolean} [options.skipErrorTracking] - Do not count failed writes in the error tracker
+ *   (default: false). See writeToInfluxWithRetry.
  *
  * @returns {Promise<void>}
  */
-export async function writeBatchToInfluxV1(datapoints, context, errorCategory, maxBatchSize) {
+export async function writeBatchToInfluxV1(
+    datapoints,
+    context,
+    errorCategory,
+    maxBatchSize,
+    options = {}
+) {
+    const { skipErrorTracking = false } = options;
+
     if (!Array.isArray(datapoints) || datapoints.length === 0) {
         globals.logger.verbose(`INFLUXDB V1 BATCH: ${context} - No points to write`);
         return;
@@ -452,7 +472,9 @@ export async function writeBatchToInfluxV1(datapoints, context, errorCategory, m
                     async () => await globals.influx.writePoints(chunk),
                     `${context} (chunk ${i + 1}/${chunks.length}, points ${startIdx}-${endIdx})`,
                     'v1',
-                    errorCategory
+                    errorCategory,
+                    {},
+                    { skipErrorTracking }
                 );
             } catch (err) {
                 allSucceeded = false;
@@ -532,6 +554,9 @@ export async function writePointsToInfluxV2(influxClient, org, bucket, points) {
  * @param {string} context - Description of what's being written
  * @param {string} errorCategory - Error category for tracking
  * @param {number} maxBatchSize - Maximum batch size from config
+ * @param {object} [options] - Write options
+ * @param {boolean} [options.skipErrorTracking] - Do not count failed writes in the error tracker
+ *   (default: false). See writeToInfluxWithRetry.
  *
  * @returns {Promise<void>}
  */
@@ -541,8 +566,11 @@ export async function writeBatchToInfluxV2(
     bucketName,
     context,
     errorCategory,
-    maxBatchSize
+    maxBatchSize,
+    options = {}
 ) {
+    const { skipErrorTracking = false } = options;
+
     if (!Array.isArray(points) || points.length === 0) {
         return;
     }
@@ -581,7 +609,9 @@ export async function writeBatchToInfluxV2(
                     },
                     `${context} (chunk ${i + 1}/${chunks.length}, points ${startIdx}-${endIdx})`,
                     'v2',
-                    errorCategory
+                    errorCategory,
+                    {},
+                    { skipErrorTracking }
                 );
             } catch (err) {
                 allSucceeded = false;
@@ -626,10 +656,22 @@ export async function writeBatchToInfluxV2(
  * @param {string} context - Description of what's being written
  * @param {string} errorCategory - Error category for tracking
  * @param {number} maxBatchSize - Maximum batch size from config
+ * @param {object} [options] - Write options
+ * @param {boolean} [options.skipErrorTracking] - Do not count failed writes in the error tracker
+ *   (default: false). See writeToInfluxWithRetry.
  *
  * @returns {Promise<void>}
  */
-export async function writeBatchToInfluxV3(points, database, context, errorCategory, maxBatchSize) {
+export async function writeBatchToInfluxV3(
+    points,
+    database,
+    context,
+    errorCategory,
+    maxBatchSize,
+    options = {}
+) {
+    const { skipErrorTracking = false } = options;
+
     if (!Array.isArray(points) || points.length === 0) {
         return;
     }
@@ -656,7 +698,9 @@ export async function writeBatchToInfluxV3(points, database, context, errorCateg
                     async () => await globals.influx.write(lineProtocol, database),
                     `${context} (chunk ${i + 1}/${chunks.length}, points ${startIdx}-${endIdx})`,
                     'v3',
-                    errorCategory
+                    errorCategory,
+                    {},
+                    { skipErrorTracking }
                 );
             } catch (err) {
                 allSucceeded = false;

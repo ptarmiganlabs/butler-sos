@@ -1,8 +1,13 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { Mutex } from 'async-mutex';
 
 import globals from '../globals.js';
 import { getInfluxDbVersion, isInfluxDbEnabled } from './influxdb/shared/utils.js';
 import { getErrorMetadata } from './error-categorizer.js';
+
+// Set while an error event is being written to InfluxDB. Lets incrementError() see that it
+// was reached from inside such a write, even across the awaits and retry timers in between.
+const errorEventWriteContext = new AsyncLocalStorage();
 
 /**
  * Class for tracking counts of API errors in Butler SOS.
@@ -121,18 +126,34 @@ export class ErrorTracker {
                 await this.logErrorSummary();
             }
 
-            // Write individual error event to InfluxDB (non-blocking)
+            // Write individual error event to InfluxDB (non-blocking).
+            // Never start an error-event write from inside another one. If that write's failure
+            // were written too, the new write would fail the same way, and the writes would
+            // multiply for as long as InfluxDB rejects them.
             if (this._isInfluxDbErrorTrackingEnabled()) {
-                const capturedErr = err;
-                setImmediate(() => {
-                    this._writeErrorToInfluxDB(apiType, serverName, metadata, capturedErr).catch(
-                        (writeErr) => {
-                            this.logger.debug(
-                                `ERROR TRACKER: Error writing error event to InfluxDB: ${writeErr.message}`
-                            );
-                        }
+                if (errorEventWriteContext.getStore()) {
+                    this.logger.debug(
+                        `ERROR TRACKER: Not writing error event ${apiType}/${serverName} to InfluxDB, as it was raised while writing another error event`
                     );
-                });
+                } else {
+                    const capturedErr = err;
+                    setImmediate(() => {
+                        errorEventWriteContext
+                            .run(true, () =>
+                                this._writeErrorToInfluxDB(
+                                    apiType,
+                                    serverName,
+                                    metadata,
+                                    capturedErr
+                                )
+                            )
+                            .catch((writeErr) => {
+                                this.logger.debug(
+                                    `ERROR TRACKER: Error writing error event to InfluxDB: ${writeErr.message}`
+                                );
+                            });
+                    });
+                }
             }
         } finally {
             release();
@@ -161,6 +182,9 @@ export class ErrorTracker {
 
     /**
      * Writes a single error event to InfluxDB.
+     *
+     * A failure of this write is logged but not tracked as an error. Tracking it would start
+     * another error-event write, which would fail the same way.
      *
      * @param {string} apiType - The error type
      * @param {string} serverName - The server name
@@ -233,7 +257,8 @@ export class ErrorTracker {
                     database,
                     `Error event: ${apiType}/${serverName}`,
                     serverName,
-                    globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+                    globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize'),
+                    { skipErrorTracking: true }
                 );
             } else if (version === 2) {
                 const { Point: Point2 } = await import('@influxdata/influxdb-client');
@@ -257,7 +282,8 @@ export class ErrorTracker {
                     bucketName,
                     `Error event: ${apiType}/${serverName}`,
                     serverName,
-                    globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+                    globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize'),
+                    { skipErrorTracking: true }
                 );
             } else if (version === 1) {
                 const { writeBatchToInfluxV1 } = await import('./influxdb/shared/utils.js');
@@ -272,7 +298,8 @@ export class ErrorTracker {
                     datapoint,
                     `Error event: ${apiType}/${serverName}`,
                     serverName,
-                    globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+                    globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize'),
+                    { skipErrorTracking: true }
                 );
             }
         } catch (err) {

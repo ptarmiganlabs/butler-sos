@@ -328,6 +328,20 @@ describe('ErrorTracker._writeErrorToInfluxDB', () => {
             expect.stringContaining('InfluxDB write failed')
         );
     });
+
+    test.each([
+        [1, mockWriteBatchToInfluxV1, 4],
+        [2, mockWriteBatchToInfluxV2, 6],
+        [3, mockWriteBatchToInfluxV3, 5],
+    ])(
+        'InfluxDB v%i: tells the batch writer not to track its own write failures',
+        async (version, writeBatch, optionsArgIndex) => {
+            mockGetInfluxDbVersion.mockReturnValue(version);
+            await tracker._writeErrorToInfluxDB('HEALTH_API', 'Server_1', {});
+            expect(writeBatch).toHaveBeenCalledTimes(1);
+            expect(writeBatch.mock.calls[0][optionsArgIndex]).toEqual({ skipErrorTracking: true });
+        }
+    );
 });
 
 describe('ErrorTracker.incrementError with InfluxDB enabled', () => {
@@ -369,6 +383,45 @@ describe('ErrorTracker.incrementError with InfluxDB enabled', () => {
         await new Promise((resolve) => setImmediate(resolve));
         await Promise.resolve();
         expect(mockWriteBatchToInfluxV1).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Gives scheduled error-event writes, and any writes they schedule in turn, time to run.
+     */
+    async function flushErrorEventWrites() {
+        for (let i = 0; i < 5; i++) {
+            await new Promise((resolve) => setImmediate(resolve));
+        }
+    }
+
+    test('counts, but does not write, an error raised while writing an error event', async () => {
+        // A write path that tracks its own failure, as if it had not been told to skip error
+        // tracking. Without the guard, every such failure would start another write.
+        mockWriteBatchToInfluxV1.mockImplementation(async () => {
+            await tracker.incrementError('INFLUXDB_V1_WRITE', 'Server_1');
+            throw new Error('Write failed');
+        });
+
+        await tracker.incrementError('HEALTH_API', 'Server_1');
+        await flushErrorEventWrites();
+
+        expect(mockWriteBatchToInfluxV1).toHaveBeenCalledTimes(1);
+        expect(await tracker.getErrorCounts()).toEqual([
+            { apiType: 'HEALTH_API', serverName: 'Server_1', count: 1 },
+            { apiType: 'INFLUXDB_V1_WRITE', serverName: 'Server_1', count: 1 },
+        ]);
+        expect(mockLogger.debug).toHaveBeenCalledWith(
+            expect.stringContaining('raised while writing another error event')
+        );
+    });
+
+    test('writes later errors normally once an error-event write has finished', async () => {
+        await tracker.incrementError('HEALTH_API', 'Server_1');
+        await flushErrorEventWrites();
+        await tracker.incrementError('PROXY_API', 'Server_1');
+        await flushErrorEventWrites();
+
+        expect(mockWriteBatchToInfluxV1).toHaveBeenCalledTimes(2);
     });
 });
 
