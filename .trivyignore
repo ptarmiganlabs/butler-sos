@@ -1,0 +1,18 @@
+# Findings the release image scan in .github/workflows/docker-image-build.yaml accepts.
+#
+# Every entry carries a reason and an expiry date. An expired entry is reported again, so the
+# release scan fails and someone has to look, instead of an exception outliving its reason.
+# Delete an entry as soon as the image no longer contains the vulnerable version.
+
+# perl-base 5.36.0-7+deb12u3, fixed in 5.36.0-7+deb12u4. Debian has released the fix, but no
+# bookworm-slim image past the 7-day quarantine contains it yet: bookworm-20261005-slim, which
+# the runtime stage uses, still has deb12u3. Butler SOS never runs Perl; Debian installs it in
+# every image as an essential package. Dependabot offers the next dated bookworm-slim tag, and
+# once that tag has deb12u4 these entries match nothing and go.
+CVE-2026-8376 exp:2026-11-30
+CVE-2026-13221 exp:2026-11-30
+CVE-2026-42496 exp:2026-11-30
+CVE-2026-42497 exp:2026-11-30
+CVE-2026-48962 exp:2026-11-30
+CVE-2026-57432 exp:2026-11-30
+CVE-2026-57433 exp:2026-11-30

@@ -187,3 +187,7 @@ jobs:
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
+          # Accepted findings, each with a reason and an expiry date. Without it a finding that
+          # has been looked at and accepted fails every release run, and a red run stops meaning
+          # anything.
+          trivyignores: '.trivyignore'
