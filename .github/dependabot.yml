@@ -15,12 +15,22 @@ updates:
   # The Dockerfile pins its base image by digest, which is only safe if something keeps that
   # digest current — otherwise the published image silently stops receiving base-OS security
   # updates. This is that something.
+  #
+  # Node majors are ignored, because otherwise this never refreshed the digest at all: offered a
+  # newer major, Dependabot proposes only that (node 25 in #1482, node 26 in #1490) and never the
+  # new digest of 24-bookworm-slim. Both majors sat unmerged, and the base image went from
+  # 2026-08-06 to 15.1.0 without a single Debian security update. Moving to a new Node major is
+  # a decision of its own, made in the Dockerfile, package.json `engines` and the SEA builds
+  # together.
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
     cooldown:
       default-days: 7
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
 
   # Workflows pin every action to a commit SHA, which had the same staleness problem: nothing
   # was updating them.
