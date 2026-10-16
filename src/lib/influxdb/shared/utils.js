@@ -223,6 +223,30 @@ export function applyTagsToPoint3(point, tags) {
 }
 
 /**
+ * Counts a failed InfluxDB write in the error tracker, unless error tracking is skipped.
+ *
+ * @param {string} versionTag - InfluxDB version in upper case ('V1', 'V2' or 'V3')
+ * @param {string} errorCategory - Error category for tracking (e.g., server name or component)
+ * @param {object} metadata - Additional context passed through to the error tracker
+ * @param {Error} err - The error the write failed with
+ * @param {boolean} skipErrorTracking - When true, do not count the failure
+ *
+ * @returns {Promise<void>}
+ */
+async function trackFailedInfluxWrite(versionTag, errorCategory, metadata, err, skipErrorTracking) {
+    if (skipErrorTracking) {
+        return;
+    }
+
+    await globals.errorTracker.incrementError(
+        `INFLUXDB_${versionTag}_WRITE`,
+        errorCategory,
+        metadata,
+        err
+    );
+}
+
+/**
  * Writes data to InfluxDB (v1, v2, or v3) with retry logic and exponential backoff.
  *
  * This unified function handles writes to any InfluxDB version with configurable retry logic.
@@ -312,14 +336,13 @@ export async function writeToInfluxWithRetry(
                 );
 
                 // Track error immediately for non-retryable errors
-                if (!skipErrorTracking) {
-                    await globals.errorTracker.incrementError(
-                        `INFLUXDB_${versionTag}_WRITE`,
-                        errorCategory,
-                        metadata,
-                        err
-                    );
-                }
+                await trackFailedInfluxWrite(
+                    versionTag,
+                    errorCategory,
+                    metadata,
+                    err,
+                    skipErrorTracking
+                );
 
                 throw err;
             }
@@ -345,14 +368,13 @@ export async function writeToInfluxWithRetry(
                 );
 
                 // Track error count (final failure after all retries)
-                if (!skipErrorTracking) {
-                    await globals.errorTracker.incrementError(
-                        `INFLUXDB_${versionTag}_WRITE`,
-                        errorCategory,
-                        metadata,
-                        err
-                    );
-                }
+                await trackFailedInfluxWrite(
+                    versionTag,
+                    errorCategory,
+                    metadata,
+                    err,
+                    skipErrorTracking
+                );
             }
         }
     }
