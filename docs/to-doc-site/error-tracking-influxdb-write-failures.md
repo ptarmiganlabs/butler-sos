@@ -124,10 +124,25 @@ It is now written:
 - **at once** for the first error after a quiet minute, so a new problem shows up in the
   log straight away
 - **at most once a minute** while errors keep occurring. Errors that occur in between are
-  counted, and the next summary line includes them. When errors stop, a last summary is
-  written once the minute is up, so the final totals always reach the log.
-- **once at midnight UTC**, as a final summary for the day, just before the counters are
-  reset
+  counted, and the next summary line includes them. When errors stop, one last running
+  summary is written once the minute is up, provided Butler SOS is still running then.
+- **once at midnight UTC**, as the final summary for the day, just before the counters are
+  reset. It includes every error counted that day, including any that were still waiting
+  for a running summary line.
+
+The first error after midnight is logged at once, as the first error of the new day.
+
+Midnight works the same way when Butler SOS is busy at that moment. If an error arrives in
+the first moments after midnight, before the midnight reset has run, that error triggers
+the previous day's final summary and the reset, and is then counted as the new day's first
+error. Either way, each day's final summary is logged exactly once, and it contains only
+that day's errors.
+
+> **Note:** If Butler SOS stops or restarts less than a minute after the last running
+> summary line (for example a service restart, `docker stop`, or an exit after a crash),
+> the errors counted since that line do not appear in a summary line. The counts are kept
+> in memory only, so a restart also starts them from zero, as it always has. The warnings
+> and errors logged when each failure happened are not affected.
 
 The `Details` part is grouped by error type, then by server. Errors that have no server
 context are counted under `_no_server_context`.
