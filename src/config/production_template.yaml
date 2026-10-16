@@ -5,7 +5,10 @@ Butler-SOS:
     # Logging configuration
     logLevel: info # Log level. Possible log levels are silly, debug, verbose, info, warn, error. Case sensitive.
     fileLogging: true # true/false to enable/disable logging to disk file
-    logDirectory: log # Subdirectory where log files are stored
+    logDirectory: log # Directory where log files are stored.
+                      # A relative path is relative to the folder containing the Butler SOS executable,
+                      # or to the working directory when Butler SOS runs from source (e.g. in Docker).
+                      # Absolute paths are also supported, e.g. /var/log/butler-sos or D:/logs/butler-sos
 
     # Crash dump configuration
     # When Butler SOS encounters an unrecoverable error (uncaught exception, unhandled promise rejection,
