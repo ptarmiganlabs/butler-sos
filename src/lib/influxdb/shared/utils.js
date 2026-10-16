@@ -334,17 +334,7 @@ export async function writeToInfluxWithRetry(
                 globals.logger.warn(
                     `INFLUXDB ${versionTag} WRITE: ${context} - Non-retryable error (${errorName}), not retrying: ${globals.getErrorMessage(err)}`
                 );
-
-                // Track error immediately for non-retryable errors
-                await trackFailedInfluxWrite(
-                    versionTag,
-                    errorCategory,
-                    metadata,
-                    err,
-                    skipErrorTracking
-                );
-
-                throw err;
+                break;
             }
 
             // This is a retryable error - check if we have retries left
@@ -366,20 +356,14 @@ export async function writeToInfluxWithRetry(
                 globals.logger.error(
                     `INFLUXDB ${versionTag} RETRY: ${context} - All ${maxRetries + 1} attempts failed. Last error: ${globals.getErrorMessage(err)}`
                 );
-
-                // Track error count (final failure after all retries)
-                await trackFailedInfluxWrite(
-                    versionTag,
-                    errorCategory,
-                    metadata,
-                    err,
-                    skipErrorTracking
-                );
             }
         }
     }
 
-    // All retries failed, throw the last error
+    // The write failed with a non-retryable error, or all retries were used up: track it once
+    await trackFailedInfluxWrite(versionTag, errorCategory, metadata, lastError, skipErrorTracking);
+
+    // Throw the last error
     throw lastError;
 }
 
