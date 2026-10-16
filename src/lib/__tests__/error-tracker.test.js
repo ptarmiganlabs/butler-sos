@@ -476,6 +476,23 @@ describe('ErrorTracker running error summary', () => {
         expect(summaryLines()[1]).toContain('Total=2');
     });
 
+    test('does not log twice when an error arrives while the pending summary is overdue', async () => {
+        await tracker.incrementError('API_1', 'Server_1'); // Logged at once
+        jest.advanceTimersByTime(10 * 1000);
+        await tracker.incrementError('API_1', 'Server_1'); // Schedules the pending summary
+
+        // The clock passes the pending summary's due time, but its timer has not run yet,
+        // as when the event loop is busy. An error arriving now is logged at once...
+        jest.setSystemTime(Date.now() + 60 * 1000);
+        await tracker.incrementError('API_1', 'Server_1');
+        expect(summaryLines()).toHaveLength(2);
+        expect(summaryLines()[1]).toContain('Total=3');
+
+        // ...so the overdue timer must not log the same totals again right after
+        jest.runOnlyPendingTimers();
+        expect(summaryLines()).toHaveLength(2);
+    });
+
     test('logs one line a minute during a steady stream of errors', async () => {
         // One error a second for five minutes
         for (let second = 0; second < 300; second++) {

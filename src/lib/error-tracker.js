@@ -188,6 +188,11 @@ export class ErrorTracker {
         const msSinceLastLog = Date.now() - this.lastSummaryLogTime;
 
         if (msSinceLastLog >= SUMMARY_LOG_INTERVAL_MS) {
+            // A pending summary may be overdue without having run yet, for example when the
+            // event loop is busy. This line covers its totals, so it must not log them again.
+            clearTimeout(this.summaryLogTimer);
+            this.summaryLogTimer = null;
+
             this.lastSummaryLogTime = Date.now();
             await this.logErrorSummary();
             return;
