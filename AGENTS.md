@@ -113,6 +113,48 @@ still miss the point.
   `<type>: <imperative summary>`. Sections defined in `release-please-config.json`: `feat`,
   `fix`, `chore`, `refactor`, `docs`, `build`, `test`
 
+## Releases
+
+- **Releases are drafts, tagged as they are made** (`"draft": true` and
+  `"force-tag-creation": true` in `release-please-config.json`). Merging the release pull
+  request creates the draft and the tag `butler-sos-vX.Y.Z` together, and ci's build jobs
+  attach the SBOM and the Linux, macOS and Windows zips. So a tag does not mean a release is
+  out; ask the release: `gh release view butler-sos-vX.Y.Z --json isDraft`.
+- **Publishing the draft is what ships it.** `docker-image-build.yaml` (Docker Hub, including
+  `latest`) and `virus-scan.yaml` run on `release: published`. Keep them there: moved to a tag
+  push, they would run for a draft nobody has published.
+- **Why the tag comes with the draft.** release-please finds the previous release by its tag,
+  and the run that creates a release goes straight on to build the next release pull request.
+  Before this setting a draft had no tag, so release-please found no previous release, took
+  the last 200 commits, and proposed a new version repeating everything already released: the
+  15.1.0 run opened #1514 (15.2.0, 115 entries, none of them new) that way. A release pull
+  request carrying more than the commits since the last release means the tag was not found.
+- **Check the draft before publishing it:** four assets, `manifest.spdx.json` and the
+  `linux-x64`, `macos-arm64` and `win` zips. The first 15.1.0 draft had only the Linux zip and
+  the SBOM.
+- **The Windows binary is signed through Azure Artifact Signing**, in three ci jobs on
+  GitHub-hosted runners: `build-win64` builds it unsigned, `sign-win64` signs it and holds the
+  only credential (the `release-signing` environment, which admits `master` alone), and
+  `publish-win64` zips and attaches it. Never add a checkout, npm or `./scripts` step to
+  `sign-win64`. To prove signing works without releasing anything:
+  `gh workflow run ci.yaml --ref master -f rehearse_signing=true`.
+- **The macOS binary is signed and notarized by `scripts/release-macos.sh`** in ci's
+  `release-macos-arm64`, on a GitHub-hosted `macos-15` runner; `insiders-build-macos` signs the
+  insiders build the same way. Both run in the `release-signing` environment: keep it on them,
+  because once the Apple secrets live in that environment, a job that does not name it cannot read
+  them. Do not move them back to a self-hosted runner: the runner groups do not admit public
+  repositories, and the job waits until one is opened by hand.
+- **If a release job fails, use "Re-run failed jobs", within 30 days.** "Re-run all jobs" builds
+  nothing: release-please finds the release already made and reports no new one, so every job
+  that waits for it is skipped. The Windows artifacts are kept 30 days on release runs so that
+  `sign-win64` and `publish-win64` can still be re-run on their own.
+- **Never re-run a release job after the release is published** unless its upload step sets
+  `omitDraftDuringUpdate: true`. One that sets only `draft: true` turns the release back into a
+  draft.
+- **List release pull requests by their branch, not by search:**
+  `gh pr list --state all --head release-please--branches--master--components--butler-sos`.
+  GitHub's search index lags.
+
 ## Finish by recommending what is worth doing next
 
 Every time you hand work back, close with what remains and what it is worth. Rank the remaining

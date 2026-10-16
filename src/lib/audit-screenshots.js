@@ -17,7 +17,12 @@ import {
     setCachedScreenshotSession,
 } from './audit-screenshot-session-cache.js';
 import { createCertificateOptions, getCertificates } from './cert-utils.js';
-import { addTextHeaderToPng } from './audit-screenshot-metadata-image.js';
+import {
+    addTextHeaderToPng,
+    assertDecodable,
+    PngNotDecodedError,
+    readPngHeader,
+} from './audit-screenshot-metadata-image.js';
 import { extractVirtualProxyFromSessionCookieName } from './util/qlik-session-utils.js';
 import { parseQlikUserIdentity } from './util/user-identity.js';
 
@@ -566,39 +571,6 @@ function normalizeCrop(crop) {
     };
 }
 
-/** PNG file signature: the first eight bytes of every PNG. */
-const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-
-/**
- * Reads image dimensions straight out of a PNG's IHDR header.
- *
- * The spec fixes the layout of the first 24 bytes: an 8-byte signature, then the IHDR chunk
- * length and type, then width and height as big-endian 32-bit integers at offsets 16 and 20.
- * Reading them costs nothing, whereas a full decode allocates and inflates the entire pixel
- * buffer — tens to hundreds of milliseconds of blocked event loop for a large screenshot.
- *
- * This is a cheap pre-check, not a validator. It returns null whenever the buffer does not
- * look like a PNG or the dimensions are not sensible, and callers must fall back to the real
- * decoder in that case rather than treating null as "no work needed".
- *
- * @param {Buffer} buffer - Candidate PNG buffer.
- * @returns {{width: number, height: number}|null} Dimensions, or null if they cannot be read.
- */
-function readPngHeaderDimensions(buffer) {
-    if (!Buffer.isBuffer(buffer) || buffer.length < 24) return null;
-    if (!buffer.subarray(0, 8).equals(PNG_SIGNATURE)) return null;
-    if (buffer.toString('ascii', 12, 16) !== 'IHDR') return null;
-
-    const width = buffer.readUInt32BE(16);
-    const height = buffer.readUInt32BE(20);
-
-    if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
-        return null;
-    }
-
-    return { width, height };
-}
-
 /**
  * Returns a URL string with any qlikTicket query value redacted.
  *
@@ -1052,7 +1024,9 @@ function cropPngBuffer(buffer, crop, logger) {
     // composite, and the standard crop's own early return. Debug mode is excluded because it
     // scans pixels, which needs the decode.
     if (!debugEnabledEarly) {
-        const header = readPngHeaderDimensions(buffer);
+        // Nothing is decoded here, so any header that reads is safe to compare. A buffer without
+        // one skips the fast path, and assertDecodable below refuses it.
+        const header = readPngHeader(buffer);
 
         if (header !== null) {
             const scrollTopEarly = crop.scrollTop || 0;
@@ -1088,6 +1062,11 @@ function cropPngBuffer(buffer, crop, logger) {
     // `setSrc` / `encodedCurrent` below) took the worst-case stall at 1920x1080 from ~512 ms
     // to ~215 ms on incompressible content. An async decode would have saved a further
     // ~65-76 ms of that remainder — the decode figure quoted on the fast path above.
+    //
+    // The decode is also unbounded in memory, whatever the download size, so the chunk headers
+    // are checked first (see assertDecodable). An image refused here throws before anything is
+    // allocated for its pixels, and the caller stores it uncropped.
+    assertDecodable(buffer, 'cropPngBuffer');
     let src = PNG.sync.read(buffer);
 
     // A valid encoding of the CURRENT `src`, or null if there isn't one yet.
@@ -1885,6 +1864,20 @@ export async function downloadScreenshot(url, envelope, config, logger) {
             // Decoded pixels handed over by cropPngBuffer, if it decoded anything. Stays null
             // when no crop ran or the crop threw, in which case the metadata step decodes.
             let croppedDecoded = null;
+            // Set when cropPngBuffer refuses to decode the image. The metadata step would refuse
+            // the same bytes for the same reason, so it is skipped rather than logged twice.
+            let notDecodedReason = null;
+
+            const metadataFlags = config?.addInImageMetadata;
+            const shouldAddMetadata =
+                ext === 'png' &&
+                metadataFlags?.enable === true &&
+                hasAnyEnabledMetadataFlag(metadataFlags);
+            const metadataLines = shouldAddMetadata
+                ? buildScreenshotMetadataLines(envelope, auditCtx, metadataFlags)
+                : [];
+            const wantsMetadata = shouldAddMetadata && metadataLines.length > 0;
+
             const evtWidth = envelope?.payload?.event?.width;
             const evtHeight = envelope?.payload?.event?.height;
             logger.debug(
@@ -1909,38 +1902,43 @@ export async function downloadScreenshot(url, envelope, config, logger) {
                         `AUDIT API: Cropped screenshot PNG to ${crop.width}x${crop.height} (top=${crop.top ?? 0}, left=${crop.left ?? 0}). selectionTxnId=${selectionTxnId} beforeBytes=${beforeLen} afterBytes=${buffer.length}`
                     );
                 } catch (cropErr) {
-                    logger.warn(
-                        `AUDIT API: Failed to crop screenshot PNG. selectionTxnId=${selectionTxnId} error=${formatAxiosError(cropErr)} ${auditCtxStr}`
-                    );
+                    if (cropErr instanceof PngNotDecodedError) {
+                        // A deliberate refusal, not a failure: the screenshot is still stored.
+                        notDecodedReason = cropErr.reason;
+                        logger.warn(
+                            `AUDIT API: Screenshot stored as downloaded, untrimmed${wantsMetadata ? ' and without its _metadata copy' : ''}: ${cropErr.reason}. selectionTxnId=${selectionTxnId} ${auditCtxStr}`
+                        );
+                    } else {
+                        logger.warn(
+                            `AUDIT API: Failed to crop screenshot PNG. selectionTxnId=${selectionTxnId} error=${formatAxiosError(cropErr)} ${auditCtxStr}`
+                        );
+                    }
                     // Continue with the uncropped buffer
                 }
             }
 
             const filename = buildScreenshotFilename(envelope, url, contentType);
 
-            const metadataFlags = config?.addInImageMetadata;
-            const shouldAddMetadata =
-                ext === 'png' &&
-                metadataFlags?.enable === true &&
-                hasAnyEnabledMetadataFlag(metadataFlags);
-            const metadataLines = shouldAddMetadata
-                ? buildScreenshotMetadataLines(envelope, auditCtx, metadataFlags)
-                : [];
-
             let metadataBuffer;
-            if (shouldAddMetadata && metadataLines.length > 0) {
+            if (wantsMetadata && notDecodedReason === null) {
                 try {
                     metadataBuffer = addTextHeaderToPng(buffer, metadataLines, {
                         decoded: croppedDecoded,
                         valueMaxChars: 160,
                     });
                 } catch (err) {
-                    logger.warn(
-                        `AUDIT API: Failed to add metadata header to screenshot PNG. selectionTxnId=${selectionTxnId}error=${formatAxiosError(
-                            err
-                        )} ${auditCtxStr}`
-                    );
-                    metadataBuffer = undefined;
+                    if (err instanceof PngNotDecodedError) {
+                        logger.warn(
+                            `AUDIT API: Screenshot _metadata copy not written: ${err.reason}. selectionTxnId=${selectionTxnId} ${auditCtxStr}`
+                        );
+                    } else {
+                        logger.warn(
+                            `AUDIT API: Failed to add metadata header to screenshot PNG. selectionTxnId=${selectionTxnId}error=${formatAxiosError(
+                                err
+                            )} ${auditCtxStr}`
+                        );
+                        metadataBuffer = undefined;
+                    }
                 }
             }
 

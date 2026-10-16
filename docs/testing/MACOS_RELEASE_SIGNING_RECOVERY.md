@@ -239,9 +239,9 @@ Only intentional source changes should remain.
 
 ### Concurrent macOS Workflow Runs
 
-The release and insider macOS jobs both run on `mac-build2` and both create temporary keychains for Developer ID signing. The keychain files are per-run, but `security default-keychain -d user` and `security list-keychains -d user` mutate shared state for the `goran` user account.
+The release and insider macOS jobs run on GitHub-hosted `macos-15` runners, so every run has a VM of its own and concurrent runs cannot share keychain state. They no longer use the concurrency group `butler-sos-macos-signing-mac-build2`, which kept them apart while both ran on the self-hosted `mac-build2`.
 
-The workflows therefore use the shared concurrency group `butler-sos-macos-signing-mac-build2` for macOS signing jobs. Do not remove that concurrency guard unless the scripts stop changing per-user keychain state or the jobs move to isolated macOS users/runners.
+On a Mac that several runs share, such as a self-hosted build host or a maintainer's own Mac, the scripts still change shared state: the keychain files are per-run, but `security default-keychain -d user` and `security list-keychains -d user` mutate state for the whole user account. Run one signing job or rehearsal at a time there.
 
 ### Interrupted Run Before Cleanup
 

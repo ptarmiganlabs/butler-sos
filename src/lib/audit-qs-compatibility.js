@@ -5,10 +5,15 @@ const { satisfies, valid } = semver;
 /**
  * Compatibility matrix mapping Butler SOS version ranges to compatible Audit.qs version ranges.
  *
- * Each entry uses semver ranges so patch and minor releases are matched automatically.
- * Only major-version boundaries require a manual matrix update.
+ * Each entry uses semver ranges, so Butler SOS patch and minor releases are matched
+ * automatically. Audit.qs is still on 0.x, where a minor release can change the audit
+ * event contract, so its range stops below the next minor version: each new Audit.qs
+ * minor is added here deliberately, once it has been checked against this Butler SOS.
+ * A new Butler SOS major version also needs its own entry before it is released;
+ * without one, every Audit.qs version is refused.
  *
- * Butler SOS 15.0.0 is the first release that supports the Audit.qs extension.
+ * Butler SOS 15.0.0 is the first release that supports the Audit.qs extension. The
+ * 15.x entry accepted Audit.qs 0.3.x in 15.0.0, added 0.4.x in 15.0.1 and 0.5.x in 15.1.0.
  *
  * @type {Array<{ butlerSosVersionRange: string, auditQsVersionRange: string }>}
  */
@@ -20,7 +25,7 @@ const COMPATIBILITY_MATRIX = [
     },
     {
         butlerSosVersionRange: '>=15.0.0 <16.0.0',
-        auditQsVersionRange: '>=0.3.0 <0.5.0',
+        auditQsVersionRange: '>=0.3.0 <0.6.0',
     },
 ];
 

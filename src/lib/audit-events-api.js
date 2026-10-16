@@ -738,13 +738,37 @@ function createPayloadValidators() {
     addFormats(ajv);
 
     /**
-     * Upper bound for every pixel dimension and offset in a `crop` object.
+     * Upper bound for every pixel dimension and offset in a `crop` object except `scrollTop`.
      *
      * 32767 is the maximum canvas dimension browsers will render, so it is also the largest
      * a genuine screenshot from the extension can be. A value above it cannot describe a real
      * rendered image, and only serves to drive absurd buffer offsets and PNG allocations.
      */
     const MAX_CROP_PIXELS = 32767;
+
+    /**
+     * Upper bound for `crop.scrollTop`, which is a scroll position rather than a dimension of
+     * the image.
+     *
+     * The extension sends a scroll container's raw `Element.scrollTop`, and how large that gets
+     * depends on the object. Legacy tables and pivot tables page their rows, so their scroll
+     * area stays within about a page (measured on Sense May 2026: at most 87 px on a
+     * 71,923-row table, 151 px on a 480-row pivot). An sn-table's scroller is as tall as all
+     * of its rows (measured: 1,798,133 px for the same 71,923 rows), and on Sense versions
+     * where Audit.qs finds that scroller it sends the absolute offset. Capping this at
+     * MAX_CROP_PIXELS rejected those events with a 422 and dropped them entirely.
+     *
+     * 33554432 (2^25) is the largest layout size a browser can represent: Chromium and WebKit
+     * store layout positions as 32-bit fixed point with 1/64 px precision, and Firefox's
+     * limit is lower still. No real scroll offset can exceed it.
+     *
+     * This bound does not keep the download path safe on its own. Audit.qs makes the Printing
+     * render taller by the scroll offset, so a large value can come with a very tall image,
+     * and the decode budget (MAX_DECODED_PIXELS) is what keeps that from being decoded.
+     * Within the budget, the composite step runs only when `scrollAreaOffsetY + scrollTop`
+     * falls inside the decoded image, and its output is never larger than that image.
+     */
+    const MAX_SCROLL_TOP_PIXELS = 33554432;
 
     /**
      * Schema for the `crop` rectangle sent by the browser extension.
@@ -756,9 +780,10 @@ function createPayloadValidators() {
      * consequences were bounded -- range errors are caught and the uncropped image is used --
      * but the work was wasted and the values were attacker-controlled.
      *
-     * Every field is bounded to a non-negative pixel count no larger than a renderable image.
-     * Those bounds are where the value is: they stop absurd magnitudes and negative offsets
-     * reaching buffer arithmetic.
+     * Every field is bounded to a non-negative pixel count no larger than a renderable image,
+     * apart from `scrollTop`, which is bounded by the largest possible scroll offset instead
+     * (see MAX_SCROLL_TOP_PIXELS). Those bounds are where the value is: they stop absurd
+     * magnitudes and negative offsets reaching buffer arithmetic.
      *
      * Deliberately `number` rather than `integer`. Browser geometry is fractional -- the
      * extension takes `scrollTop` straight from `Element.scrollTop`, which the CSSOM spec
@@ -770,15 +795,21 @@ function createPayloadValidators() {
      *
      * `additionalProperties` stays true, as everywhere else in these payload schemas, so a
      * future extension release can add fields without being rejected by an older Butler SOS.
+     *
+     * `null` is accepted and means "no crop", exactly like an absent field. Audit.qs sends
+     * `crop: null` whenever the screenshot came from one of its fallback capture paths rather
+     * than the Printing REST API, and the download path skips cropping for any crop that is
+     * not an object with positive `width` and `height`. `properties` and `required` only
+     * apply when the value is an object, so they do not constrain `null`.
      */
     const cropSchema = {
-        type: 'object',
+        type: ['object', 'null'],
         properties: {
             top: { type: 'number', minimum: 0, maximum: MAX_CROP_PIXELS },
             left: { type: 'number', minimum: 0, maximum: MAX_CROP_PIXELS },
             width: { type: 'number', exclusiveMinimum: 0, maximum: MAX_CROP_PIXELS },
             height: { type: 'number', exclusiveMinimum: 0, maximum: MAX_CROP_PIXELS },
-            scrollTop: { type: 'number', minimum: 0, maximum: MAX_CROP_PIXELS },
+            scrollTop: { type: 'number', minimum: 0, maximum: MAX_SCROLL_TOP_PIXELS },
             scrollAreaOffsetY: { type: 'number', minimum: 0, maximum: MAX_CROP_PIXELS },
             renderingOverflow: { type: 'number', minimum: 0, maximum: MAX_CROP_PIXELS },
         },
@@ -789,7 +820,7 @@ function createPayloadValidators() {
     /**
      * Payload schema for screenshot.url.received.
      *
-     * Expected shape: { event: { screenshotUrl: string, objectId?: string, crop?: object } }
+     * Expected shape: { event: { screenshotUrl: string, objectId?: string, crop?: object | null } }
      */
     const screenshotUrlReceivedPayloadSchema = {
         type: 'object',

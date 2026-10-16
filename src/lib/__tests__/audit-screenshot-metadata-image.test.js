@@ -1,8 +1,16 @@
 import { describe, expect, jest, test } from '@jest/globals';
 import pngjs from 'pngjs';
 import crypto from 'crypto';
+import zlib from 'zlib';
 
-import { addTextHeaderToPng } from '../audit-screenshot-metadata-image.js';
+import {
+    addTextHeaderToPng,
+    assertDecodable,
+    MAX_DECODED_PIXELS,
+    MAX_PNG_CHUNKS,
+    PngNotDecodedError,
+    readPngHeader,
+} from '../audit-screenshot-metadata-image.js';
 
 const { PNG } = pngjs;
 
@@ -28,16 +36,33 @@ function makeSourcePng(w, h, varyAlpha = false) {
     return PNG.sync.write(png);
 }
 
+/**
+ * Returns a copy of a PNG whose IHDR claims different dimensions. The chunk CRC is left as it
+ * was, so a decode of the result fails; only code that reads the header before decoding can
+ * tell what it claims.
+ *
+ * @param {Buffer} png - Encoded PNG.
+ * @param {number} width - Width to write into the header.
+ * @param {number} height - Height to write into the header.
+ * @returns {Buffer} PNG bytes with the header dimensions replaced.
+ */
+function withHeaderDimensions(png, width, height) {
+    const copy = Buffer.from(png);
+    copy.writeUInt32BE(width, 16);
+    copy.writeUInt32BE(height, 20);
+    return copy;
+}
+
 const LINES = [
     { key: 'Event', value: 'sheet-viewed' },
     { key: 'User', value: 'LAB\\alice' },
     { key: 'App', value: 'Sales dashboard' },
 ];
 
-describe('addTextHeaderToPng', () => {
-    // Band = paddingTop(8) + lines * (fontHeight 7 + lineSpacing 3) + paddingBottom(8).
-    const BAND_FOR_3_LINES = 46;
+// Band = paddingTop(8) + lines * (fontHeight 7 + lineSpacing 3) + paddingBottom(8).
+const BAND_FOR_3_LINES = 46;
 
+describe('addTextHeaderToPng', () => {
     test('adds a header band of exactly the documented height', () => {
         const source = makeSourcePng(120, 40);
 
@@ -214,5 +239,319 @@ describe('addTextHeaderToPng', () => {
         const out = addTextHeaderToPng(source, []);
 
         expect(out).toBe(source);
+    });
+});
+
+/** The eight bytes every PNG starts with. */
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/**
+ * Builds one PNG chunk with a correct CRC.
+ *
+ * @param {string} type - Four-letter chunk type.
+ * @param {Buffer} data - Chunk data.
+ * @returns {Buffer} Length, type, data and CRC.
+ */
+function pngChunk(type, data) {
+    const head = Buffer.alloc(8);
+    head.writeUInt32BE(data.length, 0);
+    head.write(type, 4, 'ascii');
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(zlib.crc32(Buffer.concat([head.subarray(4), data])), 0);
+    return Buffer.concat([head, data, crc]);
+}
+
+/**
+ * Builds a valid 8-bit palette PNG of 10 x 10 pixels, all of palette index 0, with the given
+ * PLTE chunks (one, normally).
+ *
+ * @param {Buffer[]} palettes - Data of each PLTE chunk to include.
+ * @returns {Buffer} Encoded PNG.
+ */
+function makePalettePng(palettes) {
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(10, 0);
+    ihdr.writeUInt32BE(10, 4);
+    ihdr[8] = 8; // bit depth
+    ihdr[9] = 3; // palette
+    return Buffer.concat([
+        PNG_SIGNATURE,
+        pngChunk('IHDR', ihdr),
+        ...palettes.map((data) => pngChunk('PLTE', data)),
+        // Each row: filter byte 0, then ten palette indexes of 0.
+        pngChunk('IDAT', zlib.deflateSync(Buffer.alloc(10 * 11))),
+        pngChunk('IEND', Buffer.alloc(0)),
+    ]);
+}
+
+/**
+ * Builds a valid, interlaced 8-bit RGBA PNG of a single grey colour, with correct CRCs.
+ *
+ * @param {number} width - Image width.
+ * @param {number} height - Image height.
+ * @param {Buffer} extra - Bytes appended to the image data before compressing it, to make it
+ *   unpack to more than the header allows.
+ * @returns {Buffer} Encoded PNG.
+ */
+function makeInterlacedPng(width, height, extra) {
+    const passes = [
+        [0, 0, 8, 8],
+        [4, 0, 8, 8],
+        [0, 4, 4, 8],
+        [2, 0, 4, 4],
+        [0, 2, 2, 4],
+        [1, 0, 2, 2],
+        [0, 1, 1, 2],
+    ];
+    const rows = [];
+    for (const [x0, y0, dx, dy] of passes) {
+        const w = width > x0 ? Math.ceil((width - x0) / dx) : 0;
+        const h = height > y0 ? Math.ceil((height - y0) / dy) : 0;
+        if (w === 0 || h === 0) continue;
+        for (let y = 0; y < h; y++) {
+            // Filter byte 0, then opaque mid-grey pixels.
+            const row = Buffer.alloc(1 + w * 4, 128);
+            row[0] = 0;
+            for (let x = 0; x < w; x++) row[1 + x * 4 + 3] = 255;
+            rows.push(row);
+        }
+    }
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(width, 0);
+    ihdr.writeUInt32BE(height, 4);
+    ihdr[8] = 8; // bit depth
+    ihdr[9] = 6; // RGBA
+    ihdr[12] = 1; // Adam7
+    return Buffer.concat([
+        PNG_SIGNATURE,
+        pngChunk('IHDR', ihdr),
+        pngChunk('IDAT', zlib.deflateSync(Buffer.concat([...rows, extra]))),
+        pngChunk('IEND', Buffer.alloc(0)),
+    ]);
+}
+
+describe('decode budget', () => {
+    // Every refusal below has to come from the header walk, before any decode: the fixtures keep
+    // their original IDAT and a stale IHDR CRC, so a decode attempt would fail with a different
+    // message, and the dimensions stay small enough that such an attempt is affordable.
+
+    /**
+     * Returns a copy of a PNG with an extra, well-formed IHDR chunk after the first one.
+     *
+     * @param {Buffer} png - Encoded PNG.
+     * @returns {Buffer} PNG bytes with a second IHDR.
+     */
+    function withSecondIhdr(png) {
+        const firstIhdrEnd = 8 + 8 + 13 + 4;
+        const chunk = Buffer.alloc(12 + 13);
+        chunk.writeUInt32BE(13, 0);
+        chunk.write('IHDR', 4, 'ascii');
+        chunk.writeUInt32BE(5000, 8);
+        chunk.writeUInt32BE(5000, 12);
+        chunk[16] = 8; // bit depth
+        chunk[17] = 6; // RGBA
+        return Buffer.concat([png.subarray(0, firstIhdrEnd), chunk, png.subarray(firstIhdrEnd)]);
+    }
+
+    test('allows exactly MAX_DECODED_PIXELS and refuses one pixel row more', () => {
+        // 5000 x 4000 is exactly 20 million pixels.
+        expect(MAX_DECODED_PIXELS).toBe(5000 * 4000);
+        const png = makeSourcePng(4, 4);
+
+        expect(() => assertDecodable(withHeaderDimensions(png, 5000, 4000), 'test')).not.toThrow();
+        expect(() => assertDecodable(withHeaderDimensions(png, 5000, 4001), 'test')).toThrow(
+            /test: image is 5000x4001 \(20005000 pixels\), above the decode budget/
+        );
+    });
+
+    test.each([
+        ['zero width', 0, 20],
+        ['zero height', 20, 0],
+    ])('refuses a header with %s', (_label, width, height) => {
+        // A zero dimension makes the pixel count 0, yet pngjs still sizes its inflate limit
+        // from the other dimension: a 0 x 4294967295 header ran Node out of memory.
+        const png = withHeaderDimensions(makeSourcePng(4, 4), width, height);
+
+        expect(() => assertDecodable(png, 'test')).toThrow(
+            `test: PNG header gives ${width}x${height}; not decoded`
+        );
+    });
+
+    test('refuses an IHDR chunk whose length is not 13', () => {
+        // The walk to the next chunk starts after a 13-byte IHDR; any other length would
+        // misalign it.
+        const png = Buffer.from(makeSourcePng(4, 4));
+        png.writeUInt32BE(14, 8);
+
+        expect(() => assertDecodable(png, 'test')).toThrow(
+            'test: PNG header chunk has the wrong length; not decoded'
+        );
+    });
+
+    test('decodes a small interlaced PNG', () => {
+        // Interlaced images are valid PNGs, so they are decoded once their data is shown to
+        // unpack to no more than the header allows.
+        const png = makeInterlacedPng(10, 7, Buffer.alloc(0));
+
+        expect(assertDecodable(png, 'test')).toMatchObject({ width: 10, height: 7, interlace: 1 });
+        const out = PNG.sync.read(addTextHeaderToPng(png, LINES));
+        expect(out.height).toBe(7 + BAND_FOR_3_LINES);
+    });
+
+    test('refuses interlaced data that unpacks to more than its header allows', () => {
+        // pngjs inflates interlaced data with no output limit: a 10 x 10 header followed by
+        // 256 MB of deflated zeros took gigabytes to decode.
+        const png = makeInterlacedPng(10, 10, Buffer.alloc(8 * 1024 * 1024));
+
+        expect(() => assertDecodable(png, 'test')).toThrow(
+            'test: interlaced PNG data unpacks to more than its 10x10 header allows; not decoded'
+        );
+    });
+
+    test('allows MAX_PNG_CHUNKS chunks and refuses one more, without keeping any per chunk', () => {
+        // pngjs keeps a Buffer per IDAT chunk while decoding: a 48 MB file of four million empty
+        // IDAT chunks took over 500 MB of heap just to list. IHDR and IEND count too.
+        expect(MAX_PNG_CHUNKS).toBe(100000);
+        const png = makeSourcePng(4, 4);
+        const ihdrEnd = 8 + 8 + 13 + 4;
+        const emptyIdat = Buffer.from([0, 0, 0, 0, 0x49, 0x44, 0x41, 0x54, 0x35, 0xaf, 0x06, 0x1e]);
+        const iend = png.subarray(png.length - 12);
+        const withEmptyChunks = (count) =>
+            Buffer.concat([
+                png.subarray(0, ihdrEnd),
+                Buffer.concat(Array(count).fill(emptyIdat)),
+                png.subarray(ihdrEnd, png.length - 12),
+                iend,
+            ]);
+        // The 4 x 4 source has one IDAT of its own, so IHDR + IDAT + IEND is 3 chunks.
+        expect(() => assertDecodable(withEmptyChunks(MAX_PNG_CHUNKS - 3), 'test')).not.toThrow();
+        expect(() => assertDecodable(withEmptyChunks(MAX_PNG_CHUNKS - 2), 'test')).toThrow(
+            'test: PNG has more than 100000 chunks; not decoded'
+        );
+    });
+
+    test('decodes a palette PNG with a full 256-entry palette', () => {
+        const png = makePalettePng([Buffer.alloc(768, 7)]);
+
+        expect(assertDecodable(png, 'test')).toMatchObject({ colorType: 3, width: 10 });
+        const out = PNG.sync.read(addTextHeaderToPng(png, LINES));
+        expect(out.height).toBe(10 + BAND_FOR_3_LINES);
+    });
+
+    test.each([
+        ['257 entries', 771],
+        ['no entries', 0],
+        ['a partial entry', 4],
+    ])('refuses a palette chunk with %s', (_label, length) => {
+        // pngjs turns every 3 palette bytes into its own array, with no limit: a 10 x 10 image
+        // with a 6 MB palette took 199 MB of heap to decode.
+        const png = makePalettePng([Buffer.alloc(length, 7)]);
+
+        expect(() => assertDecodable(png, 'test')).toThrow(
+            `test: PNG palette chunk is ${length} bytes, not 3 to 768 in steps of 3; not decoded`
+        );
+    });
+
+    test('refuses a second palette chunk', () => {
+        // pngjs appends every PLTE chunk to the same palette, so repeating a valid one is the
+        // other way to grow it without limit.
+        const png = makePalettePng([Buffer.alloc(768, 7), Buffer.alloc(768, 7)]);
+
+        expect(() => assertDecodable(png, 'test')).toThrow(
+            'test: PNG has more than one palette chunk; not decoded'
+        );
+    });
+
+    test('counts a 16-bit image double', () => {
+        // pngjs holds 16-bit pixels in a 16-bit array before scaling them down: at 20 million
+        // pixels that measured 672 MB against 366 MB for 8-bit.
+        const png = Buffer.from(makeSourcePng(4, 4));
+        png[24] = 16;
+
+        expect(() => assertDecodable(withHeaderDimensions(png, 5000, 2000), 'test')).not.toThrow();
+        expect(() => assertDecodable(withHeaderDimensions(png, 5000, 2001), 'test')).toThrow(
+            'test: image is 5000x2001 at 16 bits per channel (counts as 20010000 pixels), above the decode budget of 20000000 pixels; not decoded'
+        );
+    });
+
+    test.each([
+        ['an RGBA image with 4-bit channels', 6, 4],
+        ['a palette image with 16-bit indexes', 3, 16],
+        ['an undefined colour type', 5, 8],
+    ])('refuses %s', (_label, colorType, bitDepth) => {
+        const png = Buffer.from(makeSourcePng(4, 4));
+        png[24] = bitDepth;
+        png[25] = colorType;
+
+        expect(() => assertDecodable(png, 'test')).toThrow(
+            `test: PNG colour type ${colorType} with bit depth ${bitDepth} is not a valid combination; not decoded`
+        );
+    });
+
+    test('refuses with a PngNotDecodedError that carries the reason', () => {
+        const png = withHeaderDimensions(makeSourcePng(4, 4), 0, 20);
+
+        let caught;
+        try {
+            assertDecodable(png, 'test');
+        } catch (err) {
+            caught = err;
+        }
+
+        expect(caught).toBeInstanceOf(PngNotDecodedError);
+        expect(caught.reason).toBe('PNG header gives 0x20; not decoded');
+    });
+
+    test('readPngHeader returns the header fields, and null for anything else', () => {
+        expect(readPngHeader(makeSourcePng(40, 20))).toEqual({
+            length: 13,
+            width: 40,
+            height: 20,
+            bitDepth: 8,
+            colorType: 6,
+            interlace: 0,
+        });
+        expect(readPngHeader(Buffer.from('<html>502 Bad Gateway</html>'))).toBeNull();
+        expect(readPngHeader(makeSourcePng(4, 4).subarray(0, 30))).toBeNull();
+    });
+
+    test('refuses a PNG with a second IHDR chunk', () => {
+        // pngjs lets a later IHDR replace the first, so the size checked would not be the size
+        // decoded: a 143-byte file with a 10 x 10 header decoded to 10000 x 10000.
+        const png = withSecondIhdr(makeSourcePng(4, 4));
+
+        expect(() => assertDecodable(png, 'test')).toThrow(
+            'test: PNG has a second IHDR chunk; not decoded'
+        );
+    });
+
+    test.each([
+        ['an HTML body', Buffer.from('<html>502 Bad Gateway</html>')],
+        ['a PNG cut off inside its header chunk', makeSourcePng(4, 4).subarray(0, 30)],
+    ])('refuses %s', (_label, buffer) => {
+        expect(() => assertDecodable(buffer, 'test')).toThrow('test: not a PNG; not decoded');
+    });
+
+    test('accepts an ordinary PNG', () => {
+        expect(() => assertDecodable(makeSourcePng(40, 20), 'test')).not.toThrow();
+    });
+
+    test('addTextHeaderToPng refuses an oversized image before decoding it', () => {
+        // A flat render compresses far below the 50 MB download cap yet decodes to gigabytes.
+        const oversized = withHeaderDimensions(makeSourcePng(4, 4), 5000, 4001);
+
+        expect(() => addTextHeaderToPng(oversized, LINES)).toThrow(
+            /addTextHeaderToPng: image is 5000x4001 .* above the decode budget/
+        );
+    });
+
+    test('addTextHeaderToPng refuses an output the text would widen past the budget', () => {
+        // 10 x 1,999,000 is within the budget, but the header text widens the output to over
+        // 100 px, and that output would be ten times the budget.
+        const narrow = withHeaderDimensions(makeSourcePng(4, 4), 10, 1999000);
+
+        expect(() => addTextHeaderToPng(narrow, LINES)).toThrow(
+            /addTextHeaderToPng: output would be \d+x1999046 .* above the decode budget .*; not built/
+        );
     });
 });
