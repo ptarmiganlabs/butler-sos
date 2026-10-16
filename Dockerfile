@@ -23,6 +23,13 @@ LABEL description="Real-time operational metrics for Qlik Sense Enterprise on Wi
 # Set environment to production
 ENV NODE_ENV=production
 
+# Remove npm from the runtime image. Nothing here runs it: the dependencies are installed in the
+# build stage, and CMD and HEALTHCHECK call node directly. Left in, it is a second dependency tree
+# that ships in every image and that this project does not control. In 15.1.0 it carried 11 of
+# the 24 HIGH and CRITICAL findings Trivy reported (its own tar, undici, brace-expansion and
+# ip-address), which only a new base image could otherwise fix.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+
 WORKDIR /nodeapp
 
 # Copy only necessary files from build stage
