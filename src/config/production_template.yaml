@@ -93,7 +93,7 @@ Butler-SOS:
     errorTracking:
         enable: true # Master switch for error tracking
         logSummary:
-            enable: true # Log daily error summary to console at midnight UTC
+            enable: true # Log error counts to console: running totals at most once a minute while errors occur, and a final daily summary at midnight UTC
         influxdb:
             enable: true # Write individual error events to InfluxDB
             measurementName: butler_sos_errors # Name of InfluxDB measurement for error events
