@@ -144,6 +144,11 @@ jobs:
       contents: write
     needs: release-please
     runs-on: macos-15
+    # In the release-signing environment, which admits master alone, like sign-win64. The Apple
+    # signing secrets are repository secrets today, readable by a workflow on any branch. This lets
+    # them move into the environment, where only master's macOS jobs can read them; a job that
+    # does not name the environment would lose them then.
+    environment: release-signing
     # timeout-minutes: 15
 
     if: needs.release-please.outputs.releases_created == 'true'

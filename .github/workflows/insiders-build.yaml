@@ -24,16 +24,12 @@ jobs:
             cancel-in-progress: false
         strategy:
             matrix:
-                os: [win-code-sign, macos-15, ubuntu-latest]
+                os: [win-code-sign, ubuntu-latest]
                 include:
                     - os: win-code-sign
                       # artifact_release_name: release-binaries-win
                       # artifact_release_path: release-binaries-win/*
                       artifact_insider: butler-sos--win-x64--${{ github.sha }}.zip
-                    
-                    # Arm64 build, on a GitHub-hosted runner (see release-macos-arm64 in ci.yaml)
-                    - os: macos-15
-                      artifact_insider: butler-sos--macos-arm64--${{ github.sha }}.zip
                     
                     - os: ubuntu-latest
                       artifact_insider: butler-sos--linux-x64--${{ github.sha }}.zip
@@ -88,20 +84,6 @@ jobs:
                   CODESIGN_WIN_THUMBPRINT: ${{ secrets.WIN_CODESIGN_THUMBPRINT}}
               run: ./scripts/insider-build-win.ps1
 
-            - name: Create binaries (macOS)
-              if: matrix.os == 'macos-15'
-              env:
-                  DIST_FILE_NAME: butler-sos
-                  GITHUB_TOKEN: ${{ secrets.PAT }}
-                  MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE_BASE64_CODESIGN }}
-                  MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_CODESIGN_PWD }}
-                  MACOS_CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_CODESIGN_NAME }}
-                  MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
-                  PROD_MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
-                  PROD_MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
-                  PROD_MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
-              run: bash ./scripts/insider-build-mac.sh
-
             - name: Create binaries (Linux)
               if: matrix.os == 'ubuntu-latest'
               env:
@@ -114,6 +96,64 @@ jobs:
               with:
                   name: ${{ matrix.artifact_insider }}
                   path: ${{ matrix.artifact_insider }}
+                  retention-days: 7
+
+    # macOS is a job of its own so that it alone runs in the release-signing environment, which
+    # admits master alone. It is the only insiders build that uses the Apple signing secrets; the
+    # Windows and Linux legs have no reason to be in the environment. Why the environment matters,
+    # and why a GitHub-hosted runner: see release-macos-arm64 in ci.yaml.
+    insiders-build-macos:
+        # The same condition as insiders-build: no insiders build for a release commit.
+        if: |
+            github.event_name == 'workflow_dispatch' ||
+            !(
+                github.event_name == 'push' &&
+                (
+                    contains(github.event.head_commit.message, 'chore: release') ||
+                    contains(github.event.head_commit.message, 'chore(master): release') ||
+                    contains(github.event.head_commit.message, 'release-please--branches--master')
+                )
+            )
+        permissions: {}
+        concurrency:
+            group: ${{ format('butler-sos-insiders-build-{0}-macos-15', github.ref) }}
+            cancel-in-progress: false
+        runs-on: macos-15
+        environment: release-signing
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                persist-credentials: false
+
+            - name: Setup Node.js
+              uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+              with:
+                  node-version: 24
+                  cache: npm
+
+            - name: Install dependencies
+              run: |
+                  npm ci --ignore-scripts
+
+            - name: Create binaries (macOS)
+              env:
+                  DIST_FILE_NAME: butler-sos
+                  GITHUB_TOKEN: ${{ secrets.PAT }}
+                  MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE_BASE64_CODESIGN }}
+                  MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_CODESIGN_PWD }}
+                  MACOS_CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_CODESIGN_NAME }}
+                  MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+                  PROD_MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
+                  PROD_MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
+                  PROD_MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
+              run: bash ./scripts/insider-build-mac.sh
+
+            - name: Upload insider build artifacts to GitHub
+              uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+              with:
+                  name: butler-sos--macos-arm64--${{ github.sha }}.zip
+                  path: butler-sos--macos-arm64--${{ github.sha }}.zip
                   retention-days: 7
 
     deploy-windows-insider:
