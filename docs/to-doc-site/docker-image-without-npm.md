@@ -4,8 +4,7 @@ The Butler SOS Docker image no longer contains the Node.js package managers: **n
 **Corepack** and **Yarn**. Butler SOS itself does not use any of them while it runs, so for most
 installations nothing changes: the container starts, runs and reports its health exactly as before.
 
-This page explains why they were removed, and the situations in which you will notice. It also
-covers the same release's update of the image's operating-system packages.
+This page explains why they were removed, and the situations in which you will notice.
 
 ---
 
@@ -67,26 +66,3 @@ Check your setup if any of these apply to you, because each now fails with an er
     ```
 
     (Replace `butler-sos` with the name of your container.)
-
----
-
-## The operating-system packages are updated too
-
-The same release also builds the image on a newer Debian Linux build, which brings newer
-versions of the Debian Linux packages the image is made of. This is separate from the
-npm change above, and it also reduces what a vulnerability scan reports. Nothing changes in how
-you run or configure the container.
-
-In the 15.1.0 image, Trivy reported four HIGH findings in `libpcre2-8-0`, a text-matching library
-that is part of the operating system. The newer image includes the fixed version, so those
-findings are gone.
-
-Together with the removal of npm, and an update of `handlebars` (a template library Butler SOS
-uses, which carried two CRITICAL findings), a Trivy scan of the new image reports 7 findings rated
-HIGH or CRITICAL, down from 24 for 15.1.0. These numbers count only findings for which a fix
-exists; other scanners, or other settings, may report different totals.
-
-The seven that remain are all in `perl-base`, the core of the Perl programming language, which
-Debian includes in every installation. Butler SOS never runs Perl. The fixed version of
-`perl-base` had not yet reached the Debian base image when this release was built, and a
-later Butler SOS release will pick it up once it has.
