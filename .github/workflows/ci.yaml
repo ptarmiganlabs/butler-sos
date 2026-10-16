@@ -134,14 +134,21 @@ jobs:
           path: './build/'
           retention-days: 3
 
+  # On a GitHub-hosted runner: butler-sos is public, so it costs nothing, and the self-hosted
+  # runner groups do not admit public repositories (the 15.1.0 macOS build waited for mac-build2
+  # until one was opened by hand). Each run gets a VM of its own, so the temporary keychain and
+  # decoded certificate that scripts/release-macos.sh creates go with it, and the release and
+  # insiders builds no longer need a shared concurrency group to keep them apart.
   release-macos-arm64:
     permissions:
       contents: write
     needs: release-please
-    runs-on: mac-build2
-    concurrency:
-      group: butler-sos-macos-signing-mac-build2
-      cancel-in-progress: false
+    runs-on: macos-15
+    # In the release-signing environment, which admits master alone, like sign-win64. The Apple
+    # signing secrets are repository secrets today, readable by a workflow on any branch. This lets
+    # them move into the environment, where only master's macOS jobs can read them; a job that
+    # does not name the environment would lose them then.
+    environment: release-signing
     # timeout-minutes: 15
 
     if: needs.release-please.outputs.releases_created == 'true'

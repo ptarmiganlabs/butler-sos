@@ -138,6 +138,12 @@ still miss the point.
   `publish-win64` zips and attaches it. Never add a checkout, npm or `./scripts` step to
   `sign-win64`. To prove signing works without releasing anything:
   `gh workflow run ci.yaml --ref master -f rehearse_signing=true`.
+- **The macOS binary is signed and notarized by `scripts/release-macos.sh`** in ci's
+  `release-macos-arm64`, on a GitHub-hosted `macos-15` runner; `insiders-build-macos` signs the
+  insiders build the same way. Both run in the `release-signing` environment: keep it on them,
+  because once the Apple secrets live in that environment, a job that does not name it cannot read
+  them. Do not move them back to a self-hosted runner: the runner groups do not admit public
+  repositories, and the job waits until one is opened by hand.
 - **If a release job fails, use "Re-run failed jobs", within 30 days.** "Re-run all jobs" builds
   nothing: release-please finds the release already made and reports no new one, so every job
   that waits for it is skipped. The Windows artifacts are kept 30 days on release runs so that
