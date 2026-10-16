@@ -12,16 +12,18 @@ updates:
     cooldown:
       default-days: 7
 
-  # The Dockerfile pins its base image by digest, which is only safe if something keeps that
-  # digest current — otherwise the published image silently stops receiving base-OS security
-  # updates. This is that something.
+  # The Dockerfile pins its two base images by tag and digest, which is only safe if something
+  # keeps them current — otherwise the published image silently stops receiving base-OS security
+  # updates. This is that something. Both tags are exact (node:24.21.0-bookworm-slim,
+  # debian:bookworm-20261005-slim), so every update arrives as a change of tag: a new Node.js
+  # release, or a new dated Debian build that keeps the bookworm- prefix.
   #
-  # Node majors are ignored, because otherwise this never refreshed the digest at all: offered a
-  # newer major, Dependabot proposes only that (node 25 in #1482, node 26 in #1490) and never the
-  # new digest of 24-bookworm-slim. Both majors sat unmerged, and the base image went from
-  # 2026-08-06 to 15.1.0 without a single Debian security update. Moving to a new Node major is
-  # a decision of its own, made in the Dockerfile, package.json `engines` and the SEA builds
-  # together.
+  # Node majors are ignored. Offered one, Dependabot proposes only that (node 25 in #1482,
+  # node 26 in #1490), and both sat unmerged while the base image went from 2026-08-06 to 15.1.0
+  # without a single Debian security update. Moving to a new Node major is a decision of its own,
+  # made in the Dockerfile, package.json `engines` and the SEA builds together. Debian needs no
+  # such rule: its dated tags are not semantic versions, and every new date would count as a
+  # major update.
   - package-ecosystem: "docker"
     directory: "/"
     schedule:

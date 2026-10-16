@@ -1,10 +1,15 @@
 # Stage 1: Build
 #
-# Both base images are pinned by digest rather than by tag. Their tags are republished
-# continuously, so a bare tag means two builds of the same commit can produce different images,
-# and a regressed or compromised base ships without any change here to explain it. Dependabot's
-# docker ecosystem keeps both digests current — see .github/dependabot.yml.
-FROM node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS build
+# Both base images are pinned by tag and digest. Their tags are republished, so a bare tag means
+# two builds of the same commit can produce different images, and a regressed or compromised base
+# ships without any change here to explain it. Dependabot's docker ecosystem keeps both current —
+# see .github/dependabot.yml.
+#
+# The tags are exact: a Node.js release and a dated Debian build, not rolling tags such as
+# 24-bookworm-slim. Dependabot then offers every update as a change of tag. On a rolling tag it
+# could only offer a new digest for the same tag, which it holds back while the tag keeps being
+# republished and can suppress altogether.
+FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS build
 
 WORKDIR /nodeapp
 
@@ -22,7 +27,7 @@ RUN npm ci --omit=dev --ignore-scripts
 #
 # The Node.js binary needs only Debian's C and C++ runtime libraries (libc6, libstdc++6 and
 # libgcc-s1), which every slim image has. Keep both stages on the same Debian release, bookworm.
-FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+FROM debian:bookworm-20261005-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
 
 # Add metadata about the image
 LABEL maintainer="Göran Sander mountaindude@ptarmiganlabs.com"
