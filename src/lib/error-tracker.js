@@ -5,9 +5,24 @@ import globals from '../globals.js';
 import { getInfluxDbVersion, isInfluxDbEnabled } from './influxdb/shared/utils.js';
 import { getErrorMetadata } from './error-categorizer.js';
 
+// Minimum time between two running-total summary lines in the log
+const SUMMARY_LOG_INTERVAL_MS = 60 * 1000;
+
 // Set while an error event is being written to InfluxDB. Lets incrementError() see that it
 // was reached from inside such a write, even across the awaits and retry timers in between.
 const errorEventWriteContext = new AsyncLocalStorage();
+
+/**
+ * Checks whether error summary logging is enabled in config.
+ * Defaults to true if the config key is absent, to preserve existing behavior.
+ *
+ * @returns {boolean} True if enabled
+ */
+function isLogSummaryEnabled() {
+    return globals.config?.has?.('Butler-SOS.errorTracking.logSummary.enable')
+        ? globals.config.get('Butler-SOS.errorTracking.logSummary.enable')
+        : true;
+}
 
 /**
  * Class for tracking counts of API errors in Butler SOS.
@@ -17,6 +32,8 @@ const errorEventWriteContext = new AsyncLocalStorage();
  * - Data destination errors (InfluxDB, New Relic, MQTT)
  *
  * Counters reset daily at midnight UTC.
+ * If summary logging is enabled, the running totals are logged at most once a minute while
+ * errors occur, and a final summary is logged at midnight UTC.
  * Optionally writes individual error events to InfluxDB if configured.
  */
 export class ErrorTracker {
@@ -40,6 +57,10 @@ export class ErrorTracker {
 
         // Track when counters were last reset
         this.lastResetDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD in UTC
+
+        // Rate limiting of the running-total summary line
+        this.lastSummaryLogTime = 0;
+        this.summaryLogTimer = null;
     }
 
     /**
@@ -114,16 +135,9 @@ export class ErrorTracker {
                 });
             }
 
-            // Log current error statistics only when enabled in config.
-            // Default to true to preserve existing behavior if the config key is absent.
-            const isLogSummaryEnabled = globals.config?.has?.(
-                'Butler-SOS.errorTracking.logSummary.enable'
-            )
-                ? globals.config.get('Butler-SOS.errorTracking.logSummary.enable')
-                : true;
-
-            if (isLogSummaryEnabled) {
-                await this.logErrorSummary();
+            // Log current error statistics only when enabled in config
+            if (isLogSummaryEnabled()) {
+                await this._logRunningSummary();
             }
 
             // Write individual error event to InfluxDB (non-blocking).
@@ -157,6 +171,41 @@ export class ErrorTracker {
             }
         } finally {
             release();
+        }
+    }
+
+    /**
+     * Logs the running error totals, at most once per SUMMARY_LOG_INTERVAL_MS.
+     *
+     * The first error after a quiet interval is logged at once. Errors arriving within the
+     * interval are not logged one by one; instead the totals are logged once when the interval
+     * ends, so the last errors of a burst still show up in the log.
+     *
+     * @returns {Promise<void>}
+     * @private
+     */
+    async _logRunningSummary() {
+        const msSinceLastLog = Date.now() - this.lastSummaryLogTime;
+
+        if (msSinceLastLog >= SUMMARY_LOG_INTERVAL_MS) {
+            this.lastSummaryLogTime = Date.now();
+            await this.logErrorSummary();
+            return;
+        }
+
+        if (!this.summaryLogTimer) {
+            this.summaryLogTimer = setTimeout(() => {
+                this.summaryLogTimer = null;
+                this.lastSummaryLogTime = Date.now();
+                this.logErrorSummary().catch((logErr) => {
+                    this.logger.debug(
+                        `ERROR TRACKER: Error logging error summary: ${logErr.message}`
+                    );
+                });
+            }, SUMMARY_LOG_INTERVAL_MS - msSinceLastLog);
+
+            // Don't keep the process alive just to log a summary
+            this.summaryLogTimer.unref?.();
         }
     }
 
@@ -419,7 +468,9 @@ export function setupErrorCounterReset() {
             // Log final daily summary before reset
             const release = await globals.errorTracker.errorMutex.acquire();
             try {
-                await globals.errorTracker.logErrorSummary();
+                if (isLogSummaryEnabled()) {
+                    await globals.errorTracker.logErrorSummary();
+                }
                 await globals.errorTracker.resetCounters();
                 globals.errorTracker.lastResetDate = new Date().toISOString().split('T')[0];
             } finally {

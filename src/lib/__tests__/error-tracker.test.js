@@ -425,6 +425,70 @@ describe('ErrorTracker.incrementError with InfluxDB enabled', () => {
     });
 });
 
+describe('ErrorTracker running error summary', () => {
+    let tracker;
+
+    const summaryLines = () =>
+        mockLogger.info.mock.calls
+            .map(([message]) => message)
+            .filter((message) => message.includes('ERROR TRACKER: Error counts today (UTC)'));
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+        // logSummary.enable absent from config, so summary logging defaults to enabled
+        mockConfigHas.mockReturnValue(false);
+        mockConfigGet.mockReturnValue(undefined);
+        mockIsInfluxDbEnabled.mockReturnValue(false);
+        tracker = new ErrorTracker(mockLogger);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    test('logs the first error at once', async () => {
+        await tracker.incrementError('API_1', 'Server_1');
+        expect(summaryLines()).toHaveLength(1);
+        expect(summaryLines()[0]).toContain('Total=1');
+    });
+
+    test('logs errors that arrive within a minute of the last line once, when the minute is up', async () => {
+        await tracker.incrementError('API_1', 'Server_1');
+        await tracker.incrementError('API_1', 'Server_1');
+        await tracker.incrementError('API_2', 'Server_1');
+        expect(summaryLines()).toHaveLength(1);
+
+        jest.advanceTimersByTime(59 * 1000);
+        expect(summaryLines()).toHaveLength(1);
+
+        jest.advanceTimersByTime(1000);
+        expect(summaryLines()).toHaveLength(2);
+        expect(summaryLines()[1]).toContain('Total=3');
+    });
+
+    test('logs at once when a minute has passed since the last line', async () => {
+        await tracker.incrementError('API_1', 'Server_1');
+        jest.advanceTimersByTime(61 * 1000);
+        await tracker.incrementError('API_1', 'Server_1');
+
+        expect(summaryLines()).toHaveLength(2);
+        expect(summaryLines()[1]).toContain('Total=2');
+    });
+
+    test('logs one line a minute during a steady stream of errors', async () => {
+        // One error a second for five minutes
+        for (let second = 0; second < 300; second++) {
+            await tracker.incrementError('API_1', 'Server_1');
+            jest.advanceTimersByTime(1000);
+        }
+
+        // Lines at 0, 60, 120, 180, 240 and 300 seconds, instead of one per error
+        expect(summaryLines()).toHaveLength(6);
+        expect(summaryLines()[5]).toContain('Total=300');
+    });
+});
+
 describe('setupErrorCounterReset', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -465,5 +529,54 @@ describe('setupErrorCounterReset', () => {
         expect(mockLogger.info).toHaveBeenCalledWith(
             expect.stringContaining('Midnight UTC reached')
         );
+    });
+
+    /**
+     * Starts the midnight reset cycle with three errors counted, and runs it to midnight UTC.
+     *
+     * @param {boolean} logSummaryEnabled - Value of Butler-SOS.errorTracking.logSummary.enable
+     * @returns {Promise<string[]>} Messages logged at info level
+     */
+    async function runToMidnight(logSummaryEnabled) {
+        const { setupErrorCounterReset } = await import('../error-tracker.js');
+        const globals = (await import('../../globals.js')).default;
+
+        mockConfigHas.mockImplementation(
+            (key) => key === 'Butler-SOS.errorTracking.logSummary.enable'
+        );
+        mockConfigGet.mockImplementation((key) =>
+            key === 'Butler-SOS.errorTracking.logSummary.enable' ? logSummaryEnabled : undefined
+        );
+        globals.errorTracker = new ErrorTracker(mockLogger);
+        globals.errorTracker.errorCounts.push({
+            apiType: 'API_1',
+            serverName: 'Server_1',
+            count: 3,
+        });
+
+        setupErrorCounterReset();
+
+        const now = new Date();
+        const nextMidnight = new Date(now);
+        nextMidnight.setUTCHours(24, 0, 0, 0);
+        await jest.advanceTimersByTimeAsync(nextMidnight - now);
+
+        return mockLogger.info.mock.calls.map(([message]) => message);
+    }
+
+    test('logs the daily summary at midnight when logSummary.enable is true', async () => {
+        const messages = await runToMidnight(true);
+        expect(messages).toContainEqual(
+            expect.stringContaining('ERROR TRACKER: Error counts today (UTC): Total=3')
+        );
+        expect(messages).toContain('ERROR TRACKER: Reset all error counters');
+    });
+
+    test('resets counters at midnight without logging a summary when logSummary.enable is false', async () => {
+        const messages = await runToMidnight(false);
+        expect(messages).not.toContainEqual(
+            expect.stringContaining('ERROR TRACKER: Error counts today (UTC)')
+        );
+        expect(messages).toContain('ERROR TRACKER: Reset all error counters');
     });
 });

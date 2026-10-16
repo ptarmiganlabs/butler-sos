@@ -1,6 +1,6 @@
 // Error tracking configuration schema for Butler-SOS
-// Controls in-memory error counting, daily console summary logging,
-// and optional per-error InfluxDB writes.
+// Controls in-memory error counting, console summary logging (rate-limited
+// running totals plus a daily summary), and optional per-error InfluxDB writes.
 
 export const errorTrackingSchema = {
     errorTracking: {
