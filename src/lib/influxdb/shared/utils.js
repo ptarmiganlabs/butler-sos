@@ -705,37 +705,47 @@ function batchWriteError(notWritten, total, lastError) {
 }
 
 /**
- * Writes points in chunks of chunkSize, each once (with retries), and collects the points of the
- * chunks that failed. One pass of writeInProgressiveBatches.
+ * Counts the points in a list of chunks.
  *
- * @param {Array} pending - The points to write
- * @param {number} chunkSize - Number of points per chunk
+ * @param {Array[]} chunks - Chunks of points
+ *
+ * @returns {number} Number of points
+ */
+function countPoints(chunks) {
+    return chunks.reduce((count, chunk) => count + chunk.length, 0);
+}
+
+/**
+ * Writes each chunk once (with retries) and collects the chunks that failed. One pass of
+ * writeInProgressiveBatches.
+ *
+ * @param {Array[]} chunks - The chunks to write
  * @param {(chunk: Array) => Promise<void>} writeChunk - Writes one chunk of points
  * @param {object} pass - What the pass needs to know
  * @param {string} pass.version - InfluxDB version ('v1', 'v2' or 'v3')
  * @param {string} pass.context - Description of what's being written, for log messages
  * @param {string} pass.logPrefix - Prefix for log messages
  * @param {number} pass.total - Number of points in the whole batch, for log messages
+ * @param {number} pass.waiting - Number of points in failed chunks not written in this pass
  * @param {object} pass.retryOptions - Retry options for writeToInfluxWithRetry
  *
- * @returns {Promise<{ failed: Array, lastError: (Error|undefined) }>} The points in failed
- *   chunks, and the error the last of them failed with
+ * @returns {Promise<{ failedChunks: Array[], lastError: (Error|undefined) }>} The chunks that
+ *   failed, and the error the last of them failed with
  *
  * @throws {Error} When InfluxDB cannot be reached, which ends the pass. See batchWriteError.
  */
 async function writeChunksOnce(
-    pending,
-    chunkSize,
+    chunks,
     writeChunk,
-    { version, context, logPrefix, total, retryOptions }
+    { version, context, logPrefix, total, waiting, retryOptions }
 ) {
-    const chunks = chunkArray(pending, chunkSize);
-    const failed = [];
+    const pointsInPass = countPoints(chunks);
+    const failedChunks = [];
     let lastError;
+    let startIdx = 0;
 
     for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
-        const startIdx = i * chunkSize;
         const endIdx = startIdx + chunk.length - 1;
 
         try {
@@ -750,8 +760,8 @@ async function writeChunksOnce(
         } catch (err) {
             const unavailable = serverUnavailableReason(err);
             if (unavailable) {
-                // This chunk, the chunks after it and those that already failed are all lost
-                const notWritten = failed.length + pending.length - startIdx;
+                // This chunk, the chunks after it and all failed chunks so far are lost
+                const notWritten = waiting + countPoints(failedChunks) + (pointsInPass - startIdx);
                 globals.logger.error(
                     `${logPrefix} - ${unavailable}, so ${notWritten} of ${total} point(s) were not written. Smaller batches are not tried, as they cannot help: ${globals.getErrorMessage(err)}`
                 );
@@ -759,24 +769,27 @@ async function writeChunksOnce(
             }
 
             lastError = err;
-            failed.push(...chunk);
+            failedChunks.push(chunk);
             globals.logger.error(
                 `${logPrefix} - Chunk ${i + 1} of ${chunks.length} (points ${startIdx}-${endIdx}) failed: ${globals.getErrorMessage(err)}`
             );
         }
+
+        startIdx += chunk.length;
     }
 
-    return { failed, lastError };
+    return { failedChunks, lastError };
 }
 
 /**
- * Writes points to InfluxDB in chunks of at most maxBatchSize points. When chunks fail, the
- * points in those chunks, and only those, are written again in smaller chunks, down to one
- * point at a time, so that a single bad point costs as little of the batch as possible.
+ * Writes points to InfluxDB in chunks of at most maxBatchSize points. When chunks fail, those
+ * chunks, and only those, are written again in smaller chunks, down to one point at a time, so
+ * that a single bad point costs as little of the batch as possible.
  *
- * - A batch size is skipped when it would not make the chunks any smaller, as that would only
- *   repeat the write that just failed. A single point is written once (with retries), not once
- *   per batch size.
+ * - Failed chunks are kept apart. A pass with a smaller batch size splits only the failed
+ *   chunks that are larger than that size; a chunk that is not larger would be written exactly
+ *   as it failed, so it waits for a size that can split it. A single point that failed is never
+ *   written again, and a batch size that would split nothing is skipped.
  * - When InfluxDB cannot be reached at all, or keeps answering that it is overloaded or briefly
  *   unavailable (429, 503 and the like, after the retries), the write stops there. Smaller chunks
  *   cannot fix that, and every remaining chunk would fail the same way after its own retries.
@@ -805,56 +818,57 @@ async function writeInProgressiveBatches(
     const logPrefix = `INFLUXDB ${version.toUpperCase()} BATCH: ${context}`;
     const batchSizes = [maxBatchSize, 500, 250, 100, 10, 1].filter((size) => size <= maxBatchSize);
     const retryOptions = maxRetries === undefined ? {} : { maxRetries };
+    const pass = { version, context, logPrefix, total: points.length, retryOptions };
 
     stampPointsOnce(points, version);
 
-    let pending = points;
-    let previousChunkSize = Infinity;
-    let lastError;
+    // First pass: the whole batch, in chunks of maxBatchSize
+    let { failedChunks, lastError } = await writeChunksOnce(
+        chunkArray(points, maxBatchSize),
+        writeChunk,
+        {
+            ...pass,
+            waiting: 0,
+        }
+    );
+    if (failedChunks.length === 0) {
+        return;
+    }
 
-    for (const batchSize of batchSizes) {
-        const chunkSize = Math.min(batchSize, pending.length);
-        if (chunkSize >= previousChunkSize) {
+    for (const batchSize of batchSizes.slice(1)) {
+        const toSplit = failedChunks.filter((chunk) => chunk.length > batchSize);
+        if (toSplit.length === 0) {
             continue;
         }
 
-        const isRetryPass = previousChunkSize !== Infinity;
-        if (isRetryPass) {
-            globals.logger.warn(
-                `${logPrefix} - Writing the ${pending.length} point(s) that failed with batch size ${previousChunkSize} again, with batch size ${chunkSize}`
-            );
-        }
-        previousChunkSize = chunkSize;
-
-        const { failed, lastError: passError } = await writeChunksOnce(
-            pending,
-            chunkSize,
-            writeChunk,
-            { version, context, logPrefix, total: points.length, retryOptions }
+        const waitingChunks = failedChunks.filter((chunk) => chunk.length <= batchSize);
+        const retrying = countPoints(toSplit);
+        globals.logger.warn(
+            `${logPrefix} - Writing ${retrying} point(s) from failed chunks again, with batch size ${batchSize}`
         );
 
-        if (failed.length === 0) {
-            if (isRetryPass) {
-                globals.logger.info(
-                    `${logPrefix} - Wrote the remaining ${pending.length} point(s) using batch size ${chunkSize} (reduced from ${maxBatchSize})`
-                );
-            }
+        const result = await writeChunksOnce(
+            toSplit.flatMap((chunk) => chunkArray(chunk, batchSize)),
+            writeChunk,
+            { ...pass, waiting: countPoints(waitingChunks) }
+        );
+
+        failedChunks = [...waitingChunks, ...result.failedChunks];
+        lastError = result.lastError ?? lastError;
+
+        if (failedChunks.length === 0) {
+            globals.logger.info(
+                `${logPrefix} - Wrote the remaining ${retrying} point(s) using batch size ${batchSize} (reduced from ${maxBatchSize})`
+            );
             return;
         }
-
-        pending = failed;
-        lastError = passError;
-
-        // When only a short last chunk failed, it is smaller than the batch size just used.
-        // Writing it again at that size would repeat the same write, so the next size must be
-        // smaller than the points that are left as well.
-        previousChunkSize = Math.min(previousChunkSize, pending.length);
     }
 
+    const notWritten = countPoints(failedChunks);
     globals.logger.error(
-        `${logPrefix} - Failed to write ${pending.length} of ${points.length} point(s), even with batch size ${previousChunkSize}`
+        `${logPrefix} - Failed to write ${notWritten} of ${points.length} point(s), even with batch size ${batchSizes.at(-1) ?? maxBatchSize}`
     );
-    throw batchWriteError(pending.length, points.length, lastError);
+    throw batchWriteError(notWritten, points.length, lastError);
 }
 
 /**

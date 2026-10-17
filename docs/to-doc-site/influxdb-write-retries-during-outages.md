@@ -79,8 +79,9 @@ flowchart TD
   attempted either, as they would fail the same way.
 - **Only failed points are written again.** Points that were stored successfully are not sent a
   second time, so they are not duplicated.
-- **No pointless retries.** A batch size that would not make the batch any smaller is skipped,
-  so a single data point is written once (with its retries), not once per batch size.
+- **No pointless retries.** Failed parts of a batch are retried in smaller batches only while
+  that actually splits them. A data point that has already failed on its own is not sent again,
+  and a single data point is written once (with its retries), not once per batch size.
 - **One error per failed write.** Each failed write is counted once, and its error event is
   written to InfluxDB with a single attempt. If InfluxDB is down, that attempt fails quickly
   and quietly instead of adding more retries to the log.
@@ -133,7 +134,7 @@ are the replacements:
 
 | Old message | New message |
 |-------------|-------------|
-| `... N chunk(s) failed with batch size X, retrying with smaller batches` | `... Writing the N point(s) that failed with batch size X again, with batch size Y` |
+| `... N chunk(s) failed with batch size X, retrying with smaller batches` | `... Writing N point(s) from failed chunks again, with batch size Y` |
 | `... Failed to write data even with batch size 1. N point(s) could not be written.` | `... Failed to write N of M point(s), even with batch size X` |
 | `... Successfully wrote all data using batch size X (reduced from Y)` | `... Wrote the remaining N point(s) using batch size X (reduced from Y)` |
 | `Failed to write batch after trying all progressive sizes` | `Failed to write N of M point(s): <the reason InfluxDB gave>` |

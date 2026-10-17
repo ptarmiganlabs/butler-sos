@@ -271,6 +271,25 @@ describe.each(batchWriters)(
                 expect(attempts).toBe(3 + 10);
             });
 
+            test('a failed single point is not written again while other failed chunks are split', async () => {
+                // 2001 points in batches of 1000, with points 0 and 2000 always rejected: the first chunk
+                // and the 1-point tail fail. Point 2000 already failed on its own, so it must not come
+                // back in the smaller batches that hunt down point 0.
+                let tailWrites = 0;
+                install(async (ids) => {
+                    attempts++;
+                    if (ids.includes(2000)) tailWrites++;
+                    if (ids.includes(0) || ids.includes(2000)) {
+                        throw new Error('400 Bad Request: field type conflict');
+                    }
+                });
+
+                const { error } = await settle(writeBatch(makePoints(2001), 1000));
+
+                expect(tailWrites).toBe(1);
+                expect(error.message).toContain('Failed to write 2 of 2001 point(s)');
+            });
+
             test('a failed short last chunk is not written again unchanged', async () => {
                 // 1001 points in batches of 1000: the first 1000 are written, the 1-point tail is
                 // rejected. Writing that one point again "with batch size 500" would repeat the
