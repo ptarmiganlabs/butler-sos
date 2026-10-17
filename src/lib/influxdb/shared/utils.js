@@ -248,7 +248,7 @@ async function trackFailedInfluxWrite(versionTag, errorCategory, metadata, err, 
 
 // HTTP statuses that mean InfluxDB is overloaded or briefly unavailable: worth retrying after a
 // pause, but not worth writing in smaller batches
-const TRANSIENT_HTTP_STATUSES = [408, 429, 502, 503, 504];
+const TRANSIENT_HTTP_STATUSES = new Set([408, 429, 502, 503, 504]);
 
 // Longest pause a Retry-After header can ask for between two attempts
 const MAX_RETRY_AFTER_MS = 60 * 1000;
@@ -267,7 +267,7 @@ const MAX_RETRY_AFTER_MS = 60 * 1000;
  */
 export function transientHttpStatus(err) {
     const status = err?.statusCode ?? err?.res?.statusCode ?? err?.response?.status;
-    if (TRANSIENT_HTTP_STATUSES.includes(status)) {
+    if (TRANSIENT_HTTP_STATUSES.has(status)) {
         return status;
     }
 
