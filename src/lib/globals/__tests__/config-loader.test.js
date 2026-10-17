@@ -1,4 +1,5 @@
 import { jest, describe, expect, test, beforeEach, afterEach } from '@jest/globals';
+import path from 'node:path';
 
 /**
  * Wiring tests for initConfig.
@@ -177,6 +178,32 @@ describe('initConfig config normalisation wiring', () => {
         expect(settings.config['Butler-SOS'].influxdbConfig.maxBatchSize).toBe(1000);
         expect(console.info).toHaveBeenCalledWith(expect.stringContaining('not specified'));
         expect(console.warn).not.toHaveBeenCalledWith(expect.stringContaining('not specified'));
+    });
+
+    test('names the full path when the config file does not exist', async () => {
+        // The message used to be just "Specified config file does not exist", which left the
+        // user to work out which directory a relative path had been resolved from.
+        const settings = makeSettings();
+        settings.options.configfile = 'src/config/production.yaml';
+        settings.checkFileExistsSync = () => false;
+        const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        const exitSpy = jest.spyOn(process, 'exit').mockImplementation((code) => {
+            throw new Error(`process.exit(${code})`);
+        });
+
+        try {
+            await expect(initConfig(settings)).rejects.toThrow('process.exit(1)');
+
+            expect(errorSpy).toHaveBeenCalledWith(
+                `Error: Config file does not exist: ${path.resolve('src/config/production.yaml')}`
+            );
+            expect(errorSpy).toHaveBeenCalledWith(
+                `"src/config/production.yaml" was resolved from the current directory, ${process.cwd()}`
+            );
+        } finally {
+            errorSpy.mockRestore();
+            exitSpy.mockRestore();
+        }
     });
 
     test('normalises even when config verification is skipped', async () => {

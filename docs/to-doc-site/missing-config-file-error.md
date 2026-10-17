@@ -1,7 +1,10 @@
-# Starting Without a Config File Now Says What Is Wrong
+# Clearer Errors When Butler SOS Cannot Find Its Config File
 
 Butler SOS cannot run without a config file, which you point it at with the `-c` (or
-`--configfile`) option. If it is started without one, it now:
+`--configfile`) option. Two startup errors around this have become clearer: starting without
+the option at all, and pointing it at a file that does not exist.
+
+If it is started without a config file, it now:
 
 1. **Prints an error saying the config file is missing**, after the usual help text.
 2. **Exits with code 1**, so Docker, systemd and scripts can tell that it did not start.
@@ -75,6 +78,28 @@ node src/butler-sos.js -c src/config/production.yaml
 
 The standalone Butler SOS executables and the Docker image do not go through npm, so they are
 not affected by this.
+
+---
+
+## When the config file does not exist
+
+If the `-c` option points at a file that is not there, Butler SOS used to say only
+`Error: Specified config file does not exist`, without saying where it had looked. It now names
+the full path it tried:
+
+```text
+Error: Config file does not exist: /opt/butler-sos/src/config/production.yaml
+"src/config/production.yaml" was resolved from the current directory, /opt/butler-sos
+```
+
+The second line appears only when the path you gave is relative. A relative path is looked up
+from the directory Butler SOS was started in, not from where the Butler SOS program itself is
+installed. Starting it from a different directory — a service manager, a scheduled task, or a
+shortcut with a different working directory — is the usual reason a config file that plainly
+exists is reported as missing. Use an absolute path in service definitions to rule this out.
+
+This error is now written to standard error rather than standard output, and Butler SOS exits
+with code 1, as before.
 
 ---
 
