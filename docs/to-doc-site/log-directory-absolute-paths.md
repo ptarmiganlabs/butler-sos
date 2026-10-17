@@ -145,7 +145,7 @@ container. Otherwise the log files stay inside the container and are lost when i
    SOS stops during startup with an error like this:
 
    ```
-   FATAL: Uncaught exception – writing crash dump… Error: Cannot write log files to "/var/log/butler-sos", set by Butler-SOS.logDirectory: EACCES: permission denied, mkdir '/var/log/butler-sos/'. Absolute paths are used as given; for a folder inside the Butler SOS folder, use a relative path such as "log".
+   FATAL: Uncaught exception – writing crash dump… Cannot write log files to "/var/log/butler-sos", set by Butler-SOS.logDirectory: EACCES: permission denied, mkdir '/var/log/butler-sos/'. Absolute paths are used as given; for a folder inside the Butler SOS folder, use a relative path such as "log".
    ```
 
    - The first folder in the message is the log folder Butler SOS worked out from your setting.
