@@ -654,8 +654,9 @@ function serverUnavailableReason(err) {
 /**
  * Builds the error a batch write throws when some of its points could not be written.
  *
- * The last write error becomes its cause, and its code is copied over, so the error tracker can
- * still tell a refused connection from a rejected write.
+ * The last write error becomes its cause, and its code and name are copied over, so the error
+ * tracker can still tell a refused connection or a timeout (a RequestTimedOutError, recognised
+ * by its name) from a rejected write.
  *
  * The message takes only the last error's message, not globals.getErrorMessage(), which returns
  * the whole stack trace when Butler SOS runs from source. Whoever logs this error decides
@@ -677,6 +678,10 @@ function batchWriteError(notWritten, total, lastError) {
     const code = lastError?.code ?? lastError?.cause?.code;
     if (code) {
         err.code = code;
+    }
+
+    if (lastError?.name && lastError.name !== 'Error') {
+        err.name = lastError.name;
     }
 
     return err;

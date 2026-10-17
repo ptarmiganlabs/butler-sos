@@ -37,6 +37,7 @@ jest.unstable_mockModule('../../../globals.js', () => ({
 }));
 
 const utils = await import('../shared/utils.js');
+const { getErrorCategory } = await import('../../error-categorizer.js');
 
 /**
  * Builds a network error like the ones Node's net layer produces.
@@ -187,6 +188,7 @@ describe.each(batchWriters)(
                 expect(error.cause).toBeInstanceOf(Error);
                 expect(error.cause.address).toBe('192.168.1.176');
                 expect(error.message).toContain('connect ECONNREFUSED');
+                expect(getErrorCategory(error)).toBe('connection_refused');
             });
 
             test('the thrown error has a one-line message, even where error messages carry stack traces', async () => {
@@ -209,6 +211,28 @@ describe.each(batchWriters)(
                 await settle(writeBatch(makePoints(25), 10));
 
                 expect(mockGlobals.errorTracker.incrementError).not.toHaveBeenCalled();
+            });
+        });
+
+        describe('when a write times out', () => {
+            test('the thrown error is still categorised as a timeout', async () => {
+                // The v2 and v3 clients' timeout error: recognised by its name, as its message says
+                // "timed out" rather than "timeout"
+                class RequestTimedOutError extends Error {
+                    constructor() {
+                        super('Request timed out');
+                        this.name = 'RequestTimedOutError';
+                    }
+                }
+                install(async () => {
+                    attempts++;
+                    throw new RequestTimedOutError();
+                });
+
+                const { error } = await settle(writeBatch(makePoints(1), 1000));
+
+                expect(error.message).toContain('Failed to write 1 of 1 point(s)');
+                expect(getErrorCategory(error)).toBe('timeout');
             });
         });
 
