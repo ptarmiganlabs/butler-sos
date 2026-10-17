@@ -106,6 +106,36 @@ describe('transientHttpStatus', () => {
     });
 });
 
+describe('writeToInfluxWithRetry and temporary network failures', () => {
+    test.each([
+        [
+            'a temporary DNS failure (EAI_AGAIN)',
+            Object.assign(new Error('getaddrinfo EAI_AGAIN influxdb.local'), { code: 'EAI_AGAIN' }),
+        ],
+        [
+            'an unreachable host (EHOSTUNREACH)',
+            Object.assign(new Error('connect EHOSTUNREACH 10.0.0.5:8086'), {
+                code: 'EHOSTUNREACH',
+            }),
+        ],
+        [
+            'a reset connection whose code is only on the cause',
+            new Error('fetch failed', {
+                cause: Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' }),
+            }),
+        ],
+        ['the v1 client with no hosts left', new Error('No host available')],
+    ])('retries %s and succeeds', async (_, err) => {
+        // These used to get a single attempt, after which the batch writer gave up the batch
+        const writeFn = jest.fn().mockRejectedValueOnce(err).mockResolvedValue();
+
+        const { error } = await settle(utils.writeToInfluxWithRetry(writeFn, 'test', 'v3'));
+
+        expect(error).toBeUndefined();
+        expect(writeFn).toHaveBeenCalledTimes(2);
+    });
+});
+
 describe('writeToInfluxWithRetry and transient HTTP statuses', () => {
     test('retries a 503 and succeeds', async () => {
         const writeFn = jest.fn().mockRejectedValueOnce(httpError(503)).mockResolvedValue();
@@ -256,6 +286,22 @@ describe.each(batchWriters)(
             mockGlobals.logger.warn.mock.calls.filter(([message]) =>
                 message.includes('again, with batch size')
             ).length;
+
+        test('retries a single point after a temporary DNS failure instead of giving up the batch', async () => {
+            install(async () => {
+                attempts++;
+                if (attempts === 1) {
+                    throw Object.assign(new Error('getaddrinfo EAI_AGAIN influxdb.local'), {
+                        code: 'EAI_AGAIN',
+                    });
+                }
+            });
+
+            const { error } = await settle(writeBatch(makePoints(1), 1000));
+
+            expect(error).toBeUndefined();
+            expect(attempts).toBe(2);
+        });
 
         test('retries a single point after a 503 instead of failing at once', async () => {
             install(async () => {

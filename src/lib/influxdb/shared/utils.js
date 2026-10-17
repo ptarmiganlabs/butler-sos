@@ -253,6 +253,10 @@ const TRANSIENT_HTTP_STATUSES = new Set([408, 429, 502, 503, 504]);
 // Longest pause a Retry-After header can ask for between two attempts
 const MAX_RETRY_AFTER_MS = 60 * 1000;
 
+// Network error codes for a request that timed out or was cut off, which may well succeed when
+// tried again. Codes meaning the server cannot be reached are listed in UNREACHABLE_ERROR_CODES.
+const RETRYABLE_NETWORK_ERROR_CODES = new Set(['ETIMEDOUT', 'ECONNRESET']);
+
 /**
  * Returns the HTTP status a write failed with, if it is a transient one (408, 429, 502, 503 or
  * 504): InfluxDB is overloaded or briefly unavailable.
@@ -312,8 +316,13 @@ function retryAfterMs(err) {
 }
 
 /**
- * Decides whether a failed write is worth retrying: a timeout, a network error, or a transient
- * HTTP status (see transientHttpStatus).
+ * Decides whether a failed write is worth retrying: a timeout, a dropped connection, InfluxDB
+ * not being reachable (see isInfluxUnreachableError), or a transient HTTP status (see
+ * transientHttpStatus). Error codes are read from the error and its cause as well as from the
+ * message, as clients wrap network errors differently.
+ *
+ * Everything that makes the batch writer give up a batch is retried first, so a failure that
+ * clears within seconds does not lose the batch.
  *
  * @param {Error} err - The error a write failed with
  *
@@ -322,12 +331,17 @@ function retryAfterMs(err) {
 function isRetryableWriteError(err) {
     const errorName = err?.constructor?.name || err?.name || '';
     const errorMessage = err?.message || '';
+    const codes = [err?.code, err?.cause?.code];
 
     return (
         errorName === 'RequestTimedOutError' ||
-        ['timeout', 'timed out', 'ETIMEDOUT', 'ECONNREFUSED', 'ENOTFOUND', 'ECONNRESET'].some(
-            (text) => errorMessage.includes(text)
+        ['timeout', 'timed out', 'ETIMEDOUT', 'ECONNRESET'].some((text) =>
+            errorMessage.includes(text)
         ) ||
+        codes.some((code) => RETRYABLE_NETWORK_ERROR_CODES.has(code)) ||
+        // An unreachable server can be back moments later (a DNS hiccup, a restart), so it gets
+        // the retries before the batch is given up
+        isInfluxUnreachableError(err) ||
         transientHttpStatus(err) !== undefined
     );
 }
