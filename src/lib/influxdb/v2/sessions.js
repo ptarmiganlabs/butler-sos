@@ -83,7 +83,9 @@ export async function storeSessionsV2(userSessions) {
             `Proxy sessions for ${userSessions.host}/${userSessions.virtualProxy}`,
             'v2',
             userSessions.serverName,
-            { module: 'PROXY_SESSIONS' }
+            { module: 'PROXY_SESSIONS' },
+            // Counted once, in the catch below
+            { skipErrorTracking: true }
         );
 
         globals.logger.verbose(

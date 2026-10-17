@@ -131,6 +131,8 @@ describe('v2/sessions', () => {
             userSessions.datapointInfluxdb
         );
         expect(utils.stampPointsOnce).toHaveBeenCalledWith(userSessions.datapointInfluxdb, 'v2');
+        // A failed write is counted once, in the module's own catch, not again by the retry
+        expect(utils.writeToInfluxWithRetry.mock.calls[0][5]).toEqual({ skipErrorTracking: true });
         // Stamped before the first write attempt, so every retry sends the same timestamps
         expect(utils.stampPointsOnce.mock.invocationCallOrder[0]).toBeLessThan(
             utils.writeToInfluxWithRetry.mock.invocationCallOrder[0]

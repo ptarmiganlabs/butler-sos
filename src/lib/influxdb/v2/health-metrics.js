@@ -152,7 +152,9 @@ export async function postHealthMetricsToInfluxdbV2(serverName, host, body, serv
             `Health metrics from ${serverName}`,
             'v2',
             serverName,
-            { module: 'HEALTH_METRICS' }
+            { module: 'HEALTH_METRICS' },
+            // Counted once, in the catch below
+            { skipErrorTracking: true }
         );
 
         globals.logger.verbose(`HEALTH METRICS V2: Stored health data from server: ${serverName}`);

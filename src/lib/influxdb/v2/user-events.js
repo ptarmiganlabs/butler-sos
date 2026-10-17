@@ -101,7 +101,9 @@ export async function storeUserEventV2(msg) {
             `User event for ${msg.host}`,
             'v2',
             msg.host,
-            { module: 'USER_EVENTS' }
+            { module: 'USER_EVENTS' },
+            // Counted once, in the catch below
+            { skipErrorTracking: true }
         );
 
         globals.logger.verbose('USER EVENT V2: Sent user event data to InfluxDB');

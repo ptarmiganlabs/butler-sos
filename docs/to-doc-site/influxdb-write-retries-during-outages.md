@@ -53,7 +53,8 @@ and counts built on them — event counts, for example — came out too high.
 
 A failed write was counted once for every batch size tried, plus once more. Daily error counts
 and the error summary in the log reported InfluxDB write failures up to **seven times** too
-often.
+often. With InfluxDB v2, failed writes of health metrics, user sessions and user events were
+counted twice.
 
 ---
 
