@@ -154,6 +154,26 @@ describe('writeToInfluxWithRetry and transient HTTP statuses', () => {
         expect(writeFn).toHaveBeenCalledTimes(2);
     });
 
+    test('reads an HTTP-date Retry-After from the v2 client, whose retryAfter() returns 0 for it', async () => {
+        // The v2 client only parses a number of seconds; for a date it returns 0 and keeps the
+        // raw header
+        const retryAt = new Date(Date.now() + 8000).toUTCString();
+        const writeFn = jest
+            .fn()
+            .mockRejectedValueOnce(
+                httpError(503, { retryAfter: () => 0, headers: { 'retry-after': retryAt } })
+            )
+            .mockResolvedValue();
+
+        const write = utils.writeToInfluxWithRetry(writeFn, 'test', 'v2');
+        await jest.advanceTimersByTimeAsync(6000);
+        expect(writeFn).toHaveBeenCalledTimes(1);
+
+        await jest.advanceTimersByTimeAsync(3000);
+        await write;
+        expect(writeFn).toHaveBeenCalledTimes(2);
+    });
+
     test('waits no longer than 60 s, whatever Retry-After asks', async () => {
         const writeFn = jest
             .fn()

@@ -278,8 +278,9 @@ export function transientHttpStatus(err) {
  * How long the server asked Butler SOS to wait before trying again, from a Retry-After header,
  * in milliseconds. 0 when it did not say.
  *
- * The v2 client parses the header itself (`retryAfter()`, in seconds). For the v3 and v1
- * clients the header is read from the response headers, as seconds or as an HTTP date.
+ * The v2 client parses the header itself (`retryAfter()`, in seconds), but only when it is a
+ * number of seconds: for an HTTP date it returns 0. Then, and for the v3 and v1 clients, the
+ * header is read from the response headers, as seconds or as an HTTP date.
  *
  * @param {Error} err - The error a write failed with
  *
@@ -288,7 +289,9 @@ export function transientHttpStatus(err) {
 function retryAfterMs(err) {
     if (typeof err?.retryAfter === 'function') {
         const seconds = Number(err.retryAfter());
-        return seconds > 0 ? seconds * 1000 : 0;
+        if (seconds > 0) {
+            return seconds * 1000;
+        }
     }
 
     let header = err?.headers?.['retry-after'] ?? err?.res?.headers?.['retry-after'];
