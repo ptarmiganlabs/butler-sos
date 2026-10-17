@@ -122,12 +122,14 @@ Use -c <file> or --configfile <file> to point Butler SOS at one.`;
     // npm_command is checked too, as `npm exec -c '<command>'` also sets npm_config_call
     if (env.npm_config_call && ['run', 'run-script'].includes(env.npm_command)) {
         const scriptName = env.npm_lifecycle_event || 'butler-sos';
+        const fileArgument =
+            quoteShellArgument(env.npm_config_call, platform) ?? '<path to the config file>';
         message += `
 
 npm read "-c ${env.npm_config_call}" as one of its own options,
 so the config file never reached Butler SOS.
 Add -- after the script name to pass options on to Butler SOS:
-  npm run ${scriptName} -- -c ${quoteShellArgument(env.npm_config_call, platform)}`;
+  npm run ${scriptName} -- -c ${fileArgument}`;
     }
 
     return message;
@@ -145,9 +147,14 @@ Add -- after the script name to pass options on to Butler SOS:
  * A backslash is safe unquoted only on Windows, where it separates folders. macOS and Linux
  * shells treat it as an escape, so `config/qlik\prod.yaml` would arrive as `config/qlikprod.yaml`.
  *
+ * On Windows, double quotes do not keep `$` and a backtick literal in PowerShell, nor `%` in
+ * cmd.exe, and no quoting works for both. Butler SOS cannot tell which one the user typed in,
+ * so for such a name there is no safe way to write the argument.
+ *
  * @param {string} value - The argument
  * @param {string} platform - Operating system, as process.platform
- * @returns {string} The argument, quoted if needed
+ * @returns {string|undefined} The argument, quoted if needed, or undefined if it cannot be
+ *   written safely for every shell on this platform
  */
 function quoteShellArgument(value, platform) {
     const safeUnquoted = platform === 'win32' ? /^[\w./\\:@+=,-]+$/ : /^[\w./:@+=,-]+$/;
@@ -156,7 +163,7 @@ function quoteShellArgument(value, platform) {
     }
 
     if (platform === 'win32') {
-        return `"${value}"`;
+        return /[$%`]/.test(value) ? undefined : `"${value}"`;
     }
 
     // Close the quotes, add an escaped single quote, and open them again

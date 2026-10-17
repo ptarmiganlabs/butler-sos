@@ -95,6 +95,37 @@ describe('missingConfigFileMessage', () => {
 
         expect(message).toContain(`npm run butler-sos -- ${expected}`);
     });
+
+    test.each([
+        ['$ (PowerShell expands it)', 'config/$prod.yaml'],
+        ['% (cmd.exe expands it)', 'config/%ENV%.yaml'],
+        ['a backtick (PowerShell escape)', 'config/a`b.yaml'],
+    ])(
+        'shows a placeholder on Windows for a path with %s, as no quoting keeps it literal',
+        (_, path) => {
+            const message = missingConfigFileMessage(
+                { npm_config_call: path, npm_command: 'run', npm_lifecycle_event: 'butler-sos' },
+                'win32'
+            );
+
+            expect(message).toContain('npm run butler-sos -- -c <path to the config file>');
+            // The path itself is still shown, in the line saying what npm did
+            expect(message).toContain(`npm read "-c ${path}"`);
+        }
+    );
+
+    test('quotes a path with $ normally on macOS and Linux, where single quotes keep it literal', () => {
+        const message = missingConfigFileMessage(
+            {
+                npm_config_call: 'config/$prod.yaml',
+                npm_command: 'run',
+                npm_lifecycle_event: 'butler-sos',
+            },
+            'linux'
+        );
+
+        expect(message).toContain(`npm run butler-sos -- -c 'config/$prod.yaml'`);
+    });
 });
 
 describe('formatErrorBlock', () => {
