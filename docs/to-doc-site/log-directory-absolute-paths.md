@@ -104,8 +104,10 @@ one you wrote:
     logDirectory: "C:\temp\new-logs"     # Wrong: \t and \n turn into a tab and a line break
 ```
 
-In the second case, Butler SOS stops during startup with
-`Your path or filename contain an invalid character.`
+In the second case, if file logging is on, Butler SOS stops during startup with an error that
+names `Butler-SOS.logDirectory` and ends in `Your path or filename contain an invalid character.`
+With file logging off, nothing complains: the wrong path goes unnoticed until you turn file
+logging on.
 
 ### Docker
 
@@ -128,7 +130,8 @@ container. Otherwise the log files stay inside the container and are lost when i
 1. **Check for a leading slash you did not mean.** Until now, `logDirectory: /log` (or `\log` on
    Windows) behaved like `log`: a folder inside the Butler SOS folder. After the upgrade it means
    a `log` folder at the root of the disk (on Windows, the root of the current drive). If that is
-   not what you want, remove the leading slash.
+   not what you want, remove the leading slash. If you miss one and Butler SOS cannot create that
+   folder, the startup error in step 3 names the setting and points this out.
 
 2. **Collect your existing log files.** If you had set a full path, your existing log files are
    in the unexpected subfolder described above, for example `/opt/butler-sos/var/log/butler-sos`.
@@ -142,11 +145,12 @@ container. Otherwise the log files stay inside the container and are lost when i
    SOS stops during startup with an error like this:
 
    ```
-   FATAL: Uncaught exception – writing crash dump… Error: EACCES: permission denied, mkdir '/var/log/butler-sos/'
+   FATAL: Uncaught exception – writing crash dump… Error: Cannot write log files to "/var/log/butler-sos", set by Butler-SOS.logDirectory: EACCES: permission denied, mkdir '/var/log/butler-sos/'. Absolute paths are used as given; for a folder inside the Butler SOS folder, use a relative path such as "log".
    ```
 
-   - The folder named in the message is the first one Butler SOS could not create. It may be a
-     parent of the folder you configured.
+   - The first folder in the message is the log folder Butler SOS worked out from your setting.
+   - The folder after `mkdir` is the first one Butler SOS could not create. It may be a parent of
+     the folder you configured.
    - The error code depends on the cause. `EACCES` (permission denied) is the most common; a
      read-only disk gives `EROFS` instead.
    - Butler SOS then exits with code 1 and writes a crash dump to its crash dump folder. Under an

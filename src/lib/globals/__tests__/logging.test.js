@@ -14,6 +14,7 @@ import { jest, describe, expect, test, beforeEach, afterEach } from '@jest/globa
  * - doing the same in the "Log file directory" startup line
  * - joining rather than resolving relative paths, which mangles a drive-relative C:logs
  * - reading Butler-SOS.logDirectory when nothing uses it, or more than once
+ * - letting a log directory that cannot be created fail without naming the setting
  */
 
 // logging.js and the directory resolver it uses import Node's own 'path', so they follow the
@@ -203,5 +204,33 @@ describe('initLogging log file directory', () => {
             ([key]) => key === 'Butler-SOS.logDirectory'
         );
         expect(reads).toHaveLength(1);
+    });
+
+    // A value such as /log that once meant a subfolder now points at the disk root, and an
+    // unexplained EACCES from mkdir would leave an admin guessing why startup fails. The second
+    // cause, from the rotating file transport, already ends in a full stop.
+    test.each([
+        ["EACCES: permission denied, mkdir '/log/'", "EACCES: permission denied, mkdir '/log/'."],
+        [
+            'Your path or filename contain an invalid character.',
+            'Your path or filename contain an invalid character.',
+        ],
+    ])('names the setting when the log directory cannot be used: %s', (causeMessage, shown) => {
+        platformPath = path.posix;
+        const cause = new Error(causeMessage);
+        mockDailyRotateFile.mockImplementationOnce(() => {
+            throw cause;
+        });
+        const settings = makeSettings({ execPath: '/opt/butler-sos', logDirectory: '/log' });
+
+        expect(() => initLogging(settings)).toThrow(
+            expect.objectContaining({
+                message:
+                    `Cannot write log files to "/log", set by Butler-SOS.logDirectory: ${shown} ` +
+                    'Absolute paths are used as given; for a folder inside the Butler SOS ' +
+                    'folder, use a relative path such as "log".',
+                cause,
+            })
+        );
     });
 });

@@ -63,15 +63,28 @@ export function initLogging(settings) {
     }
 
     if (settings.config.get('Butler-SOS.fileLogging')) {
-        settings.logTransports.push(
-            new winston.transports.DailyRotateFile({
-                dirname: getLogDirectory(),
-                filename: 'butler-sos.%DATE%.log',
-                level: settings.config.get('Butler-SOS.logLevel'),
-                datePattern: 'YYYY-MM-DD',
-                maxFiles: '30d',
-            })
-        );
+        const dirname = getLogDirectory();
+
+        try {
+            settings.logTransports.push(
+                new winston.transports.DailyRotateFile({
+                    dirname,
+                    filename: 'butler-sos.%DATE%.log',
+                    level: settings.config.get('Butler-SOS.logLevel'),
+                    datePattern: 'YYYY-MM-DD',
+                    maxFiles: '30d',
+                })
+            );
+        } catch (err) {
+            // Absolute paths used to be nested under the app folder, so a value such as /log that
+            // once meant a subfolder now points at the disk root. Say so where the failure shows.
+            throw new Error(
+                `Cannot write log files to "${dirname}", set by Butler-SOS.logDirectory: ` +
+                    `${err.message.replace(/\.?$/, '.')} Absolute paths are used as given; for a ` +
+                    'folder inside the Butler SOS folder, use a relative path such as "log".',
+                { cause: err }
+            );
+        }
     }
 
     settings.logger = winston.createLogger({
