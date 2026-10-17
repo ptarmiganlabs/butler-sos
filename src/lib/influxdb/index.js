@@ -164,7 +164,7 @@ export function setupUdpQueueMetricsStorage() {
             } catch (err) {
                 globals.logger.error(
                     `UDP QUEUE METRICS: Error storing user event queue metrics to InfluxDB: ${
-                        err && err.stack ? err.stack : err
+                        err ? globals.getErrorMessage(err) : err
                     }`
                 );
             }
@@ -197,7 +197,7 @@ export function setupUdpQueueMetricsStorage() {
             } catch (err) {
                 globals.logger.error(
                     `UDP QUEUE METRICS: Error storing log event queue metrics to InfluxDB: ${
-                        err && err.stack ? err.stack : err
+                        err ? globals.getErrorMessage(err) : err
                     }`
                 );
             }
@@ -231,7 +231,7 @@ export function setupUdpQueueMetricsStorage() {
             } catch (err) {
                 globals.logger.error(
                     `AUDIT QUEUE METRICS: Error storing audit event queue metrics to InfluxDB: ${
-                        err && err.stack ? err.stack : err
+                        err ? globals.getErrorMessage(err) : err
                     }`
                 );
             }
