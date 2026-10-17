@@ -12,7 +12,7 @@
  */
 
 import { writeCrashDump } from './crash-dump.js';
-import sea from './sea-wrapper.js';
+import { shouldLogStackTraces } from './globals/utils.js';
 import { redactSensitivePatterns } from './secret-patterns.js';
 
 /** @type {object|null} */
@@ -50,10 +50,11 @@ function toError(reason) {
 /**
  * Formats an error for logging, preferring the globals-aware formatter when available.
  *
- * The fallback mirrors `getErrorMessage` in `globals/utils.js`: SEA builds get the message
- * only, because a stack trace there exposes absolute filesystem paths from the build machine.
- * Uses `||` rather than `??` for the same reason that helper does — an error carrying an
- * empty-string `stack` should fall through to the message rather than log nothing.
+ * The fallback mirrors `getErrorMessage` in `globals/utils.js`: a stack trace only when
+ * running from source outside a container (see `shouldLogStackTraces`). SEA builds get the
+ * message only, also because a stack trace there exposes absolute filesystem paths from the
+ * build machine. Uses `||` rather than `??` for the same reason that helper does — an error
+ * carrying an empty-string `stack` should fall through to the message rather than log nothing.
  *
  * @param {Error} err - The error to format.
  * @returns {string} Formatted error message.
@@ -63,9 +64,9 @@ function formatError(err) {
 
     if (typeof globalsRef?.getErrorMessage === 'function') {
         text = globalsRef.getErrorMessage(err);
-    } else if (sea.isSea()) {
-        // globals (and therefore its SEA detection) is not available yet. sea.isSea() is safe
-        // to call at any time — it falls back to a heuristic before sea.initialize() runs.
+    } else if (!shouldLogStackTraces()) {
+        // globals is not available yet, so this checks directly. The SEA check is safe to call
+        // at any time — it falls back to a heuristic before sea.initialize() runs.
         text = err?.message || String(err);
     } else {
         text = err?.stack || err?.message || String(err);
