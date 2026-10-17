@@ -267,13 +267,25 @@ describe('globals', () => {
     });
 
     test('getErrorMessage should format error correctly', () => {
+        // Running from source: isSea is false in our mock, and there is no /.dockerenv
+        mockFsAccessSync.mockImplementation(() => {
+            throw new Error('ENOENT');
+        });
+
         const err = new Error('Test error');
-        // Since isSea is false by default in our mock, it should return the stack trace
+        // Running from source outside a container, it should return the stack trace
         expect(globals.getErrorMessage(err)).toContain('Test error');
         expect(globals.getErrorMessage(err)).toContain('Error: Test error');
 
         const stringErr = 'String error';
         expect(globals.getErrorMessage(stringErr)).toBe('String error');
+    });
+
+    test('getErrorMessage should leave out the stack trace in Docker', () => {
+        // /.dockerenv exists
+        mockFsAccessSync.mockReturnValue(undefined);
+
+        expect(globals.getErrorMessage(new Error('Test error'))).toBe('Test error');
     });
 
     test('sleep should resolve after timeout', async () => {

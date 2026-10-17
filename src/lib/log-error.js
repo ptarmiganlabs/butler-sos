@@ -1,24 +1,26 @@
 /**
  * Enhanced error logging utility for Butler SOS
  *
- * Provides consistent error logging across the application with different
- * behavior for SEA (Single Executable Application) vs non-SEA environments.
+ * Provides consistent error logging across the application, with stack traces only where
+ * they help (see shouldLogStackTraces):
  *
- * In SEA mode: Only the error message is logged (cleaner output for end users)
- * In non-SEA mode: Both error message and stack trace are logged as separate
- *                  entries (better debugging for developers)
+ * Running from source outside a container: both the error message and the stack trace are
+ *     logged, as separate entries (better debugging for developers)
+ * Packaged executable or Docker: only the error message is logged (cleaner output for
+ *     end users)
  */
 
 import globals from '../globals.js';
-import sea from './sea-wrapper.js';
+import { shouldLogStackTraces } from './globals/utils.js';
 import { writeCrashDump } from './crash-dump.js';
 
 /**
  * Log an error with appropriate formatting based on execution environment
  *
  * This function wraps the global logger and provides enhanced error logging:
- * - In SEA apps: logs only the error message (cleaner for production)
- * - In non-SEA apps: logs error message and stack trace separately (better for debugging)
+ * - Running from source outside a container: logs error message and stack trace separately
+ *   (better for debugging)
+ * - Packaged executable or Docker: logs only the error message (cleaner for production)
  *
  * The function accepts the same parameters as winston logger methods.
  *
@@ -44,8 +46,8 @@ import { writeCrashDump } from './crash-dump.js';
  * }
  */
 function logErrorWithLevel(level, message, error, ...args) {
-    // Check if running as SEA app
-    const isSeaApp = globals.isSea !== undefined ? globals.isSea : sea.isSea();
+    // Stack traces only when running from source outside a container
+    const logStackTrace = shouldLogStackTraces(globals);
 
     if (!error) {
         // If no error object provided, just log the message normally
@@ -56,11 +58,11 @@ function logErrorWithLevel(level, message, error, ...args) {
     // Get error message - prefer error.message, fallback to toString()
     const errorMessage = error.message || error.toString();
 
-    if (isSeaApp) {
-        // SEA mode: Only log the error message (cleaner output)
+    if (!logStackTrace) {
+        // Packaged executable or Docker: only log the error message (cleaner output)
         globals.logger[level](`${message}: ${errorMessage}`, ...args);
     } else {
-        // Non-SEA mode: Log error message first, then stack trace separately
+        // Running from source: log error message first, then stack trace separately
         // This provides better readability and debugging information
 
         // Log 1: The error message with context
