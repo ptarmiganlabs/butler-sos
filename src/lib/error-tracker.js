@@ -1,8 +1,28 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { Mutex } from 'async-mutex';
 
 import globals from '../globals.js';
 import { getInfluxDbVersion, isInfluxDbEnabled } from './influxdb/shared/utils.js';
 import { getErrorMetadata } from './error-categorizer.js';
+
+// Minimum time between two running-total summary lines in the log
+const SUMMARY_LOG_INTERVAL_MS = 60 * 1000;
+
+// Set while an error event is being written to InfluxDB. Lets incrementError() see that it
+// was reached from inside such a write, even across the awaits and retry timers in between.
+const errorEventWriteContext = new AsyncLocalStorage();
+
+/**
+ * Checks whether error summary logging is enabled in config.
+ * Defaults to true if the config key is absent, to preserve existing behavior.
+ *
+ * @returns {boolean} True if enabled
+ */
+function isLogSummaryEnabled() {
+    return globals.config?.has?.('Butler-SOS.errorTracking.logSummary.enable')
+        ? globals.config.get('Butler-SOS.errorTracking.logSummary.enable')
+        : true;
+}
 
 /**
  * Class for tracking counts of API errors in Butler SOS.
@@ -12,6 +32,8 @@ import { getErrorMetadata } from './error-categorizer.js';
  * - Data destination errors (InfluxDB, New Relic, MQTT)
  *
  * Counters reset daily at midnight UTC.
+ * If summary logging is enabled, the running totals are logged at most once a minute while
+ * errors occur, and a final summary is logged at midnight UTC.
  * Optionally writes individual error events to InfluxDB if configured.
  */
 export class ErrorTracker {
@@ -35,6 +57,10 @@ export class ErrorTracker {
 
         // Track when counters were last reset
         this.lastResetDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD in UTC
+
+        // Rate limiting of the running-total summary line
+        this.lastSummaryLogTime = 0;
+        this.summaryLogTimer = null;
     }
 
     /**
@@ -78,14 +104,14 @@ export class ErrorTracker {
         const release = await this.errorMutex.acquire();
 
         try {
-            // Check if we need to reset counters (new day in UTC)
+            // Check if we need to reset counters (new day in UTC). This error can arrive before
+            // the midnight timer has run, so it may be the one that closes the previous day.
             const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD in UTC
-            if (currentDate !== this.lastResetDate) {
+            if (currentDate > this.lastResetDate) {
                 this.logger.debug(
                     `ERROR TRACKER: Date changed from ${this.lastResetDate} to ${currentDate}, resetting counters`
                 );
-                await this.resetCounters();
-                this.lastResetDate = currentDate;
+                await this._rollOverDay(currentDate);
             }
 
             const found = this.errorCounts.find((element) => {
@@ -109,33 +135,82 @@ export class ErrorTracker {
                 });
             }
 
-            // Log current error statistics only when enabled in config.
-            // Default to true to preserve existing behavior if the config key is absent.
-            const isLogSummaryEnabled = globals.config?.has?.(
-                'Butler-SOS.errorTracking.logSummary.enable'
-            )
-                ? globals.config.get('Butler-SOS.errorTracking.logSummary.enable')
-                : true;
-
-            if (isLogSummaryEnabled) {
-                await this.logErrorSummary();
+            // Log current error statistics only when enabled in config
+            if (isLogSummaryEnabled()) {
+                await this._logRunningSummary();
             }
 
-            // Write individual error event to InfluxDB (non-blocking)
+            // Write individual error event to InfluxDB (non-blocking).
+            // Never start an error-event write from inside another one. If that write's failure
+            // were written too, the new write would fail the same way, and the writes would
+            // multiply for as long as InfluxDB rejects them.
             if (this._isInfluxDbErrorTrackingEnabled()) {
-                const capturedErr = err;
-                setImmediate(() => {
-                    this._writeErrorToInfluxDB(apiType, serverName, metadata, capturedErr).catch(
-                        (writeErr) => {
-                            this.logger.debug(
-                                `ERROR TRACKER: Error writing error event to InfluxDB: ${writeErr.message}`
-                            );
-                        }
+                if (errorEventWriteContext.getStore()) {
+                    this.logger.debug(
+                        `ERROR TRACKER: Not writing error event ${apiType}/${serverName} to InfluxDB, as it was raised while writing another error event`
                     );
-                });
+                } else {
+                    const capturedErr = err;
+                    setImmediate(() => {
+                        errorEventWriteContext
+                            .run(true, () =>
+                                this._writeErrorToInfluxDB(
+                                    apiType,
+                                    serverName,
+                                    metadata,
+                                    capturedErr
+                                )
+                            )
+                            .catch((writeErr) => {
+                                this.logger.debug(
+                                    `ERROR TRACKER: Error writing error event to InfluxDB: ${writeErr.message}`
+                                );
+                            });
+                    });
+                }
             }
         } finally {
             release();
+        }
+    }
+
+    /**
+     * Logs the running error totals, at most once per SUMMARY_LOG_INTERVAL_MS.
+     *
+     * The first error after a quiet interval is logged at once. Errors arriving within the
+     * interval are not logged one by one; instead the totals are logged once when the interval
+     * ends, so the last errors of a burst still show up in the log.
+     *
+     * @returns {Promise<void>}
+     * @private
+     */
+    async _logRunningSummary() {
+        const msSinceLastLog = Date.now() - this.lastSummaryLogTime;
+
+        if (msSinceLastLog >= SUMMARY_LOG_INTERVAL_MS) {
+            // A pending summary may be overdue without having run yet, for example when the
+            // event loop is busy. This line covers its totals, so it must not log them again.
+            clearTimeout(this.summaryLogTimer);
+            this.summaryLogTimer = null;
+
+            this.lastSummaryLogTime = Date.now();
+            await this.logErrorSummary();
+            return;
+        }
+
+        if (!this.summaryLogTimer) {
+            this.summaryLogTimer = setTimeout(() => {
+                this.summaryLogTimer = null;
+                this.lastSummaryLogTime = Date.now();
+                this.logErrorSummary().catch((logErr) => {
+                    this.logger.debug(
+                        `ERROR TRACKER: Error logging error summary: ${logErr.message}`
+                    );
+                });
+            }, SUMMARY_LOG_INTERVAL_MS - msSinceLastLog);
+
+            // Don't keep the process alive just to log a summary
+            this.summaryLogTimer.unref?.();
         }
     }
 
@@ -161,6 +236,9 @@ export class ErrorTracker {
 
     /**
      * Writes a single error event to InfluxDB.
+     *
+     * A failure of this write is logged but not tracked as an error. Tracking it would start
+     * another error-event write, which would fail the same way.
      *
      * @param {string} apiType - The error type
      * @param {string} serverName - The server name
@@ -233,7 +311,8 @@ export class ErrorTracker {
                     database,
                     `Error event: ${apiType}/${serverName}`,
                     serverName,
-                    globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+                    globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize'),
+                    { skipErrorTracking: true }
                 );
             } else if (version === 2) {
                 const { Point: Point2 } = await import('@influxdata/influxdb-client');
@@ -257,7 +336,8 @@ export class ErrorTracker {
                     bucketName,
                     `Error event: ${apiType}/${serverName}`,
                     serverName,
-                    globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+                    globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize'),
+                    { skipErrorTracking: true }
                 );
             } else if (version === 1) {
                 const { writeBatchToInfluxV1 } = await import('./influxdb/shared/utils.js');
@@ -272,7 +352,8 @@ export class ErrorTracker {
                     datapoint,
                     `Error event: ${apiType}/${serverName}`,
                     serverName,
-                    globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
+                    globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize'),
+                    { skipErrorTracking: true }
                 );
             }
         } catch (err) {
@@ -290,6 +371,33 @@ export class ErrorTracker {
         // Note: Caller must hold the mutex before calling this method
         this.errorCounts = [];
         this.logger.info('ERROR TRACKER: Reset all error counters');
+    }
+
+    /**
+     * Ends the tracking day: logs the day's final totals (if summary logging is enabled), then
+     * resets the counters and starts the new day.
+     *
+     * Both the midnight timer and the first error of a new day can get here, in either order,
+     * so callers check lastResetDate first. That way each day's totals are logged once, and an
+     * error from the new day is never logged or reset as part of the old one.
+     *
+     * @param {string} newDate - The UTC date (YYYY-MM-DD) of the day that is starting
+     * @returns {Promise<void>}
+     */
+    async _rollOverDay(newDate) {
+        // Note: Caller must hold the mutex before calling this method
+        if (isLogSummaryEnabled()) {
+            await this.logErrorSummary();
+        }
+
+        // The final summary covers any running summary still waiting to be logged. Dropping it
+        // also keeps it from logging the new day's totals on the old day's schedule.
+        clearTimeout(this.summaryLogTimer);
+        this.summaryLogTimer = null;
+        this.lastSummaryLogTime = 0;
+
+        await this.resetCounters();
+        this.lastResetDate = newDate;
     }
 
     /**
@@ -381,6 +489,7 @@ export function setupErrorCounterReset() {
         const nextMidnight = new Date(now);
         nextMidnight.setUTCHours(24, 0, 0, 0);
         const msUntilMidnight = nextMidnight - now;
+        const newDate = nextMidnight.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
 
         globals.logger.info(
             `ERROR TRACKER: Scheduled next error counter reset at ${nextMidnight.toISOString()} (in ${Math.round(msUntilMidnight / 1000 / 60)} minutes)`
@@ -392,9 +501,15 @@ export function setupErrorCounterReset() {
             // Log final daily summary before reset
             const release = await globals.errorTracker.errorMutex.acquire();
             try {
-                await globals.errorTracker.logErrorSummary();
-                await globals.errorTracker.resetCounters();
-                globals.errorTracker.lastResetDate = new Date().toISOString().split('T')[0];
+                // An error that arrived just after midnight, before this timer ran, has already
+                // logged the final summary and reset the counters for the new day
+                if (newDate > globals.errorTracker.lastResetDate) {
+                    await globals.errorTracker._rollOverDay(newDate);
+                } else {
+                    globals.logger.debug(
+                        `ERROR TRACKER: Error counters already reset for ${newDate}, nothing to do`
+                    );
+                }
             } finally {
                 release();
             }

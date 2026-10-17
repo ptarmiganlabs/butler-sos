@@ -328,6 +328,20 @@ describe('ErrorTracker._writeErrorToInfluxDB', () => {
             expect.stringContaining('InfluxDB write failed')
         );
     });
+
+    test.each([
+        [1, mockWriteBatchToInfluxV1, 4],
+        [2, mockWriteBatchToInfluxV2, 6],
+        [3, mockWriteBatchToInfluxV3, 5],
+    ])(
+        'InfluxDB v%i: tells the batch writer not to track its own write failures',
+        async (version, writeBatch, optionsArgIndex) => {
+            mockGetInfluxDbVersion.mockReturnValue(version);
+            await tracker._writeErrorToInfluxDB('HEALTH_API', 'Server_1', {});
+            expect(writeBatch).toHaveBeenCalledTimes(1);
+            expect(writeBatch.mock.calls[0][optionsArgIndex]).toEqual({ skipErrorTracking: true });
+        }
+    );
 });
 
 describe('ErrorTracker.incrementError with InfluxDB enabled', () => {
@@ -369,6 +383,126 @@ describe('ErrorTracker.incrementError with InfluxDB enabled', () => {
         await new Promise((resolve) => setImmediate(resolve));
         await Promise.resolve();
         expect(mockWriteBatchToInfluxV1).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Gives scheduled error-event writes, and any writes they schedule in turn, time to run.
+     */
+    async function flushErrorEventWrites() {
+        for (let i = 0; i < 5; i++) {
+            await new Promise((resolve) => setImmediate(resolve));
+        }
+    }
+
+    test('counts, but does not write, an error raised while writing an error event', async () => {
+        // A write path that tracks its own failure, as if it had not been told to skip error
+        // tracking. Without the guard, every such failure would start another write.
+        mockWriteBatchToInfluxV1.mockImplementation(async () => {
+            await tracker.incrementError('INFLUXDB_V1_WRITE', 'Server_1');
+            throw new Error('Write failed');
+        });
+
+        await tracker.incrementError('HEALTH_API', 'Server_1');
+        await flushErrorEventWrites();
+
+        expect(mockWriteBatchToInfluxV1).toHaveBeenCalledTimes(1);
+        expect(await tracker.getErrorCounts()).toEqual([
+            { apiType: 'HEALTH_API', serverName: 'Server_1', count: 1 },
+            { apiType: 'INFLUXDB_V1_WRITE', serverName: 'Server_1', count: 1 },
+        ]);
+        expect(mockLogger.debug).toHaveBeenCalledWith(
+            expect.stringContaining('raised while writing another error event')
+        );
+    });
+
+    test('writes later errors normally once an error-event write has finished', async () => {
+        await tracker.incrementError('HEALTH_API', 'Server_1');
+        await flushErrorEventWrites();
+        await tracker.incrementError('PROXY_API', 'Server_1');
+        await flushErrorEventWrites();
+
+        expect(mockWriteBatchToInfluxV1).toHaveBeenCalledTimes(2);
+    });
+});
+
+describe('ErrorTracker running error summary', () => {
+    let tracker;
+
+    const summaryLines = () =>
+        mockLogger.info.mock.calls
+            .map(([message]) => message)
+            .filter((message) => message.includes('ERROR TRACKER: Error counts today (UTC)'));
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+        // logSummary.enable absent from config, so summary logging defaults to enabled
+        mockConfigHas.mockReturnValue(false);
+        mockConfigGet.mockReturnValue(undefined);
+        mockIsInfluxDbEnabled.mockReturnValue(false);
+        tracker = new ErrorTracker(mockLogger);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    test('logs the first error at once', async () => {
+        await tracker.incrementError('API_1', 'Server_1');
+        expect(summaryLines()).toHaveLength(1);
+        expect(summaryLines()[0]).toContain('Total=1');
+    });
+
+    test('logs errors that arrive within a minute of the last line once, when the minute is up', async () => {
+        await tracker.incrementError('API_1', 'Server_1');
+        await tracker.incrementError('API_1', 'Server_1');
+        await tracker.incrementError('API_2', 'Server_1');
+        expect(summaryLines()).toHaveLength(1);
+
+        jest.advanceTimersByTime(59 * 1000);
+        expect(summaryLines()).toHaveLength(1);
+
+        jest.advanceTimersByTime(1000);
+        expect(summaryLines()).toHaveLength(2);
+        expect(summaryLines()[1]).toContain('Total=3');
+    });
+
+    test('logs at once when a minute has passed since the last line', async () => {
+        await tracker.incrementError('API_1', 'Server_1');
+        jest.advanceTimersByTime(61 * 1000);
+        await tracker.incrementError('API_1', 'Server_1');
+
+        expect(summaryLines()).toHaveLength(2);
+        expect(summaryLines()[1]).toContain('Total=2');
+    });
+
+    test('does not log twice when an error arrives while the pending summary is overdue', async () => {
+        await tracker.incrementError('API_1', 'Server_1'); // Logged at once
+        jest.advanceTimersByTime(10 * 1000);
+        await tracker.incrementError('API_1', 'Server_1'); // Schedules the pending summary
+
+        // The clock passes the pending summary's due time, but its timer has not run yet,
+        // as when the event loop is busy. An error arriving now is logged at once...
+        jest.setSystemTime(Date.now() + 60 * 1000);
+        await tracker.incrementError('API_1', 'Server_1');
+        expect(summaryLines()).toHaveLength(2);
+        expect(summaryLines()[1]).toContain('Total=3');
+
+        // ...so the overdue timer must not log the same totals again right after
+        jest.runOnlyPendingTimers();
+        expect(summaryLines()).toHaveLength(2);
+    });
+
+    test('logs one line a minute during a steady stream of errors', async () => {
+        // One error a second for five minutes
+        for (let second = 0; second < 300; second++) {
+            await tracker.incrementError('API_1', 'Server_1');
+            jest.advanceTimersByTime(1000);
+        }
+
+        // Lines at 0, 60, 120, 180, 240 and 300 seconds, instead of one per error
+        expect(summaryLines()).toHaveLength(6);
+        expect(summaryLines()[5]).toContain('Total=300');
     });
 });
 
@@ -412,5 +546,152 @@ describe('setupErrorCounterReset', () => {
         expect(mockLogger.info).toHaveBeenCalledWith(
             expect.stringContaining('Midnight UTC reached')
         );
+    });
+
+    /**
+     * Starts the midnight reset cycle with three errors counted, and runs it to midnight UTC.
+     *
+     * @param {boolean} logSummaryEnabled - Value of Butler-SOS.errorTracking.logSummary.enable
+     * @returns {Promise<string[]>} Messages logged at info level
+     */
+    async function runToMidnight(logSummaryEnabled) {
+        const { setupErrorCounterReset } = await import('../error-tracker.js');
+        const globals = (await import('../../globals.js')).default;
+
+        mockConfigHas.mockImplementation(
+            (key) => key === 'Butler-SOS.errorTracking.logSummary.enable'
+        );
+        mockConfigGet.mockImplementation((key) =>
+            key === 'Butler-SOS.errorTracking.logSummary.enable' ? logSummaryEnabled : undefined
+        );
+        globals.errorTracker = new ErrorTracker(mockLogger);
+        globals.errorTracker.errorCounts.push({
+            apiType: 'API_1',
+            serverName: 'Server_1',
+            count: 3,
+        });
+
+        setupErrorCounterReset();
+
+        const now = new Date();
+        const nextMidnight = new Date(now);
+        nextMidnight.setUTCHours(24, 0, 0, 0);
+        await jest.advanceTimersByTimeAsync(nextMidnight - now);
+
+        return mockLogger.info.mock.calls.map(([message]) => message);
+    }
+
+    test('logs the daily summary at midnight when logSummary.enable is true', async () => {
+        const messages = await runToMidnight(true);
+        expect(messages).toContainEqual(
+            expect.stringContaining('ERROR TRACKER: Error counts today (UTC): Total=3')
+        );
+        expect(messages).toContain('ERROR TRACKER: Reset all error counters');
+    });
+
+    test('resets counters at midnight without logging a summary when logSummary.enable is false', async () => {
+        const messages = await runToMidnight(false);
+        expect(messages).not.toContainEqual(
+            expect.stringContaining('ERROR TRACKER: Error counts today (UTC)')
+        );
+        expect(messages).toContain('ERROR TRACKER: Reset all error counters');
+    });
+
+    describe('when errors arrive around midnight', () => {
+        /**
+         * Reads the summary lines logged so far.
+         *
+         * @returns {number[]} The Total= value of each summary line logged, in order
+         */
+        const summaryTotals = () =>
+            mockLogger.info.mock.calls
+                .map(([message]) => message)
+                .filter((message) => message.includes('ERROR TRACKER: Error counts today (UTC)'))
+                .map((message) => Number(message.match(/Total=(\d+)/)[1]));
+
+        /**
+         * Counts the counter resets logged so far.
+         *
+         * @returns {number} How many times the counters were reset
+         */
+        const resetCount = () =>
+            mockLogger.info.mock.calls.filter(
+                ([message]) => message === 'ERROR TRACKER: Reset all error counters'
+            ).length;
+
+        /**
+         * Sets the clock to 23:59:00 UTC, starts the midnight reset cycle, and counts three
+         * errors before midnight. The one at 23:59:30 is logged at once. The ones at 23:59:45
+         * and 23:59:59 wait for the pending running summary, due at 00:00:30.
+         *
+         * @returns {Promise<ErrorTracker>} The tracker, also set as globals.errorTracker
+         */
+        async function countErrorsUntilJustBeforeMidnight() {
+            const { setupErrorCounterReset } = await import('../error-tracker.js');
+            const globals = (await import('../../globals.js')).default;
+
+            // logSummary.enable absent from config, so summary logging defaults to enabled
+            mockConfigHas.mockReturnValue(false);
+            mockConfigGet.mockReturnValue(undefined);
+            mockIsInfluxDbEnabled.mockReturnValue(false);
+            jest.setSystemTime(new Date('2026-10-16T23:59:00.000Z'));
+
+            const tracker = new ErrorTracker(mockLogger);
+            globals.errorTracker = tracker;
+            setupErrorCounterReset();
+
+            jest.advanceTimersByTime(30 * 1000); // 23:59:30
+            await tracker.incrementError('API_1', 'Server_1');
+            jest.advanceTimersByTime(15 * 1000); // 23:59:45
+            await tracker.incrementError('API_1', 'Server_1');
+            jest.advanceTimersByTime(14 * 1000); // 23:59:59
+            await tracker.incrementError('API_1', 'Server_1');
+
+            expect(summaryTotals()).toEqual([1]);
+            return tracker;
+        }
+
+        test('an error just after midnight, before the midnight timer runs, closes the previous day once', async () => {
+            const tracker = await countErrorsUntilJustBeforeMidnight();
+
+            // The clock passes midnight, but the midnight timer has not run yet, as on a busy
+            // event loop. An error arrives first.
+            jest.setSystemTime(new Date('2026-10-17T00:00:00.003Z'));
+            await tracker.incrementError('API_1', 'Server_1');
+
+            // Then the late midnight timer runs, and the old pending summary's time passes
+            await jest.advanceTimersByTimeAsync(60 * 1000);
+
+            // The 23:59:30 running total, the final total for 2026-10-16 with all three of its
+            // errors, and the new day's first error. Nothing logged twice, nothing lost.
+            expect(summaryTotals()).toEqual([1, 3, 1]);
+            expect(resetCount()).toBe(1);
+            expect(tracker.lastResetDate).toBe('2026-10-17');
+            expect(await tracker.getErrorCounts()).toEqual([
+                { apiType: 'API_1', serverName: 'Server_1', count: 1 },
+            ]);
+        });
+
+        test('the midnight timer running first closes the previous day once, and the next error starts the new one', async () => {
+            const tracker = await countErrorsUntilJustBeforeMidnight();
+
+            // Midnight passes and the timer runs on time
+            await jest.advanceTimersByTimeAsync(1000);
+            expect(summaryTotals()).toEqual([1, 3]);
+
+            // The new day's first error is logged at once, as the new day's total
+            jest.advanceTimersByTime(10);
+            await tracker.incrementError('API_1', 'Server_1');
+            expect(summaryTotals()).toEqual([1, 3, 1]);
+
+            // The running summary that was pending at midnight does not log again
+            await jest.advanceTimersByTimeAsync(60 * 1000);
+            expect(summaryTotals()).toEqual([1, 3, 1]);
+            expect(resetCount()).toBe(1);
+            expect(tracker.lastResetDate).toBe('2026-10-17');
+            expect(await tracker.getErrorCounts()).toEqual([
+                { apiType: 'API_1', serverName: 'Server_1', count: 1 },
+            ]);
+        });
     });
 });

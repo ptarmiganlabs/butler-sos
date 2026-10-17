@@ -2,23 +2,40 @@ import fs from 'fs-extra';
 import sea from '../sea-wrapper.js';
 
 /**
- * Format error message appropriately for SEA vs non-SEA apps
- * In SEA apps, stack traces are less useful, so we prefer err.message
- * In non-SEA apps, we show full stack traces for better debugging
+ * Decides whether error log lines include stack traces: only when Butler SOS runs from source
+ * code outside a container, as on a developer's machine. The packaged executables and the
+ * Docker image log the error message alone. The Docker image runs from source too, but a stack
+ * trace on every error line makes a container log hard to read.
+ *
+ * Uses the checks made at startup once they are available (settings.isSea, and
+ * settings.hostInfo.isRunningInDocker, which the startup log reports as "Running in Docker"),
+ * and checks directly before then.
+ *
+ * @param {object} [settings] - The settings object, if available
+ * @returns {boolean} True if stack traces should be logged
+ */
+export function shouldLogStackTraces(settings) {
+    const isSeaApp = settings?.isSea !== undefined ? settings.isSea : sea.isSea();
+    if (isSeaApp) {
+        return false;
+    }
+
+    const inDocker = settings?.hostInfo?.isRunningInDocker ?? isRunningInDocker();
+    return !inDocker;
+}
+
+/**
+ * Formats an error for a log line: the full stack trace when Butler SOS runs from source code
+ * outside a container, and the error message alone otherwise. See shouldLogStackTraces.
  *
  * @param {object} settings - The settings object
  * @param {Error} err - The error object
  * @returns {string} Formatted error message
  */
 export function getErrorMessage(settings, err) {
-    // Check SEA status - use direct check if isSea hasn't been initialized yet
-    const isSeaApp = settings.isSea !== undefined ? settings.isSea : sea.isSea();
-
-    if (isSeaApp) {
-        // For SEA apps, prefer cleaner error messages
+    if (!shouldLogStackTraces(settings)) {
         return err.message || err.toString();
     }
-    // For non-SEA apps, show full stack trace for debugging
     return err.stack || err.message || err.toString();
 }
 
