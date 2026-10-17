@@ -24,6 +24,7 @@ import path from 'path';
 import globals from '../globals.js';
 import sea from './sea-wrapper.js';
 import { redactSensitivePatterns } from './secret-patterns.js';
+import { resolveConfiguredDir } from './resolve-configured-dir.js';
 
 // ---------------------------------------------------------------------------
 // Module-level constants and state
@@ -161,22 +162,6 @@ function buildSafeConfig() {
     return safeConfig;
 }
 
-/**
- * Resolves the directory to write crash dump files into.
- * Falls back to `process.cwd()` when the configured directory is empty.
- *
- * @param {string} configuredDir - The directory path from config (may be relative or absolute)
- * @returns {string} Absolute path to the crash dump directory
- */
-function resolveCrashDir(configuredDir) {
-    if (!configuredDir || configuredDir.trim() === '') {
-        return process.cwd();
-    }
-    return path.isAbsolute(configuredDir)
-        ? configuredDir
-        : path.resolve(process.cwd(), configuredDir);
-}
-
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -275,7 +260,8 @@ export async function writeCrashDump(error, source) {
         // ----------------------------------------------------------------
         // Determine output paths
         // ----------------------------------------------------------------
-        const resolvedDir = resolveCrashDir(crashDir);
+        // Relative to the working directory; an empty value means the working directory itself.
+        const resolvedDir = resolveConfiguredDir(crashDir, process.cwd());
         const ts = buildTimestampForFilename();
         // Include PID and an incrementing counter to guarantee uniqueness even
         // when two fatal handlers fire within the same millisecond.

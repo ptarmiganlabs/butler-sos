@@ -12,19 +12,17 @@ import { jest, describe, expect, test, beforeEach, afterEach } from '@jest/globa
  *
  * - building the rotating file transport's dirname with upath.join(execPath, logDirectory)
  * - doing the same in the "Log file directory" startup line
- * - reading Butler-SOS.logDirectory when nothing uses it (see the last test)
+ * - joining rather than resolving relative paths, which mangles a drive-relative C:logs
+ * - reading Butler-SOS.logDirectory when nothing uses it, or more than once
  */
 
-// logging.js imports Node's own 'path' (under the name upath), so it follows the rules of the OS
-// running it, and CI runs on Linux only. Routing its path calls through this delegate lets each
-// describe block choose POSIX or Windows rules, so both are exercised on every OS.
+// logging.js and the directory resolver it uses import Node's own 'path', so they follow the
+// rules of the OS running them, and CI runs on Linux only. This stand-in forwards every property
+// to platformPath, which each describe block sets to POSIX or Windows rules, so both are
+// exercised on every OS whichever path functions the code calls.
 let platformPath = path.posix;
-const pathDelegate = {
-    isAbsolute: (p) => platformPath.isAbsolute(p),
-    join: (...parts) => platformPath.join(...parts),
-    dirname: (p) => platformPath.dirname(p),
-};
-jest.unstable_mockModule('path', () => ({ ...pathDelegate, default: pathDelegate }));
+const pathDelegate = new Proxy({}, { get: (_target, name) => platformPath[name] });
+jest.unstable_mockModule('path', () => ({ default: pathDelegate }));
 
 const mockDailyRotateFile = jest.fn();
 jest.unstable_mockModule('winston', () => ({
@@ -75,12 +73,12 @@ function makeSettings({ execPath, logDirectory, logLevel = 'debug', fileLogging 
         configFile: 'production.yaml',
         config: {
             'Butler-SOS': { logLevel },
-            get: (key) => {
+            get: jest.fn((key) => {
                 if (values[key] === undefined) {
                     throw new Error(`Configuration property "${key}" is not defined`);
                 }
                 return values[key];
-            },
+            }),
         },
     };
 }
@@ -155,15 +153,28 @@ describe('initLogging log file directory', () => {
             });
         });
 
-        test.each(['D:\\Butler SOS\\log', 'D:/Butler SOS/log'])(
-            'uses absolute "%s" as given',
-            (logDirectory) => {
-                expect(logDirectoriesUsed(makeSettings({ execPath, logDirectory }))).toEqual({
-                    printed: logDirectory,
-                    dirname: logDirectory,
-                });
-            }
-        );
+        test('resolves drive-relative "C:logs" against the executable directory', () => {
+            // Joining would give C:\Program Files\Butler SOS\C:logs, which is not a valid path.
+            expect(logDirectoriesUsed(makeSettings({ execPath, logDirectory: 'C:logs' }))).toEqual({
+                printed: 'C:\\Program Files\\Butler SOS\\logs',
+                dirname: 'C:\\Program Files\\Butler SOS\\logs',
+            });
+        });
+
+        test.each([
+            'D:\\Butler SOS\\log',
+            'D:/Butler SOS/log',
+            // No drive letter: the root of the current drive. These were joined onto the
+            // executable directory before, so they are the values whose meaning changed.
+            '\\logs',
+            '/logs',
+            '\\\\fileserver\\share\\butler-sos',
+        ])('uses absolute "%s" as given', (logDirectory) => {
+            expect(logDirectoriesUsed(makeSettings({ execPath, logDirectory }))).toEqual({
+                printed: logDirectory,
+                dirname: logDirectory,
+            });
+        });
     });
 
     test('does not read logDirectory when neither file logging nor startup output uses it', () => {
@@ -180,5 +191,17 @@ describe('initLogging log file directory', () => {
 
         expect(() => initLogging(settings)).not.toThrow();
         expect(mockDailyRotateFile).not.toHaveBeenCalled();
+    });
+
+    test('reads logDirectory once when both the startup line and the log file use it', () => {
+        platformPath = path.posix;
+        const settings = makeSettings({ execPath: '/opt/butler-sos', logDirectory: 'log' });
+
+        initLogging(settings);
+
+        const reads = settings.config.get.mock.calls.filter(
+            ([key]) => key === 'Butler-SOS.logDirectory'
+        );
+        expect(reads).toHaveLength(1);
     });
 });
