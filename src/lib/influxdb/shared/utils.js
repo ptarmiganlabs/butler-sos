@@ -895,10 +895,17 @@ export async function writeBatchToInfluxV1(
 /**
  * Writes one or more InfluxDB v2 Points using a short-lived write API.
  *
- * Creates a write API with standard options (`flushInterval: 5000`, `maxRetries: 0`),
- * writes the supplied points, and closes the API on success. If writing fails,
- * `close()` is also attempted in the error handler to release resources before
- * re-throwing the original error; any error from that cleanup close is suppressed.
+ * Creates a write API that sends nothing on its own, writes the supplied points, and closes
+ * the API, which sends them all in one request. If writing fails, `close()` is also attempted
+ * in the error handler to release resources before re-throwing the original error; any error
+ * from that cleanup close is suppressed.
+ *
+ * The v2 client sends its buffer by itself once it holds `batchSize` points (1000 by default),
+ * reaches `maxBatchBytes`, or after `flushInterval`, and ignores the result of such a request:
+ * a failure is only logged by the client. `close()` would then report success for a write that
+ * failed. So the batch size is set above the number of points, the byte limit and the timer are
+ * turned off, and the only request is the one `close()` sends and reports on. The client's own
+ * retries are off too (`maxRetries: 0`); retrying is left to writeToInfluxWithRetry.
  *
  * @param {object} influxClient - InfluxDB v2 client instance (e.g. `globals.influx`)
  * @param {string} org - InfluxDB organisation name
@@ -908,12 +915,14 @@ export async function writeBatchToInfluxV1(
  * @returns {Promise<void>}
  */
 export async function writePointsToInfluxV2(influxClient, org, bucket, points) {
+    const pointsArray = Array.isArray(points) ? points : [points];
     const writeApi = influxClient.getWriteApi(org, bucket, 'ns', {
-        flushInterval: 5000,
+        batchSize: pointsArray.length + 1,
+        maxBatchBytes: Number.MAX_SAFE_INTEGER,
+        flushInterval: 0,
         maxRetries: 0,
     });
     try {
-        const pointsArray = Array.isArray(points) ? points : [points];
         await writeApi.writePoints(pointsArray);
         await writeApi.close();
     } catch (err) {

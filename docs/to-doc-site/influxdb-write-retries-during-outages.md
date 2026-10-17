@@ -89,6 +89,11 @@ flowchart TD
   v2 writes, so a failed write is retried only as described above. Butler SOS's own retries now
   cover the overloaded and unavailable answers the v2 library used to retry, for all InfluxDB
   versions.
+- **InfluxDB v2: failed full batches are no longer missed.** The v2 client library sent a batch
+  on its own once it reached 1,000 points (the default `maxBatchSize`) and ignored whether that
+  request failed. Butler SOS then treated a failed write as successful: no retry, no error
+  count, and the points were lost without a trace. Every v2 write is now sent and checked by
+  Butler SOS itself.
 
 ### What counts as "unreachable" or "overloaded"
 

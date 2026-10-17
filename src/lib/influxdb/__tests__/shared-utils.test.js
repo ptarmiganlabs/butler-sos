@@ -823,8 +823,11 @@ describe('Shared Utils - writePointsToInfluxV2', () => {
         const point = { tag: jest.fn().mockReturnThis() };
         await utils.writePointsToInfluxV2(mockInfluxClient, 'my-org', 'my-bucket', [point]);
 
+        // Nothing is sent before close(), which sends it all and reports the result
         expect(mockInfluxClient.getWriteApi).toHaveBeenCalledWith('my-org', 'my-bucket', 'ns', {
-            flushInterval: 5000,
+            batchSize: 2,
+            maxBatchBytes: Number.MAX_SAFE_INTEGER,
+            flushInterval: 0,
             maxRetries: 0,
         });
     });
