@@ -40,6 +40,37 @@ describe('missingConfigFileMessage', () => {
 
         expect(message).not.toContain('npm read');
     });
+
+    test.each([
+        ['macOS and Linux shells', 'linux', `-c 'config/my config.yaml'`],
+        ['Windows', 'win32', `-c "config/my config.yaml"`],
+    ])('quotes a path with spaces in the suggested command, for %s', (_, platform, quoted) => {
+        // npm keeps the file name without the quotes it was typed with. Unquoted, the suggested
+        // command would split it into two arguments and fail again.
+        const message = missingConfigFileMessage(
+            {
+                npm_config_call: 'config/my config.yaml',
+                npm_command: 'run',
+                npm_lifecycle_event: 'butler-sos',
+            },
+            platform
+        );
+
+        expect(message).toContain(`npm run butler-sos -- ${quoted}`);
+    });
+
+    test('quotes a single quote inside a path for macOS and Linux shells', () => {
+        const message = missingConfigFileMessage(
+            {
+                npm_config_call: "goran's.yaml",
+                npm_command: 'run',
+                npm_lifecycle_event: 'butler-sos',
+            },
+            'darwin'
+        );
+
+        expect(message).toContain(`npm run butler-sos -- -c 'goran'\\''s.yaml'`);
+    });
 });
 
 describe('formatErrorBlock', () => {

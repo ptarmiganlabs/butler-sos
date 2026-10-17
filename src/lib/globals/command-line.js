@@ -111,9 +111,11 @@ export function formatErrorBlock(message, stream) {
  * in the npm_config_call environment variable, which is used here to explain what happened.
  *
  * @param {object} env - Environment variables, normally process.env
+ * @param {string} [platform] - Operating system, as process.platform; decides how the file name
+ *   is quoted in the suggested command
  * @returns {string} The error message
  */
-export function missingConfigFileMessage(env) {
+export function missingConfigFileMessage(env, platform = process.platform) {
     let message = `Error: No config file specified.
 Use -c <file> or --configfile <file> to point Butler SOS at one.`;
 
@@ -125,8 +127,33 @@ Use -c <file> or --configfile <file> to point Butler SOS at one.`;
 npm read "-c ${env.npm_config_call}" as one of its own options,
 so the config file never reached Butler SOS.
 Add -- after the script name to pass options on to Butler SOS:
-  npm run ${scriptName} -- -c ${env.npm_config_call}`;
+  npm run ${scriptName} -- -c ${quoteShellArgument(env.npm_config_call, platform)}`;
     }
 
     return message;
+}
+
+/**
+ * Quotes a command-line argument for a command shown to the user to copy, if it needs quoting.
+ *
+ * npm keeps a file name without the quotes it was typed with, so `-c "my config.yaml"` reaches
+ * us as `my config.yaml`. Shown unquoted, it would be split into two arguments. Single quotes
+ * keep everything literal in macOS and Linux shells. Windows' cmd.exe has no single quotes, but
+ * double quotes work there and in PowerShell, and Windows file names cannot contain a double
+ * quote.
+ *
+ * @param {string} value - The argument
+ * @param {string} platform - Operating system, as process.platform
+ * @returns {string} The argument, quoted if needed
+ */
+function quoteShellArgument(value, platform) {
+    if (/^[\w./\\:@+=,-]+$/.test(value)) {
+        return value;
+    }
+
+    if (platform === 'win32') {
+        return `"${value}"`;
+    }
+
+    return `'${value.replaceAll("'", `'\\''`)}'`;
 }
