@@ -1,6 +1,7 @@
 import winston from 'winston';
 import 'winston-daily-rotate-file';
 import upath from 'path';
+import { resolveConfiguredDir } from '../resolve-configured-dir.js';
 
 /**
  * Initializes the logger and its transports.
@@ -25,6 +26,22 @@ export function initLogging(settings) {
         })
     );
 
+    let logDirectory;
+    /**
+     * Resolves the log file directory once, on first use. An absolute Butler-SOS.logDirectory is
+     * used as given; a relative one starts from the executable's directory (the working directory
+     * when not packaged). It is read only when something uses it: under
+     * --skip-config-verification a config may lack it, and node-config's get() throws for a
+     * missing key.
+     *
+     * @returns {string} The log file directory
+     */
+    const getLogDirectory = () =>
+        (logDirectory ??= resolveConfiguredDir(
+            settings.config.get('Butler-SOS.logDirectory'),
+            settings.execPath
+        ));
+
     if (
         settings.config['Butler-SOS'].logLevel === 'verbose' ||
         settings.config['Butler-SOS'].logLevel === 'debug' ||
@@ -39,27 +56,35 @@ export function initLogging(settings) {
             );
         }
 
-        console.log(
-            `Log file directory: ${upath.join(settings.execPath, settings.config.get('Butler-SOS.logDirectory'))}`
-        );
+        console.log(`Log file directory: ${getLogDirectory()}`);
 
         console.log(`upath.dirname(process.execPath): ${upath.dirname(process.execPath)}`);
         console.log(`process.cwd(): ${process.cwd()}`);
     }
 
     if (settings.config.get('Butler-SOS.fileLogging')) {
-        settings.logTransports.push(
-            new winston.transports.DailyRotateFile({
-                dirname: upath.join(
-                    settings.execPath,
-                    settings.config.get('Butler-SOS.logDirectory')
-                ),
-                filename: 'butler-sos.%DATE%.log',
-                level: settings.config.get('Butler-SOS.logLevel'),
-                datePattern: 'YYYY-MM-DD',
-                maxFiles: '30d',
-            })
-        );
+        const dirname = getLogDirectory();
+
+        try {
+            settings.logTransports.push(
+                new winston.transports.DailyRotateFile({
+                    dirname,
+                    filename: 'butler-sos.%DATE%.log',
+                    level: settings.config.get('Butler-SOS.logLevel'),
+                    datePattern: 'YYYY-MM-DD',
+                    maxFiles: '30d',
+                })
+            );
+        } catch (err) {
+            // Absolute paths used to be nested under the app folder, so a value such as /log that
+            // once meant a subfolder now points at the disk root. Say so where the failure shows.
+            throw new Error(
+                `Cannot write log files to "${dirname}", set by Butler-SOS.logDirectory: ` +
+                    `${err.message.replace(/\.?$/, '.')} Absolute paths are used as given; for a ` +
+                    'folder inside the Butler SOS folder, use a relative path such as "log".',
+                { cause: err }
+            );
+        }
     }
 
     settings.logger = winston.createLogger({
