@@ -1,10 +1,5 @@
 import globals from '../../../globals.js';
-import {
-    isInfluxDbEnabled,
-    writeToInfluxWithRetry,
-    writePointsToInfluxV2,
-    stampPointsOnce,
-} from '../shared/utils.js';
+import { isInfluxDbEnabled, writeBatchToInfluxV2 } from '../shared/utils.js';
 
 /**
  * Store proxy session data to InfluxDB v2
@@ -68,24 +63,17 @@ export async function storeSessionsV2(userSessions) {
         const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
         const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
 
-        // Timestamp the points once, so that a retry rewrites them instead of adding copies
-        stampPointsOnce(userSessions.datapointInfluxdb, 'v2');
-
-        // Write array of measurements using retry logic
-        await writeToInfluxWithRetry(
-            () =>
-                writePointsToInfluxV2(
-                    globals.influx,
-                    org,
-                    bucketName,
-                    userSessions.datapointInfluxdb
-                ),
+        // A snapshot holds a point per session, so it can be large. The batch writer sends it in
+        // chunks of maxBatchSize and splits a rejected chunk further, as the v1 and v3 session
+        // writers do. It also timestamps the points once and leaves counting a failure to the
+        // catch below.
+        await writeBatchToInfluxV2(
+            userSessions.datapointInfluxdb,
+            org,
+            bucketName,
             `Proxy sessions for ${userSessions.host}/${userSessions.virtualProxy}`,
-            'v2',
             userSessions.serverName,
-            { module: 'PROXY_SESSIONS' },
-            // Counted once, in the catch below
-            { skipErrorTracking: true }
+            globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize')
         );
 
         globals.logger.verbose(

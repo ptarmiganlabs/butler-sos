@@ -290,6 +290,28 @@ describe.each(batchWriters)(
                 expect(error.message).toContain('Failed to write 2 of 2001 point(s)');
             });
 
+            test('splits requests a size limit rejects (HTTP 413) until every point is written', async () => {
+                // A proxy or server that refuses request bodies over 300 points
+                install(async (ids) => {
+                    attempts++;
+                    if (ids.length > 300) {
+                        throw Object.assign(new Error('413 Request Entity Too Large'), {
+                            statusCode: 413,
+                        });
+                    }
+                    written.push(...ids);
+                });
+
+                const { error } = await settle(writeBatch(makePoints(2500), 1000));
+
+                expect(error).toBeUndefined();
+                expect(written.sort((a, b) => a - b)).toEqual(
+                    Array.from({ length: 2500 }, (_, i) => i)
+                );
+                // 1000, 1000 and 500 rejected; the 1000s split into 500s, rejected; all split into 250s
+                expect(attempts).toBe(3 + 4 + 10);
+            });
+
             test('a failed short last chunk is not written again unchanged', async () => {
                 // 1001 points in batches of 1000: the first 1000 are written, the 1-point tail is
                 // rejected. Writing that one point again "with batch size 500" would repeat the

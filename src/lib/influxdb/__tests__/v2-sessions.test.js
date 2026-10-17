@@ -54,12 +54,14 @@ describe('v2/sessions', () => {
         globals.config.get.mockImplementation((path) => {
             if (path.includes('org')) return 'test-org';
             if (path.includes('bucket')) return 'test-bucket';
+            if (path.includes('maxBatchSize')) return 1000;
             return undefined;
         });
 
         utils.isInfluxDbEnabled.mockReturnValue(true);
         utils.writeToInfluxWithRetry.mockImplementation(async (cb) => await cb());
         utils.writePointsToInfluxV2.mockResolvedValue(undefined);
+        utils.writeBatchToInfluxV2.mockResolvedValue(undefined);
         mockWriteApi.writePoints.mockResolvedValue(undefined);
         mockWriteApi.close.mockResolvedValue(undefined);
     });
@@ -75,7 +77,7 @@ describe('v2/sessions', () => {
             datapointInfluxdb: [mockPoint],
         };
         await storeSessionsV2(userSessions);
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
     });
 
     test('should return early with invalid datapointInfluxdb (not array)', async () => {
@@ -88,7 +90,7 @@ describe('v2/sessions', () => {
             datapointInfluxdb: 'not-an-array',
         };
         await storeSessionsV2(userSessions);
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
         expect(globals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Invalid data format')
         );
@@ -105,7 +107,7 @@ describe('v2/sessions', () => {
             datapointInfluxdb: [mockPoint],
         };
         await storeSessionsV2(userSessions);
-        expect(utils.writeToInfluxWithRetry).not.toHaveBeenCalled();
+        expect(utils.writeBatchToInfluxV2).not.toHaveBeenCalled();
         expect(globals.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Influxdb write API object not found')
         );
@@ -123,19 +125,15 @@ describe('v2/sessions', () => {
 
         await storeSessionsV2(userSessions);
 
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
-        expect(utils.writePointsToInfluxV2).toHaveBeenCalledWith(
-            globals.influx,
+        // Through the batch writer, which chunks the snapshot by maxBatchSize, timestamps the
+        // points once and leaves counting a failure to this module
+        expect(utils.writeBatchToInfluxV2).toHaveBeenCalledWith(
+            userSessions.datapointInfluxdb,
             'test-org',
             'test-bucket',
-            userSessions.datapointInfluxdb
-        );
-        expect(utils.stampPointsOnce).toHaveBeenCalledWith(userSessions.datapointInfluxdb, 'v2');
-        // A failed write is counted once, in the module's own catch, not again by the retry
-        expect(utils.writeToInfluxWithRetry.mock.calls[0][5]).toEqual({ skipErrorTracking: true });
-        // Stamped before the first write attempt, so every retry sends the same timestamps
-        expect(utils.stampPointsOnce.mock.invocationCallOrder[0]).toBeLessThan(
-            utils.writeToInfluxWithRetry.mock.invocationCallOrder[0]
+            expect.stringContaining('Proxy sessions for host1.example.com'),
+            'server1',
+            1000
         );
         expect(globals.logger.verbose).toHaveBeenCalledWith(
             expect.stringContaining('Sent user session data to InfluxDB')
@@ -154,12 +152,13 @@ describe('v2/sessions', () => {
 
         await storeSessionsV2(userSessions);
 
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
-        expect(utils.writePointsToInfluxV2).toHaveBeenCalledWith(
-            globals.influx,
+        expect(utils.writeBatchToInfluxV2).toHaveBeenCalledWith(
+            [],
             'test-org',
             'test-bucket',
-            []
+            expect.any(String),
+            'server1',
+            1000
         );
     });
 
@@ -179,8 +178,10 @@ describe('v2/sessions', () => {
         expect(globals.logger.silly).toHaveBeenCalled();
     });
 
-    test('should handle multiple datapoints', async () => {
-        const datapoints = Array(20).fill(mockPoint);
+    test('hands a large snapshot to the batch writer whole, to be written in chunks', async () => {
+        // A point per session: more than one request should carry. Before, the whole snapshot
+        // went out in a single request, which a body-size limit (HTTP 413) could reject.
+        const datapoints = Array(2500).fill(mockPoint);
         const userSessions = {
             serverName: 'server1',
             host: 'host1',
@@ -192,13 +193,15 @@ describe('v2/sessions', () => {
 
         await storeSessionsV2(userSessions);
 
-        expect(utils.writePointsToInfluxV2).toHaveBeenCalledWith(
-            globals.influx,
+        expect(utils.writeBatchToInfluxV2).toHaveBeenCalledWith(
+            datapoints,
             'test-org',
             'test-bucket',
-            datapoints
+            expect.any(String),
+            'server1',
+            1000
         );
-        expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
+        expect(utils.writePointsToInfluxV2).not.toHaveBeenCalled();
     });
 
     describe('Error handling', () => {
@@ -212,8 +215,8 @@ describe('v2/sessions', () => {
                 datapointInfluxdb: [mockPoint],
             };
 
-            // Mock writeToInfluxWithRetry to throw an error
-            utils.writeToInfluxWithRetry.mockRejectedValue(new Error('Write failed'));
+            // The batch writer throws when points could not be written
+            utils.writeBatchToInfluxV2.mockRejectedValue(new Error('Write failed'));
 
             // Should not throw
             await expect(storeSessionsV2(userSessions)).resolves.not.toThrow();
@@ -223,7 +226,8 @@ describe('v2/sessions', () => {
                 expect.stringContaining('Error saving session data')
             );
 
-            // Verify error was tracked
+            // Verify error was tracked, once
+            expect(globals.errorTracker.incrementError).toHaveBeenCalledTimes(1);
             expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
                 'INFLUXDB_V2_WRITE',
                 'host1',
