@@ -246,12 +246,96 @@ async function trackFailedInfluxWrite(versionTag, errorCategory, metadata, err, 
     );
 }
 
+// HTTP statuses that mean InfluxDB is overloaded or briefly unavailable: worth retrying after a
+// pause, but not worth writing in smaller batches
+const TRANSIENT_HTTP_STATUSES = [408, 429, 502, 503, 504];
+
+// Longest pause a Retry-After header can ask for between two attempts
+const MAX_RETRY_AFTER_MS = 60 * 1000;
+
+/**
+ * Returns the HTTP status a write failed with, if it is a transient one (408, 429, 502, 503 or
+ * 504): InfluxDB is overloaded or briefly unavailable.
+ *
+ * The v2 and v3 clients put the status on `statusCode`, and the v1 client on `res.statusCode`.
+ * The v1 client reports any 5xx response as a ServiceNotAvailableError without a status, which
+ * counts as 503 here.
+ *
+ * @param {Error} err - The error a write failed with
+ *
+ * @returns {number|undefined} The transient HTTP status, or undefined if it is not one
+ */
+export function transientHttpStatus(err) {
+    const status = err?.statusCode ?? err?.res?.statusCode ?? err?.response?.status;
+    if (TRANSIENT_HTTP_STATUSES.includes(status)) {
+        return status;
+    }
+
+    return err?.constructor?.name === 'ServiceNotAvailableError' ? 503 : undefined;
+}
+
+/**
+ * How long the server asked Butler SOS to wait before trying again, from a Retry-After header,
+ * in milliseconds. 0 when it did not say.
+ *
+ * The v2 client parses the header itself (`retryAfter()`, in seconds). For the v3 and v1
+ * clients the header is read from the response headers, as seconds or as an HTTP date.
+ *
+ * @param {Error} err - The error a write failed with
+ *
+ * @returns {number} Milliseconds to wait, or 0
+ */
+function retryAfterMs(err) {
+    if (typeof err?.retryAfter === 'function') {
+        const seconds = Number(err.retryAfter());
+        return seconds > 0 ? seconds * 1000 : 0;
+    }
+
+    let header = err?.headers?.['retry-after'] ?? err?.res?.headers?.['retry-after'];
+    if (Array.isArray(header)) {
+        header = header[0];
+    }
+    if (header === undefined || header === null || header === '') {
+        return 0;
+    }
+
+    const seconds = Number(header);
+    if (Number.isFinite(seconds)) {
+        return Math.max(0, seconds * 1000);
+    }
+
+    const retryAt = Date.parse(header);
+    return Number.isNaN(retryAt) ? 0 : Math.max(0, retryAt - Date.now());
+}
+
+/**
+ * Decides whether a failed write is worth retrying: a timeout, a network error, or a transient
+ * HTTP status (see transientHttpStatus).
+ *
+ * @param {Error} err - The error a write failed with
+ *
+ * @returns {boolean} True if the write should be retried
+ */
+function isRetryableWriteError(err) {
+    const errorName = err?.constructor?.name || err?.name || '';
+    const errorMessage = err?.message || '';
+
+    return (
+        errorName === 'RequestTimedOutError' ||
+        ['timeout', 'timed out', 'ETIMEDOUT', 'ECONNREFUSED', 'ENOTFOUND', 'ECONNRESET'].some(
+            (text) => errorMessage.includes(text)
+        ) ||
+        transientHttpStatus(err) !== undefined
+    );
+}
+
 /**
  * Writes data to InfluxDB (v1, v2, or v3) with retry logic and exponential backoff.
  *
  * This unified function handles writes to any InfluxDB version with configurable retry logic.
- * If a write fails due to timeout or network issues, it will retry up to maxRetries times
- * with exponential backoff between attempts.
+ * If a write fails due to a timeout, a network issue, or a transient HTTP status such as 429 or
+ * 503, it will retry up to maxRetries times with exponential backoff between attempts, waiting
+ * at least as long as a Retry-After header asks (up to 60 seconds).
  *
  * @param {Function} writeFn - Async function that performs the write operation
  * @param {string} context - Description of what's being written (for logging)
@@ -313,17 +397,10 @@ export async function writeToInfluxWithRetry(
             lastError = err;
             attempt++;
 
-            // Check if this is a retryable error (timeout or network issue)
+            // Timeouts, network errors and transient HTTP statuses are worth retrying
             const errorName = err.constructor?.name || err.name || '';
             const errorMessage = err.message || '';
-            const isRetryableError =
-                errorName === 'RequestTimedOutError' ||
-                errorMessage.includes('timeout') ||
-                errorMessage.includes('timed out') ||
-                errorMessage.includes('ETIMEDOUT') ||
-                errorMessage.includes('ECONNREFUSED') ||
-                errorMessage.includes('ENOTFOUND') ||
-                errorMessage.includes('ECONNRESET');
+            const isRetryableError = isRetryableWriteError(err);
 
             // Log the error type for debugging
             globals.logger.debug(
@@ -340,10 +417,15 @@ export async function writeToInfluxWithRetry(
 
             // This is a retryable error - check if we have retries left
             if (attempt <= maxRetries) {
-                // Calculate delay with exponential backoff
-                const delayMs = Math.min(
+                // Calculate delay with exponential backoff. A server that says when to come back
+                // (Retry-After) is given at least that long, up to MAX_RETRY_AFTER_MS.
+                const backoffMs = Math.min(
                     initialDelayMs * Math.pow(backoffMultiplier, attempt - 1),
                     maxDelayMs
+                );
+                const delayMs = Math.max(
+                    backoffMs,
+                    Math.min(retryAfterMs(err), MAX_RETRY_AFTER_MS)
                 );
 
                 globals.logger.warn(
@@ -550,6 +632,26 @@ export function isInfluxUnreachableError(err) {
 }
 
 /**
+ * Says why InfluxDB cannot take writes at all right now, if that is what a write failed with:
+ * it cannot be reached, or it answers that it is overloaded or briefly unavailable (a transient
+ * HTTP status, still failing after the retries). Smaller batches cannot help with either.
+ *
+ * @param {Error} err - The error a write failed with
+ *
+ * @returns {string|undefined} The reason, for log messages, or undefined for any other failure
+ */
+function serverUnavailableReason(err) {
+    if (isInfluxUnreachableError(err)) {
+        return 'InfluxDB could not be reached';
+    }
+
+    const status = transientHttpStatus(err);
+    return status === undefined
+        ? undefined
+        : `InfluxDB is not accepting writes right now (HTTP ${status})`;
+}
+
+/**
  * Builds the error a batch write throws when some of its points could not be written.
  *
  * The last write error becomes its cause, and its code is copied over, so the error tracker can
@@ -624,11 +726,12 @@ async function writeChunksOnce(
                 { ...retryOptions, skipErrorTracking: true }
             );
         } catch (err) {
-            if (isInfluxUnreachableError(err)) {
+            const unavailable = serverUnavailableReason(err);
+            if (unavailable) {
                 // This chunk, the chunks after it and those that already failed are all lost
                 const notWritten = failed.length + pending.length - startIdx;
                 globals.logger.error(
-                    `${logPrefix} - InfluxDB could not be reached, so ${notWritten} of ${total} point(s) were not written. Smaller batches are not tried, as they cannot help: ${globals.getErrorMessage(err)}`
+                    `${logPrefix} - ${unavailable}, so ${notWritten} of ${total} point(s) were not written. Smaller batches are not tried, as they cannot help: ${globals.getErrorMessage(err)}`
                 );
                 throw batchWriteError(notWritten, total, err);
             }
@@ -652,8 +755,9 @@ async function writeChunksOnce(
  * - A batch size is skipped when it would not make the chunks any smaller, as that would only
  *   repeat the write that just failed. A single point is written once (with retries), not once
  *   per batch size.
- * - When InfluxDB cannot be reached at all, the write stops there. Smaller chunks cannot fix
- *   that, and every remaining chunk would fail the same way after its own retries.
+ * - When InfluxDB cannot be reached at all, or keeps answering that it is overloaded or briefly
+ *   unavailable (429, 503 and the like, after the retries), the write stops there. Smaller chunks
+ *   cannot fix that, and every remaining chunk would fail the same way after its own retries.
  * - Failures are not counted in the error tracker here. Every caller counts a failed batch
  *   once, where it catches the error thrown.
  * - Every point gets its timestamp before the first attempt, so whatever reaches InfluxDB more

@@ -15,9 +15,11 @@ This applies to InfluxDB v1, v2 and v3 alike.
 ## How Butler SOS writes to InfluxDB
 
 Butler SOS sends data points to InfluxDB in batches — at most `maxBatchSize` points per request
-(see the setting at the end of this page). If a request fails with a temporary problem, such as
-a timeout, Butler SOS retries it up to three more times, waiting 1, 2 and then 4 seconds between
-attempts.
+(see the setting at the end of this page). If a request fails with a temporary problem — a
+timeout, a dropped connection, or InfluxDB answering that it is overloaded or briefly unavailable
+— Butler SOS retries it up to three more times, waiting 1, 2 and then 4 seconds between attempts.
+When InfluxDB says how long to wait (an HTTP `Retry-After` header), Butler SOS waits at least
+that long, up to 60 seconds.
 
 If the batch still fails, Butler SOS tries again with **smaller batches**: 500, 250, 100, 10 and
 finally 1 point per request. This is meant for the case where one bad data point makes InfluxDB
@@ -61,7 +63,7 @@ often.
 flowchart TD
     A[Write a batch] --> B{Succeeded?}
     B -- Yes --> Z[Done]
-    B -- No --> C{InfluxDB unreachable?}
+    B -- No --> C{InfluxDB unreachable<br/>or overloaded?}
     C -- Yes --> D[Stop: log once,<br/>points are not written]
     C -- No --> E{Can the batch<br/>get smaller?}
     E -- Yes --> F[Write only the failed<br/>points again, in smaller batches]
@@ -69,10 +71,11 @@ flowchart TD
     E -- No --> G[Stop: log which points<br/>could not be written]
 ```
 
-- **Unreachable InfluxDB: stop after the normal retries.** If InfluxDB cannot be reached at all,
-  Butler SOS still retries each request as before (four attempts in about 7 seconds), but then
-  gives up on that batch instead of trying smaller ones. The batches after it are not attempted
-  either, as they would fail the same way.
+- **Unreachable or overloaded InfluxDB: stop after the normal retries.** If InfluxDB cannot be
+  reached at all, or keeps answering that it is overloaded or unavailable, Butler SOS still
+  retries each request (four attempts in about 7 seconds, longer if InfluxDB asks for it), but
+  then gives up on that batch instead of trying smaller ones. The batches after it are not
+  attempted either, as they would fail the same way.
 - **Only failed points are written again.** Points that were stored successfully are not sent a
   second time, so they are not duplicated.
 - **No pointless retries.** A batch size that would not make the batch any smaller is skipped,
@@ -82,12 +85,14 @@ flowchart TD
   and quietly instead of adding more retries to the log.
 - **InfluxDB v2: no hidden extra retries.** The InfluxDB v2 client library also retried failed
   writes in the background, on top of Butler SOS's own retries. That is now turned off for all
-  v2 writes, so a failed write is retried only as described above.
+  v2 writes, so a failed write is retried only as described above. Butler SOS's own retries now
+  cover the overloaded and unavailable answers the v2 library used to retry, for all InfluxDB
+  versions.
 
-### What counts as "unreachable"
+### What counts as "unreachable" or "overloaded"
 
-Butler SOS treats these as InfluxDB being unreachable, and stops instead of trying smaller
-batches:
+Butler SOS treats these as InfluxDB being unreachable or overloaded, and stops instead of trying
+smaller batches:
 
 | Error | Meaning |
 |-------|---------|
@@ -96,6 +101,8 @@ batches:
 | `EAI_AGAIN` | A temporary DNS failure |
 | `EHOSTUNREACH`, `ENETUNREACH` | There is no network route to the InfluxDB host |
 | `No host available` | InfluxDB v1 only: the client has marked the server as down after earlier failures |
+| HTTP `429` | Too many requests — InfluxDB, or a service in front of it, is limiting how fast it accepts writes. Still failing after the retries. |
+| HTTP `408`, `502`, `503`, `504` | InfluxDB, or a proxy or load balancer in front of it, is overloaded, restarting or briefly unavailable. Still failing after the retries. |
 
 Timeouts and dropped connections (`ETIMEDOUT`, `ECONNRESET`) still go through smaller batches,
 because a smaller request can succeed where a large one timed out.
@@ -125,6 +132,7 @@ are the replacements:
 | `... Successfully wrote all data using batch size X (reduced from Y)` | `... Wrote the remaining N point(s) using batch size X (reduced from Y)` |
 | `Failed to write batch after trying all progressive sizes` | `Failed to write N of M point(s): <the reason InfluxDB gave>` |
 | *(none)* | `... InfluxDB could not be reached, so N of M point(s) were not written. Smaller batches are not tried, as they cannot help: <reason>` |
+| *(none)* | `... InfluxDB is not accepting writes right now (HTTP 503), so N of M point(s) were not written. Smaller batches are not tried, as they cannot help: <reason>` |
 
 Error events with no server name are now labelled `Error event: INFLUXDB_V3_WRITE` instead of
 `Error event: INFLUXDB_V3_WRITE/`.
