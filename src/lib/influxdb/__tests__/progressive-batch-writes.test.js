@@ -246,6 +246,23 @@ describe.each(batchWriters)(
                 // Chunks 0-9, 10-19 (rejected) and 20-24, then points 10-19 one at a time
                 expect(attempts).toBe(3 + 10);
             });
+
+            test('a failed short last chunk is not written again unchanged', async () => {
+                // 1001 points in batches of 1000: the first 1000 are written, the 1-point tail is
+                // rejected. Writing that one point again "with batch size 500" would repeat the
+                // same write, with another full round of retries for a retryable error.
+                install(async (ids) => {
+                    attempts++;
+                    if (ids.includes(1000)) {
+                        throw new Error('400 Bad Request: field type conflict');
+                    }
+                });
+
+                const { error } = await settle(writeBatch(makePoints(1001), 1000));
+
+                expect(attempts).toBe(2);
+                expect(error.message).toContain('Failed to write 1 of 1001 point(s)');
+            });
         });
     }
 );

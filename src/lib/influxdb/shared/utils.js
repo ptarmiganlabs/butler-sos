@@ -718,6 +718,11 @@ async function writeInProgressiveBatches(
 
         pending = failed;
         lastError = passError;
+
+        // When only a short last chunk failed, it is smaller than the batch size just used.
+        // Writing it again at that size would repeat the same write, so the next size must be
+        // smaller than the points that are left as well.
+        previousChunkSize = Math.min(previousChunkSize, pending.length);
     }
 
     globals.logger.error(
