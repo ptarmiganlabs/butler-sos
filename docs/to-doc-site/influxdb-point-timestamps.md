@@ -38,10 +38,11 @@ every retry. If an earlier attempt did reach InfluxDB, the retry overwrites the 
 instead of adding copies.
 
 Each timestamp is the time on the Butler SOS server, to the millisecond, when the write
-started. Within one millisecond, the finer digits of the timestamp are used as a counter so
+started. The finer digits of the timestamp hold a counter that goes up with every point, so
 that every point gets a different timestamp. That way two identical events in the same
 millisecond — one user opening the same app in two browser tabs at once, for example — are
-still stored as two points, rather than one overwriting the other.
+still stored as two points, rather than one overwriting the other. The same holds when the
+server's clock is set back and a millisecond comes round a second time.
 
 ---
 
@@ -68,10 +69,10 @@ written in the Qlik Sense log file row. Dashboards built on log events see no ch
 
 ### Raw timestamps have non-zero final digits
 
-If you look at raw timestamps in nanoseconds, you will see small numbers in the last digits:
-`1792231788937000000`, `1792231788937000001`, `1792231788937000002`, and so on, for points
-written in the same millisecond. That is the counter described above. It is far below anything
-a dashboard shows.
+If you look at raw timestamps in nanoseconds, the last six digits are not zeros: points
+written one after another look like `1792231788937000412`, `1792231788937000413`,
+`1792231788941000414`. That is the counter described above. It is far below anything a
+dashboard shows.
 
 ### Fewer inflated counts after connection problems
 

@@ -432,34 +432,35 @@ export function validateUnsignedField(value, measurement, field, serverContext) 
     return numValue;
 }
 
-// The millisecond the last point timestamp was taken in, and how many were taken in it
-let lastTimestampMs = 0;
-let timestampsInLastMs = 0;
+// Sequence number for the sub-millisecond digits of point timestamps. It runs on from one
+// millisecond to the next instead of restarting in each; see nextPointTimestamp.
+let pointTimestampSequence = 0;
 
 /**
  * Returns a timestamp for a new point: the current time in nanoseconds since the epoch, as a
  * string of digits, which is how all three InfluxDB clients accept nanosecond timestamps.
  *
- * Every call returns a different value. The clock only has millisecond resolution, so calls in
- * the same millisecond are told apart by a counter in the nanosecond digits. Without it, two
- * points with the same measurement and tags created in the same millisecond, such as two
- * identical user events, would share a timestamp, and InfluxDB would keep only the last.
+ * The clock only has millisecond resolution, so the last six digits hold a sequence number that
+ * goes up by one on every call and wraps after 999999. Without it, two points with the same
+ * measurement and tags created in the same millisecond, such as two identical user events,
+ * would share a timestamp, and InfluxDB would keep only the last.
  *
- * The value always lies within the current millisecond, so it follows the clock, including
- * when the clock is adjusted.
+ * The sequence does not restart when the millisecond changes. So when the clock is set back and
+ * a millisecond comes round a second time, its points get different sub-millisecond digits than
+ * the first time, and do not overwrite those. A value can only repeat if the same millisecond
+ * comes round again exactly a multiple of a million calls later.
+ *
+ * The value always lies within the current millisecond, so it follows the clock, including when
+ * the clock is adjusted. Holding timestamps back until a clock that was set back has caught up
+ * would avoid repeats too, but would put everything written in the meantime at one instant.
  *
  * @returns {string} Nanoseconds since the epoch
  */
 export function nextPointTimestamp() {
-    const nowMs = Date.now();
-    if (nowMs === lastTimestampMs) {
-        timestampsInLastMs += 1;
-    } else {
-        lastTimestampMs = nowMs;
-        timestampsInLastMs = 0;
-    }
+    const sequence = pointTimestampSequence;
+    pointTimestampSequence = (pointTimestampSequence + 1) % 1_000_000;
 
-    return (BigInt(nowMs) * 1_000_000n + BigInt(timestampsInLastMs)).toString();
+    return (BigInt(Date.now()) * 1_000_000n + BigInt(sequence)).toString();
 }
 
 /**

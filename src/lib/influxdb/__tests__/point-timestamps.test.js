@@ -77,6 +77,25 @@ describe('nextPointTimestamp', () => {
             jest.useRealTimers();
         }
     });
+    test('does not repeat a value when the clock is set back to a millisecond already used', () => {
+        // Readings T, T+1, T: restarting the sub-millisecond counter in each millisecond would
+        // give the first and third calls the same timestamp
+        // A millisecond no other test uses, so no earlier call has advanced its counter
+        const t = Date.parse('2026-10-17T11:22:33.444Z');
+        jest.useFakeTimers({ now: t });
+        try {
+            const first = utils.nextPointTimestamp();
+            jest.setSystemTime(t + 1);
+            utils.nextPointTimestamp();
+            jest.setSystemTime(t);
+            const revisited = utils.nextPointTimestamp();
+
+            expect(revisited).not.toBe(first);
+            expect(BigInt(revisited) / 1_000_000n).toBe(BigInt(t));
+        } finally {
+            jest.useRealTimers();
+        }
+    });
 });
 
 describe('stampPointsOnce', () => {
