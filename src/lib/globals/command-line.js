@@ -142,12 +142,16 @@ Add -- after the script name to pass options on to Butler SOS:
  * double quotes work there and in PowerShell, and Windows file names cannot contain a double
  * quote.
  *
+ * A backslash is safe unquoted only on Windows, where it separates folders. macOS and Linux
+ * shells treat it as an escape, so `config/qlik\prod.yaml` would arrive as `config/qlikprod.yaml`.
+ *
  * @param {string} value - The argument
  * @param {string} platform - Operating system, as process.platform
  * @returns {string} The argument, quoted if needed
  */
 function quoteShellArgument(value, platform) {
-    if (/^[\w./\\:@+=,-]+$/.test(value)) {
+    const safeUnquoted = platform === 'win32' ? /^[\w./\\:@+=,-]+$/ : /^[\w./:@+=,-]+$/;
+    if (safeUnquoted.test(value)) {
         return value;
     }
 
@@ -155,5 +159,7 @@ function quoteShellArgument(value, platform) {
         return `"${value}"`;
     }
 
-    return `'${value.replaceAll("'", `'\\''`)}'`;
+    // Close the quotes, add an escaped single quote, and open them again
+    const escapedSingleQuote = String.raw`'\''`;
+    return `'${value.replaceAll("'", escapedSingleQuote)}'`;
 }

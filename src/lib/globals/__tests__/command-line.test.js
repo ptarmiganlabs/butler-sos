@@ -71,6 +71,30 @@ describe('missingConfigFileMessage', () => {
 
         expect(message).toContain(`npm run butler-sos -- -c 'goran'\\''s.yaml'`);
     });
+
+    test.each([
+        // macOS and Linux shells treat a backslash as an escape, so it must be quoted there...
+        [
+            'macOS and Linux shells',
+            'linux',
+            String.raw`config/qlik\prod.yaml`,
+            String.raw`-c 'config/qlik\prod.yaml'`,
+        ],
+        // ...while on Windows it separates folders and needs no quotes
+        [
+            'Windows',
+            'win32',
+            String.raw`C:\butler-sos\config\prod.yaml`,
+            String.raw`-c C:\butler-sos\config\prod.yaml`,
+        ],
+    ])('keeps backslashes in the suggested command, for %s', (_, platform, path, expected) => {
+        const message = missingConfigFileMessage(
+            { npm_config_call: path, npm_command: 'run', npm_lifecycle_event: 'butler-sos' },
+            platform
+        );
+
+        expect(message).toContain(`npm run butler-sos -- ${expected}`);
+    });
 });
 
 describe('formatErrorBlock', () => {
