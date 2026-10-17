@@ -162,9 +162,14 @@ duplicated points.
 - **Data written while InfluxDB is down is still lost.** Butler SOS does not store metrics on
   disk to send later. What changed is how quickly and quietly it gives up, not whether the data
   survives an outage.
-- **The retries for each request** — four attempts, 1, 2 and 4 seconds apart — are the same.
-- **Audit events** sent to InfluxDB use their own write path and are not affected by this
-  change.
+- **The retries for each request** — four attempts, 1, 2 and 4 seconds apart — are the same,
+  except that overloaded and unavailable answers (HTTP 429, 503 and the like) are now retried
+  too, waiting longer when InfluxDB asks for it.
+- **Audit events** sent to InfluxDB keep their own batching and their own timestamps; the
+  changes to batches and timestamps above do not apply to them. They do share the retry rules,
+  so they are now also retried on overloaded and unavailable answers, and wait for a
+  `Retry-After` pause of up to 60 seconds. During such a pause, audit events reach InfluxDB
+  later than they otherwise would.
 
 ---
 
