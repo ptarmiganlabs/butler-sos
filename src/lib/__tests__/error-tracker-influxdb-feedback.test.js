@@ -164,7 +164,7 @@ describe('ErrorTracker: failed InfluxDB error-event writes are not tracked again
     );
 
     test.each([1, 2, 3])(
-        'InfluxDB v%i: a write failure that outlasts all retries does not call incrementError again',
+        'InfluxDB v%i: an error event that cannot reach InfluxDB gets one attempt and does not call incrementError again',
         async (version) => {
             // Leave setImmediate real: the error tracker uses it to start the write
             jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick', 'queueMicrotask'] });
@@ -179,8 +179,9 @@ describe('ErrorTracker: failed InfluxDB error-event writes are not tracked again
             await waitForErrorEventWrites(() => jest.advanceTimersByTimeAsync(1000));
 
             expect(tracker._writeErrorToInfluxDB).toHaveBeenCalledTimes(1);
-            // More than one attempt per batch size means the write was retried
-            expect(writeAttempts.mock.calls.length).toBeGreaterThan(1);
+            // Error events are written without retries, and an unreachable InfluxDB is not
+            // tried again with smaller batches: one attempt in all
+            expect(writeAttempts).toHaveBeenCalledTimes(1);
             expect(tracker.incrementError).toHaveBeenCalledTimes(1);
             expect(await tracker.getErrorCounts()).toEqual([
                 { apiType: 'PROXY_API', serverName: 'sense1', count: 1 },
@@ -188,7 +189,7 @@ describe('ErrorTracker: failed InfluxDB error-event writes are not tracked again
         }
     );
 
-    test('a failed data write is still tracked, and its error event is written once', async () => {
+    test('a failed data write is counted once by its caller, and its error event is written once', async () => {
         configureErrorTracking(1);
         const { client, writeAttempts } = createFailingInfluxClient(
             1,
@@ -197,28 +198,31 @@ describe('ErrorTracker: failed InfluxDB error-event writes are not tracked again
         mockGlobals.influx = client;
         const { writeBatchToInfluxV1 } = await import('../influxdb/shared/utils.js');
 
-        // An ordinary data write (not an error event) that InfluxDB rejects
-        await expect(
-            writeBatchToInfluxV1(
+        // An ordinary data write (not an error event) that InfluxDB rejects, counted the way
+        // every caller of the batch writers counts it: once, where the failed batch is caught
+        try {
+            await writeBatchToInfluxV1(
                 [{ measurement: 'sense_server', fields: { version: '1' } }],
                 'Health metrics',
                 'sense1',
                 1000
-            )
-        ).rejects.toThrow('Failed to write batch after trying all progressive sizes');
-        const dataWriteAttempts = writeAttempts.mock.calls.length;
+            );
+            throw new Error('the write was expected to fail');
+        } catch (err) {
+            expect(err.message).toContain('Failed to write 1 of 1 point(s)');
+            await tracker.incrementError('INFLUXDB_V1_WRITE', 'sense1', {}, err);
+        }
 
         await waitForErrorEventWrites();
 
-        // The data write failure is tracked once per batch size tried...
-        expect(tracker.incrementError.mock.calls.length).toBe(dataWriteAttempts);
-        expect(
-            tracker.incrementError.mock.calls.every(([apiType]) => apiType === 'INFLUXDB_V1_WRITE')
-        ).toBe(true);
-        // ...each tracked failure writes one error event, and those failures are not tracked
-        expect(tracker._writeErrorToInfluxDB).toHaveBeenCalledTimes(dataWriteAttempts);
+        // The batch writer itself counted nothing: the caller's count is the only one. It used
+        // to count once per batch size tried as well, each count writing its own error event.
+        expect(tracker.incrementError).toHaveBeenCalledTimes(1);
+        expect(tracker._writeErrorToInfluxDB).toHaveBeenCalledTimes(1);
+        // One attempt for the data point, one for its error event, which also fails untracked
+        expect(writeAttempts).toHaveBeenCalledTimes(2);
         expect(await tracker.getErrorCounts()).toEqual([
-            { apiType: 'INFLUXDB_V1_WRITE', serverName: 'sense1', count: dataWriteAttempts },
+            { apiType: 'INFLUXDB_V1_WRITE', serverName: 'sense1', count: 1 },
         ]);
     });
 });
