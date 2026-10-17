@@ -24,9 +24,11 @@ jobs:
             cancel-in-progress: false
         strategy:
             matrix:
-                os: [win-code-sign, ubuntu-latest]
+                # GitHub-hosted runners. The insiders Windows binary is not code-signed, so it needs
+                # no runner that holds a signing certificate; release builds are signed in ci.yaml.
+                os: [windows-latest, ubuntu-latest]
                 include:
-                    - os: win-code-sign
+                    - os: windows-latest
                       # artifact_release_name: release-binaries-win
                       # artifact_release_path: release-binaries-win/*
                       artifact_insider: butler-sos--win-x64--${{ github.sha }}.zip
@@ -77,11 +79,10 @@ jobs:
                   sarif_file: snyk.sarif
 
             - name: Create binaries (Windows)
-              if: matrix.os == 'win-code-sign'
+              if: matrix.os == 'windows-latest'
               env:
                   DIST_FILE_NAME: butler-sos
                   GITHUB_TOKEN: ${{ secrets.PAT }}
-                  CODESIGN_WIN_THUMBPRINT: ${{ secrets.WIN_CODESIGN_THUMBPRINT}}
               run: ./scripts/insider-build-win.ps1
 
             - name: Create binaries (Linux)
