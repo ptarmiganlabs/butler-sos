@@ -69,8 +69,12 @@ Configuration File:
 
 /**
  * Frames an error message with rules above and below, so it stands out at the end of the help
- * text, and shows its first line in bold red. Colour is only used when the stream is a terminal
- * that supports it and NO_COLOR is not set, so logs and redirected output stay plain text.
+ * text, and shows its first line in bold red.
+ *
+ * Colour is only used when the stream is a terminal that supports it, as its hasColors() reports
+ * (which also honours NO_COLOR, FORCE_COLOR=0 and TERM=dumb), so logs and redirected output stay
+ * plain text. The decision is made here rather than left to util.styleText, which colours any
+ * stream at all when FORCE_COLOR is set.
  *
  * @param {string} message - The error message; its first line is the headline
  * @param {object} stream - The stream the message will be written to, normally process.stderr
@@ -81,8 +85,20 @@ export function formatErrorBlock(message, stream) {
     const longestLine = Math.max(...lines.map((line) => line.length));
     const width = Math.min(longestLine, stream.columns || 100);
 
-    const rule = styleText('red', '='.repeat(width), { stream });
-    const headline = styleText(['bold', 'red'], lines[0], { stream });
+    const useColour =
+        stream.isTTY === true && typeof stream.hasColors === 'function' && stream.hasColors();
+    /**
+     * Applies a style when colour is used, and returns the text unchanged otherwise.
+     *
+     * @param {string|string[]} format - util.styleText format(s)
+     * @param {string} text - The text to style
+     * @returns {string} The text, styled or not
+     */
+    const style = (format, text) =>
+        useColour ? styleText(format, text, { validateStream: false }) : text;
+
+    const rule = style('red', '='.repeat(width));
+    const headline = style(['bold', 'red'], lines[0]);
 
     return ['', rule, headline, ...lines.slice(1), rule].join('\n');
 }

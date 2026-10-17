@@ -1,5 +1,6 @@
 import { jest, describe, expect, test, beforeEach, afterEach } from '@jest/globals';
 import { PassThrough } from 'node:stream';
+import { stripVTControlCharacters } from 'node:util';
 
 import { formatErrorBlock, initCommandLine, missingConfigFileMessage } from '../command-line.js';
 
@@ -44,6 +45,10 @@ describe('missingConfigFileMessage', () => {
 describe('formatErrorBlock', () => {
     const message = 'Error: Short headline.\nA somewhat longer second line.';
 
+    // These results depend only on the stream, not on the colour settings (FORCE_COLOR,
+    // NO_COLOR) of whoever runs the tests: a PassThrough is not a terminal, and the colour tests
+    // use a stand-in terminal that reports its own colour support.
+
     test('frames the message with rules as wide as its longest line', () => {
         const block = formatErrorBlock(message, new PassThrough());
         const rule = '='.repeat('A somewhat longer second line.'.length);
@@ -66,7 +71,7 @@ describe('formatErrorBlock', () => {
     test('colours the rules and headline red on a colour terminal', () => {
         const stream = new PassThrough();
         stream.isTTY = true;
-        stream.getColorDepth = () => 8;
+        stream.hasColors = () => true;
 
         const lines = formatErrorBlock(message, stream).split('\n');
 
@@ -74,6 +79,15 @@ describe('formatErrorBlock', () => {
         expect(lines[2]).toContain('\u001b[1m');
         expect(lines[2]).toContain('\u001b[31m');
         expect(lines[3]).toBe('A somewhat longer second line.');
+    });
+
+    test('leaves colour out on a terminal without colour support, or with NO_COLOR set', () => {
+        // A real terminal's hasColors() is false for TERM=dumb, NO_COLOR and FORCE_COLOR=0
+        const stream = new PassThrough();
+        stream.isTTY = true;
+        stream.hasColors = () => false;
+
+        expect(formatErrorBlock(message, stream)).not.toContain('\u001b[');
     });
 });
 
@@ -102,7 +116,10 @@ describe('initCommandLine', () => {
 
         expect(() => initCommandLine({ appVersion: '1.2.3' })).toThrow('process.exit(1)');
 
-        const stderr = stderrSpy.mock.calls.map((call) => call[0]).join('');
+        // Colour depends on whether stderr is a colour terminal; only the text is checked here
+        const stderr = stripVTControlCharacters(
+            stderrSpy.mock.calls.map((call) => call[0]).join('')
+        );
         expect(stderr).toContain('Usage: butler-sos [options]');
         expect(stderr).toMatch(/=+\nError: No config file specified\./);
         expect(stdoutSpy).not.toHaveBeenCalled();
