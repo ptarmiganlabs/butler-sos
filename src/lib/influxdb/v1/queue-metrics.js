@@ -40,10 +40,10 @@ function buildPointV1(data) {
  *
  * @param {string} queueType - Queue type key (see `QUEUE_TYPE_CONFIGS`).
  * @param {string} logPrefix - Log message prefix for this queue type.
- * @param {string|null} errorTrackerCode - Optional error tracker code to
- *     increment when a write fails. When `null`, the error tracker is not
- *     touched (preserves the historical behaviour of
- *     `storeUserEventQueueMetricsV1`).
+ * @param {string|null} errorTrackerCode - Error tracker code to increment
+ *     when a write fails. When `null`, the error tracker is not touched. The
+ *     batch writer does not count failures itself, so a failure is only
+ *     counted if a code is given here.
  *
  * @returns {Promise<void>} Promise that resolves when the metrics have been
  *     written (or when the operation has been skipped).
@@ -96,7 +96,7 @@ async function storeQueueMetricsV1(queueType, logPrefix, errorTrackerCode) {
  * @throws {Error} Error if unable to write data to InfluxDB
  */
 export async function storeUserEventQueueMetricsV1() {
-    return storeQueueMetricsV1('user_events', 'USER EVENT QUEUE METRICS V1', null);
+    return storeQueueMetricsV1('user_events', 'USER EVENT QUEUE METRICS V1', 'INFLUXDB_V1_WRITE');
 }
 
 /**
