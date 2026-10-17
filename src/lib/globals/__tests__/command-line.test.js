@@ -1,0 +1,120 @@
+import { jest, describe, expect, test, beforeEach, afterEach } from '@jest/globals';
+import { PassThrough } from 'node:stream';
+
+import { formatErrorBlock, initCommandLine, missingConfigFileMessage } from '../command-line.js';
+
+/**
+ * Starting Butler SOS without a config file used to print the help text and exit with code 0,
+ * with nothing saying what was wrong. The usual way to get there is
+ * `npm run butler-sos -c <file>`, where npm takes `-c` for itself, so the user had specified a
+ * config file and was given no clue why it was ignored.
+ */
+
+describe('missingConfigFileMessage', () => {
+    test('names the missing option', () => {
+        const message = missingConfigFileMessage({});
+
+        expect(message).toContain('Error: No config file specified');
+        expect(message).toContain('-c <file>');
+        expect(message).not.toContain('npm');
+    });
+
+    test('explains that npm took -c when run through npm run', () => {
+        const message = missingConfigFileMessage({
+            npm_config_call: 'src/config/production.yaml',
+            npm_command: 'run',
+            npm_lifecycle_event: 'butler-sos',
+        });
+
+        expect(message).toContain('npm read "-c src/config/production.yaml"');
+        expect(message).toContain('npm run butler-sos -- -c src/config/production.yaml');
+    });
+
+    test('gives no npm hint for npm exec -c, which also sets npm_config_call', () => {
+        const message = missingConfigFileMessage({
+            npm_config_call: 'node src/butler-sos.js',
+            npm_command: 'exec',
+            npm_lifecycle_event: 'npx',
+        });
+
+        expect(message).not.toContain('npm read');
+    });
+});
+
+describe('formatErrorBlock', () => {
+    const message = 'Error: Short headline.\nA somewhat longer second line.';
+
+    test('frames the message with rules as wide as its longest line', () => {
+        const block = formatErrorBlock(message, new PassThrough());
+        const rule = '='.repeat('A somewhat longer second line.'.length);
+
+        expect(block).toBe(
+            `\n${rule}\nError: Short headline.\nA somewhat longer second line.\n${rule}`
+        );
+    });
+
+    test('caps the rules at the terminal width', () => {
+        const stream = new PassThrough();
+        stream.columns = 10;
+
+        const lines = formatErrorBlock(message, stream).split('\n');
+
+        expect(lines[1]).toBe('='.repeat(10));
+        expect(lines.at(-1)).toBe('='.repeat(10));
+    });
+
+    test('colours the rules and headline red on a colour terminal', () => {
+        const stream = new PassThrough();
+        stream.isTTY = true;
+        stream.getColorDepth = () => 8;
+
+        const lines = formatErrorBlock(message, stream).split('\n');
+
+        expect(lines[1]).toContain('\u001b[31m');
+        expect(lines[2]).toContain('\u001b[1m');
+        expect(lines[2]).toContain('\u001b[31m');
+        expect(lines[3]).toBe('A somewhat longer second line.');
+    });
+});
+
+describe('initCommandLine', () => {
+    let originalArgv;
+    let exitSpy;
+    let stderrSpy;
+    let stdoutSpy;
+
+    beforeEach(() => {
+        originalArgv = process.argv;
+        exitSpy = jest.spyOn(process, 'exit').mockImplementation((code) => {
+            throw new Error(`process.exit(${code})`);
+        });
+        stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+        stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    });
+
+    afterEach(() => {
+        process.argv = originalArgv;
+        jest.restoreAllMocks();
+    });
+
+    test('exits with code 1 and says why when no config file is given', () => {
+        process.argv = ['node', 'butler-sos.js'];
+
+        expect(() => initCommandLine({ appVersion: '1.2.3' })).toThrow('process.exit(1)');
+
+        const stderr = stderrSpy.mock.calls.map((call) => call[0]).join('');
+        expect(stderr).toContain('Usage: butler-sos [options]');
+        expect(stderr).toMatch(/=+\nError: No config file specified\./);
+        expect(stdoutSpy).not.toHaveBeenCalled();
+    });
+
+    test('accepts a config file given with -c', () => {
+        process.argv = ['node', 'butler-sos.js', '-c', 'production.yaml'];
+        const settings = { appVersion: '1.2.3' };
+
+        initCommandLine(settings);
+
+        expect(settings.options.configfile).toBe('production.yaml');
+        expect(exitSpy).not.toHaveBeenCalled();
+    });
+});
