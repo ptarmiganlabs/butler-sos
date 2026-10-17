@@ -1,5 +1,53 @@
 # Changelog
 
+## [15.1.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.1.0...butler-sos-v15.1.1) (2026-10-16)
+
+
+### Bug Fixes
+
+* attest Windows provenance only when it names the built commit ([0589080](https://github.com/ptarmiganlabs/butler-sos/commit/05890803a414e7b3528b1c0fd96e6197e4c11cbe))
+* build the Docker image on a base with a patched libpcre2 ([6f71ebc](https://github.com/ptarmiganlabs/butler-sos/commit/6f71ebca6e8fc388fad99b978629953ed5b8e239))
+* build the Docker runtime stage on plain Debian ([dc0fcbd](https://github.com/ptarmiganlabs/butler-sos/commit/dc0fcbd3d9466fe842f91ddcbc8b5eefda28c9c8))
+* compare the Windows signer's name exactly ([ce5e2aa](https://github.com/ptarmiganlabs/butler-sos/commit/ce5e2aac4ae628c4e17c0a8ed082014fb25c1286))
+* harden the Windows release jobs found in review ([af35b2f](https://github.com/ptarmiganlabs/butler-sos/commit/af35b2f16b407716598c7861c4228cbd64bc0986))
+* keep the Node.js license notices in the Docker image ([d453f84](https://github.com/ptarmiganlabs/butler-sos/commit/d453f84fa422093876f9380b122c3c82657ee664))
+* log each day's final error totals once, whichever path ends the day ([685bf8f](https://github.com/ptarmiganlabs/butler-sos/commit/685bf8fe386587ddbdf54912b0a8912638be44cb)), closes [#1522](https://github.com/ptarmiganlabs/butler-sos/issues/1522)
+* log the running error summary at most once a minute ([67e091c](https://github.com/ptarmiganlabs/butler-sos/commit/67e091cc36331d5e5f7dd9ba61a17567228011ff)), closes [#1522](https://github.com/ptarmiganlabs/butler-sos/issues/1522)
+* never log the running error summary twice within a minute ([07ed2d5](https://github.com/ptarmiganlabs/butler-sos/commit/07ed2d5c5232d382a864070b20765452052696e5)), closes [#1522](https://github.com/ptarmiganlabs/butler-sos/issues/1522)
+* remove npm from the Docker runtime image ([c7f8bea](https://github.com/ptarmiganlabs/butler-sos/commit/c7f8bea6a6771c48cdd593e8dc616b47c2a3472a))
+* sign the Windows binary through Azure Artifact Signing ([ec4c45d](https://github.com/ptarmiganlabs/butler-sos/commit/ec4c45d20ed18cb3a51042ddf7b9f28179d67497))
+* stop error tracker from tracking its own InfluxDB write failures ([c718a2b](https://github.com/ptarmiganlabs/butler-sos/commit/c718a2bdbbae6d86d204d2c3ab33bf68c519c912)), closes [#1522](https://github.com/ptarmiganlabs/butler-sos/issues/1522)
+
+
+### Miscellaneous
+
+* accept the perl-base findings in the release image scan until 2026-11-30 ([9090ae1](https://github.com/ptarmiganlabs/butler-sos/commit/9090ae1abc6cccddacadad8c94b7ef3e7515a321))
+* **deps-dev:** update http-cache-semantics to 4.3.0 ([fc33bfb](https://github.com/ptarmiganlabs/butler-sos/commit/fc33bfbb4ae5403c1dc5e7585cc72b41faa86a94))
+* **deps:** bump handlebars from 4.7.9 to 4.7.10 ([2dff326](https://github.com/ptarmiganlabs/butler-sos/commit/2dff3269dd807c8021c9a4803d82688b23fe7768))
+* ignore Node major updates for the Docker base image ([d739b4a](https://github.com/ptarmiganlabs/butler-sos/commit/d739b4aa7b3727d3eb45ff076ea3e2906a0085a3))
+* keep published releases published when release jobs re-run ([f867f17](https://github.com/ptarmiganlabs/butler-sos/commit/f867f170ecc558203c218ee48f46b9591e0fa1e1))
+* move the macOS release and insiders builds to GitHub-hosted runners ([3b29357](https://github.com/ptarmiganlabs/butler-sos/commit/3b29357bf8448f53c6582fe53c9dd35ee01c4a23))
+* pin the Docker base images by exact version tag ([2644595](https://github.com/ptarmiganlabs/butler-sos/commit/26445956c56c6ab7e8587c7c2e56bea5bce40581))
+* run the macOS signing jobs in the release-signing environment ([4aba393](https://github.com/ptarmiganlabs/butler-sos/commit/4aba393c1764f84b0c9cd3d50a72bc5c3bdc9893))
+* tag each release when release-please creates its draft ([76662e4](https://github.com/ptarmiganlabs/butler-sos/commit/76662e4e06be5a99106aaff6f4596551f2572f22))
+* update release-please-action to v5.0.0 ([cc997de](https://github.com/ptarmiganlabs/butler-sos/commit/cc997dea4a8bdcdf1e26f87b5b8d180b519debf3))
+
+
+### Refactoring
+
+* move failed-write tracking out of writeToInfluxWithRetry ([7a5446b](https://github.com/ptarmiganlabs/butler-sos/commit/7a5446be7364a86aa1970ac2901cd3a502041e9e)), closes [#1522](https://github.com/ptarmiganlabs/butler-sos/issues/1522)
+* track a failed InfluxDB write once, after the retry loop ([ee7a9b5](https://github.com/ptarmiganlabs/butler-sos/commit/ee7a9b5c48524aa19e3c556b5a09b5cc3e9c4d1c)), closes [#1522](https://github.com/ptarmiganlabs/butler-sos/issues/1522)
+
+
+### Documentation
+
+* describe how releases are tagged and published ([2df7295](https://github.com/ptarmiganlabs/butler-sos/commit/2df7295e6e6832fff0dcdb3daa7670c29f8affd1))
+* describe how the macOS binaries are built and signed ([9a0d577](https://github.com/ptarmiganlabs/butler-sos/commit/9a0d577aefb9a54ae10364b9f1eb77d10ddeb15a))
+* describe how the Windows binary is signed ([72dc1fe](https://github.com/ptarmiganlabs/butler-sos/commit/72dc1fea56ae48ad8825d7dbb7545ba0da539f0a))
+* describe when the last running error summary is written ([d359752](https://github.com/ptarmiganlabs/butler-sos/commit/d359752a0427a54d51afb18fbdf805dc50a1de56)), closes [#1522](https://github.com/ptarmiganlabs/butler-sos/issues/1522)
+* give the base-image update its own staging page ([d223fbf](https://github.com/ptarmiganlabs/butler-sos/commit/d223fbf40e312004a7181604fea2f332592b5070))
+* stage error-tracking changes for the doc site ([df4e2a6](https://github.com/ptarmiganlabs/butler-sos/commit/df4e2a6fbd4fa2ae8ff177d4df85f703a4e4b31c)), closes [#1522](https://github.com/ptarmiganlabs/butler-sos/issues/1522)
+
 ## [15.1.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.0.1...butler-sos-v15.1.0) (2026-10-07)
 
 
