@@ -580,6 +580,70 @@ function batchWriteError(notWritten, total, lastError) {
 }
 
 /**
+ * Writes points in chunks of chunkSize, each once (with retries), and collects the points of the
+ * chunks that failed. One pass of writeInProgressiveBatches.
+ *
+ * @param {Array} pending - The points to write
+ * @param {number} chunkSize - Number of points per chunk
+ * @param {(chunk: Array) => Promise<void>} writeChunk - Writes one chunk of points
+ * @param {object} pass - What the pass needs to know
+ * @param {string} pass.version - InfluxDB version ('v1', 'v2' or 'v3')
+ * @param {string} pass.context - Description of what's being written, for log messages
+ * @param {string} pass.logPrefix - Prefix for log messages
+ * @param {number} pass.total - Number of points in the whole batch, for log messages
+ * @param {object} pass.retryOptions - Retry options for writeToInfluxWithRetry
+ *
+ * @returns {Promise<{ failed: Array, lastError: (Error|undefined) }>} The points in failed
+ *   chunks, and the error the last of them failed with
+ *
+ * @throws {Error} When InfluxDB cannot be reached, which ends the pass. See batchWriteError.
+ */
+async function writeChunksOnce(
+    pending,
+    chunkSize,
+    writeChunk,
+    { version, context, logPrefix, total, retryOptions }
+) {
+    const chunks = chunkArray(pending, chunkSize);
+    const failed = [];
+    let lastError;
+
+    for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const startIdx = i * chunkSize;
+        const endIdx = startIdx + chunk.length - 1;
+
+        try {
+            await writeToInfluxWithRetry(
+                () => writeChunk(chunk),
+                `${context} (chunk ${i + 1}/${chunks.length}, points ${startIdx}-${endIdx})`,
+                version,
+                '',
+                {},
+                { ...retryOptions, skipErrorTracking: true }
+            );
+        } catch (err) {
+            if (isInfluxUnreachableError(err)) {
+                // This chunk, the chunks after it and those that already failed are all lost
+                const notWritten = failed.length + pending.length - startIdx;
+                globals.logger.error(
+                    `${logPrefix} - InfluxDB could not be reached, so ${notWritten} of ${total} point(s) were not written. Smaller batches are not tried, as they cannot help: ${globals.getErrorMessage(err)}`
+                );
+                throw batchWriteError(notWritten, total, err);
+            }
+
+            lastError = err;
+            failed.push(...chunk);
+            globals.logger.error(
+                `${logPrefix} - Chunk ${i + 1} of ${chunks.length} (points ${startIdx}-${endIdx}) failed: ${globals.getErrorMessage(err)}`
+            );
+        }
+    }
+
+    return { failed, lastError };
+}
+
+/**
  * Writes points to InfluxDB in chunks of at most maxBatchSize points. When chunks fail, the
  * points in those chunks, and only those, are written again in smaller chunks, down to one
  * point at a time, so that a single bad point costs as little of the batch as possible.
@@ -635,41 +699,12 @@ async function writeInProgressiveBatches(
         }
         previousChunkSize = chunkSize;
 
-        const chunks = chunkArray(pending, chunkSize);
-        const failed = [];
-
-        for (let i = 0; i < chunks.length; i++) {
-            const chunk = chunks[i];
-            const startIdx = i * chunkSize;
-            const endIdx = startIdx + chunk.length - 1;
-
-            try {
-                await writeToInfluxWithRetry(
-                    () => writeChunk(chunk),
-                    `${context} (chunk ${i + 1}/${chunks.length}, points ${startIdx}-${endIdx})`,
-                    version,
-                    '',
-                    {},
-                    { ...retryOptions, skipErrorTracking: true }
-                );
-            } catch (err) {
-                lastError = err;
-
-                if (isInfluxUnreachableError(err)) {
-                    // This chunk, the chunks after it and those that already failed are all lost
-                    const notWritten = failed.length + pending.length - startIdx;
-                    globals.logger.error(
-                        `${logPrefix} - InfluxDB could not be reached, so ${notWritten} of ${points.length} point(s) were not written. Smaller batches are not tried, as they cannot help: ${globals.getErrorMessage(err)}`
-                    );
-                    throw batchWriteError(notWritten, points.length, err);
-                }
-
-                failed.push(...chunk);
-                globals.logger.error(
-                    `${logPrefix} - Chunk ${i + 1} of ${chunks.length} (points ${startIdx}-${endIdx}) failed: ${globals.getErrorMessage(err)}`
-                );
-            }
-        }
+        const { failed, lastError: passError } = await writeChunksOnce(
+            pending,
+            chunkSize,
+            writeChunk,
+            { version, context, logPrefix, total: points.length, retryOptions }
+        );
 
         if (failed.length === 0) {
             if (isRetryPass) {
@@ -681,6 +716,7 @@ async function writeInProgressiveBatches(
         }
 
         pending = failed;
+        lastError = passError;
     }
 
     globals.logger.error(

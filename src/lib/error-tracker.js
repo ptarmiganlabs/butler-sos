@@ -25,6 +25,17 @@ function isLogSummaryEnabled() {
 }
 
 /**
+ * Describes an error-event write, for log messages. Some errors have no server name.
+ *
+ * @param {string} apiType - The error type
+ * @param {string} serverName - The server name, or an empty string
+ * @returns {string} The description
+ */
+function errorEventContext(apiType, serverName) {
+    return serverName ? `Error event: ${apiType}/${serverName}` : `Error event: ${apiType}`;
+}
+
+/**
  * Class for tracking counts of API errors in Butler SOS.
  *
  * This class provides thread-safe methods to track different types of API errors:
@@ -277,10 +288,7 @@ export class ErrorTracker {
             tags.module = metadata.module;
         }
 
-        // Description of the write, for log messages. Some errors have no server name.
-        const context = serverName
-            ? `Error event: ${apiType}/${serverName}`
-            : `Error event: ${apiType}`;
+        const context = errorEventContext(apiType, serverName);
         const writeOptions = { maxRetries: 0 };
 
         // Derive error fields from the original error object
