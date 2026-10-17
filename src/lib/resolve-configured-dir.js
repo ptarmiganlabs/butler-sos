@@ -1,4 +1,4 @@
-import path from 'path';
+import path from 'node:path';
 
 /**
  * Resolves a directory taken from the config file. An absolute path is used as given, a relative
