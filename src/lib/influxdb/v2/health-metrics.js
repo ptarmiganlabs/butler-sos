@@ -4,6 +4,7 @@ import {
     isInfluxDbEnabled,
     writeToInfluxWithRetry,
     writePointsToInfluxV2,
+    stampPointsOnce,
 } from '../shared/utils.js';
 import { buildHealthMetricDatapoints } from '../shared/health-metrics-builder.js';
 
@@ -141,6 +142,9 @@ export async function postHealthMetricsToInfluxdbV2(serverName, host, body, serv
                 }
             }
         }
+
+        // Timestamp the points once, so that a retry rewrites them instead of adding copies
+        stampPointsOnce(points, 'v2');
 
         // Write all points to InfluxDB with retry logic
         await writeToInfluxWithRetry(

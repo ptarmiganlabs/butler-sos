@@ -5,6 +5,7 @@ import {
     isInfluxDbEnabled,
     validateRequiredFields,
     writeToInfluxWithRetry,
+    stampPointsOnce,
     writePointsToInfluxV2,
 } from '../shared/utils.js';
 import { applyInfluxTags } from './utils.js';
@@ -90,6 +91,9 @@ export async function storeUserEventV2(msg) {
         globals.logger.silly(
             `USER EVENT V2: Influxdb datapoint: ${JSON.stringify(point, null, 2)}`
         );
+
+        // Timestamp the point once, so that a retry rewrites it instead of adding a copy
+        stampPointsOnce([point], 'v2');
 
         // Write to InfluxDB with retry logic
         await writeToInfluxWithRetry(

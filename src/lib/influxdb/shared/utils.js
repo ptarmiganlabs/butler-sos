@@ -432,6 +432,82 @@ export function validateUnsignedField(value, measurement, field, serverContext) 
     return numValue;
 }
 
+// The millisecond the last point timestamp was taken in, and how many were taken in it
+let lastTimestampMs = 0;
+let timestampsInLastMs = 0;
+
+/**
+ * Returns a timestamp for a new point: the current time in nanoseconds since the epoch, as a
+ * string of digits, which is how all three InfluxDB clients accept nanosecond timestamps.
+ *
+ * Every call returns a different value. The clock only has millisecond resolution, so calls in
+ * the same millisecond are told apart by a counter in the nanosecond digits. Without it, two
+ * points with the same measurement and tags created in the same millisecond, such as two
+ * identical user events, would share a timestamp, and InfluxDB would keep only the last.
+ *
+ * The value always lies within the current millisecond, so it follows the clock, including
+ * when the clock is adjusted.
+ *
+ * @returns {string} Nanoseconds since the epoch
+ */
+export function nextPointTimestamp() {
+    const nowMs = Date.now();
+    if (nowMs === lastTimestampMs) {
+        timestampsInLastMs += 1;
+    } else {
+        lastTimestampMs = nowMs;
+        timestampsInLastMs = 0;
+    }
+
+    return (BigInt(nowMs) * 1_000_000n + BigInt(timestampsInLastMs)).toString();
+}
+
+/**
+ * Gives every point that has no timestamp yet one from nextPointTimestamp, so it keeps the
+ * same time through all retries of its write. Points that already have a timestamp keep it.
+ *
+ * Without this, a point gets its time when it is written: the v2 and v3 clients stamp it each
+ * time it is serialised, which happens on every write attempt, and InfluxDB v1 uses the time
+ * the server receives it. A write that reached InfluxDB but was retried anyway, after a
+ * timeout for example, then stored every point a second time.
+ *
+ * The timestamps are in nanoseconds, the precision all writes use: the v1 client's default,
+ * the 'ns' the v2 write API is created with, and the v3 client's default.
+ *
+ * Anything that is not a point of the expected kind is left as it is and written without a
+ * timestamp, as before, rather than making the write fail.
+ *
+ * @param {Array} points - Points to stamp: plain datapoint objects for v1, Point objects for v2
+ *   and v3
+ * @param {string} version - InfluxDB version ('v1', 'v2' or 'v3')
+ *
+ * @returns {void}
+ */
+export function stampPointsOnce(points, version) {
+    for (const point of points) {
+        if (point === null || typeof point !== 'object') {
+            continue;
+        }
+
+        if (version === 'v1') {
+            if (point.timestamp === undefined) {
+                point.timestamp = nextPointTimestamp();
+            }
+        } else if (version === 'v2') {
+            // The v2 Point has no getter for its timestamp; it keeps it in its `time` field
+            if (typeof point.timestamp === 'function' && point.time === undefined) {
+                point.timestamp(nextPointTimestamp());
+            }
+        } else if (
+            typeof point.setTimestamp === 'function' &&
+            typeof point.getTimestamp === 'function' &&
+            point.getTimestamp() === undefined
+        ) {
+            point.setTimestamp(nextPointTimestamp());
+        }
+    }
+}
+
 // Error codes meaning the InfluxDB server could not be reached at all
 const UNREACHABLE_ERROR_CODES = [
     'ECONNREFUSED',
@@ -515,8 +591,10 @@ function batchWriteError(notWritten, total, lastError) {
  *   that, and every remaining chunk would fail the same way after its own retries.
  * - Failures are not counted in the error tracker here. Every caller counts a failed batch
  *   once, where it catches the error thrown.
+ * - Every point gets its timestamp before the first attempt, so whatever reaches InfluxDB more
+ *   than once overwrites itself instead of being stored twice. See stampPointsOnce.
  *
- * @param {Array} points - The points to write
+ * @param {Array} points - The points to write. Points without a timestamp are given one.
  * @param {(chunk: Array) => Promise<void>} writeChunk - Writes one chunk of points
  * @param {object} options - Write options
  * @param {string} options.version - InfluxDB version ('v1', 'v2' or 'v3')
@@ -536,6 +614,8 @@ async function writeInProgressiveBatches(
     const logPrefix = `INFLUXDB ${version.toUpperCase()} BATCH: ${context}`;
     const batchSizes = [maxBatchSize, 500, 250, 100, 10, 1].filter((size) => size <= maxBatchSize);
     const retryOptions = maxRetries === undefined ? {} : { maxRetries };
+
+    stampPointsOnce(points, version);
 
     let pending = points;
     let previousChunkSize = Infinity;

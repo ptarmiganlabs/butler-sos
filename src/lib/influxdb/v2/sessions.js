@@ -3,6 +3,7 @@ import {
     isInfluxDbEnabled,
     writeToInfluxWithRetry,
     writePointsToInfluxV2,
+    stampPointsOnce,
 } from '../shared/utils.js';
 
 /**
@@ -66,6 +67,9 @@ export async function storeSessionsV2(userSessions) {
 
         const org = globals.config.get('Butler-SOS.influxdbConfig.v2Config.org');
         const bucketName = globals.config.get('Butler-SOS.influxdbConfig.v2Config.bucket');
+
+        // Timestamp the points once, so that a retry rewrites them instead of adding copies
+        stampPointsOnce(userSessions.datapointInfluxdb, 'v2');
 
         // Write array of measurements using retry logic
         await writeToInfluxWithRetry(

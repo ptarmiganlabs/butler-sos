@@ -33,6 +33,7 @@ const mockUtils = {
     writeToInfluxWithRetry: jest.fn(),
     writeBatchToInfluxV2: jest.fn(),
     writePointsToInfluxV2: jest.fn(),
+    stampPointsOnce: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -128,6 +129,11 @@ describe('v2/sessions', () => {
             'test-org',
             'test-bucket',
             userSessions.datapointInfluxdb
+        );
+        expect(utils.stampPointsOnce).toHaveBeenCalledWith(userSessions.datapointInfluxdb, 'v2');
+        // Stamped before the first write attempt, so every retry sends the same timestamps
+        expect(utils.stampPointsOnce.mock.invocationCallOrder[0]).toBeLessThan(
+            utils.writeToInfluxWithRetry.mock.invocationCallOrder[0]
         );
         expect(globals.logger.verbose).toHaveBeenCalledWith(
             expect.stringContaining('Sent user session data to InfluxDB')

@@ -46,6 +46,7 @@ const mockUtils = {
     writeToInfluxWithRetry: jest.fn(),
     writeBatchToInfluxV2: jest.fn(),
     writePointsToInfluxV2: jest.fn(),
+    stampPointsOnce: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -150,6 +151,11 @@ describe('v2/user-events', () => {
         ]);
         expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
         expect(utils.writePointsToInfluxV2).toHaveBeenCalled();
+        expect(utils.stampPointsOnce).toHaveBeenCalledWith([mockPoint], 'v2');
+        // Stamped before the first write attempt, so every retry sends the same timestamps
+        expect(utils.stampPointsOnce.mock.invocationCallOrder[0]).toBeLessThan(
+            utils.writeToInfluxWithRetry.mock.invocationCallOrder[0]
+        );
     });
 
     test('should handle event without app info', async () => {

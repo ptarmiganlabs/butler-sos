@@ -43,6 +43,7 @@ const mockUtils = {
     processAppDocuments: jest.fn(),
     getFormattedTime: jest.fn(() => '2 days, 3 hours'),
     writePointsToInfluxV2: jest.fn(),
+    stampPointsOnce: jest.fn(),
 };
 
 jest.unstable_mockModule('../shared/utils.js', () => mockUtils);
@@ -153,6 +154,12 @@ describe('v2/health-metrics', () => {
         expect(utils.writeToInfluxWithRetry).toHaveBeenCalled();
         expect(builder.buildHealthMetricDatapoints).toHaveBeenCalledTimes(1);
         expect(utils.writePointsToInfluxV2).toHaveBeenCalled();
+        expect(utils.stampPointsOnce).toHaveBeenCalledWith(expect.any(Array), 'v2');
+        expect(utils.stampPointsOnce.mock.calls[0][0]).toHaveLength(8);
+        // Stamped before the first write attempt, so every retry sends the same timestamps
+        expect(utils.stampPointsOnce.mock.invocationCallOrder[0]).toBeLessThan(
+            utils.writeToInfluxWithRetry.mock.invocationCallOrder[0]
+        );
     });
 
     test('should apply server tags to all points', async () => {
