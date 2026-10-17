@@ -61,7 +61,14 @@ export async function initConfig(settings) {
                 process.env.NODE_ENV = configFileBasename;
             }
         } else {
-            console.log('Error: Specified config file does not exist');
+            // Name the full path, as a relative path is resolved from the current directory
+            // and that is easy to get wrong, e.g. when starting Butler SOS from another folder
+            console.error(`Error: Config file does not exist: ${settings.configFile}`);
+            if (!upath.isAbsolute(configFileOption)) {
+                console.error(
+                    `"${configFileOption}" was resolved from the current directory, ${process.cwd()}`
+                );
+            }
             process.exit(1);
         }
     } else {
