@@ -334,12 +334,33 @@ describe('ErrorTracker._writeErrorToInfluxDB', () => {
         [2, mockWriteBatchToInfluxV2, 6],
         [3, mockWriteBatchToInfluxV3, 5],
     ])(
-        'InfluxDB v%i: tells the batch writer not to track its own write failures',
+        'InfluxDB v%i: writes the error event with a single attempt, without retries',
         async (version, writeBatch, optionsArgIndex) => {
             mockGetInfluxDbVersion.mockReturnValue(version);
             await tracker._writeErrorToInfluxDB('HEALTH_API', 'Server_1', {});
             expect(writeBatch).toHaveBeenCalledTimes(1);
-            expect(writeBatch.mock.calls[0][optionsArgIndex]).toEqual({ skipErrorTracking: true });
+            expect(writeBatch.mock.calls[0][optionsArgIndex]).toEqual({ maxRetries: 0 });
+        }
+    );
+
+    test.each([
+        [1, mockWriteBatchToInfluxV1, 1],
+        [2, mockWriteBatchToInfluxV2, 3],
+        [3, mockWriteBatchToInfluxV3, 2],
+    ])(
+        'InfluxDB v%i: describes an error event without a server name without a trailing slash',
+        async (version, writeBatch, contextArgIndex) => {
+            mockGetInfluxDbVersion.mockReturnValue(version);
+            await tracker._writeErrorToInfluxDB('INFLUXDB_V3_WRITE', '', {});
+            expect(writeBatch.mock.calls[0][contextArgIndex]).toBe(
+                'Error event: INFLUXDB_V3_WRITE'
+            );
+
+            writeBatch.mockClear();
+            await tracker._writeErrorToInfluxDB('HEALTH_API', 'Server_1', {});
+            expect(writeBatch.mock.calls[0][contextArgIndex]).toBe(
+                'Error event: HEALTH_API/Server_1'
+            );
         }
     );
 });

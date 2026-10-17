@@ -246,12 +246,113 @@ async function trackFailedInfluxWrite(versionTag, errorCategory, metadata, err, 
     );
 }
 
+// HTTP statuses that mean InfluxDB is overloaded or briefly unavailable: worth retrying after a
+// pause, but not worth writing in smaller batches
+const TRANSIENT_HTTP_STATUSES = new Set([408, 429, 502, 503, 504]);
+
+// Longest pause a Retry-After header can ask for between two attempts
+const MAX_RETRY_AFTER_MS = 60 * 1000;
+
+// Network error codes for a request that timed out or was cut off, which may well succeed when
+// tried again. Codes meaning the server cannot be reached are listed in UNREACHABLE_ERROR_CODES.
+const RETRYABLE_NETWORK_ERROR_CODES = new Set(['ETIMEDOUT', 'ECONNRESET']);
+
+/**
+ * Returns the HTTP status a write failed with, if it is a transient one (408, 429, 502, 503 or
+ * 504): InfluxDB is overloaded or briefly unavailable.
+ *
+ * The v2 and v3 clients put the status on `statusCode`, and the v1 client on `res.statusCode`.
+ * The v1 client reports any 5xx response as a ServiceNotAvailableError without a status, which
+ * counts as 503 here.
+ *
+ * @param {Error} err - The error a write failed with
+ *
+ * @returns {number|undefined} The transient HTTP status, or undefined if it is not one
+ */
+export function transientHttpStatus(err) {
+    const status = err?.statusCode ?? err?.res?.statusCode ?? err?.response?.status;
+    if (TRANSIENT_HTTP_STATUSES.has(status)) {
+        return status;
+    }
+
+    return err?.constructor?.name === 'ServiceNotAvailableError' ? 503 : undefined;
+}
+
+/**
+ * How long the server asked Butler SOS to wait before trying again, from a Retry-After header,
+ * in milliseconds. 0 when it did not say.
+ *
+ * The v2 client parses the header itself (`retryAfter()`, in seconds), but only when it is a
+ * number of seconds: for an HTTP date it returns 0. Then, and for the v3 and v1 clients, the
+ * header is read from the response headers, as seconds or as an HTTP date.
+ *
+ * @param {Error} err - The error a write failed with
+ *
+ * @returns {number} Milliseconds to wait, or 0
+ */
+function retryAfterMs(err) {
+    if (typeof err?.retryAfter === 'function') {
+        const seconds = Number(err.retryAfter());
+        if (seconds > 0) {
+            return seconds * 1000;
+        }
+    }
+
+    let header = err?.headers?.['retry-after'] ?? err?.res?.headers?.['retry-after'];
+    if (Array.isArray(header)) {
+        header = header[0];
+    }
+    if (header === undefined || header === null || header === '') {
+        return 0;
+    }
+
+    const seconds = Number(header);
+    if (Number.isFinite(seconds)) {
+        return Math.max(0, seconds * 1000);
+    }
+
+    const retryAt = Date.parse(header);
+    return Number.isNaN(retryAt) ? 0 : Math.max(0, retryAt - Date.now());
+}
+
+/**
+ * Decides whether a failed write is worth retrying: a timeout, a dropped connection, InfluxDB
+ * not being reachable (see isInfluxUnreachableError), or a transient HTTP status (see
+ * transientHttpStatus). Error codes are read from the error and its cause as well as from the
+ * message, as clients wrap network errors differently.
+ *
+ * Everything that makes the batch writer give up a batch is retried first, so a failure that
+ * clears within seconds does not lose the batch.
+ *
+ * @param {Error} err - The error a write failed with
+ *
+ * @returns {boolean} True if the write should be retried
+ */
+function isRetryableWriteError(err) {
+    const errorName = err?.constructor?.name || err?.name || '';
+    const errorMessage = err?.message || '';
+    const codes = [err?.code, err?.cause?.code];
+
+    return (
+        errorName === 'RequestTimedOutError' ||
+        ['timeout', 'timed out', 'ETIMEDOUT', 'ECONNRESET'].some((text) =>
+            errorMessage.includes(text)
+        ) ||
+        codes.some((code) => RETRYABLE_NETWORK_ERROR_CODES.has(code)) ||
+        // An unreachable server can be back moments later (a DNS hiccup, a restart), so it gets
+        // the retries before the batch is given up
+        isInfluxUnreachableError(err) ||
+        transientHttpStatus(err) !== undefined
+    );
+}
+
 /**
  * Writes data to InfluxDB (v1, v2, or v3) with retry logic and exponential backoff.
  *
  * This unified function handles writes to any InfluxDB version with configurable retry logic.
- * If a write fails due to timeout or network issues, it will retry up to maxRetries times
- * with exponential backoff between attempts.
+ * If a write fails due to a timeout, a network issue, or a transient HTTP status such as 429 or
+ * 503, it will retry up to maxRetries times with exponential backoff between attempts, waiting
+ * at least as long as a Retry-After header asks (up to 60 seconds).
  *
  * @param {Function} writeFn - Async function that performs the write operation
  * @param {string} context - Description of what's being written (for logging)
@@ -264,9 +365,10 @@ async function trackFailedInfluxWrite(versionTag, errorCategory, metadata, err, 
  * @param {number} options.maxDelayMs - Maximum delay between retries in ms (default: 10000)
  * @param {number} options.backoffMultiplier - Multiplier for exponential backoff (default: 2)
  * @param {boolean} options.skipErrorTracking - When true, a failed write is logged and thrown but
- *   not counted by the error tracker (default: false). The error tracker sets this for its own
- *   error-event writes: tracking their failures would schedule another error-event write, which
- *   fails the same way, and the writes would multiply.
+ *   not counted by the error tracker (default: false). The batch writers set this for every
+ *   chunk, as their callers count a failed batch once. It also keeps the error tracker's own
+ *   error-event writes from being tracked: tracking their failures would schedule another
+ *   error-event write, which fails the same way, and the writes would multiply.
  *
  * @returns {Promise<void>} Promise that resolves when write succeeds or rejects after all retries fail
  *
@@ -312,17 +414,10 @@ export async function writeToInfluxWithRetry(
             lastError = err;
             attempt++;
 
-            // Check if this is a retryable error (timeout or network issue)
+            // Timeouts, network errors and transient HTTP statuses are worth retrying
             const errorName = err.constructor?.name || err.name || '';
             const errorMessage = err.message || '';
-            const isRetryableError =
-                errorName === 'RequestTimedOutError' ||
-                errorMessage.includes('timeout') ||
-                errorMessage.includes('timed out') ||
-                errorMessage.includes('ETIMEDOUT') ||
-                errorMessage.includes('ECONNREFUSED') ||
-                errorMessage.includes('ENOTFOUND') ||
-                errorMessage.includes('ECONNRESET');
+            const isRetryableError = isRetryableWriteError(err);
 
             // Log the error type for debugging
             globals.logger.debug(
@@ -339,10 +434,15 @@ export async function writeToInfluxWithRetry(
 
             // This is a retryable error - check if we have retries left
             if (attempt <= maxRetries) {
-                // Calculate delay with exponential backoff
-                const delayMs = Math.min(
+                // Calculate delay with exponential backoff. A server that says when to come back
+                // (Retry-After) is given at least that long, up to MAX_RETRY_AFTER_MS.
+                const backoffMs = Math.min(
                     initialDelayMs * Math.pow(backoffMultiplier, attempt - 1),
                     maxDelayMs
+                );
+                const delayMs = Math.max(
+                    backoffMs,
+                    Math.min(retryAfterMs(err), MAX_RETRY_AFTER_MS)
                 );
 
                 globals.logger.warn(
@@ -431,17 +531,358 @@ export function validateUnsignedField(value, measurement, field, serverContext) 
     return numValue;
 }
 
+// Sequence number for the sub-millisecond digits of point timestamps. It runs on from one
+// millisecond to the next instead of restarting in each; see nextPointTimestamp.
+let pointTimestampSequence = 0;
+
+/**
+ * Returns a timestamp for a new point: the current time in nanoseconds since the epoch, as a
+ * string of digits, which is how all three InfluxDB clients accept nanosecond timestamps.
+ *
+ * The clock only has millisecond resolution, so the last six digits hold a sequence number that
+ * goes up by one on every call and wraps after 999999. Without it, two points with the same
+ * measurement and tags created in the same millisecond, such as two identical user events,
+ * would share a timestamp, and InfluxDB would keep only the last.
+ *
+ * The sequence does not restart when the millisecond changes. So when the clock is set back and
+ * a millisecond comes round a second time, its points get different sub-millisecond digits than
+ * the first time, and do not overwrite those. A value can only repeat if the same millisecond
+ * comes round again exactly a multiple of a million calls later.
+ *
+ * The value always lies within the current millisecond, so it follows the clock, including when
+ * the clock is adjusted. Holding timestamps back until a clock that was set back has caught up
+ * would avoid repeats too, but would put everything written in the meantime at one instant.
+ *
+ * @returns {string} Nanoseconds since the epoch
+ */
+export function nextPointTimestamp() {
+    const sequence = pointTimestampSequence;
+    pointTimestampSequence = (pointTimestampSequence + 1) % 1_000_000;
+
+    return (BigInt(Date.now()) * 1_000_000n + BigInt(sequence)).toString();
+}
+
+/**
+ * Gives every point that has no timestamp yet one from nextPointTimestamp, so it keeps the
+ * same time through all retries of its write. Points that already have a timestamp keep it.
+ *
+ * Without this, a point gets its time when it is written: the v2 and v3 clients stamp it each
+ * time it is serialised, which happens on every write attempt, and InfluxDB v1 uses the time
+ * the server receives it. A write that reached InfluxDB but was retried anyway, after a
+ * timeout for example, then stored every point a second time.
+ *
+ * The timestamps are in nanoseconds, the precision all writes use: the v1 client's default,
+ * the 'ns' the v2 write API is created with, and the v3 client's default.
+ *
+ * Anything that is not a point of the expected kind is left as it is and written without a
+ * timestamp, as before, rather than making the write fail.
+ *
+ * @param {Array} points - Points to stamp: plain datapoint objects for v1, Point objects for v2
+ *   and v3
+ * @param {string} version - InfluxDB version ('v1', 'v2' or 'v3')
+ *
+ * @returns {void}
+ */
+export function stampPointsOnce(points, version) {
+    for (const point of points) {
+        if (point === null || typeof point !== 'object') {
+            continue;
+        }
+
+        if (version === 'v1') {
+            if (point.timestamp === undefined) {
+                point.timestamp = nextPointTimestamp();
+            }
+        } else if (version === 'v2') {
+            // The v2 Point has no getter for its timestamp; it keeps it in its `time` field
+            if (typeof point.timestamp === 'function' && point.time === undefined) {
+                point.timestamp(nextPointTimestamp());
+            }
+        } else if (
+            typeof point.setTimestamp === 'function' &&
+            typeof point.getTimestamp === 'function' &&
+            point.getTimestamp() === undefined
+        ) {
+            point.setTimestamp(nextPointTimestamp());
+        }
+    }
+}
+
+// Error codes meaning the InfluxDB server could not be reached at all
+const UNREACHABLE_ERROR_CODES = [
+    'ECONNREFUSED',
+    'ENOTFOUND',
+    'EAI_AGAIN',
+    'EHOSTUNREACH',
+    'ENETUNREACH',
+];
+
+/**
+ * Checks whether an error means the InfluxDB server could not be reached at all, as opposed to
+ * the server rejecting a write or not finishing it in time.
+ *
+ * The error code is looked for on the error, on its cause and on the errors it aggregates, as
+ * clients wrap network errors differently, and in the message, where some clients only keep it.
+ * The v1 client reports that none of its hosts can be reached as "No host available".
+ *
+ * @param {Error} err - The error a write failed with
+ *
+ * @returns {boolean} True if the server could not be reached
+ */
+export function isInfluxUnreachableError(err) {
+    if (!err) {
+        return false;
+    }
+
+    const codes = [err, err.cause, ...(err.errors ?? []), ...(err.cause?.errors ?? [])].map(
+        (e) => e?.code
+    );
+    if (codes.some((code) => UNREACHABLE_ERROR_CODES.includes(code))) {
+        return true;
+    }
+
+    const message = err.message || '';
+    return (
+        message.includes('No host available') ||
+        UNREACHABLE_ERROR_CODES.some((code) => message.includes(code))
+    );
+}
+
+/**
+ * Says why InfluxDB cannot take writes at all right now, if that is what a write failed with:
+ * it cannot be reached, or it answers that it is overloaded or briefly unavailable (a transient
+ * HTTP status, still failing after the retries). Smaller batches cannot help with either.
+ *
+ * @param {Error} err - The error a write failed with
+ *
+ * @returns {string|undefined} The reason, for log messages, or undefined for any other failure
+ */
+function serverUnavailableReason(err) {
+    if (isInfluxUnreachableError(err)) {
+        return 'InfluxDB could not be reached';
+    }
+
+    const status = transientHttpStatus(err);
+    return status === undefined
+        ? undefined
+        : `InfluxDB is not accepting writes right now (HTTP ${status})`;
+}
+
+/**
+ * Builds the error a batch write throws when some of its points could not be written.
+ *
+ * The last write error becomes its cause, and its code and name are copied over, so the error
+ * tracker can still tell a refused connection or a timeout (a RequestTimedOutError, recognised
+ * by its name) from a rejected write.
+ *
+ * The message takes only the last error's message, not globals.getErrorMessage(), which returns
+ * the whole stack trace when Butler SOS runs from source. Whoever logs this error decides
+ * whether to show a stack trace; the message itself stays one line.
+ *
+ * @param {number} notWritten - Number of points that were not written
+ * @param {number} total - Number of points in the batch
+ * @param {Error} [lastError] - The last error a write failed with
+ *
+ * @returns {Error} The error to throw
+ */
+function batchWriteError(notWritten, total, lastError) {
+    const lastMessage = lastError?.message || (lastError ? String(lastError) : '');
+    const reason = lastMessage ? `: ${lastMessage}` : '';
+    const err = new Error(`Failed to write ${notWritten} of ${total} point(s)${reason}`, {
+        cause: lastError,
+    });
+
+    const code = lastError?.code ?? lastError?.cause?.code;
+    if (code) {
+        err.code = code;
+    }
+
+    if (lastError?.name && lastError.name !== 'Error') {
+        err.name = lastError.name;
+    }
+
+    return err;
+}
+
+/**
+ * Counts the points in a list of chunks.
+ *
+ * @param {Array[]} chunks - Chunks of points
+ *
+ * @returns {number} Number of points
+ */
+function countPoints(chunks) {
+    return chunks.reduce((count, chunk) => count + chunk.length, 0);
+}
+
+/**
+ * Writes each chunk once (with retries) and collects the chunks that failed. One pass of
+ * writeInProgressiveBatches.
+ *
+ * @param {Array[]} chunks - The chunks to write
+ * @param {(chunk: Array) => Promise<void>} writeChunk - Writes one chunk of points
+ * @param {object} pass - What the pass needs to know
+ * @param {string} pass.version - InfluxDB version ('v1', 'v2' or 'v3')
+ * @param {string} pass.context - Description of what's being written, for log messages
+ * @param {string} pass.logPrefix - Prefix for log messages
+ * @param {number} pass.total - Number of points in the whole batch, for log messages
+ * @param {number} pass.waiting - Number of points in failed chunks not written in this pass
+ * @param {object} pass.retryOptions - Retry options for writeToInfluxWithRetry
+ *
+ * @returns {Promise<{ failedChunks: Array[], lastError: (Error|undefined) }>} The chunks that
+ *   failed, and the error the last of them failed with
+ *
+ * @throws {Error} When InfluxDB cannot be reached, which ends the pass. See batchWriteError.
+ */
+async function writeChunksOnce(
+    chunks,
+    writeChunk,
+    { version, context, logPrefix, total, waiting, retryOptions }
+) {
+    const pointsInPass = countPoints(chunks);
+    const failedChunks = [];
+    let lastError;
+    let startIdx = 0;
+
+    for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const endIdx = startIdx + chunk.length - 1;
+
+        try {
+            await writeToInfluxWithRetry(
+                () => writeChunk(chunk),
+                `${context} (chunk ${i + 1}/${chunks.length}, points ${startIdx}-${endIdx})`,
+                version,
+                '',
+                {},
+                { ...retryOptions, skipErrorTracking: true }
+            );
+        } catch (err) {
+            const unavailable = serverUnavailableReason(err);
+            if (unavailable) {
+                // This chunk, the chunks after it and all failed chunks so far are lost
+                const notWritten = waiting + countPoints(failedChunks) + (pointsInPass - startIdx);
+                globals.logger.error(
+                    `${logPrefix} - ${unavailable}, so ${notWritten} of ${total} point(s) were not written. Smaller batches are not tried, as they cannot help: ${globals.getErrorMessage(err)}`
+                );
+                throw batchWriteError(notWritten, total, err);
+            }
+
+            lastError = err;
+            failedChunks.push(chunk);
+            globals.logger.error(
+                `${logPrefix} - Chunk ${i + 1} of ${chunks.length} (points ${startIdx}-${endIdx}) failed: ${globals.getErrorMessage(err)}`
+            );
+        }
+
+        startIdx += chunk.length;
+    }
+
+    return { failedChunks, lastError };
+}
+
+/**
+ * Writes points to InfluxDB in chunks of at most maxBatchSize points. When chunks fail, those
+ * chunks, and only those, are written again in smaller chunks, down to one point at a time, so
+ * that a single bad point costs as little of the batch as possible.
+ *
+ * - Failed chunks are kept apart. A pass with a smaller batch size splits only the failed
+ *   chunks that are larger than that size; a chunk that is not larger would be written exactly
+ *   as it failed, so it waits for a size that can split it. A single point that failed is never
+ *   written again, and a batch size that would split nothing is skipped.
+ * - When InfluxDB cannot be reached at all, or keeps answering that it is overloaded or briefly
+ *   unavailable (429, 503 and the like, after the retries), the write stops there. Smaller chunks
+ *   cannot fix that, and every remaining chunk would fail the same way after its own retries.
+ * - Failures are not counted in the error tracker here. Every caller counts a failed batch
+ *   once, where it catches the error thrown.
+ * - Every point gets its timestamp before the first attempt, so whatever reaches InfluxDB more
+ *   than once overwrites itself instead of being stored twice. See stampPointsOnce.
+ *
+ * @param {Array} points - The points to write. Points without a timestamp are given one.
+ * @param {(chunk: Array) => Promise<void>} writeChunk - Writes one chunk of points
+ * @param {object} options - Write options
+ * @param {string} options.version - InfluxDB version ('v1', 'v2' or 'v3')
+ * @param {string} options.context - Description of what's being written, for log messages
+ * @param {number} options.maxBatchSize - Largest number of points to write in one request
+ * @param {number} [options.maxRetries] - Retries per chunk (default: as writeToInfluxWithRetry)
+ *
+ * @returns {Promise<void>}
+ *
+ * @throws {Error} When any points could not be written. See batchWriteError.
+ */
+async function writeInProgressiveBatches(
+    points,
+    writeChunk,
+    { version, context, maxBatchSize, maxRetries }
+) {
+    const logPrefix = `INFLUXDB ${version.toUpperCase()} BATCH: ${context}`;
+    const batchSizes = [maxBatchSize, 500, 250, 100, 10, 1].filter((size) => size <= maxBatchSize);
+    const retryOptions = maxRetries === undefined ? {} : { maxRetries };
+    const pass = { version, context, logPrefix, total: points.length, retryOptions };
+
+    stampPointsOnce(points, version);
+
+    // First pass: the whole batch, in chunks of maxBatchSize
+    let { failedChunks, lastError } = await writeChunksOnce(
+        chunkArray(points, maxBatchSize),
+        writeChunk,
+        {
+            ...pass,
+            waiting: 0,
+        }
+    );
+    if (failedChunks.length === 0) {
+        return;
+    }
+
+    for (const batchSize of batchSizes.slice(1)) {
+        const toSplit = failedChunks.filter((chunk) => chunk.length > batchSize);
+        if (toSplit.length === 0) {
+            continue;
+        }
+
+        const waitingChunks = failedChunks.filter((chunk) => chunk.length <= batchSize);
+        const retrying = countPoints(toSplit);
+        globals.logger.warn(
+            `${logPrefix} - Writing ${retrying} point(s) from failed chunks again, with batch size ${batchSize}`
+        );
+
+        const result = await writeChunksOnce(
+            toSplit.flatMap((chunk) => chunkArray(chunk, batchSize)),
+            writeChunk,
+            { ...pass, waiting: countPoints(waitingChunks) }
+        );
+
+        failedChunks = [...waitingChunks, ...result.failedChunks];
+        lastError = result.lastError ?? lastError;
+
+        if (failedChunks.length === 0) {
+            globals.logger.info(
+                `${logPrefix} - Wrote the remaining ${retrying} point(s) using batch size ${batchSize} (reduced from ${maxBatchSize})`
+            );
+            return;
+        }
+    }
+
+    const notWritten = countPoints(failedChunks);
+    globals.logger.error(
+        `${logPrefix} - Failed to write ${notWritten} of ${points.length} point(s), even with batch size ${batchSizes.at(-1) ?? maxBatchSize}`
+    );
+    throw batchWriteError(notWritten, points.length, lastError);
+}
+
 /**
  * Writes data to InfluxDB v1 in batches with progressive retry strategy.
- * If a batch fails, it will automatically try smaller batch sizes.
+ * If a batch fails, the points that failed are written again in smaller batches.
+ * See writeInProgressiveBatches.
  *
  * @param {Array} datapoints - Array of datapoint objects to write
  * @param {string} context - Description of what's being written
- * @param {string} errorCategory - Error category for tracking
+ * @param {string} errorCategory - Not used. Failures are counted by the caller, which catches
+ *   the error thrown.
  * @param {number} maxBatchSize - Maximum batch size from config
  * @param {object} [options] - Write options
- * @param {boolean} [options.skipErrorTracking] - Do not count failed writes in the error tracker
- *   (default: false). See writeToInfluxWithRetry.
+ * @param {number} [options.maxRetries] - Retries per chunk (default: as writeToInfluxWithRetry)
  *
  * @returns {Promise<void>}
  */
@@ -452,77 +893,33 @@ export async function writeBatchToInfluxV1(
     maxBatchSize,
     options = {}
 ) {
-    const { skipErrorTracking = false } = options;
-
     if (!Array.isArray(datapoints) || datapoints.length === 0) {
         globals.logger.verbose(`INFLUXDB V1 BATCH: ${context} - No points to write`);
         return;
     }
 
-    const progressiveSizes = [maxBatchSize, 500, 250, 100, 10, 1].filter(
-        (size) => size <= maxBatchSize
-    );
-
-    for (const batchSize of progressiveSizes) {
-        const chunks = chunkArray(datapoints, batchSize);
-        let allSucceeded = true;
-        let failedChunks = [];
-
-        for (let i = 0; i < chunks.length; i++) {
-            const chunk = chunks[i];
-            const startIdx = i * batchSize;
-            const endIdx = Math.min(startIdx + chunk.length - 1, datapoints.length - 1);
-
-            try {
-                await writeToInfluxWithRetry(
-                    async () => await globals.influx.writePoints(chunk),
-                    `${context} (chunk ${i + 1}/${chunks.length}, points ${startIdx}-${endIdx})`,
-                    'v1',
-                    errorCategory,
-                    {},
-                    { skipErrorTracking }
-                );
-            } catch (err) {
-                allSucceeded = false;
-                failedChunks.push({ index: i + 1, startIdx, endIdx, total: chunks.length });
-
-                globals.logger.error(
-                    `INFLUXDB V1 BATCH: ${context} - Chunk ${i + 1} of ${chunks.length} (points ${startIdx}-${endIdx}) failed: ${globals.getErrorMessage(err)}`
-                );
-            }
-        }
-
-        if (allSucceeded) {
-            if (batchSize < maxBatchSize) {
-                globals.logger.info(
-                    `INFLUXDB V1 BATCH: ${context} - Successfully wrote all data using batch size ${batchSize} (reduced from ${maxBatchSize})`
-                );
-            }
-            return;
-        }
-
-        // If this wasn't the last attempt, log that we're trying smaller batches
-        if (batchSize !== progressiveSizes[progressiveSizes.length - 1]) {
-            globals.logger.warn(
-                `INFLUXDB V1 BATCH: ${context} - ${failedChunks.length} chunk(s) failed with batch size ${batchSize}, retrying with smaller batches`
-            );
-        } else {
-            // Final attempt failed
-            globals.logger.error(
-                `INFLUXDB V1 BATCH: ${context} - Failed to write data even with batch size 1. ${failedChunks.length} point(s) could not be written.`
-            );
-            throw new Error(`Failed to write batch after trying all progressive sizes`);
-        }
-    }
+    await writeInProgressiveBatches(datapoints, (chunk) => globals.influx.writePoints(chunk), {
+        version: 'v1',
+        context,
+        maxBatchSize,
+        maxRetries: options.maxRetries,
+    });
 }
 
 /**
  * Writes one or more InfluxDB v2 Points using a short-lived write API.
  *
- * Creates a write API with standard options (`flushInterval: 5000`, `maxRetries: 0`),
- * writes the supplied points, and closes the API on success. If writing fails,
- * `close()` is also attempted in the error handler to release resources before
- * re-throwing the original error; any error from that cleanup close is suppressed.
+ * Creates a write API that sends nothing on its own, writes the supplied points, and closes
+ * the API, which sends them all in one request. If writing fails, `close()` is also attempted
+ * in the error handler to release resources before re-throwing the original error; any error
+ * from that cleanup close is suppressed.
+ *
+ * The v2 client sends its buffer by itself once it holds `batchSize` points (1000 by default),
+ * reaches `maxBatchBytes`, or after `flushInterval`, and ignores the result of such a request:
+ * a failure is only logged by the client. `close()` would then report success for a write that
+ * failed. So the batch size is set above the number of points, the byte limit and the timer are
+ * turned off, and the only request is the one `close()` sends and reports on. The client's own
+ * retries are off too (`maxRetries: 0`); retrying is left to writeToInfluxWithRetry.
  *
  * @param {object} influxClient - InfluxDB v2 client instance (e.g. `globals.influx`)
  * @param {string} org - InfluxDB organisation name
@@ -532,12 +929,14 @@ export async function writeBatchToInfluxV1(
  * @returns {Promise<void>}
  */
 export async function writePointsToInfluxV2(influxClient, org, bucket, points) {
+    const pointsArray = Array.isArray(points) ? points : [points];
     const writeApi = influxClient.getWriteApi(org, bucket, 'ns', {
-        flushInterval: 5000,
+        batchSize: pointsArray.length + 1,
+        maxBatchBytes: Number.MAX_SAFE_INTEGER,
+        flushInterval: 0,
         maxRetries: 0,
     });
     try {
-        const pointsArray = Array.isArray(points) ? points : [points];
         await writeApi.writePoints(pointsArray);
         await writeApi.close();
     } catch (err) {
@@ -552,17 +951,21 @@ export async function writePointsToInfluxV2(influxClient, org, bucket, points) {
 
 /**
  * Writes data to InfluxDB v2 in batches with progressive retry strategy.
- * Handles writeApi lifecycle management.
+ * If a batch fails, the points that failed are written again in smaller batches.
+ * See writeInProgressiveBatches.
+ *
+ * Each chunk is written with writePointsToInfluxV2, which turns off the v2 client's own
+ * retries. Retrying is left to writeToInfluxWithRetry, so a write is not retried twice over.
  *
  * @param {Array} points - Array of Point objects to write
  * @param {string} org - InfluxDB organization
  * @param {string} bucketName - InfluxDB bucket name
  * @param {string} context - Description of what's being written
- * @param {string} errorCategory - Error category for tracking
+ * @param {string} errorCategory - Not used. Failures are counted by the caller, which catches
+ *   the error thrown.
  * @param {number} maxBatchSize - Maximum batch size from config
  * @param {object} [options] - Write options
- * @param {boolean} [options.skipErrorTracking] - Do not count failed writes in the error tracker
- *   (default: false). See writeToInfluxWithRetry.
+ * @param {number} [options.maxRetries] - Retries per chunk (default: as writeToInfluxWithRetry)
  *
  * @returns {Promise<void>}
  */
@@ -575,96 +978,31 @@ export async function writeBatchToInfluxV2(
     maxBatchSize,
     options = {}
 ) {
-    const { skipErrorTracking = false } = options;
-
     if (!Array.isArray(points) || points.length === 0) {
         return;
     }
 
-    const progressiveSizes = [maxBatchSize, 500, 250, 100, 10, 1].filter(
-        (size) => size <= maxBatchSize
+    await writeInProgressiveBatches(
+        points,
+        (chunk) => writePointsToInfluxV2(globals.influx, org, bucketName, chunk),
+        { version: 'v2', context, maxBatchSize, maxRetries: options.maxRetries }
     );
-
-    for (const batchSize of progressiveSizes) {
-        const chunks = chunkArray(points, batchSize);
-        let allSucceeded = true;
-        let failedChunks = [];
-
-        for (let i = 0; i < chunks.length; i++) {
-            const chunk = chunks[i];
-            const startIdx = i * batchSize;
-            const endIdx = Math.min(startIdx + chunk.length - 1, points.length - 1);
-
-            try {
-                await writeToInfluxWithRetry(
-                    async () => {
-                        const writeApi = globals.influx.getWriteApi(org, bucketName, 'ns', {
-                            flushInterval: 5000,
-                        });
-                        try {
-                            await writeApi.writePoints(chunk);
-                            await writeApi.close();
-                        } catch (err) {
-                            try {
-                                await writeApi.close();
-                            } catch (closeErr) {
-                                // Ignore close errors
-                            }
-                            throw err;
-                        }
-                    },
-                    `${context} (chunk ${i + 1}/${chunks.length}, points ${startIdx}-${endIdx})`,
-                    'v2',
-                    errorCategory,
-                    {},
-                    { skipErrorTracking }
-                );
-            } catch (err) {
-                allSucceeded = false;
-                failedChunks.push({ index: i + 1, startIdx, endIdx, total: chunks.length });
-
-                globals.logger.error(
-                    `INFLUXDB V2 BATCH: ${context} - Chunk ${i + 1} of ${chunks.length} (points ${startIdx}-${endIdx}) failed: ${globals.getErrorMessage(err)}`
-                );
-            }
-        }
-
-        if (allSucceeded) {
-            if (batchSize < maxBatchSize) {
-                globals.logger.info(
-                    `INFLUXDB V2 BATCH: ${context} - Successfully wrote all data using batch size ${batchSize} (reduced from ${maxBatchSize})`
-                );
-            }
-            return;
-        }
-
-        // If this wasn't the last attempt, log that we're trying smaller batches
-        if (batchSize !== progressiveSizes[progressiveSizes.length - 1]) {
-            globals.logger.warn(
-                `INFLUXDB V2 BATCH: ${context} - ${failedChunks.length} chunk(s) failed with batch size ${batchSize}, retrying with smaller batches`
-            );
-        } else {
-            // Final attempt failed
-            globals.logger.error(
-                `INFLUXDB V2 BATCH: ${context} - Failed to write data even with batch size 1. ${failedChunks.length} point(s) could not be written.`
-            );
-            throw new Error(`Failed to write batch after trying all progressive sizes`);
-        }
-    }
 }
 
 /**
  * Writes data to InfluxDB v3 in batches with progressive retry strategy.
  * Converts Point3 objects to line protocol and concatenates them.
+ * If a batch fails, the points that failed are written again in smaller batches.
+ * See writeInProgressiveBatches.
  *
  * @param {Array} points - Array of Point3 objects to write
  * @param {string} database - InfluxDB database name
  * @param {string} context - Description of what's being written
- * @param {string} errorCategory - Error category for tracking
+ * @param {string} errorCategory - Not used. Failures are counted by the caller, which catches
+ *   the error thrown.
  * @param {number} maxBatchSize - Maximum batch size from config
  * @param {object} [options] - Write options
- * @param {boolean} [options.skipErrorTracking] - Do not count failed writes in the error tracker
- *   (default: false). See writeToInfluxWithRetry.
+ * @param {number} [options.maxRetries] - Retries per chunk (default: as writeToInfluxWithRetry)
  *
  * @returns {Promise<void>}
  */
@@ -676,68 +1014,14 @@ export async function writeBatchToInfluxV3(
     maxBatchSize,
     options = {}
 ) {
-    const { skipErrorTracking = false } = options;
-
     if (!Array.isArray(points) || points.length === 0) {
         return;
     }
 
-    const progressiveSizes = [maxBatchSize, 500, 250, 100, 10, 1].filter(
-        (size) => size <= maxBatchSize
+    await writeInProgressiveBatches(
+        points,
+        // Convert Point3 objects to line protocol and concatenate
+        (chunk) => globals.influx.write(chunk.map((p) => p.toLineProtocol()).join('\n'), database),
+        { version: 'v3', context, maxBatchSize, maxRetries: options.maxRetries }
     );
-
-    for (const batchSize of progressiveSizes) {
-        const chunks = chunkArray(points, batchSize);
-        let allSucceeded = true;
-        let failedChunks = [];
-
-        for (let i = 0; i < chunks.length; i++) {
-            const chunk = chunks[i];
-            const startIdx = i * batchSize;
-            const endIdx = Math.min(startIdx + chunk.length - 1, points.length - 1);
-
-            try {
-                // Convert Point3 objects to line protocol and concatenate
-                const lineProtocol = chunk.map((p) => p.toLineProtocol()).join('\n');
-
-                await writeToInfluxWithRetry(
-                    async () => await globals.influx.write(lineProtocol, database),
-                    `${context} (chunk ${i + 1}/${chunks.length}, points ${startIdx}-${endIdx})`,
-                    'v3',
-                    errorCategory,
-                    {},
-                    { skipErrorTracking }
-                );
-            } catch (err) {
-                allSucceeded = false;
-                failedChunks.push({ index: i + 1, startIdx, endIdx, total: chunks.length });
-
-                globals.logger.error(
-                    `INFLUXDB V3 BATCH: ${context} - Chunk ${i + 1} of ${chunks.length} (points ${startIdx}-${endIdx}) failed: ${globals.getErrorMessage(err)}`
-                );
-            }
-        }
-
-        if (allSucceeded) {
-            if (batchSize < maxBatchSize) {
-                globals.logger.info(
-                    `INFLUXDB V3 BATCH: ${context} - Successfully wrote all data using batch size ${batchSize} (reduced from ${maxBatchSize})`
-                );
-            }
-            return;
-        }
-
-        // If this wasn't the last attempt, log that we're trying smaller batches
-        if (batchSize !== progressiveSizes[progressiveSizes.length - 1]) {
-            globals.logger.warn(
-                `INFLUXDB V3 BATCH: ${context} - ${failedChunks.length} chunk(s) failed with batch size ${batchSize}, retrying with smaller batches`
-            );
-        } else {
-            // Final attempt failed
-            globals.logger.error(
-                `INFLUXDB V3 BATCH: ${context} - Failed to write data even with batch size 1. ${failedChunks.length} point(s) could not be written.`
-            );
-            throw new Error(`Failed to write batch after trying all progressive sizes`);
-        }
-    }
 }

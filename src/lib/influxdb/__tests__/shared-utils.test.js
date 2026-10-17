@@ -541,7 +541,7 @@ describe('Shared Utils - writeBatchToInfluxV1', () => {
     });
 });
 
-describe('Shared Utils - skipErrorTracking write option', () => {
+describe('Shared Utils - error tracking and retry options for writes', () => {
     let utils;
     let globals;
 
@@ -706,28 +706,22 @@ describe('Shared Utils - skipErrorTracking write option', () => {
             setup(writeMock);
         });
 
-        test('tracks failed writes by default', async () => {
-            await expect(write()).rejects.toThrow(
-                'Failed to write batch after trying all progressive sizes'
-            );
+        test('does not count failed writes itself, as the caller counts a failed batch once', async () => {
+            await expect(write()).rejects.toThrow('Failed to write 1 of 1 point(s)');
 
-            expect(globals.errorTracker.incrementError).toHaveBeenCalled();
-            expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
-                `INFLUXDB_${version.toUpperCase()}_WRITE`,
-                'server1',
-                {},
-                expect.any(Error)
-            );
+            // One point is written once, not once per batch size, and the failure is left to
+            // the caller to count. Counting it here too counted every failure several times.
+            expect(writeMock).toHaveBeenCalledTimes(1);
+            expect(globals.errorTracker.incrementError).not.toHaveBeenCalled();
         });
 
-        test('does not track failed writes when skipErrorTracking is set', async () => {
-            await expect(write({ skipErrorTracking: true })).rejects.toThrow(
-                'Failed to write batch after trying all progressive sizes'
-            );
+        test(`passes maxRetries on to each chunk write (${version})`, async () => {
+            writeMock.mockRejectedValue(new Error('Request timed out'));
 
-            // Every batch size was tried, and none of the failures was tracked
-            expect(writeMock.mock.calls.length).toBeGreaterThan(1);
-            expect(globals.errorTracker.incrementError).not.toHaveBeenCalled();
+            await expect(write({ maxRetries: 0 })).rejects.toThrow('Request timed out');
+
+            // A retryable error, but no retries were asked for
+            expect(writeMock).toHaveBeenCalledTimes(1);
         });
     });
 });
@@ -829,8 +823,11 @@ describe('Shared Utils - writePointsToInfluxV2', () => {
         const point = { tag: jest.fn().mockReturnThis() };
         await utils.writePointsToInfluxV2(mockInfluxClient, 'my-org', 'my-bucket', [point]);
 
+        // Nothing is sent before close(), which sends it all and reports the result
         expect(mockInfluxClient.getWriteApi).toHaveBeenCalledWith('my-org', 'my-bucket', 'ns', {
-            flushInterval: 5000,
+            batchSize: 2,
+            maxBatchBytes: Number.MAX_SAFE_INTEGER,
+            flushInterval: 0,
             maxRetries: 0,
         });
     });

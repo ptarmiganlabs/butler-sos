@@ -231,7 +231,13 @@ describe('v1/queue-metrics', () => {
         utils.writeBatchToInfluxV1.mockRejectedValue(new Error('Write failed'));
         await expect(storeUserEventQueueMetricsV1()).rejects.toThrow();
         expect(globals.logger.error).toHaveBeenCalled();
-        expect(globals.errorTracker.incrementError).not.toHaveBeenCalled();
+        // The batch writer does not count failures, so this is the only place they are counted
+        expect(globals.errorTracker.incrementError).toHaveBeenCalledWith(
+            'INFLUXDB_V1_WRITE',
+            '',
+            { module: 'QUEUE_METRICS' },
+            expect.any(Error)
+        );
     });
 
     test('should return early when InfluxDB disabled for log events', async () => {

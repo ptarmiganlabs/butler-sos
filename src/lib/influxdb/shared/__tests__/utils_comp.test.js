@@ -151,7 +151,9 @@ describe('InfluxDB Shared Utils Comprehensive', () => {
 
             const points = [1, 2, 3];
             await utils.writeBatchToInfluxV2(points, 'org', 'bucket', 'ctx', 'cat', 2);
-            expect(mockWriteApi.writePoints).toHaveBeenCalledTimes(5);
+            // 2 (size 2: [1,2] fails, [3] succeeds) + 2 (size 1: only 1 and 2 again).
+            // Point 3 is not written twice.
+            expect(mockWriteApi.writePoints).toHaveBeenCalledTimes(4);
         });
     });
 
@@ -178,7 +180,9 @@ describe('InfluxDB Shared Utils Comprehensive', () => {
                 { toLineProtocol: () => 'p3' },
             ];
             await utils.writeBatchToInfluxV3(points, 'db', 'ctx', 'cat', 2);
-            expect(mockGlobals.influx.write).toHaveBeenCalledTimes(5);
+            // 2 (size 2: [p1,p2] fails, [p3] succeeds) + 2 (size 1: only p1 and p2 again).
+            // p3 is not written twice.
+            expect(mockGlobals.influx.write).toHaveBeenCalledTimes(4);
         });
     });
 

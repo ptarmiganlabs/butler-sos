@@ -25,6 +25,17 @@ function isLogSummaryEnabled() {
 }
 
 /**
+ * Describes an error-event write, for log messages. Some errors have no server name.
+ *
+ * @param {string} apiType - The error type
+ * @param {string} serverName - The server name, or an empty string
+ * @returns {string} The description
+ */
+function errorEventContext(apiType, serverName) {
+    return serverName ? `Error event: ${apiType}/${serverName}` : `Error event: ${apiType}`;
+}
+
+/**
  * Class for tracking counts of API errors in Butler SOS.
  *
  * This class provides thread-safe methods to track different types of API errors:
@@ -240,6 +251,10 @@ export class ErrorTracker {
      * A failure of this write is logged but not tracked as an error. Tracking it would start
      * another error-event write, which would fail the same way.
      *
+     * The write gets a single attempt, without retries. Error events are best-effort: the error
+     * is already logged and counted, and retrying matters least when InfluxDB is the thing that
+     * is failing, which is when every retry would add more noise to the log.
+     *
      * @param {string} apiType - The error type
      * @param {string} serverName - The server name
      * @param {object} metadata - Additional tags for InfluxDB
@@ -272,6 +287,9 @@ export class ErrorTracker {
         if (metadata.module) {
             tags.module = metadata.module;
         }
+
+        const context = errorEventContext(apiType, serverName);
+        const writeOptions = { maxRetries: 0 };
 
         // Derive error fields from the original error object
         const errMeta = getErrorMetadata(err);
@@ -309,10 +327,10 @@ export class ErrorTracker {
                 await writeBatchToInfluxV3(
                     [point],
                     database,
-                    `Error event: ${apiType}/${serverName}`,
+                    context,
                     serverName,
                     globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize'),
-                    { skipErrorTracking: true }
+                    writeOptions
                 );
             } else if (version === 2) {
                 const { Point: Point2 } = await import('@influxdata/influxdb-client');
@@ -334,10 +352,10 @@ export class ErrorTracker {
                     [point],
                     org,
                     bucketName,
-                    `Error event: ${apiType}/${serverName}`,
+                    context,
                     serverName,
                     globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize'),
-                    { skipErrorTracking: true }
+                    writeOptions
                 );
             } else if (version === 1) {
                 const { writeBatchToInfluxV1 } = await import('./influxdb/shared/utils.js');
@@ -350,10 +368,10 @@ export class ErrorTracker {
                 ];
                 await writeBatchToInfluxV1(
                     datapoint,
-                    `Error event: ${apiType}/${serverName}`,
+                    context,
                     serverName,
                     globals.config.get('Butler-SOS.influxdbConfig.maxBatchSize'),
-                    { skipErrorTracking: true }
+                    writeOptions
                 );
             }
         } catch (err) {
