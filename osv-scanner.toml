@@ -1,0 +1,15 @@
+# OSV-Scanner exceptions. The scheduled scan (.github/workflows/osv-scanner-scheduled.yaml)
+# fails on any finding, so every entry here is a deliberate decision with a reason and an
+# expiry date. When an entry expires, the scan starts failing again and it has to be looked at
+# afresh: remove it if the advisory is fixed in the dependency tree, or renew it with a new date.
+
+[[IgnoredVulns]]
+# sprintf-js: denial of service through unbounded precision specifiers.
+id = "GHSA-hp3w-g68c-fv3c"
+ignoreUntil = 2027-01-07
+reason = """
+No fixed sprintf-js release exists, and both copies are development-only, never shipped: \
+jest -> babel-plugin-istanbul -> @istanbuljs/load-nyc-config -> js-yaml 3 -> argparse 1 -> \
+sprintf-js 1.0.3, and snyk -> global-agent -> roarr -> sprintf-js 1.1.2. Neither formats \
+untrusted input. Revisit when jest or snyk drops the dependency, or a fixed release appears.\
+"""
