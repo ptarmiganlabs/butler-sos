@@ -45,7 +45,6 @@ Additional testing documentation exists in the repository:
 - `docs/README.testing.md` — Brief testing guidance for AI assistants
 - `docs/testing/testing-framework.md` — Full testing framework documentation
 - `docs/testing/TEST_COVERAGE_SUMMARY.md` — Coverage analysis
-- `docs/testing/INSIDER_BUILD_DEPLOYMENT_SETUP.md` — Insider build deployment testing
 - `docs/testing/MACOS_RELEASE_SIGNING_RECOVERY.md` — macOS signing recovery procedures
 
 ## Code Style & Linting
