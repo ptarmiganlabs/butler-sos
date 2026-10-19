@@ -1,5 +1,54 @@
 # Changelog
 
+## [15.1.2](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.1.1...butler-sos-v15.1.2) (2026-10-19)
+
+
+### Bug Fixes
+
+* accept Audit.qs 0.6.x in Butler SOS 15.x ([e26e1d0](https://github.com/ptarmiganlabs/butler-sos/commit/e26e1d010dccc2ab9fdccc71239efb0bd2960843))
+* count failed v1 user-event queue-metrics writes ([121617c](https://github.com/ptarmiganlabs/butler-sos/commit/121617c76303d1657e5e5a4ee68ca8163616dc11)), closes [#1524](https://github.com/ptarmiganlabs/butler-sos/issues/1524)
+* count failed v2 health, session and user-event writes once ([d51e00d](https://github.com/ptarmiganlabs/butler-sos/commit/d51e00d9cef88b59570ff04cafddde85c48c56f0)), closes [#1524](https://github.com/ptarmiganlabs/butler-sos/issues/1524)
+* decide colour from the stream, not FORCE_COLOR, in the config error ([950b7d6](https://github.com/ptarmiganlabs/butler-sos/commit/950b7d68f8ef5a4890a43565fe9f1ed02ddb7608))
+* do not write a failed short last chunk again unchanged ([ce90bc9](https://github.com/ptarmiganlabs/butler-sos/commit/ce90bc9741be2b7d54bd9dd6f17577d9dc2ec31d)), closes [#1524](https://github.com/ptarmiganlabs/butler-sos/issues/1524)
+* honour an HTTP-date Retry-After from the InfluxDB v2 client ([892fe9f](https://github.com/ptarmiganlabs/butler-sos/commit/892fe9fd5cd773f469aa1d06b8875aea27e55533)), closes [#1524](https://github.com/ptarmiganlabs/butler-sos/issues/1524)
+* keep failed chunks apart so a failed single point is not retried ([59b4e54](https://github.com/ptarmiganlabs/butler-sos/commit/59b4e54ba7165da2af579cec2262485d5e3576f3)), closes [#1524](https://github.com/ptarmiganlabs/butler-sos/issues/1524)
+* keep point timestamps unique when the clock is set back ([a5c5871](https://github.com/ptarmiganlabs/butler-sos/commit/a5c587151033bf1d14080a655eb92edd7f30bae6)), closes [#1524](https://github.com/ptarmiganlabs/butler-sos/issues/1524)
+* keep stack traces out of error log lines in Docker ([797b36a](https://github.com/ptarmiganlabs/butler-sos/commit/797b36ab7c16faaf1da0edd5dc710934f03d1667))
+* keep the original error name on a failed batch write ([6755b41](https://github.com/ptarmiganlabs/butler-sos/commit/6755b41d72c0776585063b7a9ca414b4d496af52)), closes [#1524](https://github.com/ptarmiganlabs/butler-sos/issues/1524)
+* name Butler-SOS.logDirectory when the log folder cannot be used ([20106bd](https://github.com/ptarmiganlabs/butler-sos/commit/20106bdadd7b6cb4e6df02ae6cb8d0d23e4a3b02))
+* name the full path when the config file does not exist ([50e8127](https://github.com/ptarmiganlabs/butler-sos/commit/50e81276e42e4032fc7060066a1d02da660c2445))
+* quote a config path with spaces in the npm hint ([a5ae2d1](https://github.com/ptarmiganlabs/butler-sos/commit/a5ae2d1b49fc30d5da55f34fb148572067e6f2f0))
+* quote backslashes in the npm hint on macOS and Linux ([d9148f6](https://github.com/ptarmiganlabs/butler-sos/commit/d9148f6f535767de4e88eeb64fb4568c82b3ba0c))
+* report failed InfluxDB v2 writes of full batches ([9851a4a](https://github.com/ptarmiganlabs/butler-sos/commit/9851a4ab465585f9ca9ad0b4a1d1eca430d95e3c)), closes [#1524](https://github.com/ptarmiganlabs/butler-sos/issues/1524)
+* retry InfluxDB writes on 429 and 503, and stop if they persist ([b3ab5bc](https://github.com/ptarmiganlabs/butler-sos/commit/b3ab5bca3b1e0b7494d1cf5a78afa619b4c4ce52)), closes [#1524](https://github.com/ptarmiganlabs/butler-sos/issues/1524)
+* retry only failed InfluxDB writes, and stop when InfluxDB is unreachable ([e6bebd3](https://github.com/ptarmiganlabs/butler-sos/commit/e6bebd3e9cbdafc7a56558482174cbcb56cec5cf)), closes [#1524](https://github.com/ptarmiganlabs/butler-sos/issues/1524)
+* retry temporary DNS and routing failures before giving up a batch ([0b073a8](https://github.com/ptarmiganlabs/butler-sos/commit/0b073a8b84f975dfedf4234248daf40149158aa6)), closes [#1524](https://github.com/ptarmiganlabs/butler-sos/issues/1524)
+* say why Butler SOS does not start when no config file is given ([de987f3](https://github.com/ptarmiganlabs/butler-sos/commit/de987f37ab475d17ba4b51da40d2d0d61c7a589a))
+* timestamp InfluxDB points once, before the first write attempt ([affe40c](https://github.com/ptarmiganlabs/butler-sos/commit/affe40cd4a0c50e2239837b675a4fe209d82a034)), closes [#1524](https://github.com/ptarmiganlabs/butler-sos/issues/1524)
+* use a placeholder in the npm hint for Windows paths with $ or % ([5345610](https://github.com/ptarmiganlabs/butler-sos/commit/5345610ba2de34679475ede64977aff0c9cba5aa))
+* write InfluxDB v2 session snapshots in batches ([aa384ea](https://github.com/ptarmiganlabs/butler-sos/commit/aa384ea4c5ecb1890b00c790ff8dbadbcad1f984)), closes [#1524](https://github.com/ptarmiganlabs/butler-sos/issues/1524)
+
+
+### Miscellaneous
+
+* accept the sprintf-js advisory in the OSV scan until 2026-11-30 ([d5c7dff](https://github.com/ptarmiganlabs/butler-sos/commit/d5c7dff80f3e144ffe87ceae75cd33c6f951fcc5))
+
+
+### Refactoring
+
+* import node:path in the shared directory helper ([72650e6](https://github.com/ptarmiganlabs/butler-sos/commit/72650e62c58a999ea5e5ae4d88134497bd75efa4))
+* keep the transient HTTP statuses in a Set ([c228364](https://github.com/ptarmiganlabs/butler-sos/commit/c228364fc15a750c92e393c4e7e206d9fcf9299b))
+* resolve log and crash dump folders with one shared helper ([5649cbc](https://github.com/ptarmiganlabs/butler-sos/commit/5649cbc0a6582dd84131d0bdc4fd175a8041fbf6))
+* split the progressive batch writer to cut its complexity ([6c1a3b0](https://github.com/ptarmiganlabs/butler-sos/commit/6c1a3b05e88645a8ff9b63a5e75b48831283a3a7))
+
+
+### Documentation
+
+* mark the error tracking staging page as migrated ([d42b585](https://github.com/ptarmiganlabs/butler-sos/commit/d42b5853fdc09a17697a3661e9420214d3bc5061)), closes [#1522](https://github.com/ptarmiganlabs/butler-sos/issues/1522)
+* quote the startup error as packaged and Docker runs print it ([efe4f45](https://github.com/ptarmiganlabs/butler-sos/commit/efe4f45205b33146ce735d39f2062a44ca098117))
+* remove the insiders deploy and log-monitor documentation ([64c840b](https://github.com/ptarmiganlabs/butler-sos/commit/64c840b2553d77654ca1e304e3a54bf5d4f7d8e3))
+* say how the InfluxDB retry changes reach audit events ([1bf1d8f](https://github.com/ptarmiganlabs/butler-sos/commit/1bf1d8f8fe364fe25c9617ac03dae28f5bfd625b))
+
 ## [15.1.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.1.0...butler-sos-v15.1.1) (2026-10-16)
 
 
