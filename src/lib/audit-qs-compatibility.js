@@ -13,7 +13,8 @@ const { satisfies, valid } = semver;
  * without one, every Audit.qs version is refused.
  *
  * Butler SOS 15.0.0 is the first release that supports the Audit.qs extension. The
- * 15.x entry accepted Audit.qs 0.3.x in 15.0.0, added 0.4.x in 15.0.1 and 0.5.x in 15.1.0.
+ * 15.x entry accepted Audit.qs 0.3.x in 15.0.0, added 0.4.x in 15.0.1, 0.5.x in 15.1.0
+ * and 0.6.x in 15.1.2.
  *
  * @type {Array<{ butlerSosVersionRange: string, auditQsVersionRange: string }>}
  */
@@ -25,7 +26,7 @@ const COMPATIBILITY_MATRIX = [
     },
     {
         butlerSosVersionRange: '>=15.0.0 <16.0.0',
-        auditQsVersionRange: '>=0.3.0 <0.6.0',
+        auditQsVersionRange: '>=0.3.0 <0.7.0',
     },
 ];
 
