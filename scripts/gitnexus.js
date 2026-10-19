@@ -41,15 +41,34 @@ const GITNEXUS_VERSION = '1.6.9';
 const ANALYZE_FLAGS = ['--no-stats', '--skip-agents-md'];
 
 /**
+ * The dependencies whose install scripts `install` lets run. Nothing else gets one.
+ *
+ * npm 12 blocks dependency install scripts by default, and GitNexus's graph database
+ * needs its script: it copies the prebuilt native binary for this platform out of a
+ * per-platform sub-package into place. Without it the install looks fine — `--version`
+ * and `status` both succeed — but `analyze` fails, and so does every re-index the git
+ * hook runs. The other blocked scripts in GitNexus's tree are not needed;
+ * docs/README.gitnexus.md says why for each.
+ *
+ * The grant rides on the one npx command that installs, because install scripts only
+ * run at install time. It must not move into .npmrc: `npm run` exports .npmrc settings
+ * to the environment of everything it starts, and npm 12 refuses `allow-scripts` from
+ * the environment in project-scoped commands, so `npm run deps:audit` would fail with
+ * EALLOWSCRIPTS. Under npm 11 the flag changes nothing: npm 11 runs every install script
+ * regardless, and its older releases only warn that they do not recognise it.
+ */
+const ALLOW_SCRIPTS = ['@ladybugdb/core'];
+
+/**
  * Subcommands, and how each maps onto a gitnexus invocation.
  *
- * `fetch` marks the one command allowed to download the package. Everything else runs
- * under `npx --no-install`, which executes an already-present copy and never fetches
- * one: a hook that downloaded and ran a package after every commit would be a
- * supply-chain surface (SonarCloud shell:S6505). GitNexus is deliberately not a
- * devDependency — ~40 MB unpacked with native tree-sitter builds is too much to add to
- * every CI install for a local developer tool — so `install` is the one deliberate,
- * human-invoked fetch.
+ * `fetch` marks the one command allowed to download the package, and so the only one
+ * that passes ALLOW_SCRIPTS. Everything else runs under `npx --no-install`, which
+ * executes an already-present copy and never fetches one: a hook that downloaded and
+ * ran a package after every commit would be a supply-chain surface (SonarCloud
+ * shell:S6505). GitNexus is deliberately not a devDependency — ~40 MB unpacked with
+ * native tree-sitter builds is too much to add to every CI install for a local
+ * developer tool — so `install` is the one deliberate, human-invoked fetch.
  *
  * `index` omits `--embeddings` because that is the slow part, and a plain analyze
  * preserves any embeddings already in the index. `refresh` regenerates them together
@@ -97,7 +116,9 @@ function main() {
     const result = spawnSync(
         npx,
         [
-            command.fetch ? '--yes' : '--no-install',
+            ...(command.fetch
+                ? ['--yes', `--allow-scripts=${ALLOW_SCRIPTS.join(',')}`]
+                : ['--no-install']),
             `gitnexus@${GITNEXUS_VERSION}`,
             ...command.args,
             ...passthrough,
