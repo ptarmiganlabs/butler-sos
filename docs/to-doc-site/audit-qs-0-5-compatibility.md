@@ -16,9 +16,10 @@ Butler SOS is upgraded too.
 | ------------------------------ | -------------------------- |
 | 15.0.0                         | 0.3.x                      |
 | 15.0.1                         | 0.3.x, 0.4.x               |
-| 15.1.0 and later 15.x releases | 0.3.x, 0.4.x, 0.5.x        |
+| 15.1.0, 15.1.1                 | 0.3.x, 0.4.x, 0.5.x        |
+| 15.1.2 and later 15.x releases | 0.3.x, 0.4.x, 0.5.x, 0.6.x |
 
-Audit.qs 0.6 and later are not accepted by any of these releases. Each new Audit.qs minor
+Audit.qs 0.7 and later are not accepted by any of these releases. Each new Audit.qs minor
 version is added to Butler SOS deliberately, once it has been checked against it.
 
 Pre-release builds of Audit.qs (for example `0.5.0-rc.1`) are refused even when their
