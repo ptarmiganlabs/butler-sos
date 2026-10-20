@@ -125,7 +125,7 @@ checkouts, which would otherwise re-index for nothing.
 | `npm run gitnexus:install` | One-time setup. Fetches the pinned GitNexus; the hooks are inert until this has been run |
 | `npm run gitnexus:status` | Check whether the index is current |
 | `npm run gitnexus:index` | Incremental re-index (same as the hooks) |
-| `npm run gitnexus:refresh` | Full refresh incl. embeddings and regenerated skill files |
+| `npm run gitnexus:refresh` | Full refresh incl. embeddings and the [area skills](#area-skills) |
 
 Arguments after the script name are forwarded to GitNexus, so
 `npm run gitnexus:index -- --embeddings` works.
@@ -146,20 +146,46 @@ installing its standard skill files over the ones in `.claude/skills/`.
 
 A bare `analyze` rewrites that block, and without `--skills` it does not merely regenerate it but
 *reduces* it — a bare run has already deleted all 20 rows of the generated-skills table from both
-files at once. Both files also carry hand-written sections below the managed block, so this is
+files at once. Both files also carry hand-written sections below the managed block, and the
+block's own skills table is now maintained by hand (see [Area skills](#area-skills)), so this is
 not a harmless regeneration.
 
-The generated skill files under `.claude/skills/` are rewritten by the same mechanism.
-`.claude/skills/gitnexus/*/SKILL.md` is additionally gitignored. Neither location is a safe place
-for hand-written content.
+Skill folders that GitNexus writes are no place for hand-written content either. Every
+`gitnexus:refresh` deletes and rewrites each `.claude/skills/gitnexus-area-*` folder.
+`.claude/skills/gitnexus/*/SKILL.md` holds GitNexus's standard skills and is additionally
+gitignored.
 
 `--skip-agents-md` does not cover GitNexus's standard skill files, so the two flags are needed
 together. Without `--skip-skills`, `analyze` writes its own copies of those skills straight under
 `.claude/skills/` and deletes the tracked copy in `.claude/skills/gitnexus/` of every skill
 nobody has edited. Through the git hook, that would happen after every commit.
 
-`gitnexus:refresh` is the only script that regenerates embeddings and skill files; a plain
+`gitnexus:refresh` is the only script that regenerates embeddings and the area skills; a plain
 `analyze` preserves any embeddings already in the index.
+
+## Area skills
+
+`gitnexus:refresh` passes `--skills`, which writes a skill for each of the largest functional
+areas of the code — clusters of closely connected symbols — to
+`.claude/skills/gitnexus-area-<area>/SKILL.md`. Every run first deletes all
+`.claude/skills/gitnexus-area-*` folders, and the `.claude/skills/generated/` folder that older
+GitNexus releases wrote to, then writes the current set. Commit what it leaves behind, deletions
+included.
+
+The clustering is deterministic. Refreshing unchanged code writes the same files byte for byte, so
+on a clean checkout `git status` stays clean. Once the code changes, areas can be renamed,
+renumbered (`gitnexus-area-cluster-22` is a typical name), merged or split, which shows up as
+deleted and new folders.
+
+`--skills` and `--skip-skills` do not conflict. `--skip-skills` covers only GitNexus's standard
+skills, which this repository keeps in `.claude/skills/gitnexus/<name>/` — the layout GitNexus
+used before it moved skills directly under `.claude/skills/`. Every command, `refresh` included,
+leaves them alone, and the skills table in `CLAUDE.md` and `AGENTS.md` points there.
+
+That table lists the area skills as one row with a folder pattern, not as one row per area.
+`--skip-agents-md` stops GitNexus from updating the table, so a row per area would go stale on the
+first refresh that reshuffles the areas. Claude Code does not need the list: it discovers a skill
+folder directly under `.claude/skills/` on its own.
 
 ## Why GitNexus is not a devDependency
 

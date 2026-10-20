@@ -1,5 +1,5 @@
 import { describe, test, expect } from '@jest/globals';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -22,6 +22,28 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
  */
 function readRepoFile(relativePath) {
     return readFileSync(join(repoRoot, relativePath), 'utf8');
+}
+
+/**
+ * Lists the repository files that a skill path in a table stands for. A `*` in the
+ * folder name stands for every folder that matches it, the way the one table row for
+ * all area skills uses `gitnexus-area-*`.
+ *
+ * @param {string} skillPath - Path as written in the table, relative to the repository root.
+ * @returns {string[]} Matching paths relative to the repository root.
+ */
+function expandSkillPath(skillPath) {
+    if (!skillPath.includes('*')) {
+        return [skillPath];
+    }
+
+    const [head, tail] = skillPath.split('*');
+    const parent = head.slice(0, head.lastIndexOf('/'));
+    const namePrefix = head.slice(head.lastIndexOf('/') + 1);
+
+    return readdirSync(join(repoRoot, parent))
+        .filter((entry) => entry.startsWith(namePrefix))
+        .map((entry) => `${parent}/${entry}${tail}`);
 }
 
 describe('GitNexus version pinning', () => {
@@ -149,5 +171,28 @@ describe('GitNexus reindex hook', () => {
         for (const statement of exitStatements) {
             expect(statement.replace(/\s+/g, ' ')).toBe('exit 0');
         }
+    });
+});
+
+describe('GitNexus skill tables', () => {
+    // The skills tables in CLAUDE.md and AGENTS.md are maintained by hand, because
+    // --skip-agents-md stops GitNexus updating them, so nothing else notices a row whose
+    // file is gone. That has happened: from July to October 2026 the `log/` rule in
+    // .gitignore kept .claude/skills/generated/log/SKILL.md out of git, so the Log row
+    // pointed at a file no clone had. CI runs this on a fresh checkout, where a gitignored
+    // file is missing even if a local copy exists.
+    test.each(['CLAUDE.md', 'AGENTS.md'])('every skill file named in %s exists', (file) => {
+        const skillPaths =
+            readRepoFile(file).match(/\.claude\/skills\/[^\s`|)]+\/SKILL\.md/g) ?? [];
+
+        expect(skillPaths.length).toBeGreaterThan(0);
+
+        const missing = skillPaths.filter((skillPath) => {
+            const files = expandSkillPath(skillPath);
+
+            return files.length === 0 || files.some((path) => !existsSync(join(repoRoot, path)));
+        });
+
+        expect(missing).toEqual([]);
     });
 });
