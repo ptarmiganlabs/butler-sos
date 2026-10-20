@@ -36,13 +36,17 @@ const GITNEXUS_VERSION = '1.6.12';
  * managed block in CLAUDE.md and AGENTS.md. Both files also carry hand-written
  * sections, and without `--skills` the generated block is not merely regenerated but
  * *reduced* — a bare `analyze` once deleted all 20 rows of the generated-skills table
- * from both files. `--no-stats` is belt-and-braces for the same reason.
+ * from both files. `--no-stats` is belt-and-braces for the same reason. The skills
+ * table inside the block is now maintained by hand as well (docs/README.gitnexus.md,
+ * "Area skills").
  *
  * `--skip-skills` is load-bearing in the same way. `--skip-agents-md` does not cover
  * GitNexus's standard skill files: without `--skip-skills`, `analyze` writes its own
  * copies straight under .claude/skills/ and deletes the tracked copy in
  * .claude/skills/gitnexus/ of every skill nobody has edited. Run by the git hook, that
  * would leave a deleted file and a set of untracked skill folders behind every commit.
+ * It does not cover the area skills that `refresh` writes with `--skills`, so the two
+ * flags do not conflict.
  */
 const ANALYZE_FLAGS = ['--no-stats', '--skip-agents-md', '--skip-skills'];
 
@@ -78,7 +82,10 @@ const ALLOW_SCRIPTS = ['@ladybugdb/core'];
  *
  * `index` omits `--embeddings` because that is the slow part, and a plain analyze
  * preserves any embeddings already in the index. `refresh` regenerates them together
- * with the generated skill files.
+ * with the area skills: `--skills` deletes every .claude/skills/gitnexus-area-<name>
+ * folder, and the .claude/skills/generated/ folder older GitNexus releases used, then
+ * writes the current set, which is committed. docs/README.gitnexus.md ("Area skills")
+ * has the details.
  *
  * `check` is used by the git hook to detect a missing install without printing
  * anything; it reports the result through its exit code alone.
