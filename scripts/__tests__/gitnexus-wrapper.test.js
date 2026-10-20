@@ -90,6 +90,30 @@ describe('GitNexus version pinning', () => {
     });
 });
 
+describe('GitNexus analyze flags', () => {
+    const wrapper = readRepoFile('scripts/gitnexus.js');
+
+    // Each flag keeps analyze out of tracked files: --skip-agents-md the managed block in
+    // CLAUDE.md and AGENTS.md, --skip-skills the standard skill files under
+    // .claude/skills/. Dropping either turns every re-index the git hook runs into a diff.
+    test.each(['--skip-agents-md', '--skip-skills'])('the shared flags include %s', (flag) => {
+        const flags = wrapper.match(/const ANALYZE_FLAGS = \[([^\]]*)\];/);
+
+        expect(flags).not.toBeNull();
+        expect(flags[1]).toContain(`'${flag}'`);
+    });
+
+    test('every analyze command starts from the shared flags', () => {
+        const analyzeCommands = wrapper.match(/\['analyze'[^\]]*\]/g) ?? [];
+
+        expect(analyzeCommands.length).toBeGreaterThan(0);
+
+        for (const command of analyzeCommands) {
+            expect(command).toMatch(/^\['analyze', \.\.\.ANALYZE_FLAGS\b/);
+        }
+    });
+});
+
 describe('GitNexus reindex hook', () => {
     const hook = readRepoFile('.husky/gitnexus-reindex.sh');
 

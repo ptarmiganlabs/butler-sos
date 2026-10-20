@@ -141,7 +141,8 @@ where to look when a command behaves unexpectedly.
 
 Always go through the `npm run gitnexus:*` scripts. The wrapper passes `--skip-agents-md`, which
 stops GitNexus rewriting the managed block bracketed by `<!-- gitnexus:start -->` and
-`<!-- gitnexus:end -->` in `CLAUDE.md` and `AGENTS.md`.
+`<!-- gitnexus:end -->` in `CLAUDE.md` and `AGENTS.md`, and `--skip-skills`, which stops it
+installing its standard skill files over the ones in `.claude/skills/`.
 
 A bare `analyze` rewrites that block, and without `--skills` it does not merely regenerate it but
 *reduces* it — a bare run has already deleted all 20 rows of the generated-skills table from both
@@ -151,6 +152,11 @@ not a harmless regeneration.
 The generated skill files under `.claude/skills/` are rewritten by the same mechanism.
 `.claude/skills/gitnexus/*/SKILL.md` is additionally gitignored. Neither location is a safe place
 for hand-written content.
+
+`--skip-agents-md` does not cover GitNexus's standard skill files, so the two flags are needed
+together. Without `--skip-skills`, `analyze` writes its own copies of those skills straight under
+`.claude/skills/` and deletes the tracked copy in `.claude/skills/gitnexus/` of every skill
+nobody has edited. Through the git hook, that would happen after every commit.
 
 `gitnexus:refresh` is the only script that regenerates embeddings and skill files; a plain
 `analyze` preserves any embeddings already in the index.
