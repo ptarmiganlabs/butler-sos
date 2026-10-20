@@ -27,7 +27,7 @@ import { spawnSync } from 'node:child_process';
  * This constant is the only place the version appears. Bumping it here updates the
  * hook and every npm script at once.
  */
-const GITNEXUS_VERSION = '1.6.9';
+const GITNEXUS_VERSION = '1.6.12';
 
 /**
  * Flags shared by every `analyze` run.
@@ -37,8 +37,14 @@ const GITNEXUS_VERSION = '1.6.9';
  * sections, and without `--skills` the generated block is not merely regenerated but
  * *reduced* — a bare `analyze` once deleted all 20 rows of the generated-skills table
  * from both files. `--no-stats` is belt-and-braces for the same reason.
+ *
+ * `--skip-skills` is load-bearing in the same way. `--skip-agents-md` does not cover
+ * GitNexus's standard skill files: without `--skip-skills`, `analyze` writes its own
+ * copies straight under .claude/skills/ and deletes the tracked copy in
+ * .claude/skills/gitnexus/ of every skill nobody has edited. Run by the git hook, that
+ * would leave a deleted file and a set of untracked skill folders behind every commit.
  */
-const ANALYZE_FLAGS = ['--no-stats', '--skip-agents-md'];
+const ANALYZE_FLAGS = ['--no-stats', '--skip-agents-md', '--skip-skills'];
 
 /**
  * The dependencies whose install scripts `install` lets run. Nothing else gets one.
