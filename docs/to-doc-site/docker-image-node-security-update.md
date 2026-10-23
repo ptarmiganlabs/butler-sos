@@ -57,7 +57,11 @@ openssl s_client -connect influxdb.example.com:443 -showcerts </dev/null 2>/dev/
 
 The `i:` lines show who issued each certificate in the chain:
 
-- **No line mentions emSign or eMudhra:** the connection is not affected.
+- **No output at all:** the check did not reach the server's certificate. A wrong host name or
+  port, a firewall, or a failed connection gives this result, and it tells you nothing about the
+  certificate. Correct the host name and port and run the command again. To see why it failed,
+  run it without `2>/dev/null`.
+- **`i:` lines are shown, and none mentions emSign or eMudhra:** the connection is not affected.
 - **A line mentions emSign or eMudhra:** the connection might be affected, but this alone does not
   prove it, because only eight of emSign's intermediates are blocked. Confirm it in one of two
   ways:
