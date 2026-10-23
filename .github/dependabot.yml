@@ -14,7 +14,7 @@ updates:
 
   # The Dockerfile pins its two base images by tag and digest, which is only safe if something
   # keeps them current — otherwise the published image silently stops receiving base-OS security
-  # updates. This is that something. Both tags are exact (node:24.21.0-bookworm-slim,
+  # updates. This is that something. Both tags are exact (node:24.22.1-bookworm-slim,
   # debian:bookworm-20261005-slim), so every update arrives as a change of tag: a new Node.js
   # release, or a new dated Debian build that keeps the bookworm- prefix.
   #
