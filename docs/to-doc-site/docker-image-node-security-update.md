@@ -61,10 +61,10 @@ The `i:` lines show who issued each certificate in the chain:
 - **A line mentions emSign or eMudhra:** the connection might be affected, but this alone does not
   prove it, because only eight of emSign's intermediates are blocked. Confirm it in one of two
   ways:
-  - Run the new Butler SOS release in a test environment against that server, and look for the
-    error described below.
-  - Ask whoever runs the server, or emSign, whether the certificate was issued through one of the
-    intermediates distrusted in October 2026.
+    - Run the new Butler SOS release in a test environment against that server, and look for the
+      error described below.
+    - Ask whoever runs the server, or emSign, whether the certificate was issued through one of the
+      intermediates distrusted in October 2026.
 
 ---
 
