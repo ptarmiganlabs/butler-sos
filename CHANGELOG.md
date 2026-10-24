@@ -1,5 +1,32 @@
 # Changelog
 
+## [15.1.3](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.1.2...butler-sos-v15.1.3) (2026-10-24)
+
+
+### Bug Fixes
+
+* **deps:** build the Docker image on Node 24.22.1, for its security fixes ([7ae3788](https://github.com/ptarmiganlabs/butler-sos/commit/7ae3788537d2611a6c67ce2ea44ebbe0df849e8a))
+
+
+### Miscellaneous
+
+* allow LadybugDB's install script in gitnexus:install ([de6347d](https://github.com/ptarmiganlabs/butler-sos/commit/de6347d6b3567d09685f040794ed32de6e85c587))
+* bump pinned GitNexus to 1.6.12 ([96c3f6c](https://github.com/ptarmiganlabs/butler-sos/commit/96c3f6c7d8431a36894394fd8be87b61b71fc1ca))
+* **deps-dev:** bump markdown-it from 14.3.2 to 14.3.3 ([d6bd7ea](https://github.com/ptarmiganlabs/butler-sos/commit/d6bd7ea5010f15cb5ceb75279a78e44edc2cac89))
+* **deps-dev:** bump markdown-it from 14.3.2 to 14.3.3 ([a344020](https://github.com/ptarmiganlabs/butler-sos/commit/a34402027832373fa89d8d7dc172eae41ae93723))
+* **deps:** bump follow-redirects from 1.16.0 to 1.16.1 ([b406830](https://github.com/ptarmiganlabs/butler-sos/commit/b4068308472afb0f12baa6d4eac82c2ef1c5131a))
+* **deps:** bump follow-redirects from 1.16.0 to 1.16.1 ([03b620c](https://github.com/ptarmiganlabs/butler-sos/commit/03b620c9ab38e6bdc237015e9efaef2565c81b73))
+* **deps:** clear the high-severity npm audit findings ([f42d334](https://github.com/ptarmiganlabs/butler-sos/commit/f42d334ae90b39115e0739e09ec97b074a02fcb3))
+* move the GitNexus area skills to 1.6.12's layout ([b3c4bfc](https://github.com/ptarmiganlabs/butler-sos/commit/b3c4bfc09b63c850d5356d0bdfb99d2249b824c2))
+
+
+### Documentation
+
+* format the Node 24.22.1 note with Prettier ([2a17bec](https://github.com/ptarmiganlabs/butler-sos/commit/2a17bec30d77819038d3606c430a5efc9846ebbd))
+* narrow the Node 24.22.1 note to the eight blocked emSign intermediates ([ba7419d](https://github.com/ptarmiganlabs/butler-sos/commit/ba7419d20501832e154f908f25a0dbe9610aca05))
+* stage the doc-site note for the Node 24.22.1 Docker image ([f0d3c6a](https://github.com/ptarmiganlabs/butler-sos/commit/f0d3c6a536e68d42a7571f3b63fe4efb47e3053e))
+* treat an empty certificate check as inconclusive ([ed53cd1](https://github.com/ptarmiganlabs/butler-sos/commit/ed53cd197e9565125a94b4f91af471d87c6b5def))
+
 ## [15.1.2](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.1.1...butler-sos-v15.1.2) (2026-10-19)
 
 
