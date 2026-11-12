@@ -9,7 +9,7 @@
 # 24-bookworm-slim. Dependabot then offers every update as a change of tag. On a rolling tag it
 # could only offer a new digest for the same tag, which it holds back while the tag keeps being
 # republished and can suppress altogether.
-FROM node:24.22.1-bookworm-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205 AS build
+FROM node:24.22.1-bookworm-slim@sha256:be8204d4bd327363357f532187b752ff62759c31bedf98e9e18fc08c9cbd605c AS build
 
 WORKDIR /nodeapp
 
