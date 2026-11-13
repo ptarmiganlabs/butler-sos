@@ -123,7 +123,7 @@
         "npm-check-updates": "^23.0.1",
         "postject": "1.0.0-alpha.6",
         "prettier": "^3.9.6",
-        "snyk": "^1.1306.2"
+        "snyk": "^1.1308.4"
     },
     "overrides": {
         "glob@>=9.0.0 <14.0.2": "^14.0.4",
