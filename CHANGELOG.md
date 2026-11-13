@@ -1,5 +1,27 @@
 # Changelog
 
+## [15.1.4](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.1.3...butler-sos-v15.1.4) (2026-11-13)
+
+
+### Bug Fixes
+
+* **deps:** update @fastify/static to 10.1.10 for patched glob ([6915e81](https://github.com/ptarmiganlabs/butler-sos/commit/6915e81f759bcb2214d5995531d0558cff2cdcb0))
+* **deps:** update fast-uri to 3.1.9 ([da2fead](https://github.com/ptarmiganlabs/butler-sos/commit/da2fead290cbdddb0c8e2104ab246ed55c52d4a9))
+
+
+### Miscellaneous
+
+* **deps:** bump follow-redirects from 1.16.1 to 1.16.3 ([7636ce0](https://github.com/ptarmiganlabs/butler-sos/commit/7636ce0b594a91071e3ccd51b6927c368ef4c361))
+* **deps:** bump follow-redirects from 1.16.1 to 1.16.3 ([5f3f1bc](https://github.com/ptarmiganlabs/butler-sos/commit/5f3f1bc393f10c6d3fbffdabb0b05dfbb25b8509))
+* **deps:** bump systeminformation from 5.33.1 to 5.33.16 ([5081aae](https://github.com/ptarmiganlabs/butler-sos/commit/5081aaee98e82452a26ebef73a616bf98bda6ff9))
+* **deps:** bump systeminformation from 5.33.1 to 5.33.16 ([5ccc73e](https://github.com/ptarmiganlabs/butler-sos/commit/5ccc73e906ea1119c781ff9e5956f64bf78d80b4))
+* **deps:** override vulnerable glob and minimatch in dev tooling ([4ffddcb](https://github.com/ptarmiganlabs/butler-sos/commit/4ffddcb4f2d37ff1d3e637d09d34a4d68baaff88))
+
+
+### Documentation
+
+* add sponsor section to README ([730cde5](https://github.com/ptarmiganlabs/butler-sos/commit/730cde538a3bba9bc6b50b242ba2c139242a403a))
+
 ## [15.1.3](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.1.2...butler-sos-v15.1.3) (2026-10-24)
 
 
