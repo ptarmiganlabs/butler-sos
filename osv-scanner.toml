@@ -3,14 +3,17 @@
 # Every entry here is an accepted finding, with the reason and an expiry. An expired entry is
 # reported again, so the scan fails and forces a fresh look rather than the exception outliving
 # its reason, as .trivyignore does for the release image.
+#
+# Remove an entry once OSV-Scanner reports it as an unused ignore: the package has gone, been
+# fixed, or the advisory has been withdrawn.
 
-# sprintf-js: denial of service through unbounded precision specifiers (CVE-2026-97058, medium).
-# Every release is affected, up to 1.1.3, the latest, and no fix exists to move to. Butler SOS has
-# two copies, both dev-only and neither in the built binary:
-#   1.0.3 via @istanbuljs/load-nyc-config -> argparse 1.0.10 (Jest's coverage)
-#   1.1.2 via snyk -> roarr 2.15.4
-# Both run only as dev tools, in CI and on developers' machines, on the repository's own input.
+# deepmerge: prototype poisoning of the object mergeObject() returns (medium).
+# Every release from 4.2.0 is affected, up to 4.3.1, the latest, and no fix exists to move to.
+# Butler SOS has one copy, dev-only and not in the built binary:
+#   4.3.1 via jest -> @jest/core -> jest-config
+# It runs only as part of the test tooling, in CI and on developers' machines, merging the
+# repository's own Jest configuration.
 [[IgnoredVulns]]
-id = "GHSA-hp3w-g68c-fv3c"
-ignoreUntil = 2026-11-30
-reason = "sprintf-js has no fixed release; both copies are dev-only (Jest coverage, snyk) and not in the binary"
+id = "GHSA-gcqx-w48m-w2h4"
+ignoreUntil = 2027-02-13
+reason = "deepmerge has no fixed release; the only copy is dev-only (jest-config) and not in the binary"
