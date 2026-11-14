@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import mqtt from 'mqtt';
 
 /**
@@ -17,7 +18,8 @@ export function mqttOutput(cfg) {
         username: cfg.usernameEnv ? process.env[cfg.usernameEnv] : undefined,
         password: cfg.passwordEnv ? process.env[cfg.passwordEnv] : undefined,
         reconnectPeriod: 5000,
-        clientId: `qseow-session-monitor-${process.pid}`,
+        // Unique per run: two monitors with the same id would keep disconnecting each other.
+        clientId: `qseow-session-monitor-${crypto.randomBytes(6).toString('hex')}`,
     });
     client.on('error', (err) => console.error(`${new Date().toISOString()} mqtt: ${err.message}`));
     // Resolves on the first connection, or after 5 s so a missing broker doesn't block the monitor.
@@ -26,8 +28,10 @@ export function mqttOutput(cfg) {
         setTimeout(resolve, 5000).unref();
     });
     const root = cfg.topicRoot.replace(/\/+$/, '');
-    // MQTT topic levels must not contain + or #; slashes would add levels.
-    const level = (s) => String(s).replace(/[+#/]/g, '_');
+    // MQTT topic levels must not contain + or #, and a slash would add a level. Percent-encode them
+    // (and % itself), so different user names never map to the same topic.
+    const level = (s) =>
+        String(s).replace(/[%+#/]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
     const pub = (topic, payload, retain = false) =>
         client.publish(`${root}/${topic}`, payload === '' ? '' : JSON.stringify(payload), {
             qos: 0,

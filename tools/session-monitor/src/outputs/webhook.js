@@ -31,6 +31,7 @@ export function webhookOutput(cfg) {
                     body: JSON.stringify({ source: 'qseow-session-monitor', ...e }),
                     signal: AbortSignal.timeout(10000),
                 });
+                await res.body?.cancel(); // the reply isn't used: free the connection at once
                 if (!res.ok)
                     console.error(
                         `${new Date().toISOString()} webhook: ${res.status} ${res.statusText}`
