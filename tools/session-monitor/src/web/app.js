@@ -863,7 +863,14 @@
 
     /* ---------- feed ---------- */
     const eventKey = (e) =>
-        [e.type, e.at, e.sessionId || '', e.userId || '', e.level || ''].join('|');
+        [
+            e.type,
+            e.at,
+            e.sessionId || '',
+            e.userDirectory || '',
+            e.userId || '',
+            e.level || '',
+        ].join('|');
     function describe(e) {
         const u = e.userId ? who(e) : '';
         const vp = e.virtualProxy ? vpName(e.virtualProxy) : '';
@@ -944,6 +951,9 @@
         let imp = 0;
         let act = 0;
         feedItems = feedItems.filter((x) => (ACTIVITY.has(x.e.type) ? ++act <= 300 : ++imp <= 200));
+        // Remember only the keys of events still kept, so an always-open page doesn't grow forever.
+        seenEvents.clear();
+        for (const x of feedItems) seenEvents.add(x.k);
         if (added) renderFeed();
     }
     // Several events of the same kind from one update become one line ("12 sessions signed in").
@@ -1021,9 +1031,13 @@
         const c = state.config;
         $('rule').textContent =
             `Close to real time: new data every ${state.pollSeconds} s, no history. Watching since ${clock(t(state.startedAt))}.`;
-        $('errors').textContent = state.summary.errors.length
-            ? `Problems reading Sense: ${state.summary.errors.join('; ')}`
-            : '';
+        $('errors').textContent =
+            (state.summary.licencesStale
+                ? 'Licence data could not be read: slots show the last good reading. '
+                : '') +
+            (state.summary.errors.length
+                ? `Problems reading Sense: ${state.summary.errors.join('; ')}`
+                : '');
     }
 
     function receive(s) {

@@ -60,6 +60,20 @@ export class Tracker {
      * @returns {object} { at, startedAt, config, users[], events[], summary, breakdown, licences }.
      */
     update(snap) {
+        // A failed licence read must not look like "no one holds a slot": reuse the last good read.
+        // Its timestamps age normally, so slots still free on time; nothing new is decided from it
+        // (licencesOk stays false), and the result says the licence data is stale.
+        let licencesStale = false;
+        if (snap.licencesOk) {
+            this.lastLicences = {
+                records: snap.records,
+                allocations: snap.allocations,
+                recordsSince: snap.recordsSince,
+            };
+        } else if (this.lastLicences) {
+            snap = { ...snap, ...this.lastLicences };
+            licencesStale = true;
+        }
         const now = snap.at;
         this.startedAt ??= now;
         const {
@@ -262,8 +276,12 @@ export class Tracker {
             if (this.excluded(t.key)) continue;
             const isLive = live.has(t.sessionId);
             if (!isLive && !t.hasRecord && !t.endedAt) continue;
+            // Ended sessions that took a slot or were refused keep their user listed until they leave
+            // the timeline, so a recent refusal stays visible. Others only join an existing row.
             const u =
-                isLive || t.hasRecord ? get(t.key, t.userDirectory, t.userId) : users.get(t.key);
+                isLive || t.hasRecord || ((t.recorded || t.refused) && !t.baseline)
+                    ? get(t.key, t.userDirectory, t.userId)
+                    : users.get(t.key);
             if (!u) continue;
             // A record no longer read because it is older than snap.recordsSince only aged out; one
             // that vanished while still recent was removed by the Repository's sweep.
@@ -479,6 +497,7 @@ export class Tracker {
             breakdown,
             licences: snap.licenceOverview || null,
             summary: {
+                licencesStale,
                 proxySessions: live.size,
                 usersWithSessions: rows.filter((r) => r.proxySessions > 0).length,
                 usersWarn: rows.filter((r) => r.level === 'warn').length,

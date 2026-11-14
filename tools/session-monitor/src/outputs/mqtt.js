@@ -34,6 +34,9 @@ export function mqttOutput(cfg) {
             retain,
         });
 
+    // User topics with a retained state on the broker. Compared with the current users on every
+    // update, so a user who left while the broker was unreachable is still cleared afterwards.
+    const published = new Set();
     return {
         name: 'mqtt',
         ready,
@@ -45,13 +48,19 @@ export function mqttOutput(cfg) {
             }
             pub('summary', { at: result.at, ...result.summary }, true);
             if (!cfg.publishUserState) return;
+            const current = new Set();
             for (const u of result.users) {
+                if (u.gone) continue;
                 const topic = `user/${level(u.userDirectory)}/${level(u.userId)}`;
-                if (u.gone) pub(topic, '', true);
-                else {
-                    const { key, ...state } = u;
-                    pub(topic, { at: result.at, ...state }, true);
-                }
+                const { key, timeline, ...state } = u;
+                pub(topic, { at: result.at, ...state }, true);
+                current.add(topic);
+                published.add(topic);
+            }
+            for (const topic of published) {
+                if (current.has(topic)) continue;
+                pub(topic, '', true);
+                published.delete(topic);
             }
         },
         close() {

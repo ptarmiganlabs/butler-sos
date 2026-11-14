@@ -303,3 +303,74 @@ test('the simulated site reaches the limit and refuses sessions, and sign-ins re
     assert.ok(refused > 0, 'some sessions are refused');
     assert.ok(maxSlotTaken === 5, `a new session took slot ${maxSlotTaken}`);
 });
+
+test('a failed licence read keeps the last good slot counts, marked stale, and decides nothing', () => {
+    const t = new Tracker(LIMIT, 15);
+    const five = ['a', 'b', 'c', 'd', 'e'].map((x, i) => rec(x, i));
+    t.update(
+        snap(
+            10,
+            five.map((x) => sess(x.sessionId)),
+            five
+        )
+    );
+    const r = t.update(
+        snap(
+            25,
+            five.map((x) => sess(x.sessionId)),
+            [],
+            { licencesOk: false, errors: ['QRS licences: timeout'] }
+        )
+    );
+    assert.equal(r.users.find((u) => u.userId === 'test1').slotsUsed, 5);
+    assert.equal(r.summary.licencesStale, true);
+    assert.deepEqual(types(r), []); // no "cleared" alert, no sweep
+    const later = t.update(
+        snap(
+            400,
+            five.map((x) => sess(x.sessionId)),
+            [],
+            { licencesOk: false }
+        )
+    );
+    assert.equal(later.users.find((u) => u.userId === 'test1').slotsUsed, 0); // stale records still age out
+});
+
+test('a user whose only, refused session ended stays listed with that refusal', () => {
+    const t = new Tracker(LIMIT, 15);
+    t.update(snap(0, [], []));
+    t.update(snap(15, [sess('x', 'test2')], []));
+    t.update(snap(45, [sess('x', 'test2')], [])); // refused
+    const r = t.update(snap(60, [], []));
+    const u = r.users.find((x) => x.userId === 'test2');
+    assert.ok(u && !u.gone);
+    assert.equal(u.refusedTotal, 1);
+    assert.equal(u.timeline[0].state, 'refused');
+    assert.ok(u.lastRefusedAt);
+});
+
+test('the webhook output queues and returns at once, whatever the endpoint does', async () => {
+    const { webhookOutput } = await import('../src/outputs/webhook.js');
+    const realFetch = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = () => {
+        calls++;
+        return new Promise(() => {}); // an endpoint that never answers
+    };
+    try {
+        const out = webhookOutput({ url: 'http://example.invalid/hook' });
+        const events = Array.from({ length: 20 }, (_, i) => ({
+            type: 'refused',
+            at: isoAt(i),
+            userId: `u${i}`,
+        }));
+        const started = Date.now();
+        out.handle({ at: isoAt(0), events });
+        assert.ok(Date.now() - started < 50);
+        assert.equal(calls, 1); // one request at a time
+        assert.equal(out.pending, 19);
+        out.close();
+    } finally {
+        globalThis.fetch = realFetch;
+    }
+});
