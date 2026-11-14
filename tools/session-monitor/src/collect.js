@@ -106,6 +106,7 @@ export async function snapshot(
 ) {
     const errors = [];
     let sessionsStale = false;
+    const failedTargets = [];
     const sessionLists = await Promise.all(
         targets.map(async (t) => {
             const path = t.prefix ? `/${t.prefix}/session` : '/session';
@@ -124,6 +125,7 @@ export async function snapshot(
                 return sessions;
             } catch (err) {
                 errors.push(`QPS ${t.host} /${t.prefix}: ${err.message}`);
+                failedTargets.push(`${t.host}/${t.prefix || '/'}`);
                 // Keep showing that proxy's last good list rather than none: one proxy failing must
                 // not make its users' sessions vanish. Nothing is decided from it (qpsOk is false).
                 const last = sessionCache.get(cacheKey);
@@ -169,6 +171,7 @@ export async function snapshot(
         records,
         recordsSince,
         sessionsStale,
+        failedTargets,
         qpsOk: !errors.some((e) => e.startsWith('QPS')),
         licencesOk: !errors.some((e) => e.startsWith('QRS')),
         errors,

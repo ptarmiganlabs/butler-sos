@@ -438,3 +438,32 @@ test('the simulated site renews a slot only after its window has run out', async
         }
     }
 });
+
+test('sessions first seen on a proxy that just came back from an outage are taken as already open', () => {
+    const t = new Tracker(LIMIT, 15);
+    t.update(snap(0, [], []));
+    t.update(snap(15, [], [], { qpsOk: false, failedTargets: ['node1/demoworld'] }));
+    t.update(snap(600, [sess('opened-during-outage')], [])); // its record has long aged out
+    const r = t.update(snap(660, [sess('opened-during-outage')], []));
+    assert.deepEqual(
+        types(r).filter((x) => x === 'refused'),
+        []
+    );
+});
+
+test('a sweep after a gap in licence reads exempts sessions first seen during the gap', () => {
+    const t = new Tracker(LIMIT, 15);
+    t.update(snap(0, [sess('a')], [rec('a', 0)]));
+    t.update(snap(15, [sess('a'), sess('x')], [], { licencesOk: false })); // 'x' appears; licences unreadable
+    t.update(snap(300, [sess('a'), sess('x')], [], { licencesOk: false }));
+    const r = t.update(snap(600, [sess('a'), sess('x')], [])); // reads back: 'a' record gone = sweep
+    assert.ok(types(r).includes('sweep'));
+    assert.deepEqual(
+        types(r).filter((x) => x === 'refused'),
+        []
+    );
+    assert.deepEqual(
+        types(t.update(snap(700, [sess('a'), sess('x')], []))).filter((x) => x === 'refused'),
+        []
+    );
+});

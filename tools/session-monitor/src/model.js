@@ -46,6 +46,9 @@ export class Tracker {
         /** @type {Map<string, [string, string]>} user key -> [directory, id] as Sense spells them */
         this.names = new Map();
         this.startedAt = null;
+        /** @type {Set<string>} "host/virtual proxy" pairs that couldn't be read at the previous update */
+        this.prevFailedTargets = new Set();
+        this.prevLicenceOkAt = null;
     }
 
     /**
@@ -107,11 +110,22 @@ export class Tracker {
                 this.lastSweepAt = now;
                 // Sessions that appeared just before the sweep may have had their record removed by
                 // it: mark them, so they're never taken for refused, however long they stay idle.
+                // After a gap in licence reads, the sweep may have come any time since the last good
+                // read, so look back over the whole gap too.
+                const gapMs =
+                    this.prevLicenceOkAt != null
+                        ? Math.max(0, now - this.prevLicenceOkAt - this.intervalMs)
+                        : 0;
                 for (const t of this.sessions.values())
-                    if (!t.recorded && t.firstSeen != null && now - t.firstSeen < sweepMarginMs)
+                    if (
+                        !t.recorded &&
+                        t.firstSeen != null &&
+                        now - t.firstSeen < sweepMarginMs + gapMs
+                    )
                         t.sweepExempt = true;
                 events.push({ type: 'sweep', at: iso(now), recordsRemoved: vanished });
             }
+            this.prevLicenceOkAt = now;
             this.prevRecords = new Map(
                 snap.records.map((r) => [r.sessionId, Date.parse(r.latestActivity)])
             );
@@ -135,7 +149,11 @@ export class Tracker {
                     proxyNode: s.proxyNode,
                     proxyHost: s.proxyHost,
                     firstSeen: now,
-                    baseline: this.first,
+                    // Unknown sessions on a proxy that couldn't be read last time may have opened
+                    // during the gap: take them as already open, like those seen at start.
+                    baseline:
+                        this.first ||
+                        this.prevFailedTargets.has(`${s.proxyHost}/${s.virtualProxy}`),
                     // First seen right after a sweep: its record may already have been removed.
                     sweepExempt: !!this.lastSweepAt && now - this.lastSweepAt < sweepMarginMs,
                     recorded: t?.recorded || false,
@@ -490,6 +508,7 @@ export class Tracker {
 
         // Sessions are taken as already open (never refused) until the proxies were read once in full.
         if (snap.qpsOk) this.first = false;
+        this.prevFailedTargets = new Set(snap.failedTargets || []);
         return {
             at: iso(now),
             startedAt: iso(this.startedAt),

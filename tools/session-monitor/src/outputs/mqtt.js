@@ -28,6 +28,21 @@ export function mqttOutput(cfg) {
         setTimeout(resolve, 5000).unref();
     });
     const root = cfg.topicRoot.replace(/\/+$/, '');
+    // User topics with a retained state on the broker. Compared with the current users on every
+    // update, so a user who left while the broker was unreachable is still cleared afterwards.
+    const published = new Set();
+    // On every connection, read the user topics the broker still holds as retained (from an earlier
+    // run, say), so users who left while the monitor wasn't running are cleared too.
+    client.on('connect', () => {
+        if (!cfg.publishUserState) return;
+        const filter = `${root}/user/#`;
+        client.subscribe(filter, { qos: 0 });
+        setTimeout(() => client.unsubscribe(filter), 3000).unref();
+    });
+    client.on('message', (topic, payload, packet) => {
+        if (packet.retain && payload.length && topic.startsWith(`${root}/user/`))
+            published.add(topic.slice(root.length + 1));
+    });
     // MQTT topic levels must not contain + or #, and a slash would add a level. Percent-encode them
     // (and % itself), so different user names never map to the same topic.
     const level = (s) =>
@@ -38,9 +53,6 @@ export function mqttOutput(cfg) {
             retain,
         });
 
-    // User topics with a retained state on the broker. Compared with the current users on every
-    // update, so a user who left while the broker was unreachable is still cleared afterwards.
-    const published = new Set();
     return {
         name: 'mqtt',
         ready,
