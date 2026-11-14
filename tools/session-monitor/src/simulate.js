@@ -144,9 +144,13 @@ export class SimulatedSite {
                 const rec = this.records.get(sid);
                 if (this.chance(pEnd, dt) || (!rec && this.chance(0.04, dt))) s.alive = false;
                 else if (this.chance(pApp, dt)) {
-                    // Opening an app refreshes the record; a session that already got in is never refused.
-                    if (rec) rec.latest = at - Math.floor(this.r() * dt);
-                    else if (this.wasLicensed?.has(sid))
+                    // App activity renews the record only once its window has run out (a lease, as
+                    // measured on Sense); a session that already got in is never refused.
+                    const actedAt = at - Math.floor(this.r() * dt);
+                    const windowMs = this.limit.windowSeconds * 1000;
+                    if (rec) {
+                        if (actedAt - rec.latest >= windowMs) rec.latest = actedAt;
+                    } else if (this.wasLicensed?.has(sid))
                         this.records.set(sid, { user: u, created: at, latest: at });
                 }
                 if (rec) (this.wasLicensed ??= new Set()).add(sid);

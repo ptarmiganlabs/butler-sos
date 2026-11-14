@@ -420,3 +420,21 @@ test('virtual proxy and node names that match Object properties work', () => {
     assert.equal(r.users[0].byVirtualProxy.toString, 1);
     assert.equal(JSON.parse(JSON.stringify(r.breakdown)).virtualProxies.__proto__.sessions, 1);
 });
+
+test('the simulated site renews a slot only after its window has run out', async () => {
+    const { SimulatedSite } = await import('../src/simulate.js');
+    const site = new SimulatedSite(60, LIMIT, 3);
+    for (let at = T0; at < T0 + 30 * 60000; at += 15000) {
+        const before = new Map([...site.records].map(([sid, r]) => [sid, { ...r }]));
+        site.step(at, 31 * 60000);
+        for (const [sid, r] of site.records) {
+            const prev = before.get(sid);
+            // The same record (not one re-created after a sweep) whose time moved: only after the window.
+            if (prev && prev.created === r.created && r.latest !== prev.latest)
+                assert.ok(
+                    r.latest - prev.latest >= 360000,
+                    `renewed after ${r.latest - prev.latest} ms`
+                );
+        }
+    }
+});
