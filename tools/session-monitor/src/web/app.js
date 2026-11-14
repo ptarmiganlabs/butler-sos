@@ -244,18 +244,23 @@
         const vpCount = Object.keys(state.breakdown?.virtualProxies || {}).length;
         const connected = users.filter((u) => u.proxySessions > 0).length;
         const lim = state.config.slotsLimit;
-        setKpi(
-            'limit',
-            crit,
-            `${crit === 1 ? 'user has' : 'users have'} all ${lim} slots taken`,
-            crit ? 'alarm' : ''
-        );
-        setKpi(
-            'warn',
-            warn,
-            `${warn === 1 ? 'user is' : 'users are'} one session from the limit`,
-            warn ? 'caution' : ''
-        );
+        if (licencesUnknown()) {
+            setKpi('limit', '–', 'licence data not read yet');
+            setKpi('warn', '–', 'licence data not read yet');
+        } else {
+            setKpi(
+                'limit',
+                crit,
+                `${crit === 1 ? 'user has' : 'users have'} all ${lim} slots taken`,
+                crit ? 'alarm' : ''
+            );
+            setKpi(
+                'warn',
+                warn,
+                `${warn === 1 ? 'user is' : 'users are'} one session from the limit`,
+                warn ? 'caution' : ''
+            );
+        }
         setKpi('users', connected, `holding ${slots} licence slot${slots === 1 ? '' : 's'}`);
         setKpi(
             'proxy',
@@ -384,8 +389,12 @@
         renderUsers();
     }
 
+    // Until licences have been read once, no one can be told apart as unlicensed: list everyone.
+    const licencesUnknown = () => !!state.summary.licencesUnknown;
     function visibleLicensedUsers() {
-        return state.users.filter((u) => !u.gone && (u.licence || u.slotsUsed));
+        return state.users.filter(
+            (u) => !u.gone && (u.licence || u.slotsUsed || licencesUnknown())
+        );
     }
     const refusedRecently = (u) => u.lastRefusedAt && now() - t(u.lastRefusedAt) < ATTENTION_MS;
     function needsAttention(u) {
@@ -429,7 +438,8 @@
     }
     // Everyone who could be listed: licensed users, and accounts without a licence if switched on.
     function candidates() {
-        const showUnlicensed = $('showUnlicensed').checked && mode !== 'wall';
+        const showUnlicensed =
+            ($('showUnlicensed').checked && mode !== 'wall') || licencesUnknown();
         return state.users.filter((u) => !u.gone && (u.licence || u.slotsUsed || showUnlicensed));
     }
     function shownUsers() {
@@ -533,7 +543,8 @@
         node.querySelector('.avatar').textContent = initials(u.userId);
         node.querySelector('.name').textContent = u.userId;
         node.querySelector('.dir').textContent = '';
-        node.querySelector('.lic').textContent = `${u.userDirectory} · ${licenceName(u.licence)}`;
+        node.querySelector('.lic').textContent =
+            `${u.userDirectory} · ${licencesUnknown() && !u.licence ? 'licence not read yet' : licenceName(u.licence)}`;
         node.querySelector('.who').title = who(u);
         const vps = node.querySelector('.vps');
         vps.replaceChildren();
@@ -1052,6 +1063,9 @@
         $('rule').textContent =
             `Close to real time: new data every ${state.pollSeconds} s, no history. Watching since ${clock(t(state.startedAt))}.`;
         $('errors').textContent =
+            (state.summary.licencesUnknown
+                ? 'Licence data could not be read yet: slot counts are unknown, not zero. '
+                : '') +
             (state.summary.licencesStale
                 ? 'Licence data could not be read: slots show the last good reading. '
                 : '') +

@@ -467,3 +467,13 @@ test('a sweep after a gap in licence reads exempts sessions first seen during th
         []
     );
 });
+
+test('when licences have never been read, the result says slot counts are unknown', () => {
+    const t = new Tracker(LIMIT, 15);
+    const r = t.update(
+        snap(0, [sess('a')], [], { licencesOk: false, errors: ['QRS licences: timeout'] })
+    );
+    assert.equal(r.summary.licencesUnknown, true);
+    const r2 = t.update(snap(15, [sess('a')], [rec('a', 14)]));
+    assert.equal(r2.summary.licencesUnknown, false);
+});

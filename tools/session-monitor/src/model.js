@@ -70,6 +70,8 @@ export class Tracker {
         // Its timestamps age normally, so slots still free on time; nothing new is decided from it
         // (licencesOk stays false), and the result says the licence data is stale.
         let licencesStale = false;
+        // No licence read has ever succeeded: slot counts and who holds a licence are unknown.
+        const licencesUnknown = !snap.licencesOk && !this.lastLicences;
         if (snap.licencesOk) {
             this.lastLicences = {
                 records: snap.records,
@@ -526,6 +528,7 @@ export class Tracker {
             licences: snap.licenceOverview || null,
             summary: {
                 licencesStale,
+                licencesUnknown,
                 sessionsStale: !!snap.sessionsStale,
                 proxySessions: live.size,
                 usersWithSessions: rows.filter((r) => r.proxySessions > 0).length,
