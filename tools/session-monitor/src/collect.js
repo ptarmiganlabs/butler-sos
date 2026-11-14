@@ -107,6 +107,7 @@ export async function snapshot(
     const errors = [];
     let sessionsStale = false;
     const failedTargets = [];
+    const newTargets = []; // read successfully for the first time in this snapshot
     const sessionLists = await Promise.all(
         targets.map(async (t) => {
             const path = t.prefix ? `/${t.prefix}/session` : '/session';
@@ -121,6 +122,7 @@ export async function snapshot(
                     proxyNode: t.nodeName,
                     virtualProxy: t.prefix || '/',
                 }));
+                if (!sessionCache.has(cacheKey)) newTargets.push(`${t.host}/${t.prefix || '/'}`);
                 sessionCache.set(cacheKey, sessions);
                 return sessions;
             } catch (err) {
@@ -172,6 +174,7 @@ export async function snapshot(
         recordsSince,
         sessionsStale,
         failedTargets,
+        newTargets,
         qpsOk: !errors.some((e) => e.startsWith('QPS')),
         licencesOk: !errors.some((e) => e.startsWith('QRS')),
         errors,

@@ -477,3 +477,17 @@ test('when licences have never been read, the result says slot counts are unknow
     const r2 = t.update(snap(15, [sess('a')], [rec('a', 14)]));
     assert.equal(r2.summary.licencesUnknown, false);
 });
+
+test('sessions on a newly discovered proxy, or first seen while licences are unreadable, are never taken for refused', () => {
+    const t = new Tracker(LIMIT, 15);
+    t.update(snap(0, [], []));
+    // A virtual proxy discovered later: its idle, already-open session appears for the first time.
+    t.update(snap(15, [sess('idle', 'test1', 'newvp')], [], { newTargets: ['node1/newvp'] }));
+    // A session first seen while the licence read fails.
+    t.update(snap(30, [sess('idle', 'test1', 'newvp'), sess('gap')], [], { licencesOk: false }));
+    const r = t.update(snap(120, [sess('idle', 'test1', 'newvp'), sess('gap')], []));
+    assert.deepEqual(
+        types(r).filter((x) => x === 'refused'),
+        []
+    );
+});

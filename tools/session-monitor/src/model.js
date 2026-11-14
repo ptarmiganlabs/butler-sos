@@ -153,11 +153,18 @@ export class Tracker {
                     firstSeen: now,
                     // Unknown sessions on a proxy that couldn't be read last time may have opened
                     // during the gap: take them as already open, like those seen at start.
+                    // Already open when first seen: at start, on a proxy that couldn't be read last
+                    // time, or on a proxy/virtual proxy read for the first time (newly discovered).
                     baseline:
                         this.first ||
-                        this.prevFailedTargets.has(`${s.proxyHost}/${s.virtualProxy}`),
+                        this.prevFailedTargets.has(`${s.proxyHost}/${s.virtualProxy}`) ||
+                        (snap.newTargets || []).includes(`${s.proxyHost}/${s.virtualProxy}`),
                     // First seen right after a sweep: its record may already have been removed.
-                    sweepExempt: !!this.lastSweepAt && now - this.lastSweepAt < sweepMarginMs,
+                    // Also when licences can't be read now: whether it got a licence can't be checked,
+                    // and by the time reads recover its record may have aged out of the read window.
+                    sweepExempt:
+                        (!!this.lastSweepAt && now - this.lastSweepAt < sweepMarginMs) ||
+                        !snap.licencesOk,
                     recorded: t?.recorded || false,
                     refused: false,
                     recordOnly: false,
