@@ -238,8 +238,8 @@
                     <div class="timeline"></div>
                     <div class="legend">
                         <span
-                            ><i class="lg-slot"></i>Slot held: from the session's last activity
-                            until 6 minutes later</span
+                            ><i class="lg-slot"></i>Slot held: from the session's latest licence
+                            check until 6 minutes later</span
                         >
                         <span><i class="lg-proxy"></i>Session open</span>
                         <span><i class="lg-ref"></i>Refused</span>
@@ -340,14 +340,20 @@
                 </li>
                 <li>
                     <strong
-                        >The slot stays taken for <span data-cfg="windowMinutes">6</span> minutes
-                        after the session was last active.</strong
+                        >A slot lasts <span data-cfg="windowMinutes">6</span> minutes, and is
+                        renewed while the session is in use.</strong
                     >
-                    Here, “active” means opening an app. Clicking around in the hub doesn't count.
+                    If the session is still working in an app when the
+                    <span data-cfg="windowMinutes">6</span> minutes run out (selections, sheets,
+                    opening an app), its next action renews the slot for another
+                    <span data-cfg="windowMinutes">6</span> minutes. A session in use all day keeps
+                    its slot all day.
                 </li>
                 <li>
-                    <strong>Then the slot is free again</strong>, even if the session is still open
-                    in a browser tab. The user can then start one more session.
+                    <strong>Otherwise the slot is free again</strong> when its
+                    <span data-cfg="windowMinutes">6</span> minutes are up: the session was closed,
+                    left idle, or only used in the hub. It doesn't matter if it is still open in a
+                    browser tab. The user can then start one more session.
                 </li>
                 <li>
                     <strong
@@ -448,9 +454,10 @@
                 </svg>
                 <figcaption id="dgSlotsCap">
                     One user starts a new session every minute. Coloured bar: the slot is taken.
-                    Grey line: the session is open. None of these sessions opens an app after it
-                    starts, so each slot is taken for exactly 6 minutes from the session's start.
+                    Grey line: the session is open. None of these sessions is used in an app after
+                    it starts, so each slot is taken for exactly 6 minutes from the session's start.
                     After that, all seven sessions are still open, but they no longer take a slot.
+                    Had session 1 been in use at 6:00, its slot would have been renewed instead.
                 </figcaption>
             </figure>
             <h3>What this means in practice</h3>
@@ -466,8 +473,8 @@
                     does.
                 </li>
                 <li>
-                    <strong>Sessions that are already in are never refused.</strong> An old session
-                    that opens an app again just takes its slot back, even if that makes six.
+                    <strong>Sessions that are already in are never refused.</strong> An idle session
+                    that is used again just takes its slot back, even if that makes six.
                 </li>
                 <li>
                     <strong>It counts across everything.</strong> Sessions on every virtual proxy
@@ -520,7 +527,7 @@
                 <li>
                     <strong>0 slots:</strong> users with open sessions that have been idle for more
                     than <span data-cfg="windowMinutes">6</span> minutes. They take no slot until
-                    they open an app again.
+                    they are used in an app again.
                 </li>
                 <li><strong>1 slot</strong> is normal: one session in use.</li>
                 <li>
@@ -598,8 +605,10 @@
                     <text class="d-center d-sub" x="560" y="117">0:25 left</text>
                 </svg>
                 <figcaption id="dgRingsCap">
-                    A slot's ring empties over 6 minutes after its session was last active. If the
-                    session opens an app again, its ring fills up again.
+                    A slot's ring empties over 6 minutes. If its session is still in use when the
+                    ring runs out, the session's next action fills the ring again. Working in the
+                    app before then doesn't change the ring: Sense renews a slot only once its 6
+                    minutes are up.
                 </figcaption>
             </figure>
             <ul class="facts">
@@ -610,7 +619,8 @@
                 </li>
                 <li>
                     <strong>Countdown, “until a slot is free again”:</strong> when the user's oldest
-                    slot frees, so they can start one more session than now.
+                    slot runs out. If that session is still in use then, its slot is renewed instead
+                    and the ring fills up again; otherwise the user can start one more session.
                 </li>
                 <li>
                     <strong>Countdown, “until a new session is allowed”</strong> (at the limit): how
@@ -780,21 +790,23 @@
                     <line class="d-mark" x1="400" x2="400" y1="24" y2="118" />
                     <text class="d-center d-strong" x="400" y="134">now</text>
                     <text class="d-sub" x="150" y="38">session opened</text>
-                    <text class="d-sub" x="296" y="74" text-anchor="end">last opened an app</text>
+                    <text class="d-sub" x="296" y="74" text-anchor="end">slot renewed</text>
                     <text class="d-sub" x="484" y="54">slot free at 16:02</text>
                     <text class="d-sub d-reftxt" x="344" y="112">refused</text>
                 </svg>
                 <figcaption id="dgTlCap">
-                    Top row: a session opened at about 15:51. It last opened an app at about 15:56,
-                    which took its slot again. The slot stays taken until 6 minutes after that, at
-                    16:02. Bottom row: a session that was refused.
+                    Top row: a session opened at about 15:51 and was still in use when its first 6
+                    minutes ran out, so its slot was renewed at about 15:56. It stays taken until
+                    16:02, and is renewed again then if the session is still in use. Bottom row: a
+                    session that was refused.
                 </figcaption>
             </figure>
             <ul class="facts">
                 <li><strong>Grey line:</strong> the session is open in the proxy.</li>
                 <li>
                     <strong>Solid bar:</strong> the session's slot is taken. It starts at the
-                    session's last activity.
+                    session's latest licence check: when it got in, or when its slot was last
+                    renewed.
                 </li>
                 <li>
                     <strong>Faded bar:</strong> the time still to go until the slot is free again.
@@ -906,8 +918,8 @@
                 <li>
                     <span class="fdot"></span
                     ><strong>Repository removed licence records:</strong> Sense's hourly clean-up.
-                    It also removes records of live sessions, which get a new one when they next
-                    open an app. Nothing changes for users.
+                    It also removes records of live sessions, which get a new one when they are next
+                    used in an app. Nothing changes for users.
                 </li>
             </ul>
             <p class="note">

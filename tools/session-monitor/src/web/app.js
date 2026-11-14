@@ -897,7 +897,7 @@
                 return [
                     'f-sweep',
                     ['Repository removed ', String(e.recordsRemoved), ' licence records'],
-                    'Hourly cleanup. Live sessions get a new record when they next open an app.',
+                    'Hourly cleanup. Live sessions get a new record when they are next used in an app.',
                 ];
             case 'alert': {
                 const nf = e.nextSlotFreeAt

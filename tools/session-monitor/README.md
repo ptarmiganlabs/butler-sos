@@ -120,8 +120,11 @@ The page calls each of those a **slot**.
 
 - **A session takes a slot when it gets in:** its first page load in a new browser, an incognito
   window, or a script without a saved cookie.
-- **The slot is taken until six minutes after the session was last active,** where "active" means
-  opening an app. Then it is free again, even if the session stays open.
+- **A slot lasts six minutes, and is renewed while the session is in use.** If the session is still
+  working in an app when the six minutes run out (selections, sheets, opening an app), its next
+  action renews the slot. A session in use all day keeps its slot all day.
+- **Otherwise the slot is free again after six minutes:** the session was closed, left idle, or only
+  used in the hub. That holds even if the session is still open in a browser tab.
 - **With all five slots taken, a new session is refused.** Sessions that are already in keep
   working.
 - **Closing sessions doesn't help.** Signing out, closing the browser or ending sessions in the QMC
