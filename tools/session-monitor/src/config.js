@@ -1,0 +1,131 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { load as loadYaml } from 'js-yaml';
+
+const DEFAULTS = {
+    sense: {
+        repositoryPort: 4242,
+        apiUser: { userDirectory: 'INTERNAL', userId: 'sa_api' },
+        virtualProxies: [],
+    },
+    poll: {
+        intervalSeconds: 15,
+        discoveryIntervalSeconds: 600,
+        licenceOverviewSeconds: 60,
+        requestTimeoutSeconds: 10,
+    },
+    limit: {
+        sessions: 5,
+        windowSeconds: 360,
+        warnAt: 4,
+        criticalAt: 5,
+        refusalGraceSeconds: 20,
+        excludeUsers: [
+            'INTERNAL\\sa_api',
+            'INTERNAL\\sa_proxy',
+            'INTERNAL\\sa_repository',
+            'INTERNAL\\sa_scheduler',
+            'INTERNAL\\sa_engine',
+        ],
+    },
+    outputs: {
+        console: { enable: true, table: false },
+        web: { enable: true, host: '127.0.0.1', port: 3939, timelineMinutes: 30, title: '' },
+        webhook: { enable: false },
+        mqtt: { enable: false, topicRoot: 'qliksense/sessionmonitor', publishUserState: true },
+    },
+};
+
+const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+/**
+ * Deep-merges `over` onto `base`. Arrays and scalars in `over` replace those in `base`.
+ *
+ * @param {object} base Defaults.
+ * @param {object} over Values from the config file.
+ * @returns {object} The merged object.
+ */
+function merge(base, over) {
+    const out = { ...base };
+    for (const [k, v] of Object.entries(over || {})) {
+        out[k] = isObject(v) && isObject(base[k]) ? merge(base[k], v) : v;
+    }
+    return out;
+}
+
+/**
+ * Checks the settings the monitor cannot run without. Throws one error listing every problem.
+ *
+ * @param {object} c Merged configuration.
+ */
+function validate(c, simulate) {
+    const errors = [];
+    const need = (cond, msg) => cond || errors.push(msg);
+    if (!simulate) {
+        need(
+            c.sense.repositoryHost,
+            'sense.host is missing: set it to the name of your central Sense server.'
+        );
+        const missing = ['certFile', 'keyFile', 'caFile'].filter(
+            (f) => !c.sense[f] || !fs.existsSync(c.sense[f])
+        );
+        need(
+            !missing.length,
+            `Certificate files not found: ${missing.map((f) => c.sense[f] || f).join(', ')}.\n    Export them from the QMC (Certificates > Export, "Platform independent PEM-format") and set sense.certDir to the folder holding client.pem, client_key.pem and root.pem.`
+        );
+    }
+    const l = c.limit;
+    need(
+        Number.isInteger(l.sessions) && l.sessions > 0,
+        'limit.sessions must be a positive integer'
+    );
+    need(l.windowSeconds > 0, 'limit.windowSeconds must be > 0');
+    need(l.warnAt <= l.criticalAt, 'limit.warnAt must not be above limit.criticalAt');
+    need(c.poll.intervalSeconds >= 5, 'poll.intervalSeconds must be at least 5');
+    need(
+        l.refusalGraceSeconds >= c.poll.intervalSeconds,
+        'limit.refusalGraceSeconds must be at least poll.intervalSeconds'
+    );
+    const o = c.outputs;
+    if (o.webhook.enable) need(o.webhook.url, 'outputs.webhook.url is required');
+    if (o.mqtt.enable) need(o.mqtt.url, 'outputs.mqtt.url is required');
+    if (errors.length) throw new Error(`Invalid configuration:\n  - ${errors.join('\n  - ')}`);
+}
+
+/**
+ * Reads, merges and validates the YAML configuration file.
+ *
+ * @param {string} file Path to the YAML file.
+ * @param {object} [opts] Options.
+ * @param {boolean} [opts.simulate] No Sense connection is needed (a simulated site).
+ * @returns {object} The configuration.
+ */
+export function loadConfig(file, { simulate = false } = {}) {
+    // A simulated site needs no configuration file: the defaults are enough.
+    if (!simulate && !fs.existsSync(file)) {
+        throw new Error(
+            `No configuration file found at ${file}.\n` +
+                '    Copy config.example.yaml to config.yaml and set sense.host and sense.certDir, then start again.\n' +
+                '    To try the page without a Sense server: npm run demo'
+        );
+    }
+    // The demo without a config file keeps the terminal quiet: the page is what it's for.
+    const raw =
+        simulate && !fs.existsSync(file)
+            ? { outputs: { console: { enable: false } } }
+            : loadYaml(fs.readFileSync(file, 'utf8')) || {};
+    const c = merge(DEFAULTS, raw);
+    // Friendlier names: sense.host for the server, sense.certDir for the folder the QMC export made.
+    c.sense.repositoryHost ??= c.sense.host;
+    if (c.sense.certDir) {
+        c.sense.certFile ??= path.join(c.sense.certDir, 'client.pem');
+        c.sense.keyFile ??= path.join(c.sense.certDir, 'client_key.pem');
+        c.sense.caFile ??= path.join(c.sense.certDir, 'root.pem');
+    }
+    c.limit.excludeUsers = (c.limit.excludeUsers || []).map((u) => String(u).toLowerCase());
+    c.sense.virtualProxies = (c.sense.virtualProxies || []).map((p) =>
+        String(p).replace(/^\/+|\/+$/g, '')
+    );
+    validate(c, simulate);
+    return c;
+}

@@ -1,0 +1,945 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Sense sessions</title>
+        <link rel="stylesheet" href="style.css" />
+        <link
+            rel="icon"
+            href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%233b82f6'/%3E%3Ccircle cx='16' cy='16' r='6' fill='white'/%3E%3C/svg%3E"
+        />
+    </head>
+    <body>
+        <header class="top">
+            <div class="brand">
+                <span class="live" id="live" aria-live="polite"
+                    ><span class="dot"></span><span id="liveText">Connecting…</span></span
+                >
+                <h1>Qlik Sense sessions</h1>
+                <button
+                    type="button"
+                    class="help tip-right"
+                    data-help="about"
+                    data-tip="A close to real-time view of who is connected and how licence slots are used right now. It keeps no history: for monitoring over time, use Butler SOS."
+                    aria-label="About this view"
+                >
+                    ?
+                </button>
+                <span class="site" id="site"></span>
+            </div>
+            <div class="controls">
+                <span class="updated" id="updated"></span>
+                <div class="seg" role="group" aria-label="Layout">
+                    <button type="button" data-mode="desk" aria-pressed="true">Desk</button>
+                    <button type="button" data-mode="wall" aria-pressed="false">Wall</button>
+                </div>
+                <button
+                    type="button"
+                    class="icon"
+                    id="theme"
+                    aria-label="Switch light or dark theme"
+                    title="Theme"
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <section class="kpis" id="kpis" aria-label="Overview"></section>
+
+            <div class="layout">
+                <section class="panel users" aria-labelledby="usersTitle">
+                    <div class="panel-head">
+                        <h2 id="usersTitle">Users</h2>
+                        <button
+                            type="button"
+                            class="help tip-right"
+                            data-help="slots"
+                            data-tip="Each user can be active in at most 5 different sessions within any 6 minutes. Each of those is a licence slot. Click for how it works."
+                            aria-label="Help: the five-session limit and licence slots"
+                        >
+                            ?
+                        </button>
+                        <p class="hint" id="usersHint"></p>
+                        <div class="tools">
+                            <input
+                                type="search"
+                                id="search"
+                                placeholder="Find user"
+                                aria-label="Find user"
+                            />
+                            <label class="sort"
+                                >Sort
+                                <select id="sort" aria-label="Sort users">
+                                    <option value="slots">by slots in use</option>
+                                    <option value="sessions">by open sessions</option>
+                                    <option value="refused">by refusals</option>
+                                    <option value="name">by name</option>
+                                </select></label
+                            >
+                            <label class="toggle"
+                                ><input type="checkbox" id="showUnlicensed" /> Accounts without a
+                                licence <span id="unlicensedCount"></span
+                            ></label>
+                            <button
+                                type="button"
+                                class="help tip-left"
+                                data-help="unlicensed"
+                                data-tip="Accounts that have proxy sessions but no licence allocation, such as service accounts. Hidden by default."
+                                aria-label="Help: accounts without a licence"
+                            >
+                                ?
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dist-wrap">
+                        <div class="dist-head">
+                            <span class="dist-title" id="distTitle">Users by slots in use</span>
+                            <button
+                                type="button"
+                                class="help"
+                                data-help="distribution"
+                                data-tip="How many users hold 0, 1, 2 … 5 slots right now. Click a bar to list those users."
+                                aria-label="Help: users by slots in use"
+                            >
+                                ?
+                            </button>
+                        </div>
+                        <div class="dist" id="dist" role="group" aria-labelledby="distTitle"></div>
+                    </div>
+                    <div class="chips" id="chips" role="group" aria-label="Show users"></div>
+                    <div class="col-help" aria-hidden="false">
+                        <span></span><span></span>
+                        <span class="ch"
+                            >Slots in use<button
+                                type="button"
+                                class="help"
+                                data-help="rings"
+                                data-tip="One ring per slot. A ring empties over 6 minutes. When it is empty, the slot is free again."
+                                aria-label="Help: the slot rings"
+                            >
+                                ?
+                            </button></span
+                        >
+                        <span class="ch"
+                            >Countdown<button
+                                type="button"
+                                class="help"
+                                data-help="rings"
+                                data-tip="Time until this user gets a slot back, or, at the limit, until a new session would get in."
+                                aria-label="Help: the countdown"
+                            >
+                                ?
+                            </button></span
+                        >
+                        <span class="ch"
+                            >Open sessions<button
+                                type="button"
+                                class="help"
+                                data-help="proxy"
+                                data-tip="Open proxy sessions per virtual proxy. Refused sessions are counted too, so this can be higher than the slots."
+                                aria-label="Help: open sessions"
+                            >
+                                ?
+                            </button></span
+                        >
+                    </div>
+                    <div id="userList" class="user-list"></div>
+                    <p class="empty" id="usersEmpty" hidden>No users match.</p>
+                    <div class="pager" id="pager" hidden>
+                        <span id="pagerText"></span>
+                        <button type="button" id="more">Show more</button>
+                    </div>
+                    <div class="calm" id="calm" hidden>
+                        <svg viewBox="0 0 48 48" aria-hidden="true">
+                            <circle cx="24" cy="24" r="22" />
+                            <path d="M14 25l7 7 13-15" />
+                        </svg>
+                        <div>
+                            <div class="calm-title" id="calmTitle"></div>
+                            <div class="calm-sub" id="calmSub"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <aside class="side">
+                    <section class="panel" aria-labelledby="entryTitle">
+                        <div class="panel-head">
+                            <h2 id="entryTitle">Entry points</h2>
+                            <button
+                                type="button"
+                                class="help tip-left"
+                                data-help="entry"
+                                data-tip="Where sessions come in: per virtual proxy (the part of the address after the server name) and per proxy server."
+                                aria-label="Help: entry points"
+                            >
+                                ?
+                            </button>
+                        </div>
+                        <div id="entry"></div>
+                    </section>
+                    <section class="panel feed-panel" aria-labelledby="feedTitle">
+                        <div class="panel-head">
+                            <h2 id="feedTitle">Live feed</h2>
+                            <label class="toggle feed-toggle"
+                                ><input type="checkbox" id="showActivity" /> Sign-ins</label
+                            >
+                            <button
+                                type="button"
+                                class="help tip-left"
+                                data-help="feed"
+                                data-tip="Sign-ins, refusals, alerts and clean-ups as they happen, newest first."
+                                aria-label="Help: live feed"
+                            >
+                                ?
+                            </button>
+                        </div>
+                        <ol id="feed" class="feed"></ol>
+                        <p class="empty" id="feedEmpty">
+                            Sign-ins, refusals and alerts appear here as they happen.
+                        </p>
+                    </section>
+                </aside>
+            </div>
+        </main>
+
+        <footer class="foot">
+            <span
+                ><span id="rule"></span> For monitoring over time, with history and alerts, use
+                <a href="https://butler-sos.ptarmiganlabs.com" target="_blank" rel="noopener"
+                    >Butler SOS</a
+                >.</span
+            >
+            <span id="errors" class="errors"></span>
+        </footer>
+
+        <template id="tplUser">
+            <article class="user">
+                <button type="button" class="user-row" aria-expanded="false">
+                    <span class="avatar" aria-hidden="true"></span>
+                    <span class="who"
+                        ><span class="name"></span><span class="dir"></span><span class="lic"></span
+                    ></span>
+                    <span class="pips" role="img"></span>
+                    <span class="next"
+                        ><span class="next-val"></span><span class="next-lbl"></span
+                    ></span>
+                    <span class="vps"></span>
+                    <span class="refused"></span>
+                    <svg class="chev" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M9 6l6 6-6 6" />
+                    </svg>
+                </button>
+                <div class="detail" hidden>
+                    <div class="timeline"></div>
+                    <div class="legend">
+                        <span
+                            ><i class="lg-slot"></i>Slot held: from the session's last activity
+                            until 6 minutes later</span
+                        >
+                        <span><i class="lg-proxy"></i>Session open</span>
+                        <span><i class="lg-ref"></i>Refused</span>
+                        <span><i class="lg-now"></i>Now</span>
+                        <button
+                            type="button"
+                            class="help tip-left"
+                            data-help="timeline"
+                            data-tip="How to read this timeline."
+                            aria-label="Help: the session timeline"
+                        >
+                            ?
+                        </button>
+                    </div>
+                </div>
+            </article>
+        </template>
+
+        <dialog id="helpDialog" class="help-dialog" aria-labelledby="helpTitle">
+            <div class="hd-head">
+                <span class="hd-icon" aria-hidden="true">?</span>
+                <h2 id="helpTitle"></h2>
+                <button type="button" class="hd-close" aria-label="Close">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M6 6l12 12M18 6L6 18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="hd-body" id="helpBody"></div>
+            <div class="hd-foot">
+                <span class="hd-more" id="helpMore"></span>
+                <button type="button" class="hd-ok">Got it</button>
+            </div>
+        </dialog>
+
+        <!-- ================= Help topics ================= -->
+
+        <template id="help-about" data-title="What you're looking at">
+            <p class="lead">
+                A <strong>close to real-time view</strong> of the Qlik Sense site: who is connected
+                right now, how many of their <span data-cfg="slotsLimit">5</span> licence slots each
+                user has taken, and how the site's licences are used. It shows
+                <strong>how things stand now</strong>, not history.
+            </p>
+            <ul class="facts">
+                <li>
+                    <strong>New data every <span data-cfg="pollSeconds">15</span> seconds.</strong>
+                    The monitor reads the Qlik proxy and repository at that interval and pushes the
+                    result to this page. The green <em>Live</em> badge and “updated … ago” in the
+                    top right show that data is arriving.
+                </li>
+                <li>
+                    <strong>Countdowns and slot rings move every second</strong> between updates,
+                    because a slot frees at a known time.
+                </li>
+                <li>
+                    <strong>Short memory, held only while the monitor runs:</strong> each user's
+                    sessions of the last <span data-cfg="timelineMinutes">30</span> minutes (the
+                    timeline), the last 200 events (the live feed), and refusals counted since the
+                    monitor started. Restarting the monitor clears all of it.
+                </li>
+                <li>
+                    <strong>For real monitoring, with history and alerting, use Butler SOS.</strong>
+                    This page answers <em>“what is happening right now?”</em>.
+                    <a href="https://butler-sos.ptarmiganlabs.com" target="_blank" rel="noopener"
+                        >Butler SOS</a
+                    >, the open-source monitoring tool for Qlik Sense Enterprise on Windows, answers
+                    the rest. It collects sessions, users, server health, apps, errors and warnings
+                    from Sense around the clock. It sends them to InfluxDB, Prometheus, New Relic or
+                    MQTT, for Grafana dashboards and alerts that cover days, months and years. This
+                    live view is planned to become part of Butler SOS.
+                </li>
+                <li>
+                    <strong>It only reads.</strong> Nothing on the Sense server changes because this
+                    page is open.
+                </li>
+            </ul>
+            <p class="note">
+                Two layouts: <em>Desk</em> for detail (filter, search, click a user for their
+                timeline), and <em>Wall</em> for a second screen. Wall shows only the users who need
+                attention, so it stays readable on a site with thousands of users. Every
+                <strong>?</strong> on the page explains the part next to it.
+            </p>
+        </template>
+
+        <template id="help-slots" data-title="The five-session limit, and what a “slot” is">
+            <p class="lead">
+                Qlik Sense lets each user be
+                <strong
+                    >active in at most <span data-cfg="slotsLimit">5</span> different sessions
+                    within any <span data-cfg="windowMinutes">6</span> minutes</strong
+                >. This page calls each of those a <strong>licence slot</strong>.
+            </p>
+            <ul class="facts">
+                <li>
+                    <strong>A session takes a slot when it gets in.</strong> That's its first page
+                    load, in a new browser, an incognito window or a script without a saved cookie.
+                </li>
+                <li>
+                    <strong
+                        >The slot stays taken for <span data-cfg="windowMinutes">6</span> minutes
+                        after the session was last active.</strong
+                    >
+                    Here, “active” means opening an app. Clicking around in the hub doesn't count.
+                </li>
+                <li>
+                    <strong>Then the slot is free again</strong>, even if the session is still open
+                    in a browser tab. The user can then start one more session.
+                </li>
+                <li>
+                    <strong
+                        >When all <span data-cfg="slotsLimit">5</span> slots are taken, a new
+                        session is refused</strong
+                    >
+                    with
+                    <em
+                        >“You cannot access Qlik Sense because you have too many sessions active in
+                        parallel.”</em
+                    >
+                </li>
+            </ul>
+            <figure>
+                <svg class="diagram" viewBox="0 0 640 296" role="img" aria-labelledby="dgSlotsCap">
+                    <g class="d-grid">
+                        <line x1="70" x2="70" y1="26" y2="232" />
+                        <line x1="110" x2="110" y1="26" y2="232" />
+                        <line x1="150" x2="150" y1="26" y2="232" />
+                        <line x1="190" x2="190" y1="26" y2="232" />
+                        <line x1="230" x2="230" y1="26" y2="232" />
+                        <line x1="270" x2="270" y1="26" y2="232" />
+                        <line x1="310" x2="310" y1="26" y2="232" />
+                        <line x1="350" x2="350" y1="26" y2="232" />
+                        <line x1="390" x2="390" y1="26" y2="232" />
+                        <line x1="430" x2="430" y1="26" y2="232" />
+                        <line x1="470" x2="470" y1="26" y2="232" />
+                        <line x1="510" x2="510" y1="26" y2="232" />
+                        <line x1="550" x2="550" y1="26" y2="232" />
+                        <line x1="590" x2="590" y1="26" y2="232" />
+                    </g>
+                    <line class="d-mark" x1="310" x2="310" y1="22" y2="232" />
+                    <text class="d-strong" x="316" y="16">
+                        6:00 — session 1's slot is free again
+                    </text>
+                    <!-- five sessions, one a minute; each slot lasts six minutes -->
+                    <text class="d-label" x="0" y="44">Session 1</text>
+                    <line class="d-proxy" x1="70" x2="590" y1="40" y2="40" />
+                    <rect class="d-slot" x="70" y="34" width="240" height="12" rx="6" />
+                    <text class="d-label" x="0" y="68">Session 2</text>
+                    <line class="d-proxy" x1="110" x2="590" y1="64" y2="64" />
+                    <rect class="d-slot" x="110" y="58" width="240" height="12" rx="6" />
+                    <text class="d-label" x="0" y="92">Session 3</text>
+                    <line class="d-proxy" x1="150" x2="590" y1="88" y2="88" />
+                    <rect class="d-slot" x="150" y="82" width="240" height="12" rx="6" />
+                    <text class="d-label" x="0" y="116">Session 4</text>
+                    <line class="d-proxy" x1="190" x2="590" y1="112" y2="112" />
+                    <rect class="d-slot" x="190" y="106" width="240" height="12" rx="6" />
+                    <text class="d-label" x="0" y="140">Session 5</text>
+                    <line class="d-proxy" x1="230" x2="590" y1="136" y2="136" />
+                    <rect class="d-slot" x="230" y="130" width="240" height="12" rx="6" />
+                    <!-- sixth: refused -->
+                    <text class="d-label" x="0" y="172">Session 6</text>
+                    <path class="d-ref" d="M264 162l12 12M276 162l-12 12" />
+                    <text class="d-ref-text" x="284" y="172">5:00 refused: all 5 slots taken</text>
+                    <!-- seventh: allowed after a slot is free again -->
+                    <text class="d-label" x="0" y="204">Session 7</text>
+                    <line class="d-proxy" x1="330" x2="590" y1="200" y2="200" />
+                    <rect class="d-slot d-new" x="330" y="194" width="240" height="12" rx="6" />
+                    <text class="d-bar-text" x="338" y="203.5">
+                        6:30 allowed — a slot was free again
+                    </text>
+                    <!-- axis -->
+                    <g class="d-axis">
+                        <text x="70" y="248">0</text>
+                        <text x="110" y="248">1</text>
+                        <text x="150" y="248">2</text>
+                        <text x="190" y="248">3</text>
+                        <text x="230" y="248">4</text>
+                        <text x="270" y="248">5</text>
+                        <text x="310" y="248">6</text>
+                        <text x="350" y="248">7</text>
+                        <text x="390" y="248">8</text>
+                        <text x="430" y="248">9</text>
+                        <text x="470" y="248">10</text>
+                        <text x="510" y="248">11</text>
+                        <text x="550" y="248">12</text>
+                        <text x="590" y="248">13 min</text>
+                    </g>
+                    <!-- slots in use at each minute -->
+                    <text class="d-label" x="0" y="280">In use</text>
+                    <g class="d-count">
+                        <text x="70" y="280">1</text>
+                        <text x="110" y="280">2</text>
+                        <text x="150" y="280">3</text>
+                        <text x="190" y="280">4</text>
+                        <text class="full" x="230" y="280">5</text>
+                        <text class="full" x="270" y="280">5</text>
+                        <text x="310" y="280">4</text>
+                        <text x="350" y="280">4</text>
+                        <text x="390" y="280">3</text>
+                        <text x="430" y="280">2</text>
+                        <text x="470" y="280">1</text>
+                        <text x="510" y="280">1</text>
+                        <text x="550" y="280">1</text>
+                        <text x="590" y="280">0</text>
+                    </g>
+                </svg>
+                <figcaption id="dgSlotsCap">
+                    One user starts a new session every minute. Coloured bar: the slot is taken.
+                    Grey line: the session is open. None of these sessions opens an app after it
+                    starts, so each slot is taken for exactly 6 minutes from the session's start.
+                    After that, all seven sessions are still open, but they no longer take a slot.
+                </figcaption>
+            </figure>
+            <h3>What this means in practice</h3>
+            <ul class="facts">
+                <li>
+                    <strong>One session, used all day, takes one slot.</strong> Problems start when
+                    someone keeps starting <em>new</em> sessions: new browser profiles, incognito
+                    windows, or scripts that don't keep their session cookie.
+                </li>
+                <li>
+                    <strong>Closing sessions doesn't help.</strong> Signing out, closing the browser
+                    or ending the session from the QMC or API frees no slot sooner. Only waiting
+                    does.
+                </li>
+                <li>
+                    <strong>Sessions that are already in are never refused.</strong> An old session
+                    that opens an app again just takes its slot back, even if that makes six.
+                </li>
+                <li>
+                    <strong>It counts across everything.</strong> Sessions on every virtual proxy
+                    and server count towards the same <span data-cfg="slotsLimit">5</span>.
+                </li>
+            </ul>
+            <p class="note">
+                Measured on Qlik Sense May 2026 (2026-11-14). Qlik's help says five minutes, but six
+                (360–370 s) is what both the lab and Qlik Support measured. How this page knows:
+                Sense keeps a licence usage record for each session, with the time of its last
+                activity. The page counts each user's records that are younger than 6 minutes.
+            </p>
+        </template>
+
+        <template id="help-distribution" data-title="Users by slots in use">
+            <p class="lead">
+                How many users hold 0, 1, 2 … <span data-cfg="slotsLimit">5</span> slots right now.
+                On a large site this is the quickest way to see whether the limit is a problem, and
+                for how many people.
+            </p>
+            <figure>
+                <svg class="diagram" viewBox="0 0 640 150" role="img" aria-labelledby="dgDistCap">
+                    <rect class="d-hbar d-h0" x="40" y="70" width="70" height="50" rx="6" />
+                    <rect class="d-hbar" x="140" y="20" width="70" height="100" rx="6" />
+                    <rect class="d-hbar" x="240" y="94" width="70" height="26" rx="6" />
+                    <rect class="d-hbar" x="340" y="110" width="70" height="10" rx="4" />
+                    <rect class="d-hbar d-hwarn" x="440" y="110" width="70" height="10" rx="4" />
+                    <rect class="d-hbar d-hcrit" x="540" y="112" width="70" height="8" rx="4" />
+                    <g class="d-axis">
+                        <text x="75" y="138">0 slots</text>
+                        <text x="175" y="138">1</text>
+                        <text x="275" y="138">2</text>
+                        <text x="375" y="138">3</text>
+                        <text x="475" y="138">4</text>
+                        <text x="575" y="138">5</text>
+                    </g>
+                    <text class="d-center" x="75" y="62">98</text>
+                    <text class="d-center" x="175" y="12">143</text>
+                    <text class="d-center" x="275" y="86">26</text>
+                    <text class="d-center" x="375" y="102">10</text>
+                    <text class="d-center" x="475" y="102">10</text>
+                    <text class="d-center d-reftxt" x="575" y="104">9</text>
+                </svg>
+                <figcaption id="dgDistCap">
+                    A typical picture: most users hold one slot, so one session. The amber and red
+                    bars on the right are the users to look at.
+                </figcaption>
+            </figure>
+            <ul class="facts">
+                <li>
+                    <strong>0 slots:</strong> users with open sessions that have been idle for more
+                    than <span data-cfg="windowMinutes">6</span> minutes. They take no slot until
+                    they open an app again.
+                </li>
+                <li><strong>1 slot</strong> is normal: one session in use.</li>
+                <li>
+                    <strong
+                        >Amber (<span data-cfg="warnAt">4</span>) and red (<span
+                            data-cfg="slotsLimit"
+                            >5</span
+                        >):</strong
+                    >
+                    one slot left, and at the limit.
+                </li>
+                <li>
+                    <strong>Click a bar</strong> to list just those users. Click it again, or
+                    <em>All</em>, to go back.
+                </li>
+            </ul>
+        </template>
+
+        <template id="help-rings" data-title="Slot rings and countdowns">
+            <p class="lead">
+                Each user has <span data-cfg="slotsLimit">5</span> rings, one per licence slot. A
+                full ring means a session was active just now. It drains over
+                <span data-cfg="windowMinutes">6</span> minutes, and when it's empty the slot is
+                free again.
+            </p>
+            <figure>
+                <svg class="diagram" viewBox="0 0 640 130" role="img" aria-labelledby="dgRingsCap">
+                    <circle class="d-ring-bg" cx="80" cy="46" r="26" />
+                    <circle
+                        class="d-ring"
+                        cx="80"
+                        cy="46"
+                        r="26"
+                        stroke-dasharray="163.4 163.4"
+                        stroke-dashoffset="0"
+                        transform="rotate(-90 80 46)"
+                    />
+                    <circle class="d-ring-bg" cx="240" cy="46" r="26" />
+                    <circle
+                        class="d-ring"
+                        cx="240"
+                        cy="46"
+                        r="26"
+                        stroke-dasharray="163.4 163.4"
+                        stroke-dashoffset="54.5"
+                        transform="rotate(-90 240 46)"
+                    />
+                    <circle class="d-ring-bg" cx="400" cy="46" r="26" />
+                    <circle
+                        class="d-ring"
+                        cx="400"
+                        cy="46"
+                        r="26"
+                        stroke-dasharray="163.4 163.4"
+                        stroke-dashoffset="108.9"
+                        transform="rotate(-90 400 46)"
+                    />
+                    <circle class="d-ring-bg" cx="560" cy="46" r="26" />
+                    <circle
+                        class="d-ring"
+                        cx="560"
+                        cy="46"
+                        r="26"
+                        stroke-dasharray="163.4 163.4"
+                        stroke-dashoffset="152.5"
+                        transform="rotate(-90 560 46)"
+                    />
+                    <text class="d-center" x="80" y="100">Active just now</text>
+                    <text class="d-center d-sub" x="80" y="117">6:00 left</text>
+                    <text class="d-center" x="240" y="100">Taken</text>
+                    <text class="d-center d-sub" x="240" y="117">4:00 left</text>
+                    <text class="d-center" x="400" y="100">Taken</text>
+                    <text class="d-center d-sub" x="400" y="117">2:00 left</text>
+                    <text class="d-center" x="560" y="100">Nearly free</text>
+                    <text class="d-center d-sub" x="560" y="117">0:25 left</text>
+                </svg>
+                <figcaption id="dgRingsCap">
+                    A slot's ring empties over 6 minutes after its session was last active. If the
+                    session opens an app again, its ring fills up again.
+                </figcaption>
+            </figure>
+            <ul class="facts">
+                <li>
+                    <strong>Colour shows how close the user is to the limit:</strong> blue is fine,
+                    amber means one slot left, and red means all slots are taken, so a new session
+                    would be refused.
+                </li>
+                <li>
+                    <strong>Countdown, “until a slot is free again”:</strong> when the user's oldest
+                    slot frees, so they can start one more session than now.
+                </li>
+                <li>
+                    <strong>Countdown, “until a new session is allowed”</strong> (at the limit): how
+                    long until a new session would get in. Until then, every new session is refused.
+                </li>
+                <li>
+                    <strong>The rings move every second, between data updates.</strong> The times
+                    come from Sense's own clock.
+                </li>
+            </ul>
+        </template>
+
+        <template id="help-proxy" data-title="Open sessions are not the same as slots">
+            <p class="lead">
+                The Qlik proxy lists every session it has open. The
+                <span data-cfg="slotsLimit">5</span>-session limit counts something else: the
+                sessions that got in and were active in the last
+                <span data-cfg="windowMinutes">6</span> minutes. The two numbers often differ.
+            </p>
+            <figure>
+                <svg class="diagram" viewBox="0 0 640 212" role="img" aria-labelledby="dgProxyCap">
+                    <text class="d-strong" x="20" y="18">
+                        What the proxy lists: 7 open sessions
+                    </text>
+                    <rect class="d-slot-box" x="20" y="30" width="74" height="40" rx="8" />
+                    <text class="d-center" x="57" y="55">S1</text>
+                    <rect class="d-slot-box" x="106" y="30" width="74" height="40" rx="8" />
+                    <text class="d-center" x="143" y="55">S2</text>
+                    <rect class="d-slot-box" x="192" y="30" width="74" height="40" rx="8" />
+                    <text class="d-center" x="229" y="55">S3</text>
+                    <rect class="d-slot-box" x="278" y="30" width="74" height="40" rx="8" />
+                    <text class="d-center" x="315" y="55">S4</text>
+                    <rect class="d-slot-box" x="364" y="30" width="74" height="40" rx="8" />
+                    <text class="d-center" x="401" y="55">S5</text>
+                    <rect class="d-ref-box" x="450" y="30" width="74" height="40" rx="8" />
+                    <text class="d-center d-reftxt" x="487" y="55">S6 ✕</text>
+                    <rect class="d-ref-box" x="536" y="30" width="74" height="40" rx="8" />
+                    <text class="d-center d-reftxt" x="573" y="55">S7 ✕</text>
+                    <text class="d-center d-sub" x="229" y="88">got in: each took a slot</text>
+                    <text class="d-center d-sub" x="530" y="88">refused, but still listed</text>
+                    <path class="d-arrow" d="M229 98v34" />
+                    <path class="d-arrow-head" d="M223 126l6 8 6-8" />
+                    <text class="d-strong" x="20" y="160">
+                        What the limit counts: 5 of 5 slots taken
+                    </text>
+                    <circle class="d-pip" cx="34" cy="186" r="12" />
+                    <circle class="d-pip" cx="66" cy="186" r="12" />
+                    <circle class="d-pip" cx="98" cy="186" r="12" />
+                    <circle class="d-pip" cx="130" cy="186" r="12" />
+                    <circle class="d-pip" cx="162" cy="186" r="12" />
+                    <text class="d-label" x="190" y="191">
+                        → the next new session is refused too
+                    </text>
+                </svg>
+                <figcaption id="dgProxyCap">
+                    A refused session still exists in the proxy until it times out. It just never
+                    gets a slot. So 7 open sessions can mean 5 slots taken.
+                </figcaption>
+            </figure>
+            <ul class="facts">
+                <li>
+                    <strong>More open sessions than slots:</strong> refused sessions, and sessions
+                    that have been idle for more than 6 minutes, are open but take no slot.
+                </li>
+                <li>
+                    <strong>More slots than open sessions:</strong> a session that was closed less
+                    than 6 minutes ago no longer shows in the proxy, but its slot is still taken.
+                </li>
+                <li>
+                    <strong>Proxy sessions</strong> (the tile at the top) counts every open session
+                    on every virtual proxy, service accounts included.
+                </li>
+            </ul>
+        </template>
+
+        <template id="help-refused" data-title="Refused sessions">
+            <p class="lead">
+                A <strong>refused session</strong> is a new session that Qlik Sense turned away,
+                because the user already had all <span data-cfg="slotsLimit">5</span> slots taken.
+            </p>
+            <ul class="facts">
+                <li>
+                    <strong>What the user sees:</strong>
+                    <em
+                        >“An error occurred. You cannot access Qlik Sense because you have too many
+                        sessions active in parallel.”</em
+                    >
+                    A page can sit half-loaded for a while first.
+                </li>
+                <li>
+                    <strong>How this page knows:</strong> the proxy shows a new session for a
+                    licensed user, but no licence record appears for it within
+                    <span data-cfg="graceSeconds">20</span> seconds. Checked against Sense's own
+                    licence log: every case found that way was a real refusal.
+                </li>
+                <li>
+                    <strong>What it can miss:</strong> a refused session that is closed again within
+                    one data update (<span data-cfg="pollSeconds">15</span> s). Browsers keep theirs
+                    open, so in practice this means scripts.
+                </li>
+                <li>
+                    <strong>The count</strong> starts when the monitor starts. The time is shown
+                    below the number.
+                </li>
+                <li>
+                    <strong>What to do:</strong> wait until the user's countdown reaches zero, then
+                    try again. Ending sessions doesn't help.
+                </li>
+            </ul>
+        </template>
+
+        <template id="help-levels" data-title="At the limit, one slot left, connected users">
+            <ul class="facts">
+                <li>
+                    <strong>At the limit</strong> (red): users with all
+                    <span data-cfg="slotsLimit">5</span> slots taken. Any new session of theirs is
+                    refused until a slot is free again. Sessions they already have keep working.
+                </li>
+                <li>
+                    <strong>One slot left</strong> (amber): users with
+                    <span data-cfg="warnAt">4</span> slots taken. One more new session gets in, and
+                    the one after that doesn't.
+                </li>
+                <li>
+                    <strong>Connected users:</strong> licensed users with at least one open proxy
+                    session. Below the number is how many slots they hold in total.
+                </li>
+                <li>
+                    <strong>These numbers update every second</strong> as slots free up, not only
+                    when new data arrives.
+                </li>
+            </ul>
+            <p class="note">
+                Alerts (console, webhook, MQTT) use the same levels: they're raised at
+                <span data-cfg="warnAt">4</span> and <span data-cfg="slotsLimit">5</span>, and
+                cleared when the count drops again.
+            </p>
+        </template>
+
+        <template id="help-timeline" data-title="Reading a user's timeline">
+            <p class="lead">
+                Each row is one of the user's sessions, newest at the top, labelled with its virtual
+                proxy and the first characters of its session id. Time runs left to right, and the
+                dashed line is now.
+            </p>
+            <figure>
+                <svg class="diagram" viewBox="0 0 640 150" role="img" aria-labelledby="dgTlCap">
+                    <g class="d-grid">
+                        <line x1="120" x2="120" y1="20" y2="118" />
+                        <line x1="270" x2="270" y1="20" y2="118" />
+                        <line x1="420" x2="420" y1="20" y2="118" />
+                        <line x1="570" x2="570" y1="20" y2="118" />
+                    </g>
+                    <g class="d-axis">
+                        <text x="120" y="14">15:50</text>
+                        <text x="270" y="14">15:55</text>
+                        <text x="420" y="14">16:00</text>
+                        <text x="570" y="14">16:05</text>
+                    </g>
+                    <text class="d-label" x="0" y="54">/sales · 7240</text>
+                    <line class="d-proxy" x1="150" x2="400" y1="50" y2="50" />
+                    <rect class="d-slot" x="300" y="44" width="100" height="12" rx="6" />
+                    <rect class="d-slot d-future" x="400" y="44" width="80" height="12" rx="6" />
+                    <text class="d-label" x="0" y="96">/sales · b634</text>
+                    <line class="d-proxy" x1="330" x2="400" y1="92" y2="92" />
+                    <path class="d-ref" d="M324 86l12 12M336 86l-12 12" />
+                    <line class="d-mark" x1="400" x2="400" y1="24" y2="118" />
+                    <text class="d-center d-strong" x="400" y="134">now</text>
+                    <text class="d-sub" x="150" y="38">session opened</text>
+                    <text class="d-sub" x="296" y="74" text-anchor="end">last opened an app</text>
+                    <text class="d-sub" x="484" y="54">slot free at 16:02</text>
+                    <text class="d-sub d-reftxt" x="344" y="112">refused</text>
+                </svg>
+                <figcaption id="dgTlCap">
+                    Top row: a session opened at about 15:51. It last opened an app at about 15:56,
+                    which took its slot again. The slot stays taken until 6 minutes after that, at
+                    16:02. Bottom row: a session that was refused.
+                </figcaption>
+            </figure>
+            <ul class="facts">
+                <li><strong>Grey line:</strong> the session is open in the proxy.</li>
+                <li>
+                    <strong>Solid bar:</strong> the session's slot is taken. It starts at the
+                    session's last activity.
+                </li>
+                <li>
+                    <strong>Faded bar:</strong> the time still to go until the slot is free again.
+                </li>
+                <li><strong>Red cross:</strong> a refused session.</li>
+                <li><strong>Hover over a row</strong> for exact times and the full session id.</li>
+            </ul>
+        </template>
+
+        <template id="help-licences" data-title="Licences on the site">
+            <p class="lead">
+                The same figures as the QMC's licence usage summary, read every
+                <span data-cfg="licenceSeconds">60</span> seconds.
+            </p>
+            <figure>
+                <svg class="diagram" viewBox="0 0 640 96" role="img" aria-labelledby="dgLicCap">
+                    <rect class="d-bar-bg" x="10" y="20" width="620" height="16" rx="8" />
+                    <rect class="d-bar-alloc" x="10" y="20" width="149" height="16" rx="8" />
+                    <rect class="d-bar-used" x="10" y="20" width="33" height="16" rx="8" />
+                    <text class="d-sub" x="10" y="58">in use: 4</text>
+                    <text class="d-sub" x="120" y="58">allocated: 18</text>
+                    <text class="d-sub" x="560" y="58">total: 75</text>
+                    <text class="d-label" x="10" y="84">
+                        Professional: 18 of 75 allocated, 4 of them in use right now
+                    </text>
+                </svg>
+                <figcaption id="dgLicCap">
+                    Light part: allocated. Dark part: in use now. Grey: still free to allocate.
+                </figcaption>
+            </figure>
+            <ul class="facts">
+                <li>
+                    <strong>Total:</strong> how many your licence holds (the licence key decides
+                    this).
+                </li>
+                <li>
+                    <strong>Allocated:</strong> assigned to a named user, by hand or by a licence
+                    rule. A user keeps the allocation between sessions.
+                </li>
+                <li>
+                    <strong>In use:</strong> allocated users who are using Sense right now. This is
+                    not the 5-session slots.
+                </li>
+                <li>
+                    <strong>Quarantined:</strong> taken away from a user who had used it in the last
+                    7 days. It can't be given to anyone else for 7 days.
+                </li>
+                <li>
+                    <strong>Analyzer time:</strong> minutes used out of the minutes the licence
+                    holds.
+                </li>
+            </ul>
+        </template>
+
+        <template id="help-entry" data-title="Entry points">
+            <p class="lead">
+                Where sessions come in. That helps to see which login method, and which server, the
+                load or the refusals come through.
+            </p>
+            <ul class="facts">
+                <li>
+                    <strong>Virtual proxies:</strong> the part of the address after the server name,
+                    for example <code>/sales</code> in
+                    <code>https://sense.example.com/sales/hub</code>. Each has its own login method
+                    (Windows, header, ticket, SAML, JWT). <code>/ (default)</code> is the one with
+                    no prefix.
+                </li>
+                <li>
+                    <strong>Proxy nodes:</strong> the Sense servers running the proxy service. A
+                    site with one server has one.
+                </li>
+                <li>
+                    <strong>Per row:</strong> open sessions, how many different users they belong
+                    to, and sessions refused there since the monitor started.
+                </li>
+                <li>
+                    <strong>The limit is per user, not per entry point.</strong> Sessions on all
+                    virtual proxies count towards the same <span data-cfg="slotsLimit">5</span>.
+                </li>
+            </ul>
+        </template>
+
+        <template id="help-feed" data-title="Live feed">
+            <ul class="facts feed-help">
+                <li>
+                    <span class="fdot k-blue"></span><strong>Signed in:</strong> a new session got
+                    in and took a slot, for example “slot 3 of 5”.
+                </li>
+                <li>
+                    <span class="fdot k-red"></span><strong>Refused:</strong> a new session was
+                    turned away because all slots were taken.
+                </li>
+                <li>
+                    <span class="fdot k-red"></span><strong>Reached the limit:</strong> the user has
+                    all slots taken. Their next new session will be refused.
+                </li>
+                <li>
+                    <span class="fdot k-amber"></span><strong>One slot left:</strong> the user has
+                    <span data-cfg="warnAt">4</span> slots taken.
+                </li>
+                <li>
+                    <span class="fdot k-green"></span><strong>Is clear:</strong> enough slots are
+                    free again.
+                </li>
+                <li>
+                    <span class="fdot"></span><strong>Ended a session:</strong> a session closed.
+                    Its slot stays taken until its 6 minutes are up.
+                </li>
+                <li>
+                    <span class="fdot"></span
+                    ><strong>Repository removed licence records:</strong> Sense's hourly clean-up.
+                    It also removes records of live sessions, which get a new one when they next
+                    open an app. Nothing changes for users.
+                </li>
+            </ul>
+            <p class="note">
+                The feed keeps only recent events since the monitor started. For a lasting record of
+                sessions, errors and warnings in Sense, with alerts, use
+                <a href="https://butler-sos.ptarmiganlabs.com" target="_blank" rel="noopener"
+                    >Butler SOS</a
+                >.
+            </p>
+        </template>
+
+        <template id="help-unlicensed" data-title="Accounts without a licence">
+            <p class="lead">
+                Some accounts have proxy sessions without any licence allocation, typically the
+                Sense service account and other internal accounts. They aren't subject to the
+                <span data-cfg="slotsLimit">5</span>-session limit in the same way and are never
+                reported as refused.
+            </p>
+            <ul class="facts">
+                <li>
+                    <strong>Hidden by default,</strong> so they don't crowd out real users. Tick the
+                    box to show them.
+                </li>
+                <li>
+                    <strong>They can hold many sessions.</strong> The number in brackets shows how
+                    many. A large or growing number usually means a scheduled job that starts
+                    sessions and never ends them. They time out after the virtual proxy's session
+                    timeout.
+                </li>
+            </ul>
+        </template>
+
+        <script src="app.js"></script>
+    </body>
+</html>
