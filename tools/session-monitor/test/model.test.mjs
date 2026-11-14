@@ -156,7 +156,7 @@ test('slots are counted per user across virtual proxies; proxy sessions are coun
     const u = r.users.find((x) => x.userId === 'test1');
     assert.equal(u.slotsUsed, 2);
     assert.equal(u.proxySessions, 3);
-    assert.deepEqual(u.byVirtualProxy, { demoworld: 2, impersonate: 1 });
+    assert.deepEqual({ ...u.byVirtualProxy }, { demoworld: 2, impersonate: 1 });
 });
 
 test('excluded users are not reported', () => {
@@ -269,9 +269,12 @@ test('entry points count sessions, users and refusals per virtual proxy and node
             [rec('a', 14), rec('b', 14, 'at-2')]
         )
     );
-    assert.deepEqual(r.breakdown.virtualProxies.demoworld, { sessions: 2, users: 2, refused: 1 });
-    assert.deepEqual(r.breakdown.virtualProxies['/'], { sessions: 1, users: 1, refused: 0 });
-    assert.deepEqual(r.breakdown.nodes.Central, { sessions: 3, users: 2, refused: 1 });
+    assert.deepEqual(
+        { ...r.breakdown.virtualProxies.demoworld },
+        { sessions: 2, users: 2, refused: 1 }
+    );
+    assert.deepEqual({ ...r.breakdown.virtualProxies['/'] }, { sessions: 1, users: 1, refused: 0 });
+    assert.deepEqual({ ...r.breakdown.nodes.Central }, { sessions: 3, users: 2, refused: 1 });
 });
 
 test('records that only age past the read window are not a sweep, and show as idle', () => {
@@ -369,7 +372,6 @@ test('the webhook output queues and returns at once, whatever the endpoint does'
         assert.ok(Date.now() - started < 50);
         assert.equal(calls, 1); // one request at a time
         assert.equal(out.pending, 19);
-        out.close();
     } finally {
         globalThis.fetch = realFetch;
     }
@@ -405,4 +407,16 @@ test('a session that may have lost its record to a sweep is never refused, even 
         types(r).filter((x) => x === 'refused'),
         []
     );
+});
+
+test('virtual proxy and node names that match Object properties work', () => {
+    const t = new Tracker(LIMIT, 15);
+    const odd = (sid, vp) => ({ ...sess(sid, 'test1', vp), proxyNode: 'constructor' });
+    const r = t.update(
+        snap(0, [odd('a', 'constructor'), odd('b', '__proto__'), odd('c', 'toString')], [])
+    );
+    assert.equal(r.breakdown.virtualProxies.constructor.sessions, 1);
+    assert.equal(r.breakdown.nodes.constructor.sessions, 3);
+    assert.equal(r.users[0].byVirtualProxy.toString, 1);
+    assert.equal(JSON.parse(JSON.stringify(r.breakdown)).virtualProxies.__proto__.sessions, 1);
 });

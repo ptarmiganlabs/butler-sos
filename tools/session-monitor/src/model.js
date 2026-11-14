@@ -10,6 +10,9 @@
 import { userKey } from './collect.js';
 
 const LEVELS = ['ok', 'warn', 'critical'];
+// Objects keyed by names from Sense (virtual proxy prefixes, node names) must have no inherited
+// properties: a prefix such as "constructor" would otherwise hit Object.prototype.
+const dict = () => Object.create(null);
 const iso = (ms) => (ms == null ? null : new Date(ms).toISOString());
 
 /** Most sessions listed per user in the timeline (newest first); service accounts can hold hundreds. */
@@ -250,8 +253,8 @@ export class Tracker {
                     userDirectory: dir,
                     userId: id,
                     proxySessions: 0,
-                    byVirtualProxy: {},
-                    byProxy: {},
+                    byVirtualProxy: dict(),
+                    byProxy: dict(),
                     slotTimes: [],
                     records: 0,
                     licence: allocationByUser.get(key)?.kind || null,
@@ -439,8 +442,8 @@ export class Tracker {
                 slotsFreeAt: [],
                 level: 'ok',
                 proxySessions: 0,
-                byVirtualProxy: {},
-                byProxy: {},
+                byVirtualProxy: dict(),
+                byProxy: dict(),
                 usageRecords: 0,
                 nextSlotFreeAt: null,
                 nextSlotFreeInSeconds: null,
@@ -464,7 +467,7 @@ export class Tracker {
         );
 
         // Where sessions come in: per virtual proxy and per proxy node.
-        const breakdown = { virtualProxies: {}, nodes: {} };
+        const breakdown = { virtualProxies: dict(), nodes: dict() };
         const add = (bucket, name, key) => {
             const b = (bucket[name] ??= { sessions: 0, users: new Set(), refused: 0 });
             b.sessions++;
@@ -504,6 +507,7 @@ export class Tracker {
             licences: snap.licenceOverview || null,
             summary: {
                 licencesStale,
+                sessionsStale: !!snap.sessionsStale,
                 proxySessions: live.size,
                 usersWithSessions: rows.filter((r) => r.proxySessions > 0).length,
                 usersWarn: rows.filter((r) => r.level === 'warn').length,

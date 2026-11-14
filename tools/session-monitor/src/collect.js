@@ -93,18 +93,26 @@ export class AllocationCache {
  * @param {Array<{host: string, port: number, nodeName: string, prefix: string}>} targets From discover().
  * @param {object} opts Options.
  * @param {AllocationCache} opts.allocationCache Licence allocations, reused between polls.
+ * @param {Map<string, object[]>} [opts.sessionCache] Each proxy's last good session list, reused
+ *     between polls when that proxy can't be read.
  * @param {number} opts.recordsSinceMs Only usage records active within this many ms are read. Older
  *     ones can't hold a slot, and on a large site there are thousands of them.
  * @returns {Promise<object>} { at, sessions[], allocations Map, records[], recordsSince, errors[] }.
  */
-export async function snapshot(client, targets, { allocationCache, recordsSinceMs }) {
+export async function snapshot(
+    client,
+    targets,
+    { allocationCache, recordsSinceMs, sessionCache = new Map() }
+) {
     const errors = [];
+    let sessionsStale = false;
     const sessionLists = await Promise.all(
         targets.map(async (t) => {
             const path = t.prefix ? `/${t.prefix}/session` : '/session';
+            const cacheKey = `${t.host}:${t.port}/${t.prefix}`;
             try {
                 const list = (await client.qps(t.host, t.port, path)) || [];
-                return list.map((s) => ({
+                const sessions = list.map((s) => ({
                     sessionId: s.SessionId,
                     userDirectory: s.UserDirectory,
                     userId: s.UserId,
@@ -112,9 +120,15 @@ export async function snapshot(client, targets, { allocationCache, recordsSinceM
                     proxyNode: t.nodeName,
                     virtualProxy: t.prefix || '/',
                 }));
+                sessionCache.set(cacheKey, sessions);
+                return sessions;
             } catch (err) {
                 errors.push(`QPS ${t.host} /${t.prefix}: ${err.message}`);
-                return [];
+                // Keep showing that proxy's last good list rather than none: one proxy failing must
+                // not make its users' sessions vanish. Nothing is decided from it (qpsOk is false).
+                const last = sessionCache.get(cacheKey);
+                if (last) sessionsStale = true;
+                return last || [];
             }
         })
     );
@@ -154,6 +168,7 @@ export async function snapshot(client, targets, { allocationCache, recordsSinceM
         allocations,
         records,
         recordsSince,
+        sessionsStale,
         qpsOk: !errors.some((e) => e.startsWith('QPS')),
         licencesOk: !errors.some((e) => e.startsWith('QRS')),
         errors,

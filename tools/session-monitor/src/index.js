@@ -59,6 +59,7 @@ const log = (msg) => console.log(`${new Date().toISOString()} ${msg}`);
 let targets = [];
 let discoveredAt = 0;
 let licences = null;
+const sessionCache = new Map();
 const allocationCache = new AllocationCache(cfg.poll.licenceOverviewSeconds * 1000);
 // Usage records older than this can neither hold a slot nor appear on the timeline.
 const recordsSinceMs =
@@ -82,7 +83,7 @@ async function tick() {
             if (!targets.length) return;
         }
     }
-    const snap = await snapshot(client, targets, { allocationCache, recordsSinceMs });
+    const snap = await snapshot(client, targets, { allocationCache, recordsSinceMs, sessionCache });
     if (Date.now() - licencesAt > cfg.poll.licenceOverviewSeconds * 1000) {
         try {
             licences = await licenceOverview(client);

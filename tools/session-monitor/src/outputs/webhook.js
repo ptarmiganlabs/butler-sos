@@ -57,8 +57,18 @@ export function webhookOutput(cfg) {
             }
             drain();
         },
-        close() {
+        // On shutdown, give waiting events up to 5 s to go out, then stop.
+        async close() {
+            const deadline = Date.now() + 5000;
+            while ((queue.length || sending) && Date.now() < deadline) {
+                drain();
+                await new Promise((r) => setTimeout(r, 100));
+            }
             closing = true;
+            if (queue.length)
+                console.error(
+                    `${new Date().toISOString()} webhook: ${queue.length} events not sent at shutdown`
+                );
         },
         get pending() {
             return queue.length;

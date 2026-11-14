@@ -1035,6 +1035,9 @@
             (state.summary.licencesStale
                 ? 'Licence data could not be read: slots show the last good reading. '
                 : '') +
+            (state.summary.sessionsStale
+                ? 'A proxy could not be read: its sessions show the last good reading. '
+                : '') +
             (state.summary.errors.length
                 ? `Problems reading Sense: ${state.summary.errors.join('; ')}`
                 : '');
