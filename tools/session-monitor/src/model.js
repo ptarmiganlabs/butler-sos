@@ -174,9 +174,14 @@ export class Tracker {
             t.lastSeen = now;
             t.endedAt = null;
         }
-        if (snap.qpsOk) {
+        // A session missing from the proxies has ended, except on a proxy that couldn't be read this
+        // time: one proxy being down must not stop ended sessions elsewhere from being noticed.
+        {
+            const failed = new Set(snap.failedTargets || []);
+            const unknownWhichFailed = !snap.qpsOk && !failed.size;
             for (const t of this.sessions.values()) {
                 if (t.recordOnly || t.endedAt || live.has(t.sessionId)) continue;
+                if (unknownWhichFailed || failed.has(`${t.proxyHost}/${t.virtualProxy}`)) continue;
                 t.endedAt = now;
                 if ((t.recorded || t.refused) && !this.excluded(t.key) && !t.baseline) {
                     events.push({

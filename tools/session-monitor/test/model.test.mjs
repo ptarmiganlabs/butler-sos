@@ -491,3 +491,17 @@ test('sessions on a newly discovered proxy, or first seen while licences are unr
         []
     );
 });
+
+test('a session that ends on a working proxy is noticed while another proxy is down', () => {
+    const t = new Tracker(LIMIT, 15);
+    const onB = (sid) => ({ ...sess(sid, 'test2'), proxyHost: 'node2' });
+    t.update(snap(0, [sess('a'), onB('b')], [rec('a', 0)]));
+    // node2 can't be read (its last list is reused), and 'a' on node1 has ended.
+    const r = t.update(
+        snap(15, [onB('b')], [rec('a', 0)], { qpsOk: false, failedTargets: ['node2/demoworld'] })
+    );
+    const a = r.users.find((u) => u.userId === 'test1').timeline.find((e) => e.sessionId === 'a');
+    assert.equal(a.endedAt, isoAt(15));
+    const b = r.users.find((u) => u.userId === 'test2');
+    assert.equal(b.proxySessions, 1); // the unreadable proxy's session is kept
+});
