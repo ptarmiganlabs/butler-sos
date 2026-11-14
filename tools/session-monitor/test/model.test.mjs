@@ -505,3 +505,16 @@ test('a session that ends on a working proxy is noticed while another proxy is d
     const b = r.users.find((u) => u.userId === 'test2');
     assert.equal(b.proxySessions, 1); // the unreadable proxy's session is kept
 });
+
+test('the simulated site does not grow when left running', async () => {
+    const { SimulatedSite } = await import('../src/simulate.js');
+    const site = new SimulatedSite(80, LIMIT, 11);
+    const sizes = [];
+    for (let at = T0; at < T0 + 6 * 3600000; at += 15000) {
+        site.step(at, 31 * 60000);
+        if ((at - T0) % 3600000 === 0)
+            sizes.push(site.sessions.size + site.records.size + (site.wasLicensed?.size ?? 0));
+    }
+    // After the first hours the size levels off instead of rising every hour.
+    assert.ok(sizes[5] < sizes[2] * 1.5, `sizes per hour: ${sizes.join(', ')}`);
+});

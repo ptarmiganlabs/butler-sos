@@ -156,9 +156,14 @@ export class SimulatedSite {
                 if (rec) (this.wasLicensed ??= new Set()).add(sid);
             }
         }
+        // Forget sessions that ended over an hour ago, with everything kept about them, so a demo left
+        // running for days doesn't grow.
         for (const [sid, s] of this.sessions)
-            if (!s.alive && at - (this.records.get(sid)?.latest ?? 0) > 3600000)
+            if (!s.alive && at - (this.records.get(sid)?.latest ?? 0) > 3600000) {
                 this.sessions.delete(sid);
+                this.records.delete(sid);
+                this.wasLicensed?.delete(sid);
+            }
 
         const since = at - recordsSinceMs;
         const users = this.users.length;
