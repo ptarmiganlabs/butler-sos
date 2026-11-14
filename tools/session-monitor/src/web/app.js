@@ -356,7 +356,9 @@
     const PAGE = 50;
     const WALL_TILES = 24;
     const ATTENTION_MS = 15 * 60000; // a refusal keeps a user "needing attention" this long
+    // Chip filters are remembered between visits; a clicked chart bar is not (it's a quick look).
     let filter = store.get('sm.filter', 'all');
+    if (filter.startsWith('slots:')) filter = 'all';
     let sortBy = store.get('sm.sort', 'slots');
     let pageLimit = PAGE;
     $('sort').value = sortBy;
@@ -365,13 +367,17 @@
         store.set('sm.sort', sortBy);
         renderUsers();
     });
+    $('clearFilter').addEventListener('click', () => {
+        $('search').value = '';
+        setFilter('all');
+    });
     $('more').addEventListener('click', () => {
         pageLimit += PAGE;
         renderUsers();
     });
     function setFilter(f) {
         filter = filter === f && f !== 'all' ? 'all' : f;
-        store.set('sm.filter', filter);
+        store.set('sm.filter', filter.startsWith('slots:') ? 'all' : filter);
         pageLimit = PAGE;
         renderDist();
         renderChips();
@@ -615,6 +621,20 @@
                 `Everyone has at least ${state.config.slotsLimit - state.config.warnAt + 1} slots free, and no one was refused in the last 15 minutes. Most slots held by one user: ${top} of ${state.config.slotsLimit}.`;
         }
         $('usersEmpty').hidden = users.length > 0 || calm;
+        // Say plainly when a filter or search hides users, with one click back to everyone.
+        const q = $('search').value.trim();
+        const filtered = mode !== 'wall' && (filter !== 'all' || q);
+        $('filterNote').hidden = !filtered;
+        if (filtered) {
+            const what = filter.startsWith('slots:')
+                ? `users with ${filter.slice(6)} slot${filter.slice(6) === '1' ? '' : 's'} in use`
+                : filter === 'all'
+                  ? 'users'
+                  : `users who are “${FILTERS.find(([f]) => f === filter)?.[1] ?? filter}”`;
+            const total = candidates().length;
+            $('filterText').textContent =
+                `Showing only ${what}${q ? ` matching “${q}”` : ''}: ${all.length} of ${total}.`;
+        }
         const more = all.length - users.length;
         $('pager').hidden = more <= 0;
         $('pagerText').textContent =
