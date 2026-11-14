@@ -121,10 +121,14 @@ async function loop() {
 }
 
 async function stop() {
-    if (stopping) return;
+    // A second Ctrl+C stops at once, whatever is still being closed.
+    if (stopping) process.exit(130);
     stopping = true;
     clearTimeout(timer);
-    await Promise.all(outputs.map((out) => out.close?.()));
+    log('stopping…');
+    // Give the outputs up to 6 s to close cleanly (the webhook flushes for up to 5 s), then exit anyway.
+    const deadline = new Promise((resolve) => setTimeout(resolve, 6000).unref());
+    await Promise.race([Promise.allSettled(outputs.map((out) => out.close?.())), deadline]);
     client?.close();
     process.exit(0);
 }

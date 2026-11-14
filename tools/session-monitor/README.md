@@ -100,7 +100,7 @@ npm start
 ```
 
 It prints `Open http://127.0.0.1:3939/ in your browser.` Do that. The first data arrives within a
-few seconds. Stop it with **Ctrl+C**.
+few seconds. Stop it with **Ctrl+C**. It stops within a few seconds, at once with a second **Ctrl+C**.
 
 `node src/index.js --once` reads Sense once, prints a table of users and exits. It's a quick way to check the configuration without the page.
 

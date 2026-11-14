@@ -138,8 +138,13 @@ export function webOutput(cfg, site, pollSeconds) {
             }
         },
         close() {
-            for (const c of clients) c.end();
-            return new Promise((resolve) => server.close(resolve));
+            for (const c of clients) c.destroy();
+            clients.clear();
+            // server.close() alone waits for every open browser connection (live updates and
+            // keep-alive), which an open page never ends: close them all.
+            const done = new Promise((resolve) => server.close(resolve));
+            server.closeAllConnections();
+            return done;
         },
     };
 }
