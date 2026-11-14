@@ -1822,3 +1822,62 @@ body.wall .made-by {
 body.wall .filter-note {
     display: none;
 }
+
+/* ---------- Narrow columns: nothing may run past its box ---------- */
+/* Entry points: the counts (which grow with refusals) always get a line of their own. */
+.erow {
+    grid-template-columns: minmax(70px, 1fr) 2fr;
+    row-gap: 2px;
+}
+.erow .e-num {
+    grid-column: 1 / -1;
+    text-align: left;
+    white-space: normal;
+}
+/* Licence meters: name and numbers on one line, the bar below, at every width. */
+.meter {
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    row-gap: 5px;
+}
+.meter .m-num {
+    min-width: 0;
+    text-align: right;
+    white-space: normal;
+}
+.meter .bar {
+    grid-column: 1 / -1;
+    order: 3;
+}
+/* Wall tiles may shrink below their usual minimum on small screens. */
+body.wall .user-list {
+    grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr));
+}
+
+/* ---------- Wall on laptop and projector widths (about 1280–1600 px) ---------- */
+@media (min-width: 1101px) and (max-width: 1600px) {
+    /* Five tiles in a row, and the licences on a full-width row of their own below them. */
+    body.wall .kpis {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+    body.wall .kpi.lic {
+        grid-column: 1 / -1;
+    }
+    body.wall .kpi.lic .lic-body {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 8px 28px;
+    }
+    body.wall .kpi .value {
+        font-size: 48px;
+    }
+}
+
+/* Wall on a phone: two tiles per row, smaller numbers. */
+@media (max-width: 720px) {
+    body.wall .kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    body.wall .kpi .value {
+        font-size: 36px;
+    }
+}
