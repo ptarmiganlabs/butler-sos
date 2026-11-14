@@ -1,0 +1,74 @@
+# Qlik Sense session monitor: configuration.
+#
+# Copy this file to config.yaml and change the two settings marked "CHANGE THIS".
+# Everything else can stay as it is.
+
+sense:
+    # CHANGE THIS: the central node of your Qlik Sense site, by the name the QMC shows under Nodes.
+    host: sense.example.com
+
+    # CHANGE THIS: the folder with the certificates exported from the QMC
+    # (Certificates > Export, "Platform independent PEM-format"). It holds client.pem,
+    # client_key.pem and root.pem. Keep them private; never put them in a repository.
+    certDir: /path/to/certificates
+
+    # Only watch some virtual proxies, by prefix ('' is the default one). Empty = all of them.
+    virtualProxies: []
+
+# The live web page.
+outputs:
+    web:
+        enable: true
+        # 127.0.0.1 = only this computer can open the page. The page has no login: to share it, put a
+        # reverse proxy with sign-in in front (README, "Showing the page to others"). With the proxy on
+        # another computer, listen on this computer's address and let the firewall allow only the proxy.
+        host: 127.0.0.1
+        port: 3939
+        # Name shown in the page header. Empty = the server name.
+        title: ''
+        # How far back each user's session timeline reaches, in minutes.
+        timelineMinutes: 30
+
+    console:
+        enable: true
+        # Also print a table of users at every update.
+        table: false
+
+    # Optional: send alerts and refusals to another system as JSON.
+    webhook:
+        enable: false
+        url: https://hooks.example.com/qseow-sessions
+        # Name of an environment variable holding a bearer token (not the token itself).
+        tokenEnv: SESSION_MONITOR_WEBHOOK_TOKEN
+
+    # Optional: publish alerts and per-user state to an MQTT broker (Node-RED, Home Assistant, ...).
+    mqtt:
+        enable: false
+        url: mqtt://mqtt.example.com:1883
+        topicRoot: qliksense/sessionmonitor
+        # Names of environment variables holding the user name and password (not the values).
+        usernameEnv: SESSION_MONITOR_MQTT_USER
+        passwordEnv: SESSION_MONITOR_MQTT_PASSWORD
+        publishUserState: true
+
+# You rarely need to change anything below.
+
+poll:
+    # How often Sense is read, in seconds.
+    intervalSeconds: 15
+
+limit:
+    # Qlik Sense refuses a new session when the user has already been active in `sessions`
+    # sessions within `windowSeconds`. Measured on Sense May 2026: 5 and about 360 s.
+    sessions: 5
+    windowSeconds: 360
+    # When a user is shown as "one slot left" (warnAt) and "at the limit" (criticalAt).
+    warnAt: 4
+    criticalAt: 5
+    # Users never shown, as DIRECTORY\userid.
+    excludeUsers:
+        - INTERNAL\sa_api
+        - INTERNAL\sa_proxy
+        - INTERNAL\sa_repository
+        - INTERNAL\sa_scheduler
+        - INTERNAL\sa_engine
