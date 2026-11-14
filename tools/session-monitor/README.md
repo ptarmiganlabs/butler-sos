@@ -1,3 +1,12 @@
+<p align="center">
+  <a href="https://ptarmiganlabs.com">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/brand/ptarmigan-labs-wordmark-on-dark.svg">
+      <img src="docs/brand/ptarmigan-labs-wordmark-on-light.svg" alt="Ptarmigan Labs" width="280">
+    </picture>
+  </a>
+</p>
+
 # Qlik Sense session monitor
 
 A live web page for Qlik Sense Enterprise on Windows (client-managed). It shows who is connected right now, how close each user is to Qlik Sense's limit of **five sessions**, and who is being turned away with _"You cannot access Qlik Sense because you have too many sessions active in parallel."_
@@ -242,6 +251,13 @@ The code: `src/collect.js` reads Sense, `src/model.js` turns readings into users
 `src/simulate.js` is the demo site, `src/outputs/` holds the console, web page, webhook and MQTT
 outputs, and `src/web/` is the page itself (plain HTML, CSS and JavaScript, no build step, nothing
 loaded from the internet).
+
+## About Ptarmigan Labs
+
+The session monitor is made by [Ptarmigan Labs](https://ptarmiganlabs.com), the makers of
+[Butler SOS](https://butler-sos.ptarmiganlabs.com). At [ptarmiganlabs.com](https://ptarmiganlabs.com)
+you'll find more free and open-source tools for Qlik Sense, blog posts about running Qlik Sense,
+and professional services when you want help getting the most out of it.
 
 ## Credits
 

@@ -1654,3 +1654,141 @@ body.wall .pager {
 .user.critical .lg-slot {
     background: var(--crit);
 }
+
+/* ---------- Ptarmigan Labs logo: the light or dark version, matching the theme ---------- */
+.on-dark {
+    display: none;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .on-light {
+        display: none;
+    }
+    :root:not([data-theme='light']) .on-dark {
+        display: inline;
+    }
+}
+:root[data-theme='dark'] .on-light {
+    display: none;
+}
+:root[data-theme='dark'] .on-dark {
+    display: inline;
+}
+.plabs-head {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 2px 4px 8px;
+    border-left: 1px solid var(--border);
+    margin-left: 2px;
+}
+.plabs-head img {
+    height: 30px;
+    width: auto;
+    display: block;
+}
+:root .plabs-head img.on-dark {
+    display: none;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .plabs-head img.on-dark {
+        display: block;
+    }
+    :root:not([data-theme='light']) .plabs-head img.on-light {
+        display: none;
+    }
+}
+:root[data-theme='dark'] .plabs-head img.on-dark {
+    display: block;
+}
+:root[data-theme='dark'] .plabs-head img.on-light {
+    display: none;
+}
+.made-by {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    max-width: 1680px;
+    margin: 10px auto 0;
+    padding: 14px 24px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+}
+.made-by img {
+    width: 36px;
+    height: 36px;
+    vertical-align: middle;
+}
+.made-by p {
+    margin: 0;
+}
+.made-by a,
+.about-brand a {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+}
+.made-by a:hover,
+.about-brand a:hover {
+    text-decoration: underline;
+}
+.hd-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: none;
+}
+.hd-brand:hover span {
+    color: var(--accent);
+    text-decoration: underline;
+}
+.hd-brand img {
+    width: 24px;
+    height: 24px;
+}
+.about-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 6px 0 12px;
+}
+.about-brand img {
+    height: 40px;
+    width: auto;
+    flex: none;
+}
+.about-brand p {
+    margin: 0;
+}
+body.wall .made-by {
+    font-size: 15px;
+}
+@media (max-width: 720px) {
+    .plabs-head img {
+        height: 22px;
+    }
+    .made-by {
+        padding: 14px 16px;
+    }
+    .about-brand {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .hd-more {
+        display: none;
+    }
+}
+@media (max-width: 720px) {
+    /* Entry points: the counts get a line of their own, so long ones (with refusals) fit. */
+    .erow {
+        grid-template-columns: minmax(70px, 1fr) 2fr;
+        row-gap: 2px;
+    }
+    .erow .e-num {
+        grid-column: 1 / -1;
+        text-align: left;
+        white-space: normal;
+    }
+}

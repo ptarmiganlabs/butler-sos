@@ -7,6 +7,14 @@ const FILES = {
     '/': ['index.html', 'text/html; charset=utf-8'],
     '/style.css': ['style.css', 'text/css; charset=utf-8'],
     '/app.js': ['app.js', 'text/javascript; charset=utf-8'],
+    ...Object.fromEntries(
+        [
+            'ptarmigan-labs-lockup-on-light.svg',
+            'ptarmigan-labs-lockup-on-dark.svg',
+            'ptarmigan-labs-icon.svg',
+            'ptarmigan-labs-icon-on-dark.svg',
+        ].map((f) => [`/brand/${f}`, [`brand/${f}`, 'image/svg+xml']])
+    ),
 };
 const SECURITY_HEADERS = {
     'X-Content-Type-Options': 'nosniff',
