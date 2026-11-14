@@ -33,6 +33,9 @@ export function webOutput(cfg, site, pollSeconds) {
     const important = [];
     const activity = [];
     const clients = new Set();
+    // The current time on the data's clock (Sense's, when it differs from ours), for the page's countdowns.
+    let handledAt = 0;
+    const nowIso = () => new Date(Date.parse(latest.at) + (Date.now() - handledAt)).toISOString();
     const json = (res, body, status = 200) =>
         res
             .writeHead(status, { 'Content-Type': 'application/json', ...SECURITY_HEADERS })
@@ -61,7 +64,7 @@ export function webOutput(cfg, site, pollSeconds) {
         } else if (path === '/api/state') {
             // The current state plus the recent events, for a page that has just (re)connected.
             if (!slim) res.writeHead(503, SECURITY_HEADERS).end();
-            else json(res, { ...slim, recentEvents: [...important, ...activity] });
+            else json(res, { ...slim, now: nowIso(), recentEvents: [...important, ...activity] });
         } else if (path === '/api/timeline') {
             // One user's session timeline, fetched by the page only for users whose row is open.
             const key = String(url.searchParams.get('user') || '').toLowerCase();
@@ -107,6 +110,7 @@ export function webOutput(cfg, site, pollSeconds) {
             important.splice(0, Math.max(0, important.length - 200));
             activity.splice(0, Math.max(0, activity.length - 300));
             latest = result;
+            handledAt = Date.now();
             slim = {
                 ...result,
                 users: result.users.map(({ timeline, ...u }) => u),
@@ -114,7 +118,7 @@ export function webOutput(cfg, site, pollSeconds) {
                 pollSeconds,
             };
             // Each message carries the new state and only this poll's events.
-            const msg = `data: ${JSON.stringify(slim)}\n\n`;
+            const msg = `data: ${JSON.stringify({ ...slim, now: result.at })}\n\n`;
             for (const c of clients) {
                 // A client that stops reading (a stalled browser or proxy) would otherwise buffer
                 // every update in this process. Past a few updates' worth, drop it: the browser

@@ -19,8 +19,9 @@ sense:
 outputs:
     web:
         enable: true
-        # 127.0.0.1 = only this computer can open the page. The page has no login, so before using
-        # 0.0.0.0 (open to the network), put a reverse proxy with sign-in in front of it.
+        # 127.0.0.1 = only this computer can open the page. The page has no login: to share it, put a
+        # reverse proxy with sign-in in front (README, "Showing the page to others"). With the proxy on
+        # another computer, listen on this computer's address and let the firewall allow only the proxy.
         host: 127.0.0.1
         port: 3939
         # Name shown in the page header. Empty = the server name.

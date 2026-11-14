@@ -150,7 +150,12 @@ The monitor says what's wrong when it starts. The common cases:
 
 By default only the computer running the monitor can open the page (`127.0.0.1`). The page has
 **no login of its own**. To show it to others, put it behind a reverse proxy that asks for sign-in
-(IIS, nginx, Traefik …), then set `outputs.web.host: 0.0.0.0`.
+(IIS, nginx, Traefik …):
+
+- **Proxy on the same computer:** keep `127.0.0.1`, and point the proxy at `http://127.0.0.1:3939`.
+- **Proxy on another computer:** set `outputs.web.host` to this computer's address, and let the
+  firewall allow port 3939 **only from the proxy**. Otherwise anyone on the network could skip the
+  proxy's sign-in and open the page directly.
 
 ## Configuration reference
 

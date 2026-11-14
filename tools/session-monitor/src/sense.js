@@ -66,6 +66,9 @@ export class SenseClient {
                     if (Number.isFinite(serverDate)) this.clockOffsetMs = serverDate - Date.now();
                     const chunks = [];
                     res.on('data', (c) => chunks.push(c));
+                    // A connection that breaks mid-body emits 'error' without 'end'.
+                    res.on('error', reject);
+                    res.on('aborted', () => reject(new Error(`GET ${path}: response aborted`)));
                     res.on('end', () => {
                         const text = Buffer.concat(chunks).toString('utf8');
                         if (res.statusCode < 200 || res.statusCode > 299) {

@@ -87,6 +87,7 @@ export class Tracker {
         const events = [];
         const user = (t) => ({ userDirectory: t.userDirectory, userId: t.userId });
 
+        const sweepMarginMs = refusalGraceSeconds * 1000 + this.intervalMs;
         const recordBySid = new Map(snap.records.map((r) => [r.sessionId, r]));
         const allocationByUser = new Map([...snap.allocations.values()].map((a) => [a.key, a]));
 
@@ -101,6 +102,11 @@ export class Tracker {
                 if (!recordBySid.has(sid) && latest > since) vanished++;
             if (vanished > 0 && !this.first) {
                 this.lastSweepAt = now;
+                // Sessions that appeared just before the sweep may have had their record removed by
+                // it: mark them, so they're never taken for refused, however long they stay idle.
+                for (const t of this.sessions.values())
+                    if (!t.recorded && t.firstSeen != null && now - t.firstSeen < sweepMarginMs)
+                        t.sweepExempt = true;
                 events.push({ type: 'sweep', at: iso(now), recordsRemoved: vanished });
             }
             this.prevRecords = new Map(
@@ -127,6 +133,8 @@ export class Tracker {
                     proxyHost: s.proxyHost,
                     firstSeen: now,
                     baseline: this.first,
+                    // First seen right after a sweep: its record may already have been removed.
+                    sweepExempt: !!this.lastSweepAt && now - this.lastSweepAt < sweepMarginMs,
                     recorded: t?.recorded || false,
                     refused: false,
                     recordOnly: false,
@@ -193,18 +201,15 @@ export class Tracker {
         }
 
         // Refusals: a session that appeared while we watched, of a user holding a licence allocation,
-        // that has gone the grace period without ever getting a usage record.
+        // that has gone the grace period without ever getting a usage record. A session that has
+        // already closed counts too, if it was seen in two or more polls without a record.
         if (snap.licencesOk && snap.qpsOk) {
-            for (const sid of live) {
-                const t = this.sessions.get(sid);
-                if (t.baseline || t.recorded || t.refused || this.excluded(t.key)) continue;
-                if (!allocationByUser.has(t.key)) continue;
+            for (const t of this.sessions.values()) {
+                if (t.recordOnly || t.baseline || t.recorded || t.refused || t.sweepExempt)
+                    continue;
+                if (this.excluded(t.key) || !allocationByUser.has(t.key)) continue;
                 if (now - t.firstSeen < refusalGraceSeconds * 1000) continue;
-                const nearSweep =
-                    this.lastSweepAt &&
-                    Math.abs(this.lastSweepAt - t.firstSeen) <
-                        refusalGraceSeconds * 1000 + this.intervalMs;
-                if (nearSweep) continue;
+                if (t.endedAt && !(t.lastSeen > t.firstSeen)) continue;
                 t.refused = true;
                 t.refusedAt = now;
                 const inc = (m, k) => m.set(k, (m.get(k) || 0) + 1);
@@ -480,7 +485,8 @@ export class Tracker {
             for (const b of Object.values(bucket)) b.users = b.users.size;
         }
 
-        this.first = false;
+        // Sessions are taken as already open (never refused) until the proxies were read once in full.
+        if (snap.qpsOk) this.first = false;
         return {
             at: iso(now),
             startedAt: iso(this.startedAt),

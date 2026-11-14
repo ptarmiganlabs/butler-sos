@@ -374,3 +374,35 @@ test('the webhook output queues and returns at once, whatever the endpoint does'
         globalThis.fetch = realFetch;
     }
 });
+
+test('sessions stay baseline until the proxies have been read once in full', () => {
+    const t = new Tracker(LIMIT, 15);
+    t.update(snap(0, [], [], { qpsOk: false, errors: ['QPS node1 /: timeout'] }));
+    t.update(snap(15, [sess('old')], [])); // first complete read: already-open, idle session
+    assert.deepEqual(types(t.update(snap(60, [sess('old')], []))), []);
+});
+
+test('a refused session that closed before the grace period ended is still counted', () => {
+    const t = new Tracker(LIMIT, 15);
+    t.update(snap(0, [], []));
+    t.update(snap(15, [sess('x')], []));
+    t.update(snap(30, [sess('x')], [])); // still no record, grace not yet over
+    const r = t.update(snap(45, [], [])); // closed
+    assert.deepEqual(
+        types(r).filter((x) => x === 'refused'),
+        ['refused']
+    );
+});
+
+test('a session that may have lost its record to a sweep is never refused, even after a later sweep', () => {
+    const t = new Tracker(LIMIT, 15);
+    t.update(snap(0, [sess('a')], [rec('a', 0)]));
+    t.update(snap(15, [sess('a'), sess('new')], [])); // sweep: 'a' record vanished; 'new' appears now
+    t.update(snap(30, [sess('a'), sess('new'), sess('b')], [rec('b', 29)]));
+    t.update(snap(3600, [sess('a'), sess('new'), sess('b')], [])); // next sweep, an hour later
+    const r = t.update(snap(3640, [sess('a'), sess('new'), sess('b')], []));
+    assert.deepEqual(
+        types(r).filter((x) => x === 'refused'),
+        []
+    );
+});

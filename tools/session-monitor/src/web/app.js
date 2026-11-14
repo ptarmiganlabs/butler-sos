@@ -1041,7 +1041,8 @@
     }
 
     function receive(s) {
-        offset = Date.parse(s.at) - Date.now();
+        // `now` is the server's current time (same clock as the data); `at` is when the data was read.
+        offset = Date.parse(s.now || s.at) - Date.now();
         lastMessage = Date.now();
         const first = !state;
         state = s;
