@@ -38,6 +38,15 @@ export function webOutput(cfg, site, pollSeconds) {
             .writeHead(status, { 'Content-Type': 'application/json', ...SECURITY_HEADERS })
             .end(JSON.stringify(body));
     const server = http.createServer((req, res) => {
+        try {
+            route(req, res);
+        } catch (err) {
+            // A bad request must never stop the monitor.
+            if (!res.headersSent) res.writeHead(400, SECURITY_HEADERS);
+            res.end();
+        }
+    });
+    function route(req, res) {
         const url = new URL(req.url, 'http://x');
         const path = url.pathname;
         if (req.method !== 'GET') {
@@ -77,7 +86,8 @@ export function webOutput(cfg, site, pollSeconds) {
         } else {
             res.writeHead(404, SECURITY_HEADERS).end();
         }
-    });
+    }
+
     server.on('error', (err) => {
         console.error(
             err.code === 'EADDRINUSE'
@@ -105,7 +115,15 @@ export function webOutput(cfg, site, pollSeconds) {
             };
             // Each message carries the new state and only this poll's events.
             const msg = `data: ${JSON.stringify(slim)}\n\n`;
-            for (const c of clients) c.write(msg);
+            for (const c of clients) {
+                // A client that stops reading (a stalled browser or proxy) would otherwise buffer
+                // every update in this process. Past a few updates' worth, drop it: the browser
+                // reconnects and reloads the current state.
+                if (c.writableLength > Math.max(4 * msg.length, 2 * 1024 * 1024)) {
+                    clients.delete(c);
+                    c.destroy();
+                } else c.write(msg);
+            }
         },
         close() {
             for (const c of clients) c.end();
