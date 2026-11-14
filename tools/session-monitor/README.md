@@ -252,6 +252,9 @@ The code: `src/collect.js` reads Sense, `src/model.js` turns readings into users
 outputs, and `src/web/` is the page itself (plain HTML, CSS and JavaScript, no build step, nothing
 loaded from the internet).
 
+To check how a new Sense release counts sessions (the six-minute window, renewals, sweeps), run the
+experiments in [lab/](lab/README.md) against a test site.
+
 ## About Ptarmigan Labs
 
 The session monitor is made by [Ptarmigan Labs](https://ptarmiganlabs.com), the makers of

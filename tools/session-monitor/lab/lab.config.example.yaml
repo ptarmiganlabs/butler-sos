@@ -1,0 +1,38 @@
+# Lab experiments: configuration. Copy to lab.config.yaml (ignored by git) and adjust.
+# Run the experiments only against a test site, and only with dedicated test users.
+
+sense:
+    # The central node, by the name its certificates were made for (APIs on 4242 and 4243).
+    host: sense.example.com
+    # Folder with client.pem, client_key.pem and root.pem, exported from the QMC.
+    certDir: /path/to/certificates
+    # The public address users reach Sense through (443): the server itself or a reverse proxy.
+    entryHost: sense.example.com
+
+# A virtual proxy with header authentication, used to open sessions without a browser login.
+headerProxy:
+    prefix: demo # its prefix
+    header: X-Demo-User # the header that carries the user id
+    userDirectory: CORP # the user directory it assigns
+
+# A virtual proxy with ticket authentication, used for a second way in (across-proxies) and for the
+# person-in-a-browser experiment. The monitor's own certificates request the tickets.
+ticketProxy:
+    prefix: ticket
+
+# Test users. Every experiment refuses any user id that doesn't match this pattern.
+# They get licences when they first sign in, and the experiments fill their five slots.
+testUsers:
+    pattern: '^sessiontest\d+$'
+
+# Two apps the test users can open (app ids, from the QMC or the hub's address bar).
+apps:
+    first: 00000000-0000-0000-0000-000000000000
+    second: 00000000-0000-0000-0000-000000000000
+
+# Google Chrome, for experiments that need a real browser (headless).
+chrome: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+
+# Optional: Sense's licence trace log, readable over a share. When set, the watchers also print
+# the test user's lines from it (UsageGranted, UsageDenied, Update).
+licenceLog: '' # e.g. /Volumes/Log/Repository/Trace/MYHOST_License_Repository.txt
