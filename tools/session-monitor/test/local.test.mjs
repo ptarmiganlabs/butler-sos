@@ -70,3 +70,22 @@ test('Host.cfg: base64, with a BOM, as UTF-16, or in plain text', () => {
     assert.equal(hostFromCfg(Buffer.from('qs-1.corp.example\n')), 'qs-1.corp.example');
     assert.equal(hostFromCfg(Buffer.from('')), null);
 });
+
+test('relative certificate paths in a config file are relative to that file', async () => {
+    const fs = await import('node:fs');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    const { loadConfig } = await import('../src/config.js');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-cfg-'));
+    try {
+        fs.mkdirSync(path.join(dir, 'certs'));
+        for (const f of ['client.pem', 'client_key.pem', 'root.pem'])
+            fs.writeFileSync(path.join(dir, 'certs', f), 'pem');
+        const file = path.join(dir, 'config.yaml');
+        fs.writeFileSync(file, 'sense:\n  host: qs-1.corp.example\n  certDir: certs\n');
+        const c = loadConfig(file);
+        assert.equal(c.sense.keyFile, path.join(dir, 'certs', 'client_key.pem'));
+    } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+    }
+});

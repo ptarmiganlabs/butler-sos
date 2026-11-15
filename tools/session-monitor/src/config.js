@@ -126,6 +126,14 @@ export function loadConfig(
         : simulate
           ? { outputs: { console: { enable: false } } }
           : {};
+    // Relative certificate paths in the file are relative to the file, not to wherever the program
+    // was started from: a config.yaml next to the binary can name a certs folder next to it too.
+    if (haveFile && isObject(raw.sense)) {
+        const base = path.dirname(path.resolve(file));
+        for (const k of ['certDir', 'certFile', 'keyFile', 'caFile'])
+            if (typeof raw.sense[k] === 'string' && raw.sense[k] && !path.isAbsolute(raw.sense[k]))
+                raw.sense[k] = path.resolve(base, raw.sense[k]);
+    }
     const c = merge(merge(DEFAULTS, raw), overrides);
     // Friendlier names: sense.host for the server, sense.certDir for the folder the QMC export made.
     c.sense.repositoryHost = overrides.sense?.host ?? c.sense.repositoryHost ?? c.sense.host;
