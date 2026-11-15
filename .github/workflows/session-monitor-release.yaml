@@ -85,10 +85,11 @@ jobs:
       - name: Test
         run: npm test
 
-      # Unsigned on macOS too (--no-adhoc): sign-macos signs it properly. The script smoke-tests the
-      # binary (--version) and writes its SHA-256 digest beside it.
+      # Unsigned on Windows and Linux, ad-hoc signed on macOS (Apple silicon runs nothing unsigned);
+      # sign-macos replaces that with the real signature. The script smoke-tests the binary
+      # (--version) here, in a job without credentials, and writes its SHA-256 digest beside it.
       - name: Build the binary
-        run: npm run build:binary -- --no-adhoc
+        run: npm run build:binary
 
       - name: Upload the unsigned binary
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -212,12 +213,18 @@ jobs:
           # A keychain of this run's own, so that nothing prompts and nothing outlives the job.
           keychain="$RUNNER_TEMP/signing.keychain-db"
           cert="$RUNNER_TEMP/certificate.p12"
-          trap 'security delete-keychain "$keychain" >/dev/null 2>&1 || true; rm -f "$cert"' EXIT
+          trap 'security delete-keychain "$keychain" >/dev/null 2>&1 || true; rm -f "$cert" "$RUNNER_TEMP"/*.cer' EXIT
           printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > "$cert"
           security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "$keychain"
           security set-keychain-settings -t 3600 -l "$keychain"
           security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "$keychain"
           security import "$cert" -k "$keychain" -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+          # The Developer ID intermediate and Apple's root, so codesign can build the chain, as
+          # scripts/release-macos.sh does for Butler SOS.
+          curl --proto '=https' -fsSL -o "$RUNNER_TEMP/DeveloperIDG2CA.cer" https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+          security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$keychain"
+          curl --proto '=https' -fsSL -o "$RUNNER_TEMP/AppleIncRootCertificate.cer" https://www.apple.com/appleca/AppleIncRootCertificate.cer
+          security import "$RUNNER_TEMP/AppleIncRootCertificate.cer" -k "$keychain" || true
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" "$keychain" >/dev/null
           existing=()
           while IFS= read -r k; do existing+=("$k"); done < <(security list-keychains -d user | sed -e 's/^ *//' -e 's/"//g')
@@ -230,7 +237,8 @@ jobs:
             --entitlements tools/session-monitor/release-config/macos.entitlements "$bin"
           codesign --verify --strict --verbose=2 "$bin"
           codesign -dv "$bin" 2>&1 | grep -E '^(Authority|TeamIdentifier)=' | head -2 | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY"
-          "$bin" --version
+          # The binary is not run here: this step holds the Apple credentials, and the build job
+          # already ran it.
 
           # A bare executable can't be stapled; Gatekeeper looks the ticket up online instead.
           ditto -c -k --keepParent "$bin" "$RUNNER_TEMP/notarise.zip"

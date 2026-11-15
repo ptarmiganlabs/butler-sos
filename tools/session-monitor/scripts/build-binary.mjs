@@ -2,10 +2,10 @@
 /**
  * Builds the session monitor into one executable for the platform this runs on: a copy of the
  * Node.js running this script, carrying the bundled monitor and its web page (Node's single
- * executable applications). It is unsigned; the release workflow signs it.
+ * executable applications). It is unsigned, except on macOS, where Apple silicon runs nothing
+ * unsigned: there it gets an ad-hoc signature, which the release workflow replaces with a real one.
  *
  *   npm run build:binary              # dist/qseow-session-monitor(.exe)
- *   npm run build:binary -- --no-adhoc   # macOS: leave it unsigned, for the release workflow
  *
  * Then: dist/qseow-session-monitor --simulate 300
  *
@@ -24,7 +24,6 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const NAME = 'qseow-session-monitor';
 const FUSE = 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2';
-const adhoc = !process.argv.includes('--no-adhoc');
 const win = process.platform === 'win32';
 const mac = process.platform === 'darwin';
 
@@ -99,8 +98,9 @@ await inject(binary, 'NODE_SEA_BLOB', fs.readFileSync(path.join(work, 'sea-prep.
     sentinelFuse: FUSE,
     ...(mac && { machoSegmentName: 'NODE_SEA' }),
 });
-// Apple silicon runs nothing unsigned: an ad-hoc signature for local use. A release signs it properly.
-if (mac && adhoc) run('codesign', ['--sign', '-', binary]);
+// Apple silicon runs nothing unsigned, the smoke test below included: an ad-hoc signature, which
+// the release workflow's codesign --force replaces.
+if (mac) run('codesign', ['--sign', '-', binary]);
 
 // 4. Smoke test: a binary that can't start isn't worth signing.
 const reported = execFileSync(binary, ['--version'], { encoding: 'utf8' }).trim();
