@@ -22,9 +22,12 @@ jobs:
     permissions:
       contents: read
       packages: write
+    # Releases of Butler SOS only: the repository also publishes session-monitor-v* releases
+    # (session-monitor-release.yaml), which must not rebuild or retag the Butler SOS image.
     if: |
       github.event_name != 'pull_request' &&
-      github.repository_owner == 'ptarmiganlabs'
+      github.repository_owner == 'ptarmiganlabs' &&
+      (github.event_name != 'release' || startsWith(github.event.release.tag_name, 'butler-sos-v'))
 
     steps:
       - name: Show input values
