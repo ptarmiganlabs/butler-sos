@@ -114,7 +114,7 @@ export function webOutput(cfg, site, pollSeconds) {
         server.on('error', (err) => {
             const msg =
                 err.code === 'EADDRINUSE'
-                    ? `Port ${cfg.port} is already in use, probably by another copy of the monitor. Stop that one, or set outputs.web.port to another port.`
+                    ? `Port ${cfg.port} is already in use, probably by another copy of the monitor. Stop that one, or start this one on another port with --port (or outputs.web.port in config.yaml).`
                     : `The web page can't start: ${err.message}`;
             if (!listening) return reject(new Error(msg));
             console.error(`\n${msg}\n`);

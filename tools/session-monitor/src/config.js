@@ -64,14 +64,14 @@ function validate(c, simulate) {
     if (!simulate) {
         need(
             c.sense.repositoryHost,
-            'sense.host is missing: set it to the name of your central Sense server.'
+            'The Sense server is missing: pass --host, or set sense.host in config.yaml, to the name of your central Sense server.'
         );
         const missing = ['certFile', 'keyFile', 'caFile'].filter(
             (f) => !c.sense[f] || !fs.existsSync(c.sense[f])
         );
         need(
             !missing.length,
-            `Certificate files not found: ${missing.map((f) => c.sense[f] || f).join(', ')}.\n    Export them from the QMC (Certificates > Export, "Platform independent PEM-format") and set sense.certDir to the folder holding client.pem, client_key.pem and root.pem.`
+            `Certificate files not found: ${missing.map((f) => c.sense[f] || f).join(', ')}.\n    Export them from the QMC (Certificates > Export, "Platform independent PEM-format") and pass the folder holding client.pem, client_key.pem and root.pem with --certs, or set it as sense.certDir in config.yaml.`
         );
     }
     const l = c.limit;

@@ -57,6 +57,7 @@ Usage: ${me} [options]
                       the QMC (Certificates > Export, "Platform independent PEM-format").
   -c, --config <file> A configuration file (default: config.yaml here or next to the program).
   --simulate <users>  A made-up site with this many users, to try the page without Sense.
+  --port <number>     The web page's port (default 3939).
   --no-open           Don't open the page in a browser.
   --once              Poll once, print a table and exit.
   -v, --version       Print the version.
@@ -76,6 +77,7 @@ async function main() {
                 config: { type: 'string', short: 'c' },
                 host: { type: 'string' },
                 certs: { type: 'string' },
+                port: { type: 'string' },
                 open: { type: 'boolean', default: true },
                 once: { type: 'boolean', default: false },
                 simulate: { type: 'string' },
@@ -96,6 +98,9 @@ async function main() {
     }
 
     let simulateUsers = args.simulate ? Number(args.simulate) : 0;
+    const port = args.port === undefined ? undefined : Number(args.port);
+    if (port !== undefined && !(Number.isInteger(port) && port > 0 && port < 65536))
+        await fail('--port needs a port number between 1 and 65535, e.g. --port 3940');
     if (args.simulate && !(simulateUsers > 0))
         await fail(`--simulate needs a number of users, e.g. --simulate ${DEMO_USERS}`);
 
@@ -177,7 +182,9 @@ async function main() {
     try {
         cfg = loadConfig(settings.file, {
             simulate: simulateUsers > 0,
-            overrides: settings.overrides,
+            overrides: port
+                ? { ...settings.overrides, outputs: { web: { port } } }
+                : settings.overrides,
             demoHint,
         });
     } catch (err) {
