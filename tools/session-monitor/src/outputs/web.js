@@ -100,7 +100,12 @@ export function webOutput(cfg, site, pollSeconds) {
 
     // The page's address. 127.0.0.1 stays as it is: localhost may resolve to ::1 first, where
     // nothing listens. Only an all-interfaces bind is shown as localhost.
-    const shown = ['0.0.0.0', '::'].includes(cfg.host) ? 'localhost' : cfg.host;
+    // IPv6 literals go in brackets in a URL; listen() still gets the bare address.
+    const shown = ['0.0.0.0', '::'].includes(cfg.host)
+        ? 'localhost'
+        : String(cfg.host).includes(':')
+          ? `[${cfg.host}]`
+          : cfg.host;
     const url = `http://${shown}:${cfg.port}/`;
     let listening = false;
     // Rejects when the page can't start (a port in use, say), so the caller can report it as a
