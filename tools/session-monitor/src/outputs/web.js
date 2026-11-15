@@ -98,22 +98,29 @@ export function webOutput(cfg, site, pollSeconds) {
         }
     }
 
-    server.on('error', (err) => {
-        console.error(
-            err.code === 'EADDRINUSE'
-                ? `\nPort ${cfg.port} is already in use, probably by another copy of the monitor. Stop that one, or set outputs.web.port to another port.\n`
-                : `\nThe web page can't start: ${err.message}\n`
-        );
-        process.exit(1);
-    });
-    const shown = ['0.0.0.0', '::', '127.0.0.1', '::1'].includes(cfg.host) ? 'localhost' : cfg.host;
+    // The page's address. 127.0.0.1 stays as it is: localhost may resolve to ::1 first, where
+    // nothing listens. Only an all-interfaces bind is shown as localhost.
+    const shown = ['0.0.0.0', '::'].includes(cfg.host) ? 'localhost' : cfg.host;
     const url = `http://${shown}:${cfg.port}/`;
-    const ready = new Promise((resolve) =>
+    let listening = false;
+    // Rejects when the page can't start (a port in use, say), so the caller can report it as a
+    // startup failure rather than this exiting on its own.
+    const ready = new Promise((resolve, reject) => {
+        server.on('error', (err) => {
+            const msg =
+                err.code === 'EADDRINUSE'
+                    ? `Port ${cfg.port} is already in use, probably by another copy of the monitor. Stop that one, or set outputs.web.port to another port.`
+                    : `The web page can't start: ${err.message}`;
+            if (!listening) return reject(new Error(msg));
+            console.error(`\n${msg}\n`);
+            process.exit(1);
+        });
         server.listen(cfg.port, cfg.host, () => {
+            listening = true;
             console.log(`\n    Open ${url} in your browser.\n`);
             resolve();
-        })
-    );
+        });
+    });
     return {
         name: 'web',
         url,

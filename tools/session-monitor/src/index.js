@@ -98,8 +98,6 @@ async function main() {
     let simulateUsers = args.simulate ? Number(args.simulate) : 0;
     if (args.simulate && !(simulateUsers > 0))
         await fail(`--simulate needs a number of users, e.g. --simulate ${DEMO_USERS}`);
-    if (args.certs && !args.host)
-        await fail('--certs needs --host as well: the server to connect to.');
 
     /**
      * Where the settings come from, first match wins: --config; else config.yaml in the current folder
@@ -114,22 +112,24 @@ async function main() {
                   ...(isBinary() ? [path.join(path.dirname(process.execPath), 'config.yaml')] : []),
               ];
         const file = candidates.find((f) => fs.existsSync(f)) ?? (args.config || null);
+        const haveFile = Boolean(file && fs.existsSync(file));
+        // --host and --certs override the file's settings, or stand in for a file altogether.
         const overrides = {};
-        if (args.host) {
-            const certDir = args.certs ? path.resolve(args.certs) : undefined;
+        if (args.host || args.certs)
             overrides.sense = {
-                host: args.host,
-                repositoryHost: args.host,
-                ...(certDir && {
-                    certDir,
-                    certFile: path.join(certDir, 'client.pem'),
-                    keyFile: path.join(certDir, 'client_key.pem'),
-                    caFile: path.join(certDir, 'root.pem'),
-                }),
+                ...(args.host && { host: args.host }),
+                ...(args.certs && { certDir: path.resolve(args.certs) }),
             };
+        if (!simulateUsers && !haveFile && !args.config) {
+            if (args.certs && !args.host)
+                await fail('--certs needs --host as well: the server to connect to.');
+            if (args.host && !args.certs)
+                await fail(
+                    '--host needs --certs as well: the folder with client.pem, client_key.pem and root.pem,\n' +
+                        '    exported from the QMC (Certificates > Export, "Platform independent PEM-format").'
+                );
         }
-        if (simulateUsers || args.config || args.host || (file && fs.existsSync(file)))
-            return { file, overrides };
+        if (simulateUsers || args.config || args.host || haveFile) return { file, overrides };
 
         const local = findLocalSense();
         if (local) {
@@ -147,16 +147,7 @@ async function main() {
             );
             return {
                 file: null,
-                overrides: {
-                    sense: {
-                        host: local.host,
-                        repositoryHost: local.host,
-                        certDir: local.certDir,
-                        certFile: path.win32.join(local.certDir, 'client.pem'),
-                        keyFile: path.win32.join(local.certDir, 'client_key.pem'),
-                        caFile: path.win32.join(local.certDir, 'root.pem'),
-                    },
-                },
+                overrides: { sense: { host: local.host, certDir: local.certDir } },
             };
         }
 
@@ -305,6 +296,7 @@ async function main() {
     log(
         `starting: limit ${cfg.limit.sessions} sessions per ${cfg.limit.windowSeconds} s, warn at ${cfg.limit.warnAt}, critical at ${cfg.limit.criticalAt}, poll every ${cfg.poll.intervalSeconds} s; outputs: ${outputs.map((x) => x.name).join(', ')}`
     );
+    // An output that can't start (the web page's port in use, say) ends it here, through fail().
     await Promise.all(outputs.map((out) => out.ready));
     const page = outputs.find((x) => x.name === 'web');
     if (page && args.open && !args.once) openBrowser(page.url);
@@ -352,4 +344,6 @@ function openBrowser(url) {
     }
 }
 
-main();
+// Anything that goes wrong while starting ends through fail(), so that a double-clicked binary
+// on Windows still shows the message before its window closes.
+main().catch((err) => fail(err?.message || String(err)));
