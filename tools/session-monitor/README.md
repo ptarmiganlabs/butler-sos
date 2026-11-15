@@ -13,6 +13,8 @@ A live web page for Qlik Sense Enterprise on Windows (client-managed). It shows 
 
 ![The desk layout: overview, users by slots in use, and one user's session timeline](docs/desk.jpg)
 
+▶ **[Watch the 4-minute video](https://youtu.be/kRUpunrj56M)** for a guided tour of the page.
+
 - **One page, updated every 15 seconds.** Countdowns and rings move every second in between.
 - **Nothing to install on the Sense server.** It only reads Sense's own APIs, and changes nothing.
 - **Help is built in.** Every **?** on the page explains the part next to it, with a diagram.
