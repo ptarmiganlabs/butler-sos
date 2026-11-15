@@ -93,28 +93,37 @@ function validate(c, simulate) {
 }
 
 /**
- * Reads, merges and validates the YAML configuration file.
+ * Reads, merges and validates the configuration: the defaults, then the YAML file if there is one,
+ * then `overrides` (from the command line, or found on the Sense server itself).
  *
- * @param {string} file Path to the YAML file.
+ * @param {string | null} file Path to the YAML file, or null for none.
  * @param {object} [opts] Options.
  * @param {boolean} [opts.simulate] No Sense connection is needed (a simulated site).
+ * @param {object} [opts.overrides] Settings that win over the file's.
+ * @param {string} [opts.demoHint] How to start the demo, for the error when nothing is configured.
  * @returns {object} The configuration.
  */
-export function loadConfig(file, { simulate = false } = {}) {
-    // A simulated site needs no configuration file: the defaults are enough.
-    if (!simulate && !fs.existsSync(file)) {
+export function loadConfig(
+    file,
+    { simulate = false, overrides = {}, demoHint = 'npm run demo' } = {}
+) {
+    const haveFile = Boolean(file) && fs.existsSync(file);
+    // A simulated site, or a server named on the command line, needs no configuration file.
+    if (!simulate && !haveFile && !overrides.sense?.host) {
         throw new Error(
-            `No configuration file found at ${file}.\n` +
-                '    Copy config.example.yaml to config.yaml and set sense.host and sense.certDir, then start again.\n' +
-                '    To try the page without a Sense server: npm run demo'
+            `${file ? `No configuration file found at ${file}.` : 'Nothing to connect to.'}\n` +
+                '    Copy config.example.yaml to config.yaml and set sense.host and sense.certDir, then start again,\n' +
+                '    or name the server on the command line: --host <server> --certs <folder>.\n' +
+                `    To try the page without a Sense server: ${demoHint}`
         );
     }
     // The demo without a config file keeps the terminal quiet: the page is what it's for.
-    const raw =
-        simulate && !fs.existsSync(file)
-            ? { outputs: { console: { enable: false } } }
-            : loadYaml(fs.readFileSync(file, 'utf8')) || {};
-    const c = merge(DEFAULTS, raw);
+    const raw = haveFile
+        ? loadYaml(fs.readFileSync(file, 'utf8')) || {}
+        : simulate
+          ? { outputs: { console: { enable: false } } }
+          : {};
+    const c = merge(merge(DEFAULTS, raw), overrides);
     // Friendlier names: sense.host for the server, sense.certDir for the folder the QMC export made.
     c.sense.repositoryHost ??= c.sense.host;
     if (c.sense.certDir) {

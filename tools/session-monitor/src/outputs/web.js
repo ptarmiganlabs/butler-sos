@@ -1,8 +1,7 @@
-import fs from 'node:fs';
 import http from 'node:http';
+import { readWebFile } from '../assets.js';
 
 // The page's files. Only these paths are served; they are small, so they are read on each request.
-const dir = new URL('../web/', import.meta.url);
 const FILES = {
     '/': ['index.html', 'text/html; charset=utf-8'],
     '/style.css': ['style.css', 'text/css; charset=utf-8'],
@@ -68,7 +67,7 @@ export function webOutput(cfg, site, pollSeconds) {
                 'Content-Type': type,
                 'Cache-Control': 'no-cache',
                 ...SECURITY_HEADERS,
-            }).end(fs.readFileSync(new URL(file, dir)));
+            }).end(readWebFile(file));
         } else if (path === '/api/state') {
             // The current state plus the recent events, for a page that has just (re)connected.
             if (!slim) res.writeHead(503, SECURITY_HEADERS).end();
@@ -107,12 +106,18 @@ export function webOutput(cfg, site, pollSeconds) {
         );
         process.exit(1);
     });
-    server.listen(cfg.port, cfg.host, () => {
-        const shown = cfg.host === '0.0.0.0' ? 'localhost' : cfg.host;
-        console.log(`\n    Open http://${shown}:${cfg.port}/ in your browser.\n`);
-    });
+    const shown = ['0.0.0.0', '::', '127.0.0.1', '::1'].includes(cfg.host) ? 'localhost' : cfg.host;
+    const url = `http://${shown}:${cfg.port}/`;
+    const ready = new Promise((resolve) =>
+        server.listen(cfg.port, cfg.host, () => {
+            console.log(`\n    Open ${url} in your browser.\n`);
+            resolve();
+        })
+    );
     return {
         name: 'web',
+        url,
+        ready,
         handle(result) {
             for (const e of result.events) (IMPORTANT.has(e.type) ? important : activity).push(e);
             important.splice(0, Math.max(0, important.length - 200));
