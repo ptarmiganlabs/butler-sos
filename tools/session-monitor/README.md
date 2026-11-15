@@ -215,7 +215,7 @@ Everything except `sense.host` and `sense.certDir` has a sensible default. See t
 | Setting                                 | Default                         |                                                                        |
 | --------------------------------------- | ------------------------------- | ---------------------------------------------------------------------- |
 | `sense.host`                            | —                               | The central node. Proxy servers and virtual proxies are found from it. |
-| `sense.certDir`                         | —                               | Folder with `client.pem`, `client_key.pem`, `root.pem`.                |
+| `sense.certDir`                         | —                               | Folder with `client.pem`, `client_key.pem`, `root.pem`. A relative path is relative to the config file. |
 | `sense.virtualProxies`                  | all                             | Only watch these virtual proxy prefixes.                               |
 | `outputs.web.host`, `outputs.web.port`  | `127.0.0.1`, `3939`             | Where the page listens.                                                |
 | `outputs.web.title`                     | server name                     | The name in the page header.                                           |
