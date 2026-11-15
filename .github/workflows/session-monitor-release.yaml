@@ -242,8 +242,17 @@ jobs:
 
           # A bare executable can't be stapled; Gatekeeper looks the ticket up online instead.
           ditto -c -k --keepParent "$bin" "$RUNNER_TEMP/notarise.zip"
-          xcrun notarytool submit "$RUNNER_TEMP/notarise.zip" --apple-id "$NOTARY_APPLE_ID" \
-            --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PWD" --wait --timeout 30m
+          # notarytool can exit 0 for a submission Apple rejects, so its verdict is read, not assumed.
+          result=$(xcrun notarytool submit "$RUNNER_TEMP/notarise.zip" --apple-id "$NOTARY_APPLE_ID" \
+            --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PWD" --wait --timeout 30m --output-format json)
+          echo "$result"
+          status=$(printf '%s' "$result" | /usr/bin/python3 -c 'import json,sys; print(json.load(sys.stdin).get("status",""))')
+          if [[ "$status" != "Accepted" ]]; then
+            id=$(printf '%s' "$result" | /usr/bin/python3 -c 'import json,sys; print(json.load(sys.stdin).get("id",""))')
+            [[ -n "$id" ]] && xcrun notarytool log "$id" --apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PWD" || true
+            echo "::error::Apple did not accept the notarisation: '$status'."; exit 1
+          fi
+          echo "Notarised: $status" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the signed binary
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
