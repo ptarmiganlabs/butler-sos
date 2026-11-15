@@ -11,11 +11,19 @@ const inBinary = sea.isSea();
 /** @returns {boolean} True when running as the single-executable build. */
 export const isBinary = () => inBinary;
 
+const cache = new Map();
+
 /**
+ * Reads one of the page's files.
+ *
  * @param {string} rel Path below src/web/, such as `index.html` or `brand/x.svg`.
  * @returns {Buffer} The file's contents.
  */
 export function readWebFile(rel) {
-    if (inBinary) return Buffer.from(sea.getAsset(`web/${rel}`));
+    // Inside the binary the files never change, and getAsset copies them on every call: once is enough.
+    if (inBinary) {
+        if (!cache.has(rel)) cache.set(rel, Buffer.from(sea.getAsset(`web/${rel}`)));
+        return cache.get(rel);
+    }
     return fs.readFileSync(new URL(`./web/${rel}`, import.meta.url));
 }
