@@ -107,11 +107,14 @@ export function loadConfig(
     file,
     { simulate = false, overrides = {}, demoHint = 'npm run demo' } = {}
 ) {
-    const haveFile = Boolean(file) && fs.existsSync(file);
+    // A file that was asked for must be there: running on defaults instead could, say, open the
+    // web page that file would have turned off.
+    if (file && !fs.existsSync(file)) throw new Error(`No configuration file found at ${file}.`);
+    const haveFile = Boolean(file);
     // A simulated site, or a server named on the command line, needs no configuration file.
     if (!simulate && !haveFile && !overrides.sense?.host) {
         throw new Error(
-            `${file ? `No configuration file found at ${file}.` : 'Nothing to connect to.'}\n` +
+            'Nothing to connect to.\n' +
                 '    Copy config.example.yaml to config.yaml and set sense.host and sense.certDir, then start again,\n' +
                 '    or name the server on the command line: --host <server> --certs <folder>.\n' +
                 `    To try the page without a Sense server: ${demoHint}`
@@ -125,7 +128,14 @@ export function loadConfig(
           : {};
     const c = merge(merge(DEFAULTS, raw), overrides);
     // Friendlier names: sense.host for the server, sense.certDir for the folder the QMC export made.
-    c.sense.repositoryHost ??= c.sense.host;
+    c.sense.repositoryHost = overrides.sense?.host ?? c.sense.repositoryHost ?? c.sense.host;
+    // A certificate folder given on the command line (or found on the server) wins over any
+    // certificate files the configuration file names.
+    if (overrides.sense?.certDir) {
+        delete c.sense.certFile;
+        delete c.sense.keyFile;
+        delete c.sense.caFile;
+    }
     if (c.sense.certDir) {
         c.sense.certFile ??= path.join(c.sense.certDir, 'client.pem');
         c.sense.keyFile ??= path.join(c.sense.certDir, 'client_key.pem');
