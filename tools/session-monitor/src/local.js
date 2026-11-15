@@ -25,15 +25,14 @@ export function findLocalSense({
 } = {}) {
     if (platform !== 'win32') return null;
     const base = path.win32.join(env.ProgramData || 'C:\\ProgramData', 'Qlik', 'Sense');
-    let host;
+    let raw;
     try {
-        const raw = fsImpl.readFileSync(path.win32.join(base, 'Host.cfg'), 'utf8').trim();
-        host = Buffer.from(raw, 'base64').toString('utf8').trim();
+        raw = fsImpl.readFileSync(path.win32.join(base, 'Host.cfg'));
     } catch {
         return null;
     }
-    // A Host.cfg that doesn't decode to a host name is not one this can use.
-    if (!/^[A-Za-z0-9.-]+$/.test(host)) return null;
+    const host = hostFromCfg(raw);
+    if (!host) return null;
     const certDir = path.win32.join(
         base,
         'Repository',
@@ -52,4 +51,26 @@ export function findLocalSense({
         }
     }
     return { host, certDir, missing, unreadable };
+}
+
+const HOST = /^[A-Za-z0-9.-]+$/;
+
+/**
+ * Reads the host name out of Host.cfg's contents. Sense writes it base64-encoded; this also copes
+ * with a byte-order mark, UTF-16, surrounding white space, and a plain-text host name.
+ *
+ * @param {Buffer | string} raw The file's contents.
+ * @returns {string | null} The host name, or null if there is none to be found.
+ */
+export function hostFromCfg(raw) {
+    const buf = Buffer.isBuffer(raw) ? raw : Buffer.from(String(raw), 'utf8');
+    const utf16 = buf.length > 1 && (buf.includes(0) || (buf[0] === 0xff && buf[1] === 0xfe));
+    const text = buf
+        .toString(utf16 ? 'utf16le' : 'utf8')
+        .replace(/^\uFEFF/, '')
+        .replace(/\0/g, '')
+        .trim();
+    const decoded = Buffer.from(text, 'base64').toString('utf8').replace(/\0/g, '').trim();
+    if (HOST.test(decoded) && /^[A-Za-z0-9+/=]+$/.test(text)) return decoded;
+    return HOST.test(text) && text.includes('.') ? text : null;
 }
