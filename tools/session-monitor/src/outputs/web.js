@@ -1,8 +1,7 @@
-import fs from 'node:fs';
 import http from 'node:http';
+import { readWebFile } from '../assets.js';
 
 // The page's files. Only these paths are served; they are small, so they are read on each request.
-const dir = new URL('../web/', import.meta.url);
 const FILES = {
     '/': ['index.html', 'text/html; charset=utf-8'],
     '/style.css': ['style.css', 'text/css; charset=utf-8'],
@@ -68,7 +67,7 @@ export function webOutput(cfg, site, pollSeconds) {
                 'Content-Type': type,
                 'Cache-Control': 'no-cache',
                 ...SECURITY_HEADERS,
-            }).end(fs.readFileSync(new URL(file, dir)));
+            }).end(readWebFile(file));
         } else if (path === '/api/state') {
             // The current state plus the recent events, for a page that has just (re)connected.
             if (!slim) res.writeHead(503, SECURITY_HEADERS).end();
@@ -99,20 +98,38 @@ export function webOutput(cfg, site, pollSeconds) {
         }
     }
 
-    server.on('error', (err) => {
-        console.error(
-            err.code === 'EADDRINUSE'
-                ? `\nPort ${cfg.port} is already in use, probably by another copy of the monitor. Stop that one, or set outputs.web.port to another port.\n`
-                : `\nThe web page can't start: ${err.message}\n`
-        );
-        process.exit(1);
-    });
-    server.listen(cfg.port, cfg.host, () => {
-        const shown = cfg.host === '0.0.0.0' ? 'localhost' : cfg.host;
-        console.log(`\n    Open http://${shown}:${cfg.port}/ in your browser.\n`);
+    // The page's address. 127.0.0.1 stays as it is: localhost may resolve to ::1 first, where
+    // nothing listens. Only an all-interfaces bind is shown as localhost.
+    // IPv6 literals go in brackets in a URL; listen() still gets the bare address.
+    const shown = ['0.0.0.0', '::'].includes(cfg.host)
+        ? 'localhost'
+        : String(cfg.host).includes(':')
+          ? `[${cfg.host}]`
+          : cfg.host;
+    const url = `http://${shown}:${cfg.port}/`;
+    let listening = false;
+    // Rejects when the page can't start (a port in use, say), so the caller can report it as a
+    // startup failure rather than this exiting on its own.
+    const ready = new Promise((resolve, reject) => {
+        server.on('error', (err) => {
+            const msg =
+                err.code === 'EADDRINUSE'
+                    ? `Port ${cfg.port} is already in use, probably by another copy of the monitor. Stop that one, or start this one on another port with --port (or outputs.web.port in config.yaml).`
+                    : `The web page can't start: ${err.message}`;
+            if (!listening) return reject(new Error(msg));
+            console.error(`\n${msg}\n`);
+            process.exit(1);
+        });
+        server.listen(cfg.port, cfg.host, () => {
+            listening = true;
+            console.log(`\n    Open ${url} in your browser.\n`);
+            resolve();
+        });
     });
     return {
         name: 'web',
+        url,
+        ready,
         handle(result) {
             for (const e of result.events) (IMPORTANT.has(e.type) ? important : activity).push(e);
             important.splice(0, Math.max(0, important.length - 200));

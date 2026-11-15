@@ -24,7 +24,38 @@ A live web page for Qlik Sense Enterprise on Windows (client-managed). It shows 
 > and alerting, use [Butler SOS](https://butler-sos.ptarmiganlabs.com). This live view is planned to
 > become part of Butler SOS.
 
+## Quickest start: download one program
+
+The monitor comes as a single program for Windows, macOS (Apple silicon) and Linux, with nothing
+else to install. Download the zip for your computer from the
+[session monitor releases](https://github.com/ptarmiganlabs/butler-sos/releases?q=session-monitor)
+and unzip it. The Windows program is signed by Ptarmigan Labs; the macOS one is signed and
+notarised by Apple.
+
+- **On the Sense server itself** (the central node), run `qseow-session-monitor.exe` as an
+  administrator, for example by right-clicking it and choosing _Run as administrator_. It finds
+  the server's name and Sense's own certificates by itself, and opens the page in the browser.
+  That's all.
+- **On any other computer**, first export certificates from the QMC (step 2 below), then:
+
+    ```bash
+    qseow-session-monitor --host <central node> --certs <folder with the certificates>
+    ```
+
+- **No Sense server at hand?** Run it with no options and answer **Y** when it offers the demo,
+  or start it with `--simulate 300`.
+
+It runs until you press **Ctrl+C**. `qseow-session-monitor --help` lists every option. For the
+settings beyond those, put a `config.yaml` next to the program (the zip includes
+`config.example.yaml`).
+
+> **macOS:** the first time the program connects to your Sense server, macOS asks whether it may
+> find devices on your local network. Allow it, or the connection times out.
+
 ## Try it in two minutes, without a Sense server
+
+This and the following sections run it from the source code instead, with Node.js.
+
 
 You need [Node.js](https://nodejs.org) 24 or later. Check with `node --version`.
 
@@ -184,7 +215,7 @@ Everything except `sense.host` and `sense.certDir` has a sensible default. See t
 | Setting                                 | Default                         |                                                                        |
 | --------------------------------------- | ------------------------------- | ---------------------------------------------------------------------- |
 | `sense.host`                            | —                               | The central node. Proxy servers and virtual proxies are found from it. |
-| `sense.certDir`                         | —                               | Folder with `client.pem`, `client_key.pem`, `root.pem`.                |
+| `sense.certDir`                         | —                               | Folder with `client.pem`, `client_key.pem`, `root.pem`. A relative path is relative to the config file. |
 | `sense.virtualProxies`                  | all                             | Only watch these virtual proxy prefixes.                               |
 | `outputs.web.host`, `outputs.web.port`  | `127.0.0.1`, `3939`             | Where the page listens.                                                |
 | `outputs.web.title`                     | server name                     | The name in the page header.                                           |
@@ -252,7 +283,14 @@ users.
 ```bash
 npm test                              # unit tests
 node src/index.js --simulate 300      # the demo, with a config file of your own: add --config
+npm run build:binary                  # the single program, for this computer, in dist/
 ```
+
+The program is Node.js's own [single executable application](https://nodejs.org/api/single-executable-applications.html):
+`scripts/build-binary.mjs` bundles the code with esbuild, adds the page's files as assets, and puts
+both into a copy of Node.js. The release workflow, `.github/workflows/session-monitor-release.yaml`,
+builds it on Windows, macOS and Linux, signs the Windows and macOS programs, and drafts a release
+tagged `session-monitor-v<version>`.
 
 The code: `src/collect.js` reads Sense, `src/model.js` turns readings into users, slots and events,
 `src/simulate.js` is the demo site, `src/outputs/` holds the console, web page, webhook and MQTT

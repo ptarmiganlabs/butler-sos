@@ -14,10 +14,15 @@
     "scripts": {
         "start": "node src/index.js",
         "demo": "node src/index.js --simulate 300",
-        "test": "node --test \"test/*.test.mjs\""
+        "test": "node --test \"test/*.test.mjs\"",
+        "build:binary": "node scripts/build-binary.mjs"
     },
     "dependencies": {
         "js-yaml": "5.4.2",
         "mqtt": "5.15.2"
+    },
+    "devDependencies": {
+        "esbuild": "0.28.1",
+        "postject": "1.0.0-alpha.6"
     }
 }

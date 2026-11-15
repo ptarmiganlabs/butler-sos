@@ -1,0 +1,340 @@
+name: session-monitor release
+
+# Builds the Qlik Sense session monitor (tools/session-monitor) into single executables for
+# Windows, macOS and Linux, signs the Windows and macOS ones, and drafts a GitHub release tagged
+# session-monitor-v<version>. Started by hand:
+#
+#   gh workflow run session-monitor-release.yaml --repo ptarmiganlabs/butler-sos --ref master -f version=0.1.0
+#
+# The version must be the one in tools/session-monitor/package.json. Butler SOS's own releases are
+# untouched: release-please only reads butler-sos-v* tags, and the release is created with
+# make_latest false, so Butler SOS stays the repository's latest release. The release is a draft
+# until someone publishes it.
+#
+# From any other branch, it builds the three unsigned binaries as workflow artifacts and stops:
+# signing runs in the release-signing environment, which admits master alone.
+#
+# Signing follows ci.yaml: no job both runs repository code and holds a signing credential.
+#   build         repository code and npm, no credential -> unsigned binaries + digests
+#   sign-windows  the Azure credential, no repository code -> signed .exe
+#   sign-macos    the Apple certificate, no repository code -> signed, notarised binary
+#   publish       no credential but contents: write -> zips, provenance, draft release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The session monitor version to release, as in tools/session-monitor/package.json
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: session-monitor-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: windows-latest
+            target: win-x64
+            file: qseow-session-monitor.exe
+          - os: macos-15
+            target: macos-arm64
+            file: qseow-session-monitor
+          - os: ubuntu-latest
+            target: linux-x64
+            file: qseow-session-monitor
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read # checkout only
+    defaults:
+      run:
+        shell: bash
+        working-directory: tools/session-monitor
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      # No npm cache: what this job builds gets signed, so it starts from nothing an earlier run left.
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+          check-latest: true
+
+      - name: Check the version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::'$VERSION' is not a version like 1.2.3"; exit 1; }
+          have=$(node -p "require('./package.json').version")
+          [[ "$have" == "$VERSION" ]] || { echo "::error::package.json says $have, not $VERSION"; exit 1; }
+
+      # --ignore-scripts: esbuild runs from its platform package without its install script.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Test
+        run: npm test
+
+      # Unsigned on Windows and Linux, ad-hoc signed on macOS (Apple silicon runs nothing unsigned);
+      # sign-macos replaces that with the real signature. The script smoke-tests the binary
+      # (--version) here, in a job without credentials, and writes its SHA-256 digest beside it.
+      - name: Build the binary
+        run: npm run build:binary
+
+      - name: Upload the unsigned binary
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: unsigned-${{ matrix.target }}
+          path: |
+            tools/session-monitor/dist/${{ matrix.file }}
+            tools/session-monitor/dist/${{ matrix.file }}.sha256
+          retention-days: 14
+          if-no-files-found: error
+
+  sign-windows:
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    # The same environment, and so the same Entra federated credential, as ci.yaml's sign-win64:
+    # its subject is the repository plus this environment name, not a workflow file.
+    environment: release-signing
+    permissions:
+      id-token: write # the OIDC token azure/login exchanges for the signing credential
+    steps:
+      - name: Download the unsigned binary
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: unsigned-win-x64
+          path: to-sign
+
+      - name: Verify the artifact is what build produced
+        shell: pwsh
+        run: |
+          $expected = (Get-Content to-sign/qseow-session-monitor.exe.sha256 -Raw).Trim().ToUpper()
+          $actual = (Get-FileHash to-sign/qseow-session-monitor.exe -Algorithm SHA256).Hash
+          if ($actual -ne $expected) { throw "Refusing to sign: the artifact does not match the digest build recorded." }
+          Remove-Item to-sign/qseow-session-monitor.exe.sha256
+
+      - name: Azure login via OIDC
+        uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c # v3.0.2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign with Azure Artifact Signing
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2.0.0
+        with:
+          endpoint: ${{ vars.SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ vars.SIGNING_CERT_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}\to-sign
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      # A hard failure, as in ci.yaml: an unsigned or wrongly signed binary is never released.
+      - name: Verify the signature
+        shell: pwsh
+        run: |
+          $st = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+                Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $st) { throw "signtool.exe not found on this runner." }
+          & $st.FullName verify /pa /v to-sign\qseow-session-monitor.exe
+          if ($LASTEXITCODE -ne 0) { throw "Signature verification failed." }
+          $sig = Get-AuthenticodeSignature -LiteralPath to-sign\qseow-session-monitor.exe
+          if ($sig.Status -ne 'Valid') { throw "Windows reads the signature as $($sig.Status): $($sig.StatusMessage)" }
+          $signer = $sig.SignerCertificate.GetNameInfo([System.Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false)
+          if ($signer -cne 'Ptarmigan Labs AB') {
+            throw "Signed by an unexpected certificate: '$signer' ($($sig.SignerCertificate.Subject))"
+          }
+          Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value "Windows binary signed by: ``$($sig.SignerCertificate.Subject)``"
+
+      - name: Upload the signed binary
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: signed-win-x64
+          path: to-sign/qseow-session-monitor.exe
+          retention-days: 14
+          if-no-files-found: error
+
+  sign-macos:
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    runs-on: macos-15
+    timeout-minutes: 45
+    environment: release-signing
+    permissions:
+      contents: read # the entitlements file, and nothing else, from the repository
+    steps:
+      # Only the entitlements, a property list codesign reads. No repository code runs here.
+      - name: Checkout the entitlements
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: tools/session-monitor/release-config
+          sparse-checkout-cone-mode: false
+
+      - name: Download the unsigned binary
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: unsigned-macos-arm64
+          path: to-sign
+
+      - name: Sign and notarise
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE_BASE64_CODESIGN }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_CODESIGN_PWD }}
+          MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+          NOTARY_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
+          NOTARY_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
+          NOTARY_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
+        run: |
+          set -euo pipefail
+          bin=to-sign/qseow-session-monitor
+          expected=$(tr -d '[:space:]' < "$bin.sha256")
+          actual=$(shasum -a 256 "$bin" | cut -d' ' -f1)
+          [[ "$actual" == "$expected" ]] || { echo "::error::Refusing to sign: the artifact does not match the digest build recorded."; exit 1; }
+          rm "$bin.sha256"
+          chmod +x "$bin"
+
+          # A keychain of this run's own, so that nothing prompts and nothing outlives the job.
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          cert="$RUNNER_TEMP/certificate.p12"
+          trap 'security delete-keychain "$keychain" >/dev/null 2>&1 || true; rm -f "$cert" "$RUNNER_TEMP"/*.cer' EXIT
+          printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > "$cert"
+          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "$keychain"
+          security set-keychain-settings -t 3600 -l "$keychain"
+          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "$keychain"
+          security import "$cert" -k "$keychain" -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+          # The Developer ID intermediate and Apple's root, so codesign can build the chain, as
+          # scripts/release-macos.sh does for Butler SOS.
+          curl --proto '=https' -fsSL -o "$RUNNER_TEMP/DeveloperIDG2CA.cer" https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+          security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$keychain"
+          curl --proto '=https' -fsSL -o "$RUNNER_TEMP/AppleIncRootCertificate.cer" https://www.apple.com/appleca/AppleIncRootCertificate.cer
+          security import "$RUNNER_TEMP/AppleIncRootCertificate.cer" -k "$keychain" || true
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" "$keychain" >/dev/null
+          existing=()
+          while IFS= read -r k; do existing+=("$k"); done < <(security list-keychains -d user | sed -e 's/^ *//' -e 's/"//g')
+          security list-keychains -d user -s "$keychain" "${existing[@]}"
+          identity=$(security find-identity -v -p codesigning "$keychain" | awk '/^[[:space:]]*[0-9]+\)/ {print $2; exit}')
+          [[ -n "$identity" ]] || { echo "::error::No code-signing identity in the certificate."; exit 1; }
+
+          # The hardened runtime, which notarisation requires, with what Node.js needs under it.
+          codesign --keychain "$keychain" --force --sign "$identity" --options runtime --timestamp \
+            --entitlements tools/session-monitor/release-config/macos.entitlements "$bin"
+          codesign --verify --strict --verbose=2 "$bin"
+          codesign -dv "$bin" 2>&1 | grep -E '^(Authority|TeamIdentifier)=' | head -2 | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY"
+          # The binary is not run here: this step holds the Apple credentials, and the build job
+          # already ran it.
+
+          # A bare executable can't be stapled; Gatekeeper looks the ticket up online instead.
+          ditto -c -k --keepParent "$bin" "$RUNNER_TEMP/notarise.zip"
+          # notarytool can exit 0 for a submission Apple rejects, so its verdict is read, not assumed.
+          result=$(xcrun notarytool submit "$RUNNER_TEMP/notarise.zip" --apple-id "$NOTARY_APPLE_ID" \
+            --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PWD" --wait --timeout 30m --output-format json)
+          echo "$result"
+          status=$(printf '%s' "$result" | /usr/bin/python3 -c 'import json,sys; print(json.load(sys.stdin).get("status",""))')
+          if [[ "$status" != "Accepted" ]]; then
+            id=$(printf '%s' "$result" | /usr/bin/python3 -c 'import json,sys; print(json.load(sys.stdin).get("id",""))')
+            [[ -n "$id" ]] && xcrun notarytool log "$id" --apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PWD" || true
+            echo "::error::Apple did not accept the notarisation: '$status'."; exit 1
+          fi
+          echo "Notarised: $status" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the signed binary
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: signed-macos-arm64
+          path: to-sign/qseow-session-monitor
+          retention-days: 14
+          if-no-files-found: error
+
+  publish:
+    needs: [build, sign-windows, sign-macos]
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # creates the draft release and its tag
+      id-token: write # for the provenance attestation only
+      attestations: write # stores the provenance attestation
+    steps:
+      - name: Checkout the files that ship beside the binaries
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            tools/session-monitor/config.example.yaml
+            LICENSE
+          sparse-checkout-cone-mode: false
+
+      - name: Download the binaries
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: '{signed-win-x64,signed-macos-arm64,unsigned-linux-x64}'
+          path: bin
+
+      - name: Generate build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            bin/signed-win-x64/qseow-session-monitor.exe
+            bin/signed-macos-arm64/qseow-session-monitor
+            bin/unsigned-linux-x64/qseow-session-monitor
+
+      - name: Zip them
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          extras=(tools/session-monitor/config.example.yaml LICENSE)
+          for t in win-x64 macos-arm64 linux-x64; do
+            dir=bin/signed-$t; [[ -d $dir ]] || dir=bin/unsigned-$t
+            rm -f "$dir"/*.sha256
+            chmod +x "$dir"/qseow-session-monitor*
+            zip -j -9 "qseow-session-monitor-$VERSION-$t.zip" "$dir"/qseow-session-monitor* "${extras[@]}"
+            unzip -l "qseow-session-monitor-$VERSION-$t.zip"
+          done
+          sha256sum qseow-session-monitor-*.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          tag="session-monitor-v$VERSION"
+          if gh release view "$tag" --repo "$REPO" >/dev/null 2>&1; then
+            echo "::error::$tag exists already. Bump the version in tools/session-monitor/package.json."; exit 1
+          fi
+          # Built line by line: a heredoc's closing word can't be indented inside this block.
+          {
+            echo "A live view of Qlik Sense Enterprise on Windows sessions and the five-session limit, as one program: download, unzip, run."
+            echo
+            echo "- **Windows** (signed): \`qseow-session-monitor-$VERSION-win-x64.zip\`. Run \`qseow-session-monitor.exe\` on the central Sense node, as an administrator, and it finds the server and its certificates by itself."
+            echo "- **macOS, Apple silicon** (signed and notarised): \`qseow-session-monitor-$VERSION-macos-arm64.zip\`."
+            echo "- **Linux x64**: \`qseow-session-monitor-$VERSION-linux-x64.zip\`."
+            echo
+            echo "Anywhere other than the Sense server: \`qseow-session-monitor --host <central node> --certs <folder with the QMC's exported PEM certificates>\`. No Sense server at hand? \`qseow-session-monitor --simulate 300\`."
+            echo
+            echo "How it works, and every option: [tools/session-monitor](https://github.com/$REPO/tree/$tag/tools/session-monitor). Check that a download came from this workflow with \`gh attestation verify <file> --repo $REPO\`."
+          } > notes.md
+          gh release create "$tag" --repo "$REPO" --draft --latest=false --target "$SHA" \
+            --title "Qlik Sense session monitor $VERSION" --notes-file notes.md \
+            qseow-session-monitor-*.zip SHA256SUMS.txt
