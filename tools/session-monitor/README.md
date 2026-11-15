@@ -138,9 +138,14 @@ The page calls each of those a **slot**.
   working.
 - **Closing sessions doesn't help.** Signing out, closing the browser or ending sessions in the QMC
   frees no slot sooner. Only waiting does.
-- **It counts across all virtual proxies and servers** together.
+- **It counts across all virtual proxies** together, and very likely across all proxy servers too
+  (not yet tested on a site with several proxy nodes).
 
 The **?** next to _Users_ on the page explains this with a diagram. These figures were measured on Qlik Sense May 2026. Qlik's help says five minutes, but six (360–370 seconds) is what was measured, by Qlik Support as well.
+
+The whole story is in the blog post [Five's company, six is a crowd: how Qlik Sense's session limit
+really works](https://ptarmiganlabs.com/qlik-sense-session-monitor/): how the limit was measured, a
+decade of conflicting answers about it, and a tour of this page.
 
 ## If something doesn't work
 
