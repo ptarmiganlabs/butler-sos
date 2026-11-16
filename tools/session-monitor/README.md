@@ -327,7 +327,8 @@ On a large site, only records from the last half hour are read, the page draws 5
 and each user's timeline is only sent when it's opened. The page was checked with 1,000 simulated
 users.
 
-**Not covered yet:** sites with several proxy nodes are read, but this was tested on a single-node site. Analyzer capacity and token-based licences aren't read. Direct engine connections (port 4747) weren't checked.
+**Not covered yet:** sites with several proxy nodes are read, but this was tested on a single-node site.  
+Analyzer capacity and token-based licences aren't read. Direct engine connections (port 4747) weren't checked.
 
 ## For developers
 
@@ -351,15 +352,14 @@ loaded from the internet).
 ## About Ptarmigan Labs
 
 The session monitor is made by [Ptarmigan Labs](https://ptarmiganlabs.com), the makers of
-[Butler SOS](https://butler-sos.ptarmiganlabs.com). At [ptarmiganlabs.com](https://ptarmiganlabs.com)
-you'll find more free and open-source tools for Qlik Sense, blog posts about running Qlik Sense,
-and professional services when you want help getting the most out of it.
+[Butler SOS](https://butler-sos.ptarmiganlabs.com). At [ptarmiganlabs.com](https://ptarmiganlabs.com) you'll find more free and open-source tools for Qlik Sense, blog posts about 
+running Qlik Sense, and professional services when you want help getting the most out of it.
 
 ## Credits
 
 - **Finding every proxy server and virtual proxy from the Repository** follows Ctrl-Q's `session-get` command ([ptarmiganlabs/ctrl-q](https://github.com/ptarmiganlabs/ctrl-q), MIT).
-- **Joining proxy sessions to licence usage records** is an idea from Christof Schwarz's sessionTerminator ([ChristofSchwarz/qs-OEM-tricks](https://github.com/ChristofSchwarz/qs-OEM-tricks)). No code was taken from it.
+- **Joining proxy sessions to licence usage records** is an idea from Christof Schwarz's sessionTerminator ([ChristofSchwarz/qs-OEM-tricks](https://github.com/ChristofSchwarz/qs-OEM-tricks)).
 
 ## Licence
 
-MIT, as Butler SOS.
+MIT, same as Butler SOS.
