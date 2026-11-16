@@ -536,3 +536,21 @@ test('every open session is listed for ending, even one the capped timeline has 
         ['old']
     );
 });
+
+test('a session listed by a proxy read now and remembered from one that failed is ended where it was read now', () => {
+    const t = new Tracker(LIMIT, 15);
+    t.update(snap(0, [], []));
+    const cachedA = { ...sess('dup', 'test1', 'a'), proxyHost: 'node1', proxyNode: 'Central' };
+    const liveB = { ...sess('dup', 'test1', 'b'), proxyHost: 'node2', proxyNode: 'Rim' };
+    t.update(snap(15, [cachedA, liveB], [], { failedTargets: ['node1/a'] }));
+    assert.deepEqual(t.sessions.get('dup').seenOn, {
+        proxyHost: 'node2',
+        virtualProxy: 'b',
+        proxyNode: 'Rim',
+    });
+    const r = t.update(snap(30, [liveB], []));
+    const u = r.users.find((x) => x.key === 'corp\\test1');
+    assert.equal(u.openSessions[0].virtualProxy, 'b');
+    assert.equal(u.openSessions[0].proxyNode, 'Rim');
+    assert.ok(!('seenOn' in u.timeline[0]), 'the timeline carries no location field');
+});

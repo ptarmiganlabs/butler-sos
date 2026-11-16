@@ -135,7 +135,15 @@ export class Tracker {
 
         // Track proxy sessions: first and last seen, whether they ever had a usage record.
         const live = new Set();
-        for (const s of snap.sessions) {
+        // A session listed on two proxies counts once. Where it does, the listing from a proxy
+        // read this time wins over one remembered from a proxy that couldn't be read.
+        const stale = new Set(snap.failedTargets || []);
+        const fresh = (x) => !stale.has(`${x.proxyHost}/${x.virtualProxy}`);
+        const sessions = [
+            ...snap.sessions.filter(fresh),
+            ...snap.sessions.filter((x) => !fresh(x)),
+        ];
+        for (const s of sessions) {
             if (live.has(s.sessionId)) continue; // same session listed on two proxies
             live.add(s.sessionId);
             const key = userKey(s.userDirectory, s.userId);
@@ -174,7 +182,11 @@ export class Tracker {
             t.lastSeen = now;
             t.endedAt = null;
             // Where the session was seen this time, which is where ending it must go.
-            t.seenOn = { proxyHost: s.proxyHost, virtualProxy: s.virtualProxy };
+            t.seenOn = {
+                proxyHost: s.proxyHost,
+                virtualProxy: s.virtualProxy,
+                proxyNode: s.proxyNode,
+            };
         }
         // A session missing from the proxies has ended, except on a proxy that couldn't be read this
         // time: one proxy being down must not stop ended sessions elsewhere from being noticed.
@@ -344,6 +356,11 @@ export class Tracker {
                 sessionId: t.sessionId,
                 virtualProxy: t.virtualProxy,
                 proxyNode: t.proxyNode,
+                // Where an open session was seen in this poll, for ending it; dropped from the timeline.
+                seenOn:
+                    isLive && t.seenOn
+                        ? { virtualProxy: t.seenOn.virtualProxy, proxyNode: t.seenOn.proxyNode }
+                        : undefined,
                 firstSeen: iso(t.firstSeen),
                 lastSeen: iso(t.lastSeen),
                 endedAt: iso(t.endedAt),
@@ -389,11 +406,13 @@ export class Tracker {
                 atLimitUntil: iso(fullUntil),
                 refusedTotal: this.refusedTotal.get(u.key) || 0,
                 lastRefusedAt: iso(this.lastRefusedAt.get(u.key)),
-                timeline: u.timeline.slice(0, MAX_TIMELINE_SESSIONS),
+                timeline: u.timeline.slice(0, MAX_TIMELINE_SESSIONS).map(({ seenOn, ...e }) => e),
                 timelineTotal: u.timeline.length,
                 // Every open session, however many: the timeline above is capped, and a session
                 // that has been open long can fall off it while it is still there to be ended.
-                openSessions: u.timeline.filter((e) => e.live),
+                openSessions: u.timeline
+                    .filter((e) => e.live)
+                    .map(({ seenOn, ...e }) => ({ ...e, ...seenOn })),
                 key: u.key,
             });
         }

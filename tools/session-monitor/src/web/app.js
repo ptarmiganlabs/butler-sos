@@ -697,7 +697,8 @@
         const live = state.canEndSessions && node._tl ? node._tl.openSessions || [] : [];
         box.hidden = !state.canEndSessions;
         if (!state.canEndSessions) return;
-        const ids = live.map((e) => e.sessionId).join(',');
+        // Rebuilt when a session or where it is changes, so End never names an old proxy.
+        const ids = live.map((e) => `${e.sessionId}@${e.virtualProxy}@${e.proxyNode}`).join(',');
         if (box._ids === ids && box.childElementCount) return;
         box._ids = ids;
         const head = el(
