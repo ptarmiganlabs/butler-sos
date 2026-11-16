@@ -38,6 +38,8 @@ export class Tracker {
         this.prevRecords = new Map();
         this.lastSweepAt = 0;
         this.prevUsers = new Set();
+        /** The most users there have been in each "slots in use" bucket (0…limit) since start. */
+        this.slotPeaks = Array.from({ length: limit.sessions + 1 }, () => ({ count: 0, at: null }));
         this.refusedTotal = new Map();
         /** @type {Map<string, number>} user key -> when the user was last refused */
         this.lastRefusedAt = new Map();
@@ -560,6 +562,7 @@ export class Tracker {
                 refusalGraceSeconds,
             },
             users: rows,
+            slotPeaks: this.updateSlotPeaks(rows, now, licencesUnknown || licencesStale),
             events,
             breakdown,
             licences: snap.licenceOverview || null,
@@ -577,5 +580,29 @@ export class Tracker {
                 errors: snap.errors,
             },
         };
+    }
+
+    /**
+     * Counts the licensed users with sessions by how many slots they hold, as the page's "Users by
+     * slots in use" chart does, and keeps the highest count each bucket has reached since start.
+     * Slot counts are only trusted when the licence records were just read.
+     *
+     * @param {object[]} rows This update's users.
+     * @param {number} now Time of this update, in ms.
+     * @param {boolean} unsure The licence records are unknown or stale.
+     * @returns {Array<{count: number, at: string | null}>} The peaks, one per bucket.
+     */
+    updateSlotPeaks(rows, now, unsure) {
+        if (!unsure) {
+            const lim = this.slotPeaks.length - 1;
+            const counts = Array(lim + 1).fill(0);
+            for (const r of rows)
+                if (!r.gone && r.licence && (r.proxySessions || r.slotsUsed))
+                    counts[Math.min(lim, r.slotsUsed)]++;
+            counts.forEach((n, k) => {
+                if (n > this.slotPeaks[k].count) this.slotPeaks[k] = { count: n, at: iso(now) };
+            });
+        }
+        return this.slotPeaks.map((p) => ({ ...p }));
     }
 }

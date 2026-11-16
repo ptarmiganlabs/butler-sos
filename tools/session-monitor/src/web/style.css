@@ -1462,12 +1462,33 @@ body.wall .col-help {
     font-weight: 700;
     color: var(--text);
 }
+.dbar .dplot {
+    position: relative;
+    align-self: stretch;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    width: 100%;
+    max-width: 120px;
+}
+/* The highest the bar has been since the monitor started: a faint dashed line. */
+.dbar .dpeak {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0;
+    border-top: 1.5px dashed var(--faint);
+    opacity: 0.7;
+    pointer-events: none;
+}
+.dbar .dpeak[hidden] {
+    display: none;
+}
 .dbar .dcol {
     display: block;
     width: 100%;
     max-width: 120px;
     min-height: 2px;
-    align-self: end;
     border-radius: 6px 6px 2px 2px;
     background: color-mix(in srgb, var(--accent) 70%, transparent);
     transition:
