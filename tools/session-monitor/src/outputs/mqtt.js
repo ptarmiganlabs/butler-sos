@@ -68,7 +68,8 @@ export function mqttOutput(cfg) {
             for (const u of result.users) {
                 if (u.gone) continue;
                 const topic = `user/${level(u.userDirectory)}/${level(u.userId)}`;
-                const { key, timeline, ...state } = u;
+                // The per-session lists are for the page; MQTT gets the compact user state.
+                const { key, timeline, openSessions, ...state } = u;
                 pub(topic, { at: result.at, ...state }, true);
                 current.add(topic);
                 published.add(topic);
