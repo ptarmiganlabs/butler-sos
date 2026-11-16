@@ -29,7 +29,7 @@ A live web page for Qlik Sense Enterprise on Windows (client-managed). It shows 
 
 The monitor comes as a single program for Windows, macOS (Apple silicon) and Linux, with nothing
 else to install. Download the zip for your computer from the current release,
-**[session monitor 0.2.0](https://github.com/ptarmiganlabs/butler-sos/releases/tag/session-monitor-v0.2.0)**
+**[session monitor 0.4.0](https://github.com/ptarmiganlabs/butler-sos/releases/tag/session-monitor-v0.4.0)**
 (all versions are [here](https://github.com/ptarmiganlabs/butler-sos/releases?q=session-monitor)),
 and unzip it:
 
