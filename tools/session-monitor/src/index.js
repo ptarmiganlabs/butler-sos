@@ -291,11 +291,13 @@ async function main() {
         if (!t || t.recordOnly || t.endedAt || !t.proxyHost)
             return { ok: false, message: 'That session is not open, or has already ended.' };
         const who = `${t.userDirectory}\\${t.userId}`;
-        const where = `${t.proxyHost}${t.virtualProxy === '/' ? '/' : `/${t.virtualProxy}`}`;
+        // The proxy and virtual proxy it was seen on in the latest poll.
+        const { proxyHost, virtualProxy } = t.seenOn || t;
+        const where = `${proxyHost}${virtualProxy === '/' ? '/' : `/${virtualProxy}`}`;
         if (site) site.endSession(sessionId);
         else {
-            const prefix = t.virtualProxy === '/' ? '' : t.virtualProxy;
-            const target = targets.find((x) => x.host === t.proxyHost && x.prefix === prefix);
+            const prefix = virtualProxy === '/' ? '' : virtualProxy;
+            const target = targets.find((x) => x.host === proxyHost && x.prefix === prefix);
             if (!target)
                 return { ok: false, message: `The proxy ${where} is not being polled now.` };
             try {

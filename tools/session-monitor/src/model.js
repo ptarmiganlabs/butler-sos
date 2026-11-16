@@ -173,6 +173,8 @@ export class Tracker {
             }
             t.lastSeen = now;
             t.endedAt = null;
+            // Where the session was seen this time, which is where ending it must go.
+            t.seenOn = { proxyHost: s.proxyHost, virtualProxy: s.virtualProxy };
         }
         // A session missing from the proxies has ended, except on a proxy that couldn't be read this
         // time: one proxy being down must not stop ended sessions elsewhere from being noticed.
