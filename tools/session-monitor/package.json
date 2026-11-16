@@ -1,6 +1,6 @@
 {
     "name": "qseow-session-monitor",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "description": "A live view of Qlik Sense Enterprise on Windows sessions and the five-session limit",
     "private": true,
     "type": "module",
