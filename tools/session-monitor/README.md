@@ -310,6 +310,12 @@ Neither is needed for the page.
 
 ## How it works
 
+[![How the session monitor works: it reads the Proxy (QPS) on every proxy node and the Repository (QRS) on the central node over HTTPS, joins sessions to licence usage records to count each user's slots, and pushes the result to a live web page over Server-Sent Events](src/web/how-it-works.svg)](src/web/how-it-works.svg)
+
+The same picture is on the page, under the **?** next to its title. A PNG copy for slides and
+posts is in [`docs/how-it-works.png`](docs/how-it-works.png), and a portrait version for narrow
+columns and social media in [`docs/how-it-works-narrow.png`](docs/how-it-works-narrow.png).
+
 Every 15 seconds the monitor reads Sense:
 
 - **The open sessions** on every proxy server and virtual proxy (Proxy API, port 4243).
@@ -352,7 +358,7 @@ loaded from the internet).
 ## About Ptarmigan Labs
 
 The session monitor is made by [Ptarmigan Labs](https://ptarmiganlabs.com), the makers of
-[Butler SOS](https://butler-sos.ptarmiganlabs.com). At [ptarmiganlabs.com](https://ptarmiganlabs.com) you'll find more free and open-source tools for Qlik Sense, blog posts about 
+[Butler SOS](https://butler-sos.ptarmiganlabs.com). At [ptarmiganlabs.com](https://ptarmiganlabs.com) you'll find more free and open-source tools for Qlik Sense, blog posts about
 running Qlik Sense, and professional services when you want help getting the most out of it.
 
 ## Credits

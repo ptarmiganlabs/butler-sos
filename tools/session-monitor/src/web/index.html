@@ -347,13 +347,23 @@
 
         <!-- ================= Help topics ================= -->
 
-        <template id="help-about" data-title="What you're looking at">
+        <template id="help-about" data-title="What you're looking at" data-wide>
             <p class="lead">
                 A <strong>close to real-time view</strong> of the Qlik Sense site: who is connected
                 right now, how many of their <span data-cfg="slotsLimit">5</span> slots each user
                 has taken, and how the site's licences are used. It shows
                 <strong>how things stand now</strong>, not history.
             </p>
+            <figure class="overview">
+                <a href="how-it-works.svg" target="_blank" rel="noopener"
+                    ><img
+                        src="how-it-works.svg"
+                        alt="How the session monitor works: it reads the Proxy (QPS) on every proxy node and the Repository (QRS) on the central node over HTTPS, joins sessions to licence usage records to count each user's slots, and pushes the result to this page over Server-Sent Events."
+                /></a>
+                <figcaption>
+                    How it works. Click the picture to open it full size in a new tab.
+                </figcaption>
+            </figure>
             <ul class="facts">
                 <li>
                     <strong>New data every <span data-cfg="pollSeconds">15</span> seconds.</strong>
