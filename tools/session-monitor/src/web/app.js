@@ -534,6 +534,7 @@
         node.querySelector('.detail').hidden = !isOpen;
         if (isOpen) {
             drawTimeline(node);
+            drawEndSessions(node);
             fetchTimeline(node);
         }
     }
@@ -676,12 +677,95 @@
             if (r.ok) {
                 node._tl = await r.json();
                 node._tlFor = state.at;
-                if (open.has(key)) drawTimeline(node);
+                if (open.has(key)) {
+                    drawTimeline(node);
+                    drawEndSessions(node);
+                }
             }
         } catch {
             /* the next update tries again */
         } finally {
             node._tlLoading = false;
+        }
+    }
+
+    /* ---------- ending sessions (only with --allow-session-delete) ---------- */
+    // The user's open proxy sessions, each with an End button. Rebuilt when a new timeline arrives,
+    // not every second, so a button doesn't move under the pointer.
+    function drawEndSessions(node) {
+        const box = node.querySelector('.end-sessions');
+        const live = state.canEndSessions && node._tl ? node._tl.openSessions || [] : [];
+        box.hidden = !state.canEndSessions;
+        if (!state.canEndSessions) return;
+        // Rebuilt when a session or where it is changes, so End never names an old proxy.
+        const ids = live.map((e) => `${e.sessionId}@${e.virtualProxy}@${e.proxyNode}`).join(',');
+        if (box._ids === ids && box.childElementCount) return;
+        box._ids = ids;
+        const head = el(
+            'p',
+            'es-head',
+            live.length ? `Open sessions: ${live.length}` : 'No open sessions.'
+        );
+        const list = el('ul', 'es-list');
+        for (const e of live) {
+            const li = el('li');
+            const bits = [vpName(e.virtualProxy)];
+            if (e.proxyNode) bits.push(e.proxyNode);
+            if (e.firstSeen)
+                bits.push(
+                    `${e.seenAtStart ? 'open since before' : 'opened'} ${clockS(t(e.firstSeen))}`
+                );
+            li.append(
+                el('code', 'es-id', String(e.sessionId).slice(0, 8)),
+                el('span', 'es-meta', bits.join(' · '))
+            );
+            const b = el('button', 'es-end', 'End');
+            b.type = 'button';
+            b.title = `End session ${e.sessionId} in Sense`;
+            b.addEventListener('click', () => endSession(node, e, b));
+            li.append(b);
+            list.append(li);
+        }
+        const note = el(
+            'p',
+            'es-note',
+            'Ending a session signs that browser tab out of Sense. It does not free a licence slot: that stays taken until its six minutes run out.'
+        );
+        // The outcome of the last End press, kept when the list is rebuilt without that session.
+        const status = el('p', `es-status${box._bad ? ' bad' : ''}`, box._msg || '');
+        status.setAttribute('role', 'status');
+        box.replaceChildren(head, list, note, status);
+    }
+    async function endSession(node, e, button) {
+        const u = node._u;
+        const ok = window.confirm(
+            `End session ${e.sessionId} of ${who(u)} on ${vpName(e.virtualProxy)}?\n\n` +
+                'That browser tab is signed out of Sense at once. The licence slot stays taken until its six minutes run out.'
+        );
+        if (!ok) return;
+        const status = node.querySelector('.es-status');
+        button.disabled = true;
+        status.textContent = 'Ending…';
+        status.classList.remove('bad');
+        try {
+            const r = await fetch(`api/end-session?id=${encodeURIComponent(e.sessionId)}`, {
+                method: 'POST',
+                headers: { 'X-Session-Monitor': 'end-session' },
+            });
+            const body = await r.json().catch(() => ({ message: `HTTP ${r.status}` }));
+            say(body.message || (r.ok ? 'Ended.' : 'Failed.'), !r.ok);
+            if (!r.ok) button.disabled = false;
+        } catch {
+            say('The monitor did not answer.', true);
+            button.disabled = false;
+        }
+        function say(msg, bad) {
+            const box = node.querySelector('.end-sessions');
+            box._msg = msg;
+            box._bad = bad;
+            const st = node.querySelector('.es-status');
+            st.textContent = msg;
+            st.classList.toggle('bad', bad);
         }
     }
 
@@ -1052,6 +1136,7 @@
     /* ---------- whole page ---------- */
     function render() {
         $('site').textContent = state.site || '';
+        $('endingOn').hidden = !state.canEndSessions;
         renderKpis();
         renderLicences();
         renderDist();

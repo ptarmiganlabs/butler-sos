@@ -1881,3 +1881,79 @@ body.wall .user-list {
         font-size: 36px;
     }
 }
+
+/* ---------- Ending sessions (only with --allow-session-delete) ---------- */
+.ending-on {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--crit);
+    border: 1px solid var(--crit);
+    border-radius: 99px;
+    padding: 1px 8px;
+    white-space: nowrap;
+}
+.end-sessions {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+}
+.es-head {
+    margin: 0 0 6px;
+    font-weight: 650;
+    color: var(--muted);
+}
+.es-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.es-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    padding: 4px 0;
+}
+.es-id {
+    font-size: 11.5px;
+    color: var(--text);
+}
+.es-meta {
+    color: var(--muted);
+    flex: 1 1 200px;
+    min-width: 0;
+}
+.es-end {
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 650;
+    color: var(--crit);
+    background: transparent;
+    border: 1px solid var(--crit);
+    border-radius: 6px;
+    padding: 2px 10px;
+    cursor: pointer;
+}
+.es-end:hover:not(:disabled) {
+    background: var(--crit-soft);
+}
+.es-end:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+.es-note {
+    margin: 6px 0 0;
+    color: var(--faint);
+}
+.es-status {
+    margin: 4px 0 0;
+    color: var(--muted);
+    min-height: 1em;
+}
+.es-status.bad {
+    color: var(--crit);
+}
+body.wall .end-sessions {
+    display: none;
+}

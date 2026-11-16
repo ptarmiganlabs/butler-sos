@@ -4,7 +4,8 @@ import crypto from 'node:crypto';
 
 /**
  * Minimal client for the Qlik Sense Repository (QRS) and Proxy (QPS) APIs using client certificates.
- * Read-only use: the monitor only ever sends GET requests.
+ * The monitor only reads (GET), except for ending a proxy session (DELETE), which it does only
+ * when started with --allow-session-delete and someone presses End on the page.
  */
 export class SenseClient {
     /**
@@ -42,6 +43,19 @@ export class SenseClient {
      * @returns {Promise<any>} Parsed JSON body.
      */
     get(host, port, path) {
+        return this.request('GET', host, port, path);
+    }
+
+    /**
+     * Sends a request and parses a JSON reply, if there is one.
+     *
+     * @param {'GET' | 'DELETE'} method HTTP method.
+     * @param {string} host Host name.
+     * @param {number} port Port (4242 QRS, 4243 QPS).
+     * @param {string} path Path including any query string, without the xrfkey.
+     * @returns {Promise<any>} Parsed JSON body, or null for an empty one.
+     */
+    request(method, host, port, path) {
         const sep = path.includes('?') ? '&' : '?';
         const fullPath = `${encodeURI(path).replace(/'/g, '%27')}${sep}xrfkey=${this.xrf}`;
         return new Promise((resolve, reject) => {
@@ -50,7 +64,7 @@ export class SenseClient {
                     host,
                     port,
                     path: fullPath,
-                    method: 'GET',
+                    method,
                     agent: this.agent,
                     timeout: this.timeoutMs,
                     headers: {
@@ -68,13 +82,15 @@ export class SenseClient {
                     res.on('data', (c) => chunks.push(c));
                     // A connection that breaks mid-body emits 'error' without 'end'.
                     res.on('error', reject);
-                    res.on('aborted', () => reject(new Error(`GET ${path}: response aborted`)));
+                    res.on('aborted', () =>
+                        reject(new Error(`${method} ${path}: response aborted`))
+                    );
                     res.on('end', () => {
                         const text = Buffer.concat(chunks).toString('utf8');
                         if (res.statusCode < 200 || res.statusCode > 299) {
                             reject(
                                 new Error(
-                                    `GET https://${host}:${port}${path} -> ${res.statusCode} ${text.slice(0, 200)}`
+                                    `${method} https://${host}:${port}${path} -> ${res.statusCode} ${text.slice(0, 200)}`
                                 )
                             );
                             return;
@@ -82,13 +98,15 @@ export class SenseClient {
                         try {
                             resolve(text ? JSON.parse(text) : null);
                         } catch (err) {
-                            reject(new Error(`GET ${path}: invalid JSON (${err.message})`));
+                            // A DELETE may answer with something that isn't JSON; it still worked.
+                            if (method === 'DELETE') resolve(null);
+                            else reject(new Error(`GET ${path}: invalid JSON (${err.message})`));
                         }
                     });
                 }
             );
             req.on('timeout', () =>
-                req.destroy(new Error(`GET https://${host}:${port}${path} timed out`))
+                req.destroy(new Error(`${method} https://${host}:${port}${path} timed out`))
             );
             req.on('error', reject);
             req.end();
@@ -108,6 +126,20 @@ export class SenseClient {
      */
     qps(host, port, path) {
         return this.get(host, port, `/qps${path}`);
+    }
+
+    /**
+     * Ends one proxy session, as the QPS API's DELETE /qps/{virtual proxy}/session/{id} does.
+     *
+     * @param {string} host Proxy node host.
+     * @param {number} port Proxy REST port.
+     * @param {string} prefix Virtual proxy prefix, '' for the root one.
+     * @param {string} sessionId The session.
+     * @returns {Promise<any>} What the proxy answered.
+     */
+    endSession(host, port, prefix, sessionId) {
+        const vp = prefix ? `/${prefix}` : '';
+        return this.request('DELETE', host, port, `/qps${vp}/session/${sessionId}`);
     }
 
     close() {

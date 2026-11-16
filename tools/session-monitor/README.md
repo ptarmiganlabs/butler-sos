@@ -16,7 +16,8 @@ A live web page for Qlik Sense Enterprise on Windows (client-managed). It shows 
 ▶ **[Watch the 4-minute video](https://youtu.be/kRUpunrj56M)** for a guided tour of the page.
 
 - **One page, updated every 15 seconds.** Countdowns and rings move every second in between.
-- **Nothing to install on the Sense server.** It only reads Sense's own APIs, and changes nothing.
+- **Nothing to install on the Sense server.** It only reads Sense's own APIs, and changes nothing,
+  unless you start it with [`--allow-session-delete`](#ending-sessions-from-the-page-testing-only).
 - **Help is built in.** Every **?** on the page explains the part next to it, with a diagram.
 
 > **This is a live view, not a monitoring system.** It shows how things stand now and keeps no
@@ -55,7 +56,6 @@ settings beyond those, put a `config.yaml` next to the program (the zip includes
 ## Try it in two minutes, without a Sense server
 
 This and the following sections run it from the source code instead, with Node.js.
-
 
 You need [Node.js](https://nodejs.org) 24 or later. Check with `node --version`.
 
@@ -196,6 +196,45 @@ The monitor says what's wrong when it starts. The common cases:
 | `Port 3939 is already in use`                             | Another copy is running: stop it, or set `outputs.web.port` to another port.                    |
 | The page says **No data**                                 | The monitor has stopped or can't read Sense: look at its window for errors.                     |
 
+## Ending sessions from the page (testing only)
+
+> [!WARNING]
+> **This is for testing and debugging, on a test or lab site. Don't use it in production.** With
+> `--allow-session-delete`, **anyone who can open the page can end any user's Sense session**. The
+> page has **no login**, and this option does not add one.
+
+Started with `--allow-session-delete`, the monitor shows **Session ending on** in red in the page's
+header, and each user's open sessions get an **End** button below their timeline:
+
+```bash
+qseow-session-monitor --allow-session-delete
+```
+
+**What End does:** after you confirm, the monitor ends that **proxy session** in Sense, as the Proxy
+API's `DELETE /qps/{virtual proxy}/session/{id}` does. The user's browser tab loses its Sense
+session at once and has to be reloaded. Anything they hadn't saved in an app may be lost.
+
+**What End does _not_ do: free a licence slot.** A slot is held for six minutes after the session's
+last licence check, whether or not the session still exists ([details](#the-five-session-limit-in-short)).
+A user who is refused for having five sessions is still refused right after you end one, until that
+session's six minutes have run out. That's Sense's rule, measured on a real site; this tool can't
+change it.
+
+**The limits it keeps to:**
+
+- **Only on this computer.** It refuses to start unless the page is bound to `127.0.0.1`, `::1` or
+  `localhost` (the default). The page must be opened on the computer running the monitor; it also
+  refuses requests that come through a reverse proxy, a different host name or another website.
+- **Only sessions it can see.** End works on the sessions in the monitor's own list, on the proxy and
+  virtual proxy where it found them. It can't be pointed at anything else.
+- **Every End is logged** on the console: the time, the session id, the user, and the proxy and
+  virtual proxy.
+- **Nothing else changes.** No other write reaches Sense, and without the option there's no End
+  button and no way to end a session from the page at all.
+
+To end every session of one user on a virtual proxy at once, use the QMC or the Proxy API's
+`DELETE /qps/{virtual proxy}/user/{directory}/{user id}`; this tool doesn't do that.
+
 ## Showing the page to others
 
 By default only the computer running the monitor can open the page (`127.0.0.1`). The page has
@@ -212,19 +251,19 @@ By default only the computer running the monitor can open the page (`127.0.0.1`)
 Everything except `sense.host` and `sense.certDir` has a sensible default. See the comments in
 [config.example.yaml](config.example.yaml).
 
-| Setting                                 | Default                         |                                                                        |
-| --------------------------------------- | ------------------------------- | ---------------------------------------------------------------------- |
-| `sense.host`                            | —                               | The central node. Proxy servers and virtual proxies are found from it. |
+| Setting                                 | Default                         |                                                                                                         |
+| --------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `sense.host`                            | —                               | The central node. Proxy servers and virtual proxies are found from it.                                  |
 | `sense.certDir`                         | —                               | Folder with `client.pem`, `client_key.pem`, `root.pem`. A relative path is relative to the config file. |
-| `sense.virtualProxies`                  | all                             | Only watch these virtual proxy prefixes.                               |
-| `outputs.web.host`, `outputs.web.port`  | `127.0.0.1`, `3939`             | Where the page listens.                                                |
-| `outputs.web.title`                     | server name                     | The name in the page header.                                           |
-| `outputs.web.timelineMinutes`           | 30                              | How far back a user's timeline reaches.                                |
-| `outputs.console.table`                 | `false`                         | Also print a table of users at every update.                           |
-| `poll.intervalSeconds`                  | 15                              | How often Sense is read.                                               |
-| `limit.sessions`, `limit.windowSeconds` | 5, 360                          | The limit and its window.                                              |
-| `limit.warnAt`, `limit.criticalAt`      | 4, 5                            | When a user shows as _one slot left_ and _at the limit_.               |
-| `limit.excludeUsers`                    | Sense's internal `sa_` accounts | Users never shown, as `DIRECTORY\userid`.                              |
+| `sense.virtualProxies`                  | all                             | Only watch these virtual proxy prefixes.                                                                |
+| `outputs.web.host`, `outputs.web.port`  | `127.0.0.1`, `3939`             | Where the page listens.                                                                                 |
+| `outputs.web.title`                     | server name                     | The name in the page header.                                                                            |
+| `outputs.web.timelineMinutes`           | 30                              | How far back a user's timeline reaches.                                                                 |
+| `outputs.console.table`                 | `false`                         | Also print a table of users at every update.                                                            |
+| `poll.intervalSeconds`                  | 15                              | How often Sense is read.                                                                                |
+| `limit.sessions`, `limit.windowSeconds` | 5, 360                          | The limit and its window.                                                                               |
+| `limit.warnAt`, `limit.criticalAt`      | 4, 5                            | When a user shows as _one slot left_ and _at the limit_.                                                |
+| `limit.excludeUsers`                    | Sense's internal `sa_` accounts | Users never shown, as `DIRECTORY\userid`.                                                               |
 
 ### Optional: pass alerts on to other systems
 

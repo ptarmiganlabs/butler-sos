@@ -88,6 +88,16 @@ export class SimulatedSite {
         this.service = { id: 'svc-qliksense', vp: '/' };
     }
 
+    /**
+     * Ends a session, as a QPS DELETE would: the proxy session goes, its licence record stays.
+     *
+     * @param {string} sid Session id.
+     */
+    endSession(sid) {
+        const s = this.sessions.get(sid);
+        if (s) s.alive = false;
+    }
+
     /** @param {number} p Chance per minute. @param {number} dtMs Step. @returns {boolean} Happens this step. */
     chance(p, dtMs) {
         return this.r() < 1 - Math.pow(1 - p, dtMs / 60000);
