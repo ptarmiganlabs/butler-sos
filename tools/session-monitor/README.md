@@ -28,15 +28,27 @@ A live web page for Qlik Sense Enterprise on Windows (client-managed). It shows 
 ## Quickest start: download one program
 
 The monitor comes as a single program for Windows, macOS (Apple silicon) and Linux, with nothing
-else to install. Download the zip for your computer from the
-[session monitor releases](https://github.com/ptarmiganlabs/butler-sos/releases?q=session-monitor)
-and unzip it. The Windows program is signed by Ptarmigan Labs; the macOS one is signed and
-notarised by Apple.
+else to install. Download the zip for your computer from the current release,
+**[session monitor 0.2.0](https://github.com/ptarmiganlabs/butler-sos/releases/tag/session-monitor-v0.2.0)**
+(all versions are [here](https://github.com/ptarmiganlabs/butler-sos/releases?q=session-monitor)),
+and unzip it:
+
+| Computer              | Download                                          | Size  | Signed                        |
+| --------------------- | ------------------------------------------------- | ----- | ----------------------------- |
+| Windows (x64)         | `qseow-session-monitor-<version>-win-x64.zip`     | 35 MB | by Ptarmigan Labs AB          |
+| macOS (Apple silicon) | `qseow-session-monitor-<version>-macos-arm64.zip` | 40 MB | signed and notarised by Apple |
+| Linux (x64)           | `qseow-session-monitor-<version>-linux-x64.zip`   | 44 MB | no                            |
+
+The program unzips to about 120 MB, because it carries Node.js inside it. Windows may still show a
+SmartScreen warning the first few times a new version is downloaded, even though it is signed; we
+haven't tested this. Each release's notes include a VirusTotal scan of the zips, and
+`gh attestation verify <file> --repo ptarmiganlabs/butler-sos` proves a download came from the
+release workflow.
 
 - **On the Sense server itself** (the central node), run `qseow-session-monitor.exe` as an
   administrator, for example by right-clicking it and choosing _Run as administrator_. It finds
   the server's name and Sense's own certificates by itself, and opens the page in the browser.
-  That's all.
+  That's all. (Checked on Qlik Sense Enterprise on Windows May 2026.)
 - **On any other computer**, first export certificates from the QMC (step 2 below), then:
 
     ```bash
