@@ -28,15 +28,27 @@ A live web page for Qlik Sense Enterprise on Windows (client-managed). It shows 
 ## Quickest start: download one program
 
 The monitor comes as a single program for Windows, macOS (Apple silicon) and Linux, with nothing
-else to install. Download the zip for your computer from the
-[session monitor releases](https://github.com/ptarmiganlabs/butler-sos/releases?q=session-monitor)
-and unzip it. The Windows program is signed by Ptarmigan Labs; the macOS one is signed and
-notarised by Apple.
+else to install. Download the zip for your computer from the current release,
+**[session monitor 0.2.0](https://github.com/ptarmiganlabs/butler-sos/releases/tag/session-monitor-v0.2.0)**
+(all versions are [here](https://github.com/ptarmiganlabs/butler-sos/releases?q=session-monitor)),
+and unzip it:
+
+| Computer              | Download                                          | Size  | Signed                        |
+| --------------------- | ------------------------------------------------- | ----- | ----------------------------- |
+| Windows (x64)         | `qseow-session-monitor-<version>-win-x64.zip`     | 35 MB | by Ptarmigan Labs AB          |
+| macOS (Apple silicon) | `qseow-session-monitor-<version>-macos-arm64.zip` | 40 MB | signed and notarised by Apple |
+| Linux (x64)           | `qseow-session-monitor-<version>-linux-x64.zip`   | 44 MB | no                            |
+
+The program unzips to about 120 MB, because it carries Node.js inside it. Windows may still show a
+SmartScreen warning the first few times a new version is downloaded, even though it is signed; we
+haven't tested this. Each release's notes include a VirusTotal scan of the zips, and
+`gh attestation verify <program> --repo ptarmiganlabs/butler-sos`, run on the unzipped program
+(not the zip), proves it came from the release workflow.
 
 - **On the Sense server itself** (the central node), run `qseow-session-monitor.exe` as an
   administrator, for example by right-clicking it and choosing _Run as administrator_. It finds
   the server's name and Sense's own certificates by itself, and opens the page in the browser.
-  That's all.
+  That's all. (Checked on Qlik Sense Enterprise on Windows May 2026.)
 - **On any other computer**, first export certificates from the QMC (step 2 below), then:
 
     ```bash
@@ -315,7 +327,8 @@ On a large site, only records from the last half hour are read, the page draws 5
 and each user's timeline is only sent when it's opened. The page was checked with 1,000 simulated
 users.
 
-**Not covered yet:** sites with several proxy nodes are read, but this was tested on a single-node site. Analyzer capacity and token-based licences aren't read. Direct engine connections (port 4747) weren't checked.
+**Not covered yet:** sites with several proxy nodes are read, but this was tested on a single-node site.  
+Analyzer capacity and token-based licences aren't read. Direct engine connections (port 4747) weren't checked.
 
 ## For developers
 
@@ -339,15 +352,14 @@ loaded from the internet).
 ## About Ptarmigan Labs
 
 The session monitor is made by [Ptarmigan Labs](https://ptarmiganlabs.com), the makers of
-[Butler SOS](https://butler-sos.ptarmiganlabs.com). At [ptarmiganlabs.com](https://ptarmiganlabs.com)
-you'll find more free and open-source tools for Qlik Sense, blog posts about running Qlik Sense,
-and professional services when you want help getting the most out of it.
+[Butler SOS](https://butler-sos.ptarmiganlabs.com). At [ptarmiganlabs.com](https://ptarmiganlabs.com) you'll find more free and open-source tools for Qlik Sense, blog posts about 
+running Qlik Sense, and professional services when you want help getting the most out of it.
 
 ## Credits
 
 - **Finding every proxy server and virtual proxy from the Repository** follows Ctrl-Q's `session-get` command ([ptarmiganlabs/ctrl-q](https://github.com/ptarmiganlabs/ctrl-q), MIT).
-- **Joining proxy sessions to licence usage records** is an idea from Christof Schwarz's sessionTerminator ([ChristofSchwarz/qs-OEM-tricks](https://github.com/ChristofSchwarz/qs-OEM-tricks)). No code was taken from it.
+- **Joining proxy sessions to licence usage records** is an idea from Christof Schwarz's sessionTerminator ([ChristofSchwarz/qs-OEM-tricks](https://github.com/ChristofSchwarz/qs-OEM-tricks)).
 
 ## Licence
 
-MIT, as Butler SOS.
+MIT, same as Butler SOS.
