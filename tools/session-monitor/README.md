@@ -313,7 +313,8 @@ Neither is needed for the page.
 [![How the session monitor works: it reads the Proxy (QPS) on every proxy node and the Repository (QRS) on the central node over HTTPS, joins sessions to licence usage records to count each user's slots, and pushes the result to a live web page over Server-Sent Events](src/web/how-it-works.svg)](src/web/how-it-works.svg)
 
 The same picture is on the page, under the **?** next to its title. A PNG copy for slides and
-posts is in [`docs/how-it-works.png`](docs/how-it-works.png).
+posts is in [`docs/how-it-works.png`](docs/how-it-works.png), and a portrait version for narrow
+columns and social media in [`docs/how-it-works-narrow.png`](docs/how-it-works-narrow.png).
 
 Every 15 seconds the monitor reads Sense:
 

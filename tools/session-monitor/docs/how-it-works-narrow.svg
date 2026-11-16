@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <title>How the Qlik Sense session monitor works</title>
+  <desc>The monitor reads the Proxy on every proxy node and the Repository on the central node over HTTPS, counts each user's slots, and pushes the result to a live web page.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#475569"/></marker>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2f5fe0"/></marker>
+    <style>
+      .h1 { font-size: 34px; font-weight: 800; fill: #0f172a; }
+      .sub { font-size: 18px; fill: #475569; }
+      .col { font-size: 15px; font-weight: 700; letter-spacing: 0.1em; fill: #64748b; }
+      .bt { font-size: 21px; font-weight: 700; fill: #0f172a; }
+      .t { font-size: 18px; fill: #1e293b; }
+      .s { font-size: 16.5px; fill: #475569; }
+      .m { font-size: 17px; fill: #1e293b; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+      .lab { font-size: 16.5px; font-weight: 600; fill: #334155; }
+      .labB { font-size: 16.5px; font-weight: 700; fill: #2f5fe0; }
+      .num { font-size: 15px; font-weight: 700; fill: #fff; }
+    </style>
+  </defs>
+  <rect width="800" height="1000" rx="20" fill="#f8fafc"/>
+
+  <text x="40" y="62" class="h1">How the session monitor works</text>
+  <text x="40" y="94" class="sub">Reads Sense's own APIs, counts each user's slots, and shows it live.</text>
+  <text x="40" y="118" class="sub">Nothing is installed on the Sense server.</text>
+
+  <!-- Sense site -->
+  <text x="40" y="164" class="col">YOUR QLIK SENSE SITE</text>
+  <g transform="translate(40,176)">
+    <rect width="344" height="170" rx="14" fill="#ecfdf3" stroke="#16a34a" stroke-width="1.5"/>
+    <text x="22" y="38" class="bt">Every proxy node</text>
+    <text x="22" y="68" class="t" font-weight="600">Proxy (QPS)</text><text x="148" y="68" class="m">:4243</text>
+    <text x="22" y="104" class="s">Open sessions, per</text>
+    <text x="22" y="128" class="s">virtual proxy. Each node</text>
+    <text x="22" y="152" class="s">knows only its own.</text>
+  </g>
+  <g transform="translate(416,176)">
+    <rect width="344" height="170" rx="14" fill="#ecfdf3" stroke="#16a34a" stroke-width="1.5"/>
+    <text x="22" y="38" class="bt">Central node</text>
+    <text x="22" y="68" class="t" font-weight="600">Repository (QRS)</text><text x="186" y="68" class="m">:4242</text>
+    <text x="22" y="104" class="s">Licence usage records:</text>
+    <text x="22" y="128" class="s">the slots the limit counts.</text>
+    <text x="22" y="152" class="s">Proxies and licences.</text>
+  </g>
+
+  <!-- arrows down -->
+  <line x1="212" y1="352" x2="212" y2="404" stroke="#475569" stroke-width="2.6" marker-end="url(#a)"/>
+  <line x1="588" y1="352" x2="588" y2="404" stroke="#475569" stroke-width="2.6" marker-end="url(#a)"/>
+  <text x="400" y="376" class="lab" text-anchor="middle">HTTPS, Sense's client certificates,</text>
+  <text x="400" y="398" class="lab" text-anchor="middle">read only</text>
+
+  <!-- Monitor -->
+  <text x="40" y="440" class="col">THE SESSION MONITOR · ONE PROGRAM</text>
+  <rect x="40" y="452" width="720" height="250" rx="14" fill="#ffffff" stroke="#2f5fe0" stroke-width="2"/>
+  <g transform="translate(62,474)">
+    <rect width="326" height="96" rx="11" fill="#eef3ff"/>
+    <circle cx="26" cy="30" r="15" fill="#2f5fe0"/><text x="26" y="35.5" class="num" text-anchor="middle">1</text>
+    <text x="52" y="36" class="t" font-weight="700">Discover</text>
+    <text x="52" y="62" class="s">every proxy node and</text>
+    <text x="52" y="84" class="s">virtual proxy, each 10 min</text>
+  </g>
+  <g transform="translate(412,474)">
+    <rect width="326" height="96" rx="11" fill="#eef3ff"/>
+    <circle cx="26" cy="30" r="15" fill="#2f5fe0"/><text x="26" y="35.5" class="num" text-anchor="middle">2</text>
+    <text x="52" y="36" class="t" font-weight="700">Poll</text>
+    <text x="52" y="62" class="s">sessions and licence</text>
+    <text x="52" y="84" class="s">records every 15 seconds</text>
+  </g>
+  <g transform="translate(62,584)">
+    <rect width="326" height="96" rx="11" fill="#eef3ff"/>
+    <circle cx="26" cy="30" r="15" fill="#2f5fe0"/><text x="26" y="35.5" class="num" text-anchor="middle">3</text>
+    <text x="52" y="36" class="t" font-weight="700">Count slots</text>
+    <text x="52" y="62" class="s">a record under 6 minutes</text>
+    <text x="52" y="84" class="s">old = a slot; 5 is the limit</text>
+  </g>
+  <g transform="translate(412,584)">
+    <rect width="326" height="96" rx="11" fill="#eef3ff"/>
+    <circle cx="26" cy="30" r="15" fill="#2f5fe0"/><text x="26" y="35.5" class="num" text-anchor="middle">4</text>
+    <text x="52" y="36" class="t" font-weight="700">Publish</text>
+    <text x="52" y="62" class="s">state, alerts and who</text>
+    <text x="52" y="84" class="s">was refused</text>
+  </g>
+
+  <line x1="400" y1="708" x2="400" y2="756" stroke="#2f5fe0" stroke-width="3" marker-end="url(#b)"/>
+  <text x="416" y="738" class="labB">pushed live, no reloading</text>
+
+  <!-- What you see -->
+  <text x="40" y="790" class="col">WHAT YOU SEE</text>
+  <g transform="translate(40,802)">
+    <rect width="410" height="150" rx="10" fill="#0f172a"/>
+    <circle cx="18" cy="17" r="5" fill="#ef4444"/><circle cx="35" cy="17" r="5" fill="#f59e0b"/><circle cx="52" cy="17" r="5" fill="#22c55e"/>
+    <rect x="72" y="8" width="326" height="19" rx="9" fill="#1e293b"/>
+    <text x="86" y="22.5" font-size="13" fill="#94a3b8" font-family="ui-monospace, Menlo, Consolas, monospace">http://127.0.0.1:3939</text>
+    <rect x="14" y="40" width="88" height="40" rx="6" fill="#3b1d24" stroke="#ef4444"/><text x="26" y="70" font-size="22" font-weight="700" fill="#f87171">8</text>
+    <rect x="112" y="40" width="88" height="40" rx="6" fill="#33290f" stroke="#f59e0b"/><text x="124" y="70" font-size="22" font-weight="700" fill="#fbbf24">4</text>
+    <rect x="210" y="40" width="88" height="40" rx="6" fill="#1e293b"/><text x="222" y="70" font-size="22" font-weight="700" fill="#e2e8f0">236</text>
+    <rect x="308" y="40" width="88" height="40" rx="6" fill="#1e293b"/><text x="320" y="70" font-size="22" font-weight="700" fill="#e2e8f0">406</text>
+    <rect x="14" y="90" width="382" height="24" rx="5" fill="#1e293b"/>
+    <g fill="none" stroke-width="3.4"><circle cx="34" cy="102" r="6.5" stroke="#ef4444"/><circle cx="54" cy="102" r="6.5" stroke="#ef4444"/><circle cx="74" cy="102" r="6.5" stroke="#ef4444"/><circle cx="94" cy="102" r="6.5" stroke="#ef4444"/><circle cx="114" cy="102" r="6.5" stroke="#ef4444"/></g>
+    <text x="134" y="107.5" font-size="14" font-weight="700" fill="#e2e8f0">1:03</text><text x="174" y="107.5" font-size="13.5" fill="#94a3b8">until a slot frees</text>
+    <rect x="14" y="118" width="382" height="24" rx="5" fill="#1e293b"/>
+    <g fill="none" stroke-width="3.4"><circle cx="34" cy="130" r="6.5" stroke="#f59e0b"/><circle cx="54" cy="130" r="6.5" stroke="#f59e0b"/><circle cx="74" cy="130" r="6.5" stroke="#f59e0b"/><circle cx="94" cy="130" r="6.5" stroke="#f59e0b"/><circle cx="114" cy="130" r="6.5" stroke="#334155"/></g>
+    <text x="134" y="135.5" font-size="14" font-weight="700" fill="#e2e8f0">3:41</text><text x="174" y="135.5" font-size="13.5" fill="#94a3b8">one slot left</text>
+  </g>
+  <g transform="translate(474,802)">
+    <text x="0" y="24" class="t" font-weight="700">A live web page</text>
+    <text x="0" y="52" class="s">Countdowns tick every</text>
+    <text x="0" y="74" class="s">second in the browser.</text>
+    <text x="0" y="110" class="t" font-weight="700">Also: alerts</text>
+    <text x="0" y="136" class="s">Console, webhook, MQTT</text>
+  </g>
+
+  <text x="40" y="984" class="s" font-size="15">No history is kept: for monitoring over months, use Butler SOS.</text>
+</svg>
