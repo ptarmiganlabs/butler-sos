@@ -6,6 +6,12 @@ const FILES = {
     '/': ['index.html', 'text/html; charset=utf-8'],
     '/style.css': ['style.css', 'text/css; charset=utf-8'],
     '/app.js': ['app.js', 'text/javascript; charset=utf-8'],
+    // A drawing that styles itself, opened full size in its own tab too: inline styles only, nothing else.
+    '/how-it-works.svg': [
+        'how-it-works.svg',
+        'image/svg+xml',
+        { 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'" },
+    ],
     ...Object.fromEntries(
         [
             'ptarmigan-labs-lockup-on-light.svg',
@@ -67,11 +73,12 @@ export function webOutput(cfg, site, pollSeconds, actions = {}) {
         } else if (req.method !== 'GET') {
             res.writeHead(405, SECURITY_HEADERS).end();
         } else if (FILES[path]) {
-            const [file, type] = FILES[path];
+            const [file, type, headers] = FILES[path];
             res.writeHead(200, {
                 'Content-Type': type,
                 'Cache-Control': 'no-cache',
                 ...SECURITY_HEADERS,
+                ...headers,
             }).end(readWebFile(file));
         } else if (path === '/api/state') {
             // The current state plus the recent events, for a page that has just (re)connected.

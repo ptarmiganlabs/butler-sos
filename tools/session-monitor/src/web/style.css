@@ -1128,6 +1128,25 @@ body.wall .col-help {
     box-shadow: 0 24px 70px #0007;
     overflow: hidden;
 }
+.help-dialog.wide {
+    width: min(1100px, calc(100vw - 32px));
+}
+/* "How it works": the diagram, full width, linked to the full-size file. */
+.hd-body .overview {
+    padding: 0;
+    overflow: hidden;
+    background: #f8fafc;
+}
+.hd-body .overview img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+.hd-body .overview figcaption {
+    margin: 0;
+    padding: 8px 14px 10px;
+    background: var(--bg);
+}
 .help-dialog[open] {
     display: flex;
     flex-direction: column;

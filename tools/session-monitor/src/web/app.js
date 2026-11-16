@@ -339,6 +339,8 @@
         }
         $('helpBody').replaceChildren(body);
         $('helpBody').scrollTop = 0;
+        // A topic with a large diagram (data-wide on its template) gets a wider dialog.
+        dialog.classList.toggle('wide', 'wide' in tpl.dataset);
         $('helpMore').textContent =
             topic === 'about' ? '' : 'Every ? on the page explains the part next to it.';
         dialog.showModal();
