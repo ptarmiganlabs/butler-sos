@@ -42,8 +42,8 @@ and unzip it:
 The program unzips to about 120 MB, because it carries Node.js inside it. Windows may still show a
 SmartScreen warning the first few times a new version is downloaded, even though it is signed; we
 haven't tested this. Each release's notes include a VirusTotal scan of the zips, and
-`gh attestation verify <file> --repo ptarmiganlabs/butler-sos` proves a download came from the
-release workflow.
+`gh attestation verify <program> --repo ptarmiganlabs/butler-sos`, run on the unzipped program
+(not the zip), proves it came from the release workflow.
 
 - **On the Sense server itself** (the central node), run `qseow-session-monitor.exe` as an
   administrator, for example by right-clicking it and choosing _Run as administrator_. It finds
