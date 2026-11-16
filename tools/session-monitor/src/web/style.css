@@ -1239,15 +1239,18 @@ body.wall .col-help {
     padding-left: 0 !important;
 }
 .feed-help li {
-    display: grid;
-    grid-template-columns: 14px 1fr;
-    gap: 8px;
+    /* The dot hangs in the left margin, so the label and its sentence flow as one paragraph. (A
+       two-column grid put the sentence, a third piece, into the dot's narrow column.) */
+    position: relative;
+    padding-left: 22px;
 }
 .feed-help .fdot {
+    position: absolute;
+    left: 0;
+    top: 0.45em;
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    margin-top: 7px;
     background: var(--faint);
 }
 .feed-help .k-blue {
