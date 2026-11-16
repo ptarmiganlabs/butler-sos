@@ -60,3 +60,30 @@ test('ending sessions: only from the page itself, only for a session id', async 
         await p.close();
     }
 });
+
+test('the diagram gets its own narrow policy; every other page file keeps the page policy', async () => {
+    const p = await page({});
+    try {
+        const svg = await fetch(`${p.base}/how-it-works.svg`);
+        assert.equal(svg.status, 200);
+        assert.equal(svg.headers.get('content-type'), 'image/svg+xml');
+        assert.equal(
+            svg.headers.get('content-security-policy'),
+            "default-src 'none'; style-src 'unsafe-inline'"
+        );
+        assert.equal(svg.headers.get('x-content-type-options'), 'nosniff');
+        assert.equal(svg.headers.get('referrer-policy'), 'no-referrer');
+        for (const path of ['/', '/app.js', '/style.css']) {
+            const r = await fetch(`${p.base}${path}`);
+            assert.equal(r.status, 200, path);
+            const csp = r.headers.get('content-security-policy');
+            assert.match(csp, /default-src 'self'/, path);
+            assert.match(csp, /script-src 'self'/, path);
+            assert.doesNotMatch(csp, /unsafe-inline/, path);
+            assert.equal(r.headers.get('x-content-type-options'), 'nosniff', path);
+            assert.equal(r.headers.get('referrer-policy'), 'no-referrer', path);
+        }
+    } finally {
+        await p.close();
+    }
+});
