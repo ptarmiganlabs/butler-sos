@@ -568,7 +568,9 @@ test('each "slots in use" bucket keeps its highest count since start', () => {
     assert.equal(r2.slotPeaks[1].count, 2);
     assert.equal(r2.slotPeaks[1].at, isoAt(15));
     assert.equal(r2.slotPeaks[2].count, 1);
-    // While the licence records can't be read, counts aren't trusted and peaks don't move.
-    const r3 = t.update(snap(45, [], [], { licencesOk: false }));
+    // While the licence records can't be read, counts aren't trusted and peaks don't move. Long
+    // after the remembered records have run out, session a would count as holding 0 slots.
+    const r3 = t.update(snap(500, [sess('a')], [], { licencesOk: false }));
+    assert.equal(r3.users.find((x) => x.key === 'corp\\test1').slotsUsed, 0);
     assert.equal(r3.slotPeaks[0].count, 0);
 });
