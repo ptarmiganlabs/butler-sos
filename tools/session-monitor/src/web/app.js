@@ -261,7 +261,7 @@
                 warn ? 'caution' : ''
             );
         }
-        setKpi('users', connected, `holding ${slots} licence slot${slots === 1 ? '' : 's'}`);
+        setKpi('users', connected, `holding ${slots} slot${slots === 1 ? '' : 's'}`);
         setKpi(
             'proxy',
             s.proxySessions,
@@ -463,14 +463,19 @@
         }
         // Square-root heights: on a large site the few users at 4 or 5 slots would otherwise be invisible
         // next to the hundreds at 1. The exact counts are printed above each bar.
-        const max = Math.sqrt(Math.max(1, ...counts));
+        // The most users each bucket has held since the monitor started (kept by the monitor, so a
+        // reload doesn't lose it), drawn as a faint line. The scale takes it in, so the line fits.
+        const peaks = (state.slotPeaks || []).map((p) => p?.count || 0);
+        const max = Math.sqrt(Math.max(1, ...counts, ...peaks));
         if (box.children.length !== lim + 1) {
             box.replaceChildren();
             for (let k = 0; k <= lim; k++) {
                 const b = el('button', 'dbar');
                 b.type = 'button';
                 b.dataset.k = String(k);
-                b.append(el('span', 'dcount'), el('span', 'dcol'), el('span', 'dlab'));
+                const plot = el('span', 'dplot');
+                plot.append(el('span', 'dcol'), el('span', 'dpeak'));
+                b.append(el('span', 'dcount'), plot, el('span', 'dlab'));
                 b.addEventListener('click', () => mode !== 'wall' && setFilter(`slots:${k}`));
                 box.append(b);
             }
@@ -481,13 +486,21 @@
             b.querySelector('.dcount').textContent = String(counts[k]);
             b.querySelector('.dcol').style.height =
                 `${counts[k] ? Math.max(4, (Math.sqrt(counts[k]) / max) * 100) : 0}%`;
+            const peak = state.slotPeaks?.[k];
+            const pk = b.querySelector('.dpeak');
+            // Only drawn when it says something: a peak above the bar as it is now.
+            pk.hidden = !(peak?.count > counts[k]);
+            pk.style.bottom = `${peak?.count ? Math.max(4, (Math.sqrt(peak.count) / max) * 100) : 0}%`;
             b.querySelector('.dlab').textContent =
                 k === 0 ? '0 slots' : k === lim ? `${k}` : String(k);
             b.setAttribute(
                 'aria-label',
                 `${counts[k]} users with ${k} slot${k === 1 ? '' : 's'} in use`
             );
-            b.title = `${counts[k]} user${counts[k] === 1 ? '' : 's'} with ${k} slot${k === 1 ? '' : 's'} in use. Click to list them.`;
+            const highest = peak?.count
+                ? ` Highest since the monitor started: ${peak.count}, at ${clock(t(peak.at))}.`
+                : '';
+            b.title = `${counts[k]} user${counts[k] === 1 ? '' : 's'} with ${k} slot${k === 1 ? '' : 's'} in use.${highest} Click to list them.`;
         });
     }
     function renderChips() {
@@ -584,7 +597,7 @@
             p.style.setProperty('--p', r != null ? Math.max(0.02, r / win).toFixed(3) : 0);
             p.title = r != null ? `Slot taken. Free again in ${dur(r)}` : 'Free slot';
         });
-        pips.setAttribute('aria-label', `${slots.length} of ${limit} licence slots in use`);
+        pips.setAttribute('aria-label', `${slots.length} of ${limit} slots in use`);
         const val = node.querySelector('.next-val');
         const lbl = node.querySelector('.next-lbl');
         if (slots.length >= limit) {
@@ -729,7 +742,7 @@
         const note = el(
             'p',
             'es-note',
-            'Ending a session signs that browser tab out of Sense. It does not free a licence slot: that stays taken until its six minutes run out.'
+            'Ending a session signs that browser tab out of Sense. It does not free a slot: that stays taken until its six minutes run out.'
         );
         // The outcome of the last End press, kept when the list is rebuilt without that session.
         const status = el('p', `es-status${box._bad ? ' bad' : ''}`, box._msg || '');
@@ -740,7 +753,7 @@
         const u = node._u;
         const ok = window.confirm(
             `End session ${e.sessionId} of ${who(u)} on ${vpName(e.virtualProxy)}?\n\n` +
-                'That browser tab is signed out of Sense at once. The licence slot stays taken until its six minutes run out.'
+                'That browser tab is signed out of Sense at once. The slot stays taken until its six minutes run out.'
         );
         if (!ok) return;
         const status = node.querySelector('.es-status');
@@ -834,7 +847,7 @@
                     `${e.seenAtStart ? 'open when the monitor started' : 'opened'} ${clockS(t(e.firstSeen))}`
                 );
             if (e.endedAt) bits.push(`ended ${clockS(t(e.endedAt))}`);
-            if (e.state === 'refused') bits.push('refused: no licence slot');
+            if (e.state === 'refused') bits.push('refused: no free slot');
             if (e.latestActivity) bits.push(`last licence check ${clockS(t(e.latestActivity))}`);
             if (e.slotUntil)
                 bits.push(
@@ -858,7 +871,7 @@
                         )
                     );
             }
-            // Licence slot: held from the last licence check until six minutes later.
+            // Slot: held from the last licence check until six minutes later.
             if (e.latestActivity) {
                 const a = t(e.latestActivity);
                 const b = t(e.slotUntil);
@@ -997,11 +1010,7 @@
                     `${vp} · took slot ${e.slotsUsed ?? '?'} of ${e.slotsLimit}`,
                 ];
             case 'refused':
-                return [
-                    'f-refused',
-                    [u, ' was refused a session'],
-                    `${vp} · all licence slots in use`,
-                ];
+                return ['f-refused', [u, ' was refused a session'], `${vp} · all slots in use`];
             case 'session-ended':
                 return [
                     'f-ended',

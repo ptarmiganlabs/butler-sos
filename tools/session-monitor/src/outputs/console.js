@@ -9,11 +9,11 @@ export function consoleOutput(cfg) {
     const line = (e) => {
         switch (e.type) {
             case 'alert':
-                return `${e.level.toUpperCase().padEnd(8)} ${e.change.padEnd(9)} ${user(e)}: ${e.slotsUsed}/${e.slotsLimit} licence slots used in the window, ${e.proxySessions} proxy sessions${e.nextSlotFreeAt ? `, next slot free ${e.nextSlotFreeAt}` : ''}`;
+                return `${e.level.toUpperCase().padEnd(8)} ${e.change.padEnd(9)} ${user(e)}: ${e.slotsUsed}/${e.slotsLimit} slots used in the window, ${e.proxySessions} proxy sessions${e.nextSlotFreeAt ? `, next slot free ${e.nextSlotFreeAt}` : ''}`;
             case 'refused':
                 return `REFUSED  session   ${user(e)}: new session ${e.sessionId} on ${e.proxyHost} /${e.virtualProxy === '/' ? '' : e.virtualProxy} got no licence (first seen ${e.firstSeen})`;
             case 'licensed':
-                return `INFO     signed in ${user(e)}: new session on /${e.virtualProxy === '/' ? '' : e.virtualProxy} took licence slot ${e.slotsUsed} of ${e.slotsLimit}`;
+                return `INFO     signed in ${user(e)}: new session on /${e.virtualProxy === '/' ? '' : e.virtualProxy} took slot ${e.slotsUsed} of ${e.slotsLimit}`;
             case 'session-ended':
                 return `INFO     ended     ${user(e)}: ${e.refused ? 'refused ' : ''}session ${e.sessionId} closed`;
             case 'sweep':

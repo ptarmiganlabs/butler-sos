@@ -23,7 +23,7 @@ const SECURITY_HEADERS = {
 };
 
 /**
- * Live web page: per-user licence slots with countdowns, session timelines, entry points, licence
+ * Live web page: per-user slots with countdowns, session timelines, entry points, licence
  * totals and a live feed, pushed with Server-Sent Events. Binds to localhost by default; it has no
  * authentication, so put a reverse proxy with sign-in in front of it before exposing it further.
  *

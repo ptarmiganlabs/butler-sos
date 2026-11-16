@@ -18,7 +18,7 @@
                     type="button"
                     class="help tip-right"
                     data-help="about"
-                    data-tip="A close to real-time view of who is connected and how licence slots are used right now. It keeps no history: for monitoring over time, use Butler SOS."
+                    data-tip="A close to real-time view of who is connected and how slots are used right now. It keeps no history: for monitoring over time, use Butler SOS."
                     aria-label="About this view"
                 >
                     ?
@@ -80,8 +80,8 @@
                             type="button"
                             class="help tip-right"
                             data-help="slots"
-                            data-tip="Each user can be active in at most 5 different sessions within any 6 minutes. Each of those is a licence slot. Click for how it works."
-                            aria-label="Help: the five-session limit and licence slots"
+                            data-tip="Each user can be active in at most 5 different sessions within any 6 minutes. Each of those is a slot. Click for how it works."
+                            aria-label="Help: the five-session limit and slots"
                         >
                             ?
                         </button>
@@ -350,8 +350,8 @@
         <template id="help-about" data-title="What you're looking at">
             <p class="lead">
                 A <strong>close to real-time view</strong> of the Qlik Sense site: who is connected
-                right now, how many of their <span data-cfg="slotsLimit">5</span> licence slots each
-                user has taken, and how the site's licences are used. It shows
+                right now, how many of their <span data-cfg="slotsLimit">5</span> slots each user
+                has taken, and how the site's licences are used. It shows
                 <strong>how things stand now</strong>, not history.
             </p>
             <ul class="facts">
@@ -430,7 +430,9 @@
                 <strong
                     >active in at most <span data-cfg="slotsLimit">5</span> different sessions
                     within any <span data-cfg="windowMinutes">6</span> minutes</strong
-                >. This page calls each of those a <strong>licence slot</strong>.
+                >. This page calls each of those a <strong>slot</strong>. A slot isn't a licence:
+                every user has <span data-cfg="slotsLimit">5</span>, whether they hold a
+                Professional or an Analyzer licence.
             </p>
             <ul class="facts">
                 <li>
@@ -642,13 +644,25 @@
                     <strong>Click a bar</strong> to list just those users. Click it again, or
                     <em>All</em>, to go back.
                 </li>
+                <li>
+                    <strong>The dashed line</strong> above a bar is the most users that bar has had
+                    since the monitor started. Hover over the bar for the number and the time. It
+                    only shows while the bar is below it.
+                </li>
             </ul>
+            <p class="note">
+                The highest counts are kept in memory only: they start again from zero whenever the
+                monitor is restarted. For a lasting record over days and months, use
+                <a href="https://butler-sos.ptarmiganlabs.com" target="_blank" rel="noopener"
+                    >Butler SOS</a
+                >.
+            </p>
         </template>
 
         <template id="help-rings" data-title="Slot rings and countdowns">
             <p class="lead">
-                Each user has <span data-cfg="slotsLimit">5</span> rings, one per licence slot. A
-                full ring means a session was active just now. It drains over
+                Each user has <span data-cfg="slotsLimit">5</span> rings, one per slot. A full ring
+                means a session was active just now. It drains over
                 <span data-cfg="windowMinutes">6</span> minutes, and when it's empty the slot is
                 free again.
             </p>
@@ -832,6 +846,17 @@
         </template>
 
         <template id="help-levels" data-title="At the limit, one slot left, connected users">
+            <p class="lead">
+                <strong>A slot</strong> is what Qlik Sense's five-session limit counts. It has
+                nothing to do with licence types such as Professional or Analyzer: every user has
+                <span data-cfg="slotsLimit">5</span>, whatever licence they hold. A session takes
+                one the first time it uses Sense, for example by opening an app, and holds it for
+                <span data-cfg="windowMinutes">6</span> minutes. A session still in use after that
+                takes it again. Ending a session doesn't give its slot back early. A user with every
+                slot taken can't start another session until one is free again. The
+                <strong>?</strong> next to the <em>Users</em> heading explains it in more detail,
+                with a diagram.
+            </p>
             <ul class="facts">
                 <li>
                     <strong>At the limit</strong> (red): users with all

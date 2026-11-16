@@ -226,7 +226,7 @@ qseow-session-monitor --allow-session-delete
 API's `DELETE /qps/{virtual proxy}/session/{id}` does. The user's browser tab loses its Sense
 session at once and has to be reloaded. Anything they hadn't saved in an app may be lost.
 
-**What End does _not_ do: free a licence slot.** A slot is held for six minutes after the session's
+**What End does _not_ do: free a slot.** A slot is held for six minutes after the session's
 last licence check, whether or not the session still exists ([details](#the-five-session-limit-in-short)).
 A user who is refused for having five sessions is still refused right after you end one, until that
 session's six minutes have run out. That's Sense's rule, measured on a real site; this tool can't

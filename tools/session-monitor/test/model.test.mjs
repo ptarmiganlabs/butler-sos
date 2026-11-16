@@ -554,3 +554,23 @@ test('a session listed by a proxy read now and remembered from one that failed i
     assert.equal(u.openSessions[0].proxyNode, 'Rim');
     assert.ok(!('seenOn' in u.timeline[0]), 'the timeline carries no location field');
 });
+
+test('each "slots in use" bucket keeps its highest count since start', () => {
+    const t = new Tracker(LIMIT, 15);
+    t.update(snap(0, [], []));
+    // Two users with one slot each.
+    const r1 = t.update(
+        snap(15, [sess('a', 'test1'), sess('b', 'test2')], [rec('a', 10), rec('b', 10, 'at-2')])
+    );
+    assert.equal(r1.slotPeaks[1].count, 2);
+    // test1 now holds two slots, test2 has gone: bucket 1 drops to 0, its peak stays at 2.
+    const r2 = t.update(snap(30, [sess('a'), sess('c')], [rec('a', 10), rec('c', 25)]));
+    assert.equal(r2.slotPeaks[1].count, 2);
+    assert.equal(r2.slotPeaks[1].at, isoAt(15));
+    assert.equal(r2.slotPeaks[2].count, 1);
+    // While the licence records can't be read, counts aren't trusted and peaks don't move. Long
+    // after the remembered records have run out, session a would count as holding 0 slots.
+    const r3 = t.update(snap(500, [sess('a')], [], { licencesOk: false }));
+    assert.equal(r3.users.find((x) => x.key === 'corp\\test1').slotsUsed, 0);
+    assert.equal(r3.slotPeaks[0].count, 0);
+});
