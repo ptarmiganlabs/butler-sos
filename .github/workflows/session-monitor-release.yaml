@@ -333,7 +333,7 @@ jobs:
             echo
             echo "Anywhere other than the Sense server: \`qseow-session-monitor --host <central node> --certs <folder with the QMC's exported PEM certificates>\`. No Sense server at hand? \`qseow-session-monitor --simulate 300\`."
             echo
-            echo "How it works, and every option: [tools/session-monitor](https://github.com/$REPO/tree/$tag/tools/session-monitor). Check that a download came from this workflow with \`gh attestation verify <file> --repo $REPO\`."
+            echo "How it works, and every option: [tools/session-monitor](https://github.com/$REPO/tree/$tag/tools/session-monitor). Check that the unzipped program (not the zip) came from this workflow with \`gh attestation verify <program> --repo $REPO\`."
           } > notes.md
           gh release create "$tag" --repo "$REPO" --draft --latest=false --target "$SHA" \
             --title "Qlik Sense session monitor $VERSION" --notes-file notes.md \
