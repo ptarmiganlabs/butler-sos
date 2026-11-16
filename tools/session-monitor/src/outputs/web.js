@@ -30,9 +30,12 @@ const SECURITY_HEADERS = {
  * @param {object} cfg The `outputs.web` section.
  * @param {string} site Shown in the page header (the Repository host).
  * @param {number} pollSeconds Poll interval, so the page can tell when data is stale.
+ * @param {object} [actions] What the page may change. Present only with --allow-session-delete.
+ * @param {(sessionId: string) => Promise<{ok: boolean, message: string}>} [actions.endSession]
+ *     Ends one proxy session the monitor can see.
  * @returns {{name: string, handle: Function, close: Function}} Output.
  */
-export function webOutput(cfg, site, pollSeconds) {
+export function webOutput(cfg, site, pollSeconds, actions = {}) {
     let latest = null; // full result, timelines included
     let slim = null; // what every browser gets: the result without per-user timelines
     // Two event buffers, so sign-ins on a busy site can't push refusals and alerts out of the feed.
@@ -59,7 +62,9 @@ export function webOutput(cfg, site, pollSeconds) {
     function route(req, res) {
         const url = new URL(req.url, 'http://x');
         const path = url.pathname;
-        if (req.method !== 'GET') {
+        if (req.method === 'POST' && path === '/api/end-session') {
+            endSession(req, res, url);
+        } else if (req.method !== 'GET') {
             res.writeHead(405, SECURITY_HEADERS).end();
         } else if (FILES[path]) {
             const [file, type] = FILES[path];
@@ -96,6 +101,37 @@ export function webOutput(cfg, site, pollSeconds) {
         } else {
             res.writeHead(404, SECURITY_HEADERS).end();
         }
+    }
+
+    /**
+     * Ends a proxy session, when the monitor was started with --allow-session-delete. There is no
+     * sign-in: anyone who can open the page can do this, which is why the flag refuses a page bound to
+     * anything but this computer. What this does check is that the request comes from the page
+     * itself, opened on this computer: a loopback Host header, a custom header (which a form or another site's script can't send without a
+     * CORS preflight this server never approves) and, when the browser sends one, a matching Origin.
+     */
+    function endSession(req, res, url) {
+        if (!actions.endSession)
+            return json(res, { ok: false, message: 'Ending sessions is off.' }, 403);
+        const origin = req.headers.origin;
+        // The Host header must name this computer: a page on another domain that has rebound its
+        // name to 127.0.0.1 (DNS rebinding) would otherwise pass as same-origin.
+        const hostName = String(req.headers.host || '')
+            .replace(/:\d+$/, '')
+            .replace(/^\[|\]$/g, '');
+        if (
+            !['localhost', '127.0.0.1', '::1'].includes(hostName) ||
+            req.headers['x-session-monitor'] !== 'end-session' ||
+            (origin && origin !== `http://${req.headers.host}`)
+        )
+            return json(res, { ok: false, message: 'Refused: not sent by this page.' }, 403);
+        const id = String(url.searchParams.get('id') || '');
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+            return json(res, { ok: false, message: 'Not a session id.' }, 400);
+        actions.endSession(id).then(
+            (r) => json(res, r, r.ok ? 200 : 409),
+            (err) => json(res, { ok: false, message: err.message }, 502)
+        );
     }
 
     // The page's address. 127.0.0.1 stays as it is: localhost may resolve to ::1 first, where
@@ -141,6 +177,7 @@ export function webOutput(cfg, site, pollSeconds) {
                 users: result.users.map(({ timeline, ...u }) => u),
                 site: cfg.title || site,
                 pollSeconds,
+                canEndSessions: Boolean(actions.endSession),
             };
             // Each message carries the new state and only this poll's events.
             const msg = `data: ${JSON.stringify({ ...slim, now: result.at })}\n\n`;

@@ -24,6 +24,13 @@
                     ?
                 </button>
                 <span class="site" id="site"></span>
+                <span
+                    class="ending-on"
+                    id="endingOn"
+                    hidden
+                    title="Started with --allow-session-delete: an End button on each open session ends it in Sense. Anyone who can open this page can do that."
+                    >Session ending on</span
+                >
             </div>
             <div class="controls">
                 <span class="updated" id="updated"></span>
@@ -298,6 +305,7 @@
                             ?
                         </button>
                     </div>
+                    <div class="end-sessions" hidden></div>
                 </div>
             </article>
         </template>
@@ -376,7 +384,10 @@
                 </li>
                 <li>
                     <strong>It only reads.</strong> Nothing on the Sense server changes because this
-                    page is open.
+                    page is open. The one exception: when the monitor was started with
+                    <code>--allow-session-delete</code> (the header then says
+                    <em>Session ending on</em>), the End buttons under a user's timeline end proxy
+                    sessions. That is meant for test sites only.
                 </li>
             </ul>
             <h3>Made by Ptarmigan Labs</h3>

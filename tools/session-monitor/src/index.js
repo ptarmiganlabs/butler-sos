@@ -59,6 +59,10 @@ Usage: ${me} [options]
   --simulate <users>  A made-up site with this many users, to try the page without Sense.
   --port <number>     The web page's port (default 3939).
   --no-open           Don't open the page in a browser.
+  --allow-session-delete
+                      Put an End button on each open session, which ends that proxy session in
+                      Sense. For testing and debugging: the page has no sign-in, so anyone who can
+                      open it can end sessions. Only allowed with the page on this computer.
   --once              Poll once, print a table and exit.
   -v, --version       Print the version.
   -h, --help          Print this.
@@ -79,6 +83,7 @@ async function main() {
                 certs: { type: 'string' },
                 port: { type: 'string' },
                 open: { type: 'boolean', default: true },
+                'allow-session-delete': { type: 'boolean', default: false },
                 once: { type: 'boolean', default: false },
                 simulate: { type: 'string' },
                 version: { type: 'boolean', short: 'v' },
@@ -199,6 +204,17 @@ async function main() {
     });
 
     const o = cfg.outputs;
+    const allowDelete = args['allow-session-delete'];
+    // Ending sessions has no sign-in behind it, so the page that offers it must only be reachable
+    // from this computer.
+    if (allowDelete && !['127.0.0.1', '::1', 'localhost'].includes(o.web.host))
+        await fail(
+            `--allow-session-delete needs the page on this computer only, but outputs.web.host is ${o.web.host}.\n` +
+                '    Set it to 127.0.0.1 (the default), or leave --allow-session-delete off.'
+        );
+    if (allowDelete && (!o.web.enable || args.once))
+        await fail('--allow-session-delete needs the web page: it puts its End buttons there.');
+    const actions = allowDelete ? { endSession } : {};
     const outputs = [
         o.console.enable && consoleOutput(o.console),
         o.web.enable &&
@@ -206,7 +222,8 @@ async function main() {
             webOutput(
                 o.web,
                 simulateUsers ? `Simulated site, ${simulateUsers} users` : cfg.sense.repositoryHost,
-                cfg.poll.intervalSeconds
+                cfg.poll.intervalSeconds,
+                actions
             ),
         o.webhook.enable && webhookOutput(o.webhook),
         o.mqtt.enable && mqttOutput(o.mqtt),
@@ -224,6 +241,8 @@ async function main() {
     let licencesAt = 0;
     let stopping = false;
     let timer = null;
+    let polling = false;
+    let pollSoon = false;
 
     async function tick() {
         if (site) return publish(site.step(Date.now(), recordsSinceMs));
@@ -260,6 +279,44 @@ async function main() {
         return publish(snap);
     }
 
+    /**
+     * Ends one proxy session the monitor currently sees, on the proxy and virtual proxy it is on.
+     * Only sessions in the monitor's own list can be ended: the page can't name an arbitrary one.
+     *
+     * @param {string} sessionId The session.
+     * @returns {Promise<{ok: boolean, message: string}>} What happened, for the page.
+     */
+    async function endSession(sessionId) {
+        const t = tracker.sessions.get(sessionId);
+        if (!t || t.recordOnly || t.endedAt || !t.proxyHost)
+            return { ok: false, message: 'That session is not open, or has already ended.' };
+        const who = `${t.userDirectory}\\${t.userId}`;
+        const where = `${t.proxyHost}${t.virtualProxy === '/' ? '/' : `/${t.virtualProxy}`}`;
+        if (site) site.endSession(sessionId);
+        else {
+            const prefix = t.virtualProxy === '/' ? '' : t.virtualProxy;
+            const target = targets.find((x) => x.host === t.proxyHost && x.prefix === prefix);
+            if (!target)
+                return { ok: false, message: `The proxy ${where} is not being polled now.` };
+            try {
+                await client.endSession(target.host, target.port, prefix, sessionId);
+            } catch (err) {
+                log(`ending session ${sessionId} of ${who} on ${where} failed: ${err.message}`);
+                return { ok: false, message: `Sense refused: ${err.message}` };
+            }
+        }
+        // Every session ended from the page is logged, as a record of who lost what and when.
+        log(`ended proxy session ${sessionId} of ${who} on ${where} (from the page)`);
+        // Poll again soon, so the page shows it gone without waiting a whole interval. A poll
+        // under way picks that up when it finishes; otherwise the waiting one is brought forward.
+        if (polling) pollSoon = true;
+        else if (!stopping && !args.once) {
+            clearTimeout(timer);
+            timer = setTimeout(loop, 500);
+        }
+        return { ok: true, message: `Ended session ${sessionId.slice(0, 8)} of ${who}.` };
+    }
+
     async function publish(snap, only) {
         const result = tracker.update(snap);
         for (const out of only || outputs) {
@@ -274,13 +331,18 @@ async function main() {
 
     async function loop() {
         const started = Date.now();
+        polling = true;
         try {
             await tick();
         } catch (err) {
             log(`poll failed: ${err.message}`);
         }
+        polling = false;
         if (stopping) return;
-        const wait = Math.max(0, cfg.poll.intervalSeconds * 1000 - (Date.now() - started));
+        const wait = pollSoon
+            ? 500
+            : Math.max(0, cfg.poll.intervalSeconds * 1000 - (Date.now() - started));
+        pollSoon = false;
         timer = setTimeout(loop, wait);
     }
 
@@ -305,6 +367,10 @@ async function main() {
     );
     // An output that can't start (the web page's port in use, say) ends it here, through fail().
     await Promise.all(outputs.map((out) => out.ready));
+    if (allowDelete)
+        log(
+            'session ending is ON (--allow-session-delete): anyone who can open the page can end proxy sessions'
+        );
     const page = outputs.find((x) => x.name === 'web');
     if (page && args.open && !args.once) openBrowser(page.url);
     if (site) {
