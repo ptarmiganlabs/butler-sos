@@ -102,7 +102,7 @@
     <text x="44" y="29" class="t" font-weight="700">Poll</text><text x="84" y="29" class="s">every 15 seconds</text>
     <text x="44" y="51" class="s">Open sessions from every proxy node ×</text>
     <text x="44" y="68" class="s">virtual proxy, in parallel.</text>
-    <text x="44" y="89" class="s">Licence usage records of the last half hour;</text>
+    <text x="44" y="89" class="s">Licence usage records recent enough to count;</text>
     <text x="44" y="106" class="s">allocations and totals once a minute.</text>
   </g>
   <g transform="translate(472,450)">
@@ -122,7 +122,7 @@
     <text x="44" y="29" class="t" font-weight="700">Publish</text>
     <text x="44" y="50" class="s">Current state, plus events and alerts.</text>
   </g>
-  <text x="472" y="704" class="s">Keeps only the last half hour, in memory.</text>
+  <text x="472" y="704" class="s">Everything is kept in memory: nothing is saved.</text>
   <text x="472" y="722" class="s">For history over months: Butler SOS.</text>
 
   <!-- arrows Sense -> monitor -->
