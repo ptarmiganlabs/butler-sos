@@ -1041,9 +1041,12 @@
                 </li>
                 <li>
                     <span class="fdot"></span
-                    ><strong>Repository removed licence records:</strong> Sense's hourly clean-up.
-                    It also removes records of live sessions, which get a new one when they are next
-                    used in an app. Nothing changes for users.
+                    ><strong>Repository removed licence records:</strong> Sense's hourly clean-up of
+                    records whose <span data-cfg="windowMinutes">6</span> minutes have already run
+                    out, live sessions' too. Those get a new record when they are next used in an
+                    app. It never frees a slot early: records still inside their
+                    <span data-cfg="windowMinutes">6</span> minutes are left alone. Open sessions
+                    keep working.
                 </li>
             </ul>
             <p class="note">
