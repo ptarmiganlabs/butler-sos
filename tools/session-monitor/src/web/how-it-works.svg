@@ -23,7 +23,7 @@
   <rect x="0" y="0" width="1240" height="800" rx="18" fill="#f8fafc"/>
 
   <text x="40" y="52" class="h1">How the session monitor works</text>
-  <text x="40" y="78" class="sub">It reads Sense's own APIs every 15 seconds, works out each user's slots, and pushes the result to a live web page. Nothing is installed on the Sense server.</text>
+  <text x="40" y="78" class="sub">It reads Sense's own APIs every 15 seconds by default, works out each user's slots, and pushes the result to a live web page. Nothing is installed on the Sense server.</text>
 
   <!-- ===================== Column 1: the Sense site ===================== -->
   <text x="40" y="122" class="col">YOUR QLIK SENSE SITE</text>
@@ -92,14 +92,14 @@
   <g transform="translate(472,222)">
     <rect width="326" height="86" rx="10" fill="#eef3ff"/>
     <circle cx="22" cy="24" r="12" fill="#2f5fe0"/><text x="22" y="28.5" class="num" text-anchor="middle">1</text>
-    <text x="44" y="29" class="t" font-weight="700">Discover</text><text x="118" y="29" class="s">every 10 minutes</text>
+    <text x="44" y="29" class="t" font-weight="700">Discover</text><text x="118" y="29" class="s">every 10 min, by default</text>
     <text x="44" y="51" class="s">Asks the Repository for every proxy node</text>
     <text x="44" y="68" class="s">and virtual proxy, so new ones are found.</text>
   </g>
   <g transform="translate(472,320)">
     <rect width="326" height="118" rx="10" fill="#eef3ff"/>
     <circle cx="22" cy="24" r="12" fill="#2f5fe0"/><text x="22" y="28.5" class="num" text-anchor="middle">2</text>
-    <text x="44" y="29" class="t" font-weight="700">Poll</text><text x="84" y="29" class="s">every 15 seconds</text>
+    <text x="44" y="29" class="t" font-weight="700">Poll</text><text x="84" y="29" class="s">every 15 s, by default</text>
     <text x="44" y="51" class="s">Open sessions from every proxy node ×</text>
     <text x="44" y="68" class="s">virtual proxy, in parallel.</text>
     <text x="44" y="89" class="s">Licence usage records recent enough to count;</text>
@@ -186,7 +186,7 @@
     <rect x="20" y="44" width="280" height="40" rx="8" fill="#f1f5f9"/>
     <text x="34" y="69" class="t" font-weight="600">Console</text><text x="104" y="69" class="s">alerts and an optional table</text>
     <rect x="20" y="92" width="280" height="40" rx="8" fill="#f1f5f9"/>
-    <text x="34" y="117" class="t" font-weight="600">Webhook</text><text x="104" y="117" class="s">alerts to Teams, Slack, …</text>
+    <text x="34" y="117" class="t" font-weight="600">Webhook</text><text x="104" y="117" class="s">alerts as JSON, to any URL</text>
     <rect x="20" y="140" width="280" height="40" rx="8" fill="#f1f5f9"/>
     <text x="34" y="165" class="t" font-weight="600">MQTT</text><text x="104" y="165" class="s">state and alerts, off by default</text>
   </g>
