@@ -84,10 +84,16 @@ export function webOutput(cfg, site, pollSeconds, actions = {}) {
             if (!u)
                 json(
                     res,
-                    { at: latest?.at ?? null, timeline: [], timelineTotal: 0 },
+                    { at: latest?.at ?? null, timeline: [], timelineTotal: 0, openSessions: [] },
                     latest ? 404 : 503
                 );
-            else json(res, { at: latest.at, timeline: u.timeline, timelineTotal: u.timelineTotal });
+            else
+                json(res, {
+                    at: latest.at,
+                    timeline: u.timeline,
+                    timelineTotal: u.timelineTotal,
+                    openSessions: u.openSessions,
+                });
         } else if (path === '/events') {
             res.writeHead(200, {
                 'Content-Type': 'text/event-stream',
@@ -174,7 +180,7 @@ export function webOutput(cfg, site, pollSeconds, actions = {}) {
             handledAt = Date.now();
             slim = {
                 ...result,
-                users: result.users.map(({ timeline, ...u }) => u),
+                users: result.users.map(({ timeline, openSessions, ...u }) => u),
                 site: cfg.title || site,
                 pollSeconds,
                 canEndSessions: Boolean(actions.endSession),

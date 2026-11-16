@@ -518,3 +518,21 @@ test('the simulated site does not grow when left running', async () => {
     // After the first hours the size levels off instead of rising every hour.
     assert.ok(sizes[5] < sizes[2] * 1.5, `sizes per hour: ${sizes.join(', ')}`);
 });
+
+test('every open session is listed for ending, even one the capped timeline has dropped', () => {
+    const t = new Tracker(LIMIT, 15);
+    t.update(snap(0, [sess('old')], []));
+    const many = Array.from({ length: 45 }, (_, i) => sess(`n${i}`));
+    t.update(snap(15, [sess('old'), ...many], []));
+    const r = t.update(snap(30, [sess('old')], []));
+    const u = r.users.find((x) => x.key === 'corp\\test1');
+    assert.equal(u.timeline.length, 40);
+    assert.ok(
+        !u.timeline.some((e) => e.sessionId === 'old'),
+        'the oldest session is off the timeline'
+    );
+    assert.deepEqual(
+        u.openSessions.map((e) => e.sessionId),
+        ['old']
+    );
+});

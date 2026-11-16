@@ -694,8 +694,7 @@
     // not every second, so a button doesn't move under the pointer.
     function drawEndSessions(node) {
         const box = node.querySelector('.end-sessions');
-        const live =
-            state.canEndSessions && node._tl ? node._tl.timeline.filter((e) => e.live) : [];
+        const live = state.canEndSessions && node._tl ? node._tl.openSessions || [] : [];
         box.hidden = !state.canEndSessions;
         if (!state.canEndSessions) return;
         const ids = live.map((e) => e.sessionId).join(',');

@@ -389,6 +389,9 @@ export class Tracker {
                 lastRefusedAt: iso(this.lastRefusedAt.get(u.key)),
                 timeline: u.timeline.slice(0, MAX_TIMELINE_SESSIONS),
                 timelineTotal: u.timeline.length,
+                // Every open session, however many: the timeline above is capped, and a session
+                // that has been open long can fall off it while it is still there to be ended.
+                openSessions: u.timeline.filter((e) => e.live),
                 key: u.key,
             });
         }
@@ -484,6 +487,7 @@ export class Tracker {
                 lastRefusedAt: iso(this.lastRefusedAt.get(key)),
                 timeline: [],
                 timelineTotal: 0,
+                openSessions: [],
                 key,
                 gone: true,
             });
