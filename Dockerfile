@@ -28,7 +28,7 @@ RUN npm ci --omit=dev --ignore-scripts
 #
 # The Node.js binary needs only Debian's C and C++ runtime libraries (libc6, libstdc++6 and
 # libgcc-s1), which every slim image has. Keep both stages on the same Debian release, bookworm.
-FROM debian:bookworm-20261005-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+FROM debian:bookworm-20261104-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
 
 # Add metadata about the image
 LABEL maintainer="Göran Sander mountaindude@ptarmiganlabs.com"
