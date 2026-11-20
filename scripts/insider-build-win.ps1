@@ -1,5 +1,5 @@
 # Platform: Windows only
-# Requires: Node.js, esbuild, PowerShell, Windows SDK (signtool.exe)
+# Requires: Node.js, the npm dependencies (npm ci), PowerShell, Windows SDK (signtool.exe)
 $ErrorActionPreference = 'Stop'
 
 # Inject git SHA and date into package.json
@@ -11,7 +11,8 @@ $DATE_STR = (Get-Date -Format "yyyy-MMM-dd")
 $SHA = $env:GITHUB_SHA
 
 # Create a single JS file using esbuild
-./node_modules/.bin/esbuild "src/bundle.js" --bundle --outfile=build.cjs --format=cjs --platform=node --target=node22 --inject:./src/lib/import-meta-url.js --define:import.meta.url=import_meta_url
+node scripts/bundle.mjs bundle
+if ($LASTEXITCODE -ne 0) { throw "Bundling failed with exit code $LASTEXITCODE" }
 
 # Generate blob to be injected into the binary
 node --experimental-sea-config src/sea-config.json
@@ -32,8 +33,8 @@ if (-not $signtool) { throw 'signtool.exe not found. Install the signing tools f
 & $signtool.FullName remove /s "./${env:DIST_FILE_NAME}.exe"
 if ($LASTEXITCODE -ne 0) { throw "signtool remove failed with exit code $LASTEXITCODE" }
 
-npx --no-install postject "${env:DIST_FILE_NAME}.exe" NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
-if ($LASTEXITCODE -ne 0) { throw "postject failed with exit code $LASTEXITCODE" }
+node scripts/bundle.mjs inject "./${env:DIST_FILE_NAME}.exe"
+if ($LASTEXITCODE -ne 0) { throw "Injecting the SEA blob failed with exit code $LASTEXITCODE" }
 
 # Insider builds are not code-signed. Release builds are signed through Azure Artifact Signing
 # in ci.yaml.

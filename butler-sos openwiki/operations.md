@@ -40,12 +40,13 @@ Butler SOS can be built as a **Single Executable Application (SEA)** — a stand
 
 ### Build Pipeline
 
-All builds follow the same 4-step core pipeline:
+All builds follow the same 4-step core pipeline. Steps 1 and 4 are `scripts/bundle.mjs`, which every
+build script calls:
 
-1. **Bundle with esbuild** — `src/bundle.js` → `build.cjs` (CommonJS, Node 22 target)
+1. **Bundle with esbuild** — `node scripts/bundle.mjs bundle`: `src/bundle.js` → `build.cjs` (CommonJS, Node 22 target)
 2. **Generate SEA blob** — `node --experimental-sea-config src/sea-config.json` produces `sea-prep.blob` + draft binary
 3. **Copy Node.js executable** — Fresh copy of the running `node` binary as the host
-4. **Inject blob** — `npx postject` embeds the JavaScript application into the Node binary
+4. **Inject blob** — `node scripts/bundle.mjs inject <binary>` runs postject, which embeds the JavaScript application into the Node binary
 
 `src/bundle.js` is a 2-line entry point that sets `NODE_ENV=production` and requires `./butler-sos`.
 

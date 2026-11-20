@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Platform: Linux only
-# Requires: Node.js, esbuild
+# Requires: Node.js, the npm dependencies (npm ci)
 set -e
 
-./node_modules/.bin/esbuild src/bundle.js  --bundle --outfile=build.cjs --format=cjs --platform=node --target=node22 --inject:./src/lib/import-meta-url.js --define:import.meta.url=import_meta_url
+node scripts/bundle.mjs bundle
 node --experimental-sea-config src/sea-config.json
 
 # Get a copy of the Node executable
 cp "$(node -p 'process.execPath')" "${DIST_FILE_NAME}"
-npx --no-install postject ${DIST_FILE_NAME} NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
+node scripts/bundle.mjs inject "${DIST_FILE_NAME}"
 
 # Make binary executable
 chmod +x ./${DIST_FILE_NAME}
