@@ -1,5 +1,102 @@
 # Changelog
 
+## [15.2.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.1.3...butler-sos-v15.2.0) (2026-11-20)
+
+
+### Features
+
+* add --port to the session monitor, and give advice that works without a config file ([9d466e8](https://github.com/ptarmiganlabs/butler-sos/commit/9d466e8f93a9d3625a5c1d6b4f53396eb2eeb7a9))
+* add a build-time extension point for variant builds ([1785d50](https://github.com/ptarmiganlabs/butler-sos/commit/1785d5013d08978fa09897ccf0b25dd4d49fcd65))
+* add QSEoW session monitor with live view ([80962dd](https://github.com/ptarmiganlabs/butler-sos/commit/80962dd73c1795a587b8064f0083cf9e3128d4af))
+* add the Ptarmigan Labs logo to the session monitor ([ac30d7c](https://github.com/ptarmiganlabs/butler-sos/commit/ac30d7ceb8e37ffcc39b7d274a3fc5059b34564f))
+* let the session monitor end proxy sessions from the page with --allow-session-delete ([2250d7f](https://github.com/ptarmiganlabs/butler-sos/commit/2250d7fdb7d27af1bde41b4cce092458bb174b51))
+* show each slot bucket's highest count since the session monitor started ([6d1a033](https://github.com/ptarmiganlabs/butler-sos/commit/6d1a0331b2c6ef0a7cdaa12aedf54c2ebc657e9d))
+* start the session monitor with no configuration on a Sense server ([af91f6b](https://github.com/ptarmiganlabs/butler-sos/commit/af91f6bf9b803fe7ebd829a9a9fb949b04cd9678))
+
+
+### Bug Fixes
+
+* avoid false refusals and stale MQTT rows after outages and restarts ([4a49362](https://github.com/ptarmiganlabs/butler-sos/commit/4a49362fce3c58db2feb9bfef26fb610cb4bb860))
+* avoid MQTT identity clashes and held webhook connections ([f29af4d](https://github.com/ptarmiganlabs/butler-sos/commit/f29af4d438f33206a84cb0d98a07f4dc55d816d0))
+* call a session monitor slot a slot, and say it isn't a licence ([2fa64df](https://github.com/ptarmiganlabs/butler-sos/commit/2fa64dfa6fe9fc3dde7f6409b9853b1a2a54321c))
+* close the remaining review gaps in the session monitor ([19fe445](https://github.com/ptarmiganlabs/butler-sos/commit/19fe445ff49d9e83f2fe8d892f4462c7132e63bb))
+* **deps:** update @fastify/static to 10.1.10 for patched glob ([6915e81](https://github.com/ptarmiganlabs/butler-sos/commit/6915e81f759bcb2214d5995531d0558cff2cdcb0))
+* **deps:** update fast-uri to 3.1.9 ([da2fead](https://github.com/ptarmiganlabs/butler-sos/commit/da2fead290cbdddb0c8e2104ab246ed55c52d4a9))
+* don't take sessions on new proxies or from licence outages for refused ([3d9b06b](https://github.com/ptarmiganlabs/butler-sos/commit/3d9b06b3a56f81add5cc6e04fc7761673993ec6f))
+* end a session on the proxy where the monitor last saw it ([5fcce88](https://github.com/ptarmiganlabs/butler-sos/commit/5fcce8860ac2e6d39d9886a519263dd50df9957f))
+* explain that a session in use keeps its slot ([d738ac0](https://github.com/ptarmiganlabs/butler-sos/commit/d738ac094b3cb6e12d483213e75413ee185d3eb3))
+* harden the session monitor after review ([cfa9c66](https://github.com/ptarmiganlabs/butler-sos/commit/cfa9c66cfcfea1b90a4573cb0789a18d43b7cec6))
+* keep the open-session list out of the session monitor's MQTT user state ([ca17f12](https://github.com/ptarmiganlabs/butler-sos/commit/ca17f12db441747d1453769e411b356a4b73f883))
+* keep the session monitor's layout inside the screen at laptop widths ([796d52b](https://github.com/ptarmiganlabs/butler-sos/commit/796d52b2b1597cd9f01179ad05d3008fd573369b))
+* keep the session monitor's web page from stopping or bloating the monitor ([adb63ee](https://github.com/ptarmiganlabs/butler-sos/commit/adb63eeb95985507ce9e152d43f8d0b71a63741a))
+* keep the simulated demo site from growing when left running ([0336916](https://github.com/ptarmiganlabs/butler-sos/commit/0336916acdca5672ad0f4b0740c0f9e789a06bfb))
+* lay out the session monitor's Live feed help as readable sentences ([ba6450e](https://github.com/ptarmiganlabs/butler-sos/commit/ba6450ed07b46d787dbef3d8c2f48e16b0a2e239))
+* let Ctrl+C stop the session monitor at once ([84f1de8](https://github.com/ptarmiganlabs/butler-sos/commit/84f1de8799358a5f1e92f08383c3308abc72a84a))
+* list every open session for ending, not only those on the capped timeline ([4724dc0](https://github.com/ptarmiganlabs/butler-sos/commit/4724dc0ff1e1949e020524dbe2b8ed0fa1b57e32))
+* make active user filters obvious in the session monitor ([4fcfa43](https://github.com/ptarmiganlabs/butler-sos/commit/4fcfa436340b5363206d5d262ae3c99c7ff24074))
+* make the session monitor robust to odd names and proxy outages ([e3027f1](https://github.com/ptarmiganlabs/butler-sos/commit/e3027f12a308440fe6378ea089329862352bae12))
+* make the simulated site renew slots like Sense does ([0373745](https://github.com/ptarmiganlabs/butler-sos/commit/03737450e1b53fdfd70ff45a195c5f9d755dceed))
+* notice ended sessions on working proxies while another is down ([abd775f](https://github.com/ptarmiganlabs/butler-sos/commit/abd775fdd5154bcfd47bf5fc2e84c2b30c8a239d))
+* put an IPv6 address in brackets in the session monitor's page address ([5f109ab](https://github.com/ptarmiganlabs/butler-sos/commit/5f109ab37b91a445212366fecb46c9fcbaf4959f))
+* read relative certificate paths in a session monitor config file from its own folder ([297f74a](https://github.com/ptarmiganlabs/butler-sos/commit/297f74ae70ae1f48d96e343754af6b3034af4fe1))
+* read the Sense host name from Host.cfg in more encodings ([ab55652](https://github.com/ptarmiganlabs/butler-sos/commit/ab556527a27dcaa9b7bc8a508fc685bdbc1deb1e))
+* refuse a session monitor config file that was named but is missing ([ad6546d](https://github.com/ptarmiganlabs/butler-sos/commit/ad6546daa26141e8de5d58de001442ebee07f051))
+* show and use one up-to-date location for each session the page can end ([00717da](https://github.com/ptarmiganlabs/butler-sos/commit/00717da8199a70c757dc5e8f5b9884371282b94e))
+* show every session monitor startup failure before its window closes ([c3ef97f](https://github.com/ptarmiganlabs/butler-sos/commit/c3ef97f55b7d84deddd5259d800a3a13f609b603))
+* show slot counts as unknown until licences have been read once ([7782e35](https://github.com/ptarmiganlabs/butler-sos/commit/7782e356c5a7a587af3ff978aa92caa0f7ef94f1))
+
+
+### Miscellaneous
+
+* accept a variant build's version headline in the Windows release smoke test ([3903c22](https://github.com/ptarmiganlabs/butler-sos/commit/3903c22ec95be5abae41021b30da29d3aa0f3037))
+* build the Docker image only for Butler SOS releases ([09139d0](https://github.com/ptarmiganlabs/butler-sos/commit/09139d0bea3cd749364fd0ffca665cd7cb9ec775))
+* build the session monitor into a single executable ([1863555](https://github.com/ptarmiganlabs/butler-sos/commit/186355542f1aa25f362518db4475cf4f09d316f4))
+* bump the session monitor to 0.2.0 ([dc8aead](https://github.com/ptarmiganlabs/butler-sos/commit/dc8aead23dc717356f0acaf0fb57a64ca58afe34))
+* bump the session monitor to 0.3.0 ([2f6f5b5](https://github.com/ptarmiganlabs/butler-sos/commit/2f6f5b547f1676000face76f2be80f16473edd8d))
+* bump the session monitor to 0.4.0 ([7e38199](https://github.com/ptarmiganlabs/butler-sos/commit/7e38199d863484433493b5b23644f71a211d22d6))
+* canary the extensions override in packaged binaries ([f37b305](https://github.com/ptarmiganlabs/butler-sos/commit/f37b305dfb8e230710ad9362124d521ab6a88dca))
+* define the esbuild bundle and postject inject steps once, in scripts/bundle.mjs ([e61b891](https://github.com/ptarmiganlabs/butler-sos/commit/e61b8916a52ce918f9b5b29a24151bf1c42137a9))
+* **deps:** bump follow-redirects from 1.16.1 to 1.16.3 ([7636ce0](https://github.com/ptarmiganlabs/butler-sos/commit/7636ce0b594a91071e3ccd51b6927c368ef4c361))
+* **deps:** bump follow-redirects from 1.16.1 to 1.16.3 ([5f3f1bc](https://github.com/ptarmiganlabs/butler-sos/commit/5f3f1bc393f10c6d3fbffdabb0b05dfbb25b8509))
+* **deps:** bump systeminformation from 5.33.1 to 5.33.16 ([5081aae](https://github.com/ptarmiganlabs/butler-sos/commit/5081aaee98e82452a26ebef73a616bf98bda6ff9))
+* **deps:** bump systeminformation from 5.33.1 to 5.33.16 ([5ccc73e](https://github.com/ptarmiganlabs/butler-sos/commit/5ccc73e906ea1119c781ff9e5956f64bf78d80b4))
+* **deps:** override vulnerable glob and minimatch in dev tooling ([4ffddcb](https://github.com/ptarmiganlabs/butler-sos/commit/4ffddcb4f2d37ff1d3e637d09d34a4d68baaff88))
+* fail the session monitor release when Apple rejects notarisation ([aacdee2](https://github.com/ptarmiganlabs/butler-sos/commit/aacdee2604ba729fd83042978157b9cb8b1aaf05))
+* guard the extension point's boundary in lint and at commit time ([3a757cc](https://github.com/ptarmiganlabs/butler-sos/commit/3a757ccb43e6f373c993bad927479d1a82583c3c))
+* ignore every release archive, not only the Windows one ([d099c88](https://github.com/ptarmiganlabs/butler-sos/commit/d099c888e0ab2915f294e186e31126890689d288))
+* keep jest out of tools/ ([7b7eeed](https://github.com/ptarmiganlabs/butler-sos/commit/7b7eeed437fad4bac1936c217e3d115fc34b4423))
+* let the macOS session monitor build run, and keep its signing credentials from it ([15043c1](https://github.com/ptarmiganlabs/butler-sos/commit/15043c199bc2007a7e27e77e83af3a38c9dc61d0))
+* make the slot-peak test fail if peaks move during a failed licence read ([d1923ad](https://github.com/ptarmiganlabs/butler-sos/commit/d1923ade7fd6636157422b019d612436aed52d8d))
+* pin the diagram's narrow security policy and the page's own ([95aa5fa](https://github.com/ptarmiganlabs/butler-sos/commit/95aa5fa0fd07a6ef472b90e945d305d812f10a5a))
+* release the session monitor as signed binaries ([001d931](https://github.com/ptarmiganlabs/butler-sos/commit/001d931b2f79da831fe8d28b51a8c0e1530ac01e))
+* say in session monitor release notes to verify the unzipped program ([e430dd8](https://github.com/ptarmiganlabs/butler-sos/commit/e430dd823eb90a40e8033718fe3cd6f1a56cbee3))
+* stop the local and insider Windows builds when the SEA blob step fails ([5708151](https://github.com/ptarmiganlabs/butler-sos/commit/5708151e2d1ca0eafcbcfb8681a6ca4f2e6db2e9))
+
+
+### Refactoring
+
+* read the session monitor's page files from the binary once ([d765474](https://github.com/ptarmiganlabs/butler-sos/commit/d7654743056fb343102c0e6263275734bbec7861))
+
+
+### Documentation
+
+* add a diagram of how the session monitor works ([39aaa30](https://github.com/ptarmiganlabs/butler-sos/commit/39aaa301a7b230fb7dee4f122bc5647cd0bb64c2))
+* add a portrait cut of the session monitor diagram for narrow columns ([d525bde](https://github.com/ptarmiganlabs/butler-sos/commit/d525bdedbaa81f99f357f156c23f5e5c7b356b7b))
+* add sponsor section to README ([730cde5](https://github.com/ptarmiganlabs/butler-sos/commit/730cde538a3bba9bc6b50b242ba2c139242a403a))
+* describe the session monitor's download-and-run quick start ([3650fce](https://github.com/ptarmiganlabs/butler-sos/commit/3650fce7fce58b11e1c711b2cea40375b416aebf))
+* explain the session monitor's testing-only session ending ([b9db94f](https://github.com/ptarmiganlabs/butler-sos/commit/b9db94fc173afb358c6ea64c82638bc374ed9ab1))
+* link the session limit blog post from the session monitor README ([db4f982](https://github.com/ptarmiganlabs/butler-sos/commit/db4f982ae107363ff9dbbf71d381b6e0aa7759ca))
+* link the session monitor video from its README ([73baa11](https://github.com/ptarmiganlabs/butler-sos/commit/73baa110494bf1867cb92f0bdeb713882f6c9ee1))
+* mark the session monitor diagram's intervals as defaults, and the webhook as JSON ([f47b46b](https://github.com/ptarmiganlabs/butler-sos/commit/f47b46b578c93ede8bfa7340cf8b4cab345bfd51))
+* point the session monitor's quick start at its 0.2.0 release ([f9793d6](https://github.com/ptarmiganlabs/butler-sos/commit/f9793d6ce531069de95321579f0fec48378a15c2))
+* point the session monitor's quick start at its 0.4.0 release ([9f8153b](https://github.com/ptarmiganlabs/butler-sos/commit/9f8153b75920cb07ed450955a7b672fb73218759))
+* say that a relative certDir is relative to the session monitor's config file ([e63c450](https://github.com/ptarmiganlabs/butler-sos/commit/e63c450f105dbec3930df9551501c1f40bc625b5))
+* say the session monitor keeps everything in memory, not only a half hour ([ac35e43](https://github.com/ptarmiganlabs/butler-sos/commit/ac35e43f9126d2b9589bcf6c30f83a48106764be))
+* say the session monitor's attestation is checked on the unzipped program ([04180a9](https://github.com/ptarmiganlabs/butler-sos/commit/04180a9e86fb3b172504d239134272547bbcb328))
+* say the session monitor's hourly clean-up never frees a slot early ([9f1d608](https://github.com/ptarmiganlabs/butler-sos/commit/9f1d608aafbc748859c33597222baf79b089362a))
+* say which Sense version the clean-up measurement was made on ([e7447d8](https://github.com/ptarmiganlabs/butler-sos/commit/e7447d8d50a3ede7e67ae7f102ada749aee1e920))
+* tidy the session monitor README's closing sections ([706bc7a](https://github.com/ptarmiganlabs/butler-sos/commit/706bc7ae66c2252b4ec15ca13694bb062c695772))
+
 ## [15.1.3](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.1.2...butler-sos-v15.1.3) (2026-10-24)
 
 
