@@ -106,9 +106,18 @@ Run it from the repository root. Between the two steps, `node --experimental-sea
 src/sea-config.json` turns `build.cjs` into `sea-prep.blob`. The esbuild options are in
 `scripts/lib/bundle-options.mjs`.
 
-`BUNDLE_TRANSFORM_MODULE`, when set, names a module whose default export takes the bundle's text and
-returns the text to package. It runs after esbuild, before the blob is made. Every build here leaves
-it unset; see `scripts/lib/bundle-transform.mjs`.
+Every bundle is stamped with its build date, derived from `SOURCE_DATE_EPOCH` or the commit date
+rather than the clock (`scripts/lib/build-date.mjs`), so two builds of one commit are identical.
+
+Two environment variables let a variant build change the result. Every build here leaves both unset:
+
+- `EXTENSIONS_MODULE` names a module to bundle behind the `#extensions` specifier instead of the
+  committed stub, `src/lib/extensions/index.js`. That module describes command-line options, config
+  settings and a startup step to add; `src/lib/extensions/apply.js` documents the shape. A variant
+  build's `--version` names the variant and lists both versions and the build date.
+- `BUNDLE_TRANSFORM_MODULE` names a module whose default export takes the bundle's text and returns
+  the text to package. It runs after esbuild, before the blob is made; see
+  `scripts/lib/bundle-transform.mjs`.
 
 ---
 

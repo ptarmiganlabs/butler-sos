@@ -3,6 +3,8 @@ import fs from 'fs/promises';
 import { default as Ajv } from 'ajv';
 
 import configFileSchema from './config-file-schema.js';
+import { extensions } from '#extensions';
+import { applyConfigSchema } from './extensions/apply.js';
 import { verifyHost } from './host-utils.js';
 import { getConfigArray } from './util/config-utils.js';
 
@@ -123,7 +125,12 @@ export async function verifyConfigFileSchema(configFile) {
         }
 
         // Create a conditional schema based on enabled features
-        const conditionalSchema = createConditionalSchema(parsedFileContent, configFileSchema);
+        // Settings a variant build contributes through `#extensions` are checked with core's own.
+        // For a stock build this is the core schema itself.
+        const conditionalSchema = createConditionalSchema(
+            parsedFileContent,
+            applyConfigSchema(configFileSchema, extensions)
+        );
 
         // Log the schema modification for debugging (in development)
         if (process.env.NODE_ENV === 'development' || process.env.DEBUG_CONFIG_VALIDATION) {

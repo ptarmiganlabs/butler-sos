@@ -30,6 +30,10 @@ export default [
         languageOptions: {
             globals: {
                 ...globals.node,
+                // Defined by scripts/bundle.mjs when it bundles, and absent in a source run.
+                // src/lib/util/version-report.js reads both behind a `typeof` guard.
+                __BUTLER_SOS_BUILD_DATE__: 'readonly',
+                __BUTLER_SOS_EXTENSIONS_VERSION__: 'readonly',
             },
 
             ecmaVersion: 2022,

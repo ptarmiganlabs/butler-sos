@@ -6,6 +6,8 @@ jest.unstable_mockModule('../crash-dump.js', () => ({
 
 const { writeCrashDump } = await import('../crash-dump.js');
 const {
+    STARTUP_FAILURE_DRAIN_MS,
+    handleStartupFailure,
     handleUnhandledRejection,
     handleUncaughtException,
     registerProcessSafetyNet,
@@ -237,6 +239,83 @@ describe('process safety net - uncaughtException', () => {
 
 // crash-dump.js redacts these patterns before writing a dump file. Without the same
 // treatment here, the identical error was sanitised on disk and disclosed in the log.
+describe('process safety net - startup failure', () => {
+    let consoleErrorSpy;
+    let exitSpy;
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
+        writeCrashDump.mockClear();
+    });
+
+    afterEach(() => {
+        jest.clearAllTimers();
+        jest.useRealTimers();
+        consoleErrorSpy.mockRestore();
+        exitSpy.mockRestore();
+        setGlobalsRef(null);
+        process.exitCode = undefined;
+    });
+
+    test('reports an expected refusal as its message alone, with no crash dump, and exits 1', async () => {
+        await handleStartupFailure(
+            Object.assign(new Error('This config needs something it does not have.'), {
+                expected: true,
+            })
+        );
+
+        expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+            'This config needs something it does not have.'
+        );
+        expect(writeCrashDump).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+    });
+
+    // The file log transport writes asynchronously, so exiting at once could lose the one line
+    // that says why Butler SOS did not start.
+    test('lets the log drain rather than exiting at once, and stops the process if it lingers', async () => {
+        await handleStartupFailure(Object.assign(new Error('refused'), { expected: true }));
+
+        expect(exitSpy).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+
+        jest.advanceTimersByTime(STARTUP_FAILURE_DRAIN_MS);
+
+        expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    test('does not repeat a refusal that was already logged', async () => {
+        await handleStartupFailure(
+            Object.assign(new Error('already said'), { expected: true, logged: true })
+        );
+
+        expect(consoleErrorSpy).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+    });
+
+    test('redacts a secret from the refusal before it is shown', async () => {
+        await handleStartupFailure(
+            Object.assign(new Error('cannot reach https://admin:hunter2@influx.local:8086'), {
+                expected: true,
+            })
+        );
+
+        expect(consoleErrorSpy.mock.calls[0][0]).not.toContain('hunter2');
+    });
+
+    test('treats anything else as a crash', async () => {
+        const err = new Error('fatal boom');
+
+        await handleStartupFailure(err);
+
+        expect(writeCrashDump).toHaveBeenCalledWith(err, 'uncaughtException');
+        expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+});
+
 describe('process safety net - secret redaction in logged errors', () => {
     let consoleErrorSpy;
 

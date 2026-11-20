@@ -3,7 +3,13 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { BUNDLE_OPTIONS, BLOB, OUTFILE, SENTINEL_FUSE } from '../lib/bundle-options.mjs';
+import {
+    BUNDLE_OPTIONS,
+    BLOB,
+    OUTFILE,
+    SENTINEL_FUSE,
+    bundleOptionsFor,
+} from '../lib/bundle-options.mjs';
 
 /**
  * Guards the single definition of the bundle and inject steps.
@@ -49,6 +55,49 @@ describe('the bundle options', () => {
 
     test('use the fuse Node looks for', () => {
         expect(SENTINEL_FUSE).toBe('NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2');
+    });
+});
+
+describe('the options for one build', () => {
+    test('a stock build gets the build date and nothing else', () => {
+        expect(bundleOptionsFor({ buildDate: '2026-11-20' })).toEqual({
+            ...BUNDLE_OPTIONS,
+            define: {
+                'import.meta.url': 'import_meta_url',
+                __BUTLER_SOS_BUILD_DATE__: '"2026-11-20"',
+            },
+        });
+    });
+
+    test('a variant build swaps the module behind #extensions, and bundles core Commander', () => {
+        const options = bundleOptionsFor({
+            buildDate: '2026-11-20',
+            extensionsModule: '/work/variant/src/index.js',
+            extensionsVersion: '0.1.0',
+            commanderEntry: '/work/butler-sos/node_modules/commander/index.js',
+        });
+
+        expect(options.alias).toEqual({
+            '#extensions': '/work/variant/src/index.js',
+            commander: '/work/butler-sos/node_modules/commander/index.js',
+        });
+        expect(options.define.__BUTLER_SOS_EXTENSIONS_VERSION__).toBe('"0.1.0"');
+    });
+
+    test('a variant module with no version leaves the identifier undeclared', () => {
+        const options = bundleOptionsFor({
+            buildDate: '2026-11-20',
+            extensionsModule: '/work/variant/src/index.js',
+        });
+
+        expect(options.define).not.toHaveProperty('__BUTLER_SOS_EXTENSIONS_VERSION__');
+    });
+
+    test('does not change the shared defaults', () => {
+        bundleOptionsFor({ buildDate: '2026-11-20', extensionsModule: '/x.js' });
+
+        expect(BUNDLE_OPTIONS.define).toEqual({ 'import.meta.url': 'import_meta_url' });
+        expect(BUNDLE_OPTIONS).not.toHaveProperty('alias');
     });
 });
 
