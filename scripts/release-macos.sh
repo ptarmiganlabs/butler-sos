@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Platform: macOS only
-# Requires: Node.js, esbuild, codesign, xcrun (for notarization), macOS signing certificates
+# Requires: Node.js, the npm dependencies (npm ci), codesign, xcrun (for notarization), macOS signing certificates
 set -e
 
 KEYCHAIN_LABEL="${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-0}-${GITHUB_JOB:-macos}-$$"
@@ -40,7 +40,7 @@ cleanup_keychain_state() {
 trap 'cleanup_keychain_state $?' EXIT
 
 # Create a single JS file using esbuild
-./node_modules/.bin/esbuild src/bundle.js  --bundle --outfile=build.cjs --format=cjs --platform=node --target=node22 --inject:./src/lib/import-meta-url.js --define:import.meta.url=import_meta_url
+node scripts/bundle.mjs bundle
 
 # Generate blob to be injected into the binary
 node --experimental-sea-config src/sea-config.json
@@ -52,7 +52,7 @@ cp "$(node -p 'process.execPath')" "${DIST_FILE_NAME}"
 codesign --remove-signature ${DIST_FILE_NAME}
 
 # Inject the blob
-npx --no-install postject ${DIST_FILE_NAME} NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 --macho-segment-name NODE_SEA
+node scripts/bundle.mjs inject "${DIST_FILE_NAME}"
 
 security delete-keychain "${KEYCHAIN_PATH}" >/dev/null 2>&1 || true
 rm -f "${KEYCHAIN_PATH}"

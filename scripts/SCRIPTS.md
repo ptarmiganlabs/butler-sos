@@ -85,6 +85,33 @@ Reattach to a running tmux session.
 
 ## Build Scripts
 
+### bundle.mjs
+
+The two packaging steps every build script below shares, defined once: bundling the source into
+`build.cjs` with esbuild, and injecting the SEA blob into a copy of the Node executable with
+postject. The build scripts call it rather than running esbuild or postject themselves, so a flag
+cannot change on one platform and not the others. `scripts/__tests__/bundle-options.test.js` fails
+if a build script runs either tool directly again.
+
+**Platform:** Cross-platform
+
+**Usage:**
+
+```bash
+node scripts/bundle.mjs bundle                  # writes build.cjs
+node scripts/bundle.mjs inject <binary path>    # injects sea-prep.blob into that file
+```
+
+Run it from the repository root. Between the two steps, `node --experimental-sea-config
+src/sea-config.json` turns `build.cjs` into `sea-prep.blob`. The esbuild options are in
+`scripts/lib/bundle-options.mjs`.
+
+`BUNDLE_TRANSFORM_MODULE`, when set, names a module whose default export takes the bundle's text and
+returns the text to package. It runs after esbuild, before the blob is made. Every build here leaves
+it unset; see `scripts/lib/bundle-transform.mjs`.
+
+---
+
 ### build-binary-macos.sh
 
 Builds a standalone Butler SOS binary for macOS (arm64) for local use.

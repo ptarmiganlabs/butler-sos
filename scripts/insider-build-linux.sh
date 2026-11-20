@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Platform: Linux only
-# Requires: Node.js, esbuild
+# Requires: Node.js, the npm dependencies (npm ci)
 set -e
 
 # Inject git SHA and date into package.json
@@ -12,12 +12,12 @@ sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION}_${DATE_STR}_${GIT_SHA}\"
 # Get GitHub SHA for artifact naming
 SHA=$GITHUB_SHA
 
-./node_modules/.bin/esbuild src/bundle.js  --bundle --outfile=build.cjs --format=cjs --platform=node --target=node22 --inject:./src/lib/import-meta-url.js --define:import.meta.url=import_meta_url
+node scripts/bundle.mjs bundle
 node --experimental-sea-config src/sea-config.json
 
 # Get a copy of the Node executable
 cp "$(node -p 'process.execPath')" "${DIST_FILE_NAME}"
-npx --no-install postject "${DIST_FILE_NAME}" NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
+node scripts/bundle.mjs inject "${DIST_FILE_NAME}"
 
 # Compress insider's build
 # Include following directories & files in the created archive file.
