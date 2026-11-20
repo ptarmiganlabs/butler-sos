@@ -121,6 +121,22 @@ Two environment variables let a variant build change the result. Every build her
 
 ---
 
+### extensions-canary.mjs
+
+Builds two SEA binaries from the current tree and checks them: one with a throw-away extensions
+module, which must register its option, config setting and startup step, and one without, which must
+be unchanged. Run in CI by `extensions-canary.yaml` on Linux and Windows.
+
+**Platform:** Cross-platform (macOS needs `codesign`, for the ad-hoc signature)
+
+**Usage:**
+
+```bash
+node scripts/extensions-canary.mjs
+```
+
+---
+
 ### check-extension-point.mjs
 
 Refuses any file under `src/lib/extensions/` that is not on its allowlist. That directory is the one

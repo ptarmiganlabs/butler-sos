@@ -1,0 +1,89 @@
+name: extensions-canary
+
+# Does the `#extensions` build-time override still work once the binary is packaged?
+#
+# Butler SOS ships SEA binaries for three platforms, and the failure this guards against is the kind
+# that "works everywhere except inside the packaged binary". Most of the override is bundle-time and
+# platform-agnostic - esbuild resolves an alias long before anything platform-specific happens. One
+# part is not: scripts/bundle.mjs resolves EXTENSIONS_MODULE to an absolute path and hands it to
+# esbuild as an alias value and to pathToFileURL, and on Windows that is a C:\ path with
+# backslashes.
+#
+# scripts/extensions-canary.mjs builds two binaries on each runner. One bundles a throw-away
+# extensions module and must register its option, its config setting and its startup hook, and
+# report the hook's refusal to start as an ordinary failure. The other bundles the committed stub
+# and must be unchanged. Every assertion prints `ok` or `FAIL`, and the job fails with the full
+# list rather than at the first problem.
+#
+# Signing is not covered: the question is packaging and module resolution. macOS is not in the
+# matrix; scripts/build-binary-macos.sh runs the same steps on every developer Mac, and the canary
+# runs there by hand.
+#
+# No secrets are read, so this is safe to run for a pull request from a fork.
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/bundle.mjs'
+      - 'scripts/lib/bundle-*.mjs'
+      - 'scripts/lib/build-date.mjs'
+      - 'scripts/extensions-canary.mjs'
+      - 'src/lib/extensions/**'
+      - 'src/lib/util/version-report.js'
+      - 'src/lib/globals/command-line.js'
+      - 'src/lib/config-file-verify.js'
+      - 'src/lib/globals/config-loader.js'
+      - 'src/globals.js'
+      - 'src/butler-sos.js'
+      - 'src/lib/process-safety-net.js'
+      - 'src/sea-config.json'
+      - '.github/workflows/extensions-canary.yaml'
+      # bundle.mjs aliases `commander` to this tree's copy for an override build and fails
+      # the build when the majors differ, so a dependency bump changes what this guards
+      # without touching a file above.
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: extensions-canary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  canary:
+    name: extensions override in a packaged binary (${{ matrix.os }})
+    strategy:
+      # Report both platforms rather than cancelling the sibling on first failure: a
+      # platform difference is only visible when both legs report.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    # Two full SEA builds per leg, and the install. The bound is here so a hung postject
+    # costs minutes rather than hours.
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+          # The newest 24.x, not whichever one this runner has cached.
+          check-latest: true
+          cache: npm
+
+      # --ignore-scripts, as in every job here: esbuild's JS API resolves its
+      # @esbuild/<platform> optionalDependency without its postinstall.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build, package and interrogate the binaries
+        run: node scripts/extensions-canary.mjs
