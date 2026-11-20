@@ -121,6 +121,21 @@ Two environment variables let a variant build change the result. Every build her
 
 ---
 
+### check-extension-point.mjs
+
+Refuses any file under `src/lib/extensions/` that is not on its allowlist. That directory is the one
+place a build can substitute, so a file added there is a deliberate change to the extension point.
+Run by the `extension-point-allowlist` pre-commit hook with the staged paths, and by
+`src/__tests__/extension-point-allowlist.test.js` over the whole directory.
+
+**Usage:**
+
+```bash
+node scripts/check-extension-point.mjs [path...]
+```
+
+---
+
 ### build-binary-macos.sh
 
 Builds a standalone Butler SOS binary for macOS (arm64) for local use.

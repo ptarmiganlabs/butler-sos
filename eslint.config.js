@@ -14,6 +14,39 @@ const compat = new FlatCompat({
     allConfig: js.configs.all,
 });
 
+// The extension-point boundary. Core reaches src/lib/extensions/ only through the `#extensions`
+// specifier, and through apply.js and version.js, which are core-side code that lives beside the
+// seam rather than behind it.
+const SEAM_MESSAGE =
+    'Import the extension point through the `#extensions` specifier instead. A relative path resolves under node and Jest, so it passes every test, and then silently ignores the build-time override - esbuild cannot alias a relative specifier. The failure appears only inside the packaged binary. Nothing under src/lib/extensions/ is reachable from core except `#extensions`, and apply.js and version.js beside it.';
+
+/**
+ * The extension-point boundary, as no-restricted-imports patterns.
+ *
+ * `**\/extensions/index.js` catches the module being imported by path rather than through the
+ * specifier. `**\/extensions/*\/**` catches anything reaching into a subdirectory of it.
+ *
+ * These patterns match the import *string*, not the resolved path, so they are deliberately not
+ * anchored on `lib/extensions/`: a sibling module writes `../extensions/index.js`, with no `lib/` in
+ * it. The accepted cost is that a future directory named `extensions` anywhere under `src/` inherits
+ * this rule. There is none today; if one appears, rename it or scope this block by `files`.
+ */
+const SEAM_IMPORT_PATTERNS = [
+    {
+        group: ['**/extensions/index.js', '**/extensions/*/**'],
+        message: SEAM_MESSAGE,
+    },
+];
+
+/**
+ * The dynamic-import half of the same boundary: no-restricted-imports covers static imports and
+ * `export ... from` only, and a dynamic `await import('./extensions/index.js')` sails past it.
+ */
+const SEAM_IMPORT_SELECTOR = {
+    selector: 'ImportExpression > Literal[value=/extensions\\/(index\\.js|[^/]+\\/)/]',
+    message: SEAM_MESSAGE,
+};
+
 // export default [...compat.extends("airbnb-base", "prettier"), {
 export default [
     {
@@ -75,6 +108,18 @@ export default [
         files: ['**/__tests__/**/*.js', '**/*.test.js'],
         rules: {
             'jsdoc/require-jsdoc': 'off',
+        },
+    },
+    {
+        // Placed last, carrying `files` and `rules` only. If another block ever needs
+        // no-restricted-imports or no-restricted-syntax for these files, add its patterns here
+        // instead: flat config replaces a rule's options rather than merging them, so a second
+        // block naming the same rule would silently switch this one off.
+        files: ['src/**/*.js'],
+        ignores: ['src/lib/extensions/**'],
+        rules: {
+            'no-restricted-imports': ['error', { patterns: SEAM_IMPORT_PATTERNS }],
+            'no-restricted-syntax': ['error', SEAM_IMPORT_SELECTOR],
         },
     },
 ];
