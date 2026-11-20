@@ -220,4 +220,13 @@ describe('initCommandLine', () => {
         expect(settings.options.configfile).toBe('production.yaml');
         expect(exitSpy).not.toHaveBeenCalled();
     });
+
+    test('reports the bare version, as it always has', () => {
+        process.argv = ['node', 'butler-sos.js', '-c', 'production.yaml'];
+        const settings = { appVersion: '1.2.3' };
+
+        initCommandLine(settings);
+
+        expect(settings.versionReport).toBe('1.2.3');
+    });
 });

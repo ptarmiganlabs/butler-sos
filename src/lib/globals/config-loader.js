@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url';
 import sea from '../sea-wrapper.js';
 import { verifyConfigFileSchema, verifyAppConfig } from '../config-file-verify.js';
 import configFileSchema from '../config-file-schema.js';
+import { extensions } from '#extensions';
+import { applyConfigSchema } from '../extensions/apply.js';
 import { normalizeNullableArrays, applySchemaDefaults } from '../util/config-utils.js';
 
 /**
@@ -128,7 +130,10 @@ export async function initConfig(settings) {
     // importing globals.js. The real constraint is simply that any reader running earlier would
     // see the un-normalised value. verifyAppConfig below is the first reader, so this must stay
     // above it — and above the skipConfigVerification branch, so it runs in that mode too.
-    const normalizedPaths = normalizeNullableArrays(settings.config, configFileSchema);
+    // Settings a variant build contributes through `#extensions` are normalised and defaulted with
+    // core's own. For a stock build this is the core schema itself.
+    const schema = applyConfigSchema(configFileSchema, extensions);
+    const normalizedPaths = normalizeNullableArrays(settings.config, schema);
     if (normalizedPaths.length > 0) {
         console.info(
             `MAIN: Treating ${normalizedPaths.length} empty config setting(s) as empty lists: ${normalizedPaths.join(', ')}`
@@ -141,7 +146,7 @@ export async function initConfig(settings) {
     // verification never sees: --skip-config-verification, node-config merge layers
     // (local.yaml, NODE_CONFIG), and sections the conditional schema stops validating once
     // their enable flag is false.
-    for (const { level, message } of applySchemaDefaults(settings.config, configFileSchema)) {
+    for (const { level, message } of applySchemaDefaults(settings.config, schema)) {
         if (level === 'warn') {
             console.warn(`MAIN: ${message}`);
         } else {

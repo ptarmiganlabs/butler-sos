@@ -62,6 +62,12 @@ jobs:
       - name: Test
         run: npm test
 
+      # The Windows release smoke test's --version match, fed every report shape the binary
+      # prints, with no build. It otherwise first runs in a release.
+      - name: Check the release smoke test's version match
+        shell: pwsh
+        run: ./scripts/diag/win-version-check.ps1
+
   dependency-audit:
     name: Dependency audit
     runs-on: ubuntu-latest

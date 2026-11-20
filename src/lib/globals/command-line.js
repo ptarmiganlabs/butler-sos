@@ -1,18 +1,38 @@
 import { styleText } from 'node:util';
 import { Command, Option } from 'commander';
+import { extensions } from '#extensions';
+import { applyOptions } from '../extensions/apply.js';
+import {
+    BUILD_DATE,
+    EXTENSIONS_VERSION,
+    describeVersion,
+    versionStampLine,
+} from '../util/version-report.js';
 
 /**
  * Initializes command line parameters and parses them.
  *
+ * Options a variant build contributes through `#extensions` are added before parsing, so they are
+ * parsed, listed by `--help` and validated like core's own. `settings.versionReport` is what
+ * `--version` prints: the bare version for a stock build.
+ *
  * @param {object} settings - The settings object to populate
  */
 export function initCommandLine(settings) {
+    settings.versionReport = describeVersion({
+        name: 'butler-sos',
+        version: settings.appVersion,
+        variant: extensions?.variant,
+        variantVersion: EXTENSIONS_VERSION,
+        buildDate: BUILD_DATE,
+    });
+
     const program = new Command();
     program
-        .version(settings.appVersion)
+        .version(settings.versionReport)
         .name('butler-sos')
         .description(
-            `Version: ${settings.appVersion}
+            `Version: ${versionStampLine(settings.versionReport)}
 
 Butler SenseOps Stats ("Butler-SOS") is a tool publishing operational Qlik Sense metrics to InfluxDB, Prometheus, New Relic and other destinations.
 
@@ -52,6 +72,8 @@ Configuration File:
         .option('--new-relic-api-key <key...>', 'insert API key to use with New Relic')
         .option('--new-relic-account-id <id...>', 'New Relic account ID')
         .option('--skip-config-verification', 'Disable config file verification', false);
+
+    applyOptions(program, extensions);
 
     // Parse command line params
     program.parse(process.argv);

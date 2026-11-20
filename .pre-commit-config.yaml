@@ -35,3 +35,24 @@ repos:
           - id: check-xml
           - id: check-yaml
           - id: detect-private-key
+
+    - repo: local
+      hooks:
+          # src/lib/extensions/ is a build seam: EXTENSIONS_MODULE makes `#extensions`
+          # resolve elsewhere at bundle time, and the committed default is what every
+          # build here uses instead. A file added beside it is either contract surface
+          # or something an override build half-replaces, so the directory carries an
+          # explicit allowlist and this rejects anything not on it.
+          #
+          # Deliberately an allowlist: a denylist fails silently a year later, this fails
+          # closed at the moment the decision is being made. `files` does the filtering,
+          # so the script only ever sees staged paths under that directory - and because
+          # it inspects what is staged, `git add -f` makes no difference.
+          - id: extension-point-allowlist
+            name: extension point allowlist
+            entry: node scripts/check-extension-point.mjs
+            language: system
+            # Matches the directory itself as well as its contents: replacing the whole
+            # directory with a symlink stages the single path `src/lib/extensions`, and a
+            # trailing-slash pattern would let exactly that through.
+            files: '^src/lib/extensions(/|$)'

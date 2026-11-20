@@ -16,6 +16,9 @@ import { initLogging } from './lib/globals/logging.js';
 import { initUdp } from './lib/globals/udp-servers.js';
 import { initInfluxDBClient, initInfluxDB } from './lib/globals/influxdb.js';
 import { initHostInfo } from './lib/globals/host-info.js';
+import { extensions } from '#extensions';
+import { createStartContext, isExpectedFailure, runBeforeStart } from './lib/extensions/apply.js';
+import { redactSensitivePatterns } from './lib/secret-patterns.js';
 
 let instance = null;
 
@@ -148,6 +151,22 @@ export class Settings {
         this.certPath = upath.resolve(dirname, this.config.get('Butler-SOS.cert.clientCert'));
         this.keyPath = upath.resolve(dirname, this.config.get('Butler-SOS.cert.clientCertKey'));
         this.caPath = upath.resolve(dirname, this.config.get('Butler-SOS.cert.clientCertCA'));
+
+        // A variant build's startup step, if it has one. It runs here - config loaded, logging up,
+        // certificate paths resolved - and before any UDP port, InfluxDB or MQTT connection, or
+        // service, so a step that refuses to start stops Butler SOS before it touches anything.
+        // The stock build has no step, and this does nothing.
+        try {
+            await runBeforeStart(extensions, createStartContext(this));
+        } catch (err) {
+            if (isExpectedFailure(err)) {
+                // Redacted like every other fatal message: a step may fold an underlying error,
+                // with a URL and its credentials, into its own.
+                this.logger.error(redactSensitivePatterns(err.message ?? String(err)));
+                err.logged = true;
+            }
+            throw err;
+        }
 
         // UDP servers and queue managers
         initUdp(this);

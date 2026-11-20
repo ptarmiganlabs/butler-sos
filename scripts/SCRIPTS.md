@@ -106,9 +106,49 @@ Run it from the repository root. Between the two steps, `node --experimental-sea
 src/sea-config.json` turns `build.cjs` into `sea-prep.blob`. The esbuild options are in
 `scripts/lib/bundle-options.mjs`.
 
-`BUNDLE_TRANSFORM_MODULE`, when set, names a module whose default export takes the bundle's text and
-returns the text to package. It runs after esbuild, before the blob is made. Every build here leaves
-it unset; see `scripts/lib/bundle-transform.mjs`.
+Every bundle is stamped with its build date, derived from `SOURCE_DATE_EPOCH` or the commit date
+rather than the clock (`scripts/lib/build-date.mjs`), so two builds of one commit are identical.
+
+Two environment variables let a variant build change the result. Every build here leaves both unset:
+
+- `EXTENSIONS_MODULE` names a module to bundle behind the `#extensions` specifier instead of the
+  committed stub, `src/lib/extensions/index.js`. That module describes command-line options, config
+  settings and a startup step to add; `src/lib/extensions/apply.js` documents the shape. A variant
+  build's `--version` names the variant and lists both versions and the build date.
+- `BUNDLE_TRANSFORM_MODULE` names a module whose default export takes the bundle's text and returns
+  the text to package. It runs after esbuild, before the blob is made; see
+  `scripts/lib/bundle-transform.mjs`.
+
+---
+
+### extensions-canary.mjs
+
+Builds two SEA binaries from the current tree and checks them: one with a throw-away extensions
+module, which must register its option, config setting and startup step, and one without, which must
+be unchanged. Run in CI by `extensions-canary.yaml` on Linux and Windows.
+
+**Platform:** Cross-platform (macOS needs `codesign`, for the ad-hoc signature)
+
+**Usage:**
+
+```bash
+node scripts/extensions-canary.mjs
+```
+
+---
+
+### check-extension-point.mjs
+
+Refuses any file under `src/lib/extensions/` that is not on its allowlist. That directory is the one
+place a build can substitute, so a file added there is a deliberate change to the extension point.
+Run by the `extension-point-allowlist` pre-commit hook with the staged paths, and by
+`src/__tests__/extension-point-allowlist.test.js` over the whole directory.
+
+**Usage:**
+
+```bash
+node scripts/check-extension-point.mjs [path...]
+```
 
 ---
 

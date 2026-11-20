@@ -59,6 +59,9 @@
     },
     "homepage": "https://github.com/ptarmiganlabs/butler-sos#readme",
     "type": "module",
+    "imports": {
+        "#extensions": "./src/lib/extensions/index.js"
+    },
     "dependencies": {
         "@breejs/later": "^4.2.0",
         "@fastify/cors": "^11.3.0",

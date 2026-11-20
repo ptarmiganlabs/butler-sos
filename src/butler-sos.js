@@ -28,8 +28,9 @@ import { initAuditInfluxDestination } from './lib/audit-destinations/influxdb/in
 import { setupUdpEventsStorage } from './lib/udp-event.js';
 import { setupUdpQueueMetricsStorage } from './lib/influxdb/index.js';
 import { logError } from './lib/log-error.js';
+import { versionStampLine } from './lib/util/version-report.js';
 import {
-    handleUncaughtException,
+    handleStartupFailure,
     registerProcessSafetyNet,
     setGlobalsRef,
 } from './lib/process-safety-net.js';
@@ -161,7 +162,9 @@ async function mainScript() {
         globals.logger.info('--------------------------------------');
         globals.logger.info('Starting Butler SOS');
         globals.logger.info(`Log level         : ${globals.getLoggingLevel()}`);
-        globals.logger.info(`App version       : ${globals.appVersion}`);
+        globals.logger.info(
+            `App version       : ${versionStampLine(globals.versionReport ?? globals.appVersion)}`
+        );
         globals.logger.info(`Instance ID       : ${globals.hostInfo.id}`);
         globals.logger.info(`Running in Docker : ${globals.hostInfo.isRunningInDocker}`);
         globals.logger.info('');
@@ -381,6 +384,7 @@ registerProcessSafetyNet();
 // listening, the event loop drains, and the process exits 0. Docker `restart: on-failure`
 // and systemd `Restart=on-failure` both read that as a clean shutdown and never restart.
 //
-// handleUncaughtException is used rather than logFatal because it is hardened for the
-// pre-init case: startup can fail before globals (and its logger) exist.
-mainScript().catch(handleUncaughtException);
+// handleStartupFailure is used rather than logFatal because it is hardened for the pre-init
+// case: startup can fail before globals (and its logger) exist. It reports an expected refusal
+// to start as one line, and hands anything else to handleUncaughtException.
+mainScript().catch(handleStartupFailure);

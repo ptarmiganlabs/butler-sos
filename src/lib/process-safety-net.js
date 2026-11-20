@@ -174,6 +174,48 @@ export async function handleUncaughtException(err) {
 }
 
 /**
+ * How long an expected refusal to start waits for the log to drain before it stops the process.
+ */
+export const STARTUP_FAILURE_DRAIN_MS = 5000;
+
+/**
+ * Handler for a failure that stops startup.
+ *
+ * An error that says it is expected (`expected === true`) is an ordinary refusal to start, such as
+ * a startup step finding the config unusable: it is reported as its message alone, with no stack
+ * and no crash dump, and the process exits 1. Anything else is a crash, and goes to
+ * {@link handleUncaughtException}.
+ *
+ * An expected refusal does not call `process.exit` at once. The file log transport writes
+ * asynchronously, and exiting straight away can lose the one line that says why Butler SOS did not
+ * start. Nothing is listening or connected yet at this point, so the process ends with exit code 1
+ * as soon as the log has drained. A timer that does not itself keep the process alive stops it
+ * anyway if something else does.
+ *
+ * @param {unknown} err - What stopped startup.
+ * @returns {Promise<void>} Resolves once the failure has been reported.
+ */
+export async function handleStartupFailure(err) {
+    if (err?.expected !== true) {
+        await handleUncaughtException(err);
+        return;
+    }
+
+    try {
+        // Already logged by whoever threw it, when the logger was up - and the logger writes to
+        // the console too, so writing it again here would print it twice.
+        if (err.logged !== true) {
+            reportToLoggerAndStderr(redactSensitivePatterns(err.message ?? String(err)));
+        }
+    } catch {
+        // Must not throw
+    } finally {
+        process.exitCode = 1;
+        setTimeout(() => process.exit(1), STARTUP_FAILURE_DRAIN_MS).unref();
+    }
+}
+
+/**
  * Registers the process-level handlers.
  *
  * @returns {void}

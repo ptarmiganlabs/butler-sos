@@ -53,13 +53,14 @@ if ($LASTEXITCODE -ne 0) { throw "Injecting the SEA blob failed with exit code $
 
 # -------------------
 # Smoke-test it. A binary that cannot start is not worth signing, and this is the cheapest check
-# that postject produced something that runs. Some line of its output must be the version being
-# built and nothing else: a bare substring match would also accept 15.1.10 for 15.1.1, or an error
-# message that happens to mention the version.
+# that postject produced something that runs. Its report must say it is the version being built:
+# Test-VersionReport (scripts/lib/version-report.ps1) has the rule, for a stock build and for a
+# variant build alike, and scripts/diag/win-version-check.ps1 checks it.
+. "$PSScriptRoot/lib/version-report.ps1"
 $expected = node -p "require('./package.json').version"
 $reported = (& $binary --version | Out-String).Trim()
 if ($LASTEXITCODE -ne 0) { throw "The built binary failed to run: --version exited $LASTEXITCODE." }
-if ($reported -notmatch "(?m)^\s*v?$([regex]::Escape($expected))\s*$") {
+if (-not (Test-VersionReport -Report $reported -Version $expected)) {
     throw "The built binary reports version '$reported', expected '$expected'."
 }
 Write-Host "smoke test: --version reports $reported"
