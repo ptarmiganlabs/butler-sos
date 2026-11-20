@@ -22,6 +22,7 @@ if ($LASTEXITCODE -ne 0) { throw "Bundling failed with exit code $LASTEXITCODE" 
 
 Write-Output "Step 2: Generate SEA blob..."
 node --experimental-sea-config src/sea-config.json
+if ($LASTEXITCODE -ne 0) { throw "Generating the SEA blob failed with exit code $LASTEXITCODE" }
 
 Write-Output "Step 3: Copy Node.js executable..."
 # In CI, we remove the existing Authenticode signature from the copied node.exe

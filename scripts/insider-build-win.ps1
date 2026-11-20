@@ -16,6 +16,7 @@ if ($LASTEXITCODE -ne 0) { throw "Bundling failed with exit code $LASTEXITCODE" 
 
 # Generate blob to be injected into the binary
 node --experimental-sea-config src/sea-config.json
+if ($LASTEXITCODE -ne 0) { throw "Generating the SEA blob failed with exit code $LASTEXITCODE" }
 
 # Get a copy of the Node executable
 node -e "require('fs').copyFileSync(process.execPath, '${env:DIST_FILE_NAME}.exe')" 
