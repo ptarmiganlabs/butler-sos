@@ -17,7 +17,10 @@
  *      hook that is given core's loaded config. The hook refuses to start, as an ordinary failure,
  *      and the binary must report that as one line, exit 1, and write no crash dump - and with
  *      file logging on, the line must reach the log file.
- *   2. A binary built WITHOUT one is unchanged: `--version` prints the bare version, and nothing the
+ *   2. With a setting that lets it start, the same binary runs the module's `afterStart` hook once
+ *      core's services are up, hands it a writer for each output that is on and none for one that
+ *      is off, and keeps running when the hook throws, reporting that once.
+ *   3. A binary built WITHOUT one is unchanged: `--version` prints the bare version, and nothing the
  *      module would have added is there.
  *
  * Signing is deliberately not part of this. The question is packaging and module resolution.
@@ -26,7 +29,7 @@
  *   node scripts/extensions-canary.mjs
  */
 
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import {
     chmodSync,
     copyFileSync,
@@ -52,6 +55,7 @@ const MODULE_PATH = join(BUILD_DIR, 'canary-extensions.mjs');
 const CONFIG_PATH = join(BUILD_DIR, 'canary-config.yaml');
 const BAD_CONFIG_PATH = join(BUILD_DIR, 'canary-config-bad.yaml');
 const FILE_LOG_CONFIG_PATH = join(BUILD_DIR, 'canary-config-file-log.yaml');
+const START_CONFIG_PATH = join(BUILD_DIR, 'canary-config-start.yaml');
 
 /** Named for what it is, so nobody finds it in a process list and wonders. */
 const BINARY_PATH = join(
@@ -75,6 +79,11 @@ const CRASH_DUMP_DIR = join(RUN_DIR, 'crash_dumps');
 /** Markers the throw-away module prints, matched below. */
 const HOOK_MARKER = 'CANARY_HOOK_RAN';
 const REFUSAL_MARKER = 'CANARY_REFUSED_TO_START';
+const AFTER_MARKER = 'CANARY_AFTER_START_RAN';
+const AFTER_FAILURE_MARKER = 'CANARY_AFTER_START_THREW';
+
+/** What core logs when an afterStart hook throws. */
+const AFTER_FAILURE_LINE = 'EXTENSIONS: The step after startup failed';
 
 const EXTENSIONS_MODULE_SOURCE = `import { Option } from 'commander';
 
@@ -85,7 +94,7 @@ export const extensions = {
     configSchema: {
         canary: {
             type: 'object',
-            properties: { label: { type: 'string' } },
+            properties: { label: { type: 'string' }, start: { type: 'boolean' } },
             required: ['label'],
             additionalProperties: false,
         },
@@ -103,9 +112,27 @@ export const extensions = {
                     })
             );
 
+            if (context.config.has('Butler-SOS.canary.start') &&
+                context.config.get('Butler-SOS.canary.start') === true) {
+                return;
+            }
+
             // Stopping startup deliberately, the way the contract says to: throw, and mark the
             // error so it is reported as an ordinary failure rather than as a crash.
             throw Object.assign(new Error('${REFUSAL_MARKER}'), { expected: true });
+        },
+        afterStart: (context) => {
+            context.logger.info(
+                '${AFTER_MARKER} ' +
+                    JSON.stringify({
+                        keys: Object.keys(context),
+                        influxdb: typeof context.influxdb?.writePoints,
+                        mqtt: typeof context.mqtt?.publish,
+                    })
+            );
+
+            // Butler SOS is running by now: a throw must be reported, and must not stop it.
+            throw new Error('${AFTER_FAILURE_MARKER}');
         },
     },
 };
@@ -188,6 +215,54 @@ const runBinary = (args) => {
 };
 
 /**
+ * Run the packaged binary until it has printed a marker, then for a little longer, then stop it.
+ *
+ * For a run that starts: Butler SOS does not end by itself, so it is judged on what it printed,
+ * and on whether it was still running when it was stopped.
+ *
+ * @param {string[]} args - Arguments to pass to the binary.
+ * @param {string} marker - What to wait for.
+ * @param {number} [graceMs] - How long to let it run after the marker.
+ *
+ * @returns {Promise<{output: string, sawMarker: boolean, exitedByItself: boolean}>} What it
+ *     printed, whether the marker came, and whether it ended before it was stopped.
+ */
+const runUntil = (args, marker, graceMs = 3000) =>
+    new Promise((resolvePromise, reject) => {
+        const child = spawn(resolve(BINARY_PATH), args, { cwd: RUN_DIR, shell: false });
+        let output = '';
+        let sawMarker = false;
+        let stopping = false;
+        /** Stop the binary, and remember that it did not end by itself. */
+        const stop = () => {
+            stopping = true;
+            child.kill();
+        };
+        const deadline = setTimeout(stop, 60_000);
+        /**
+         * Collect what it printed, and start the grace period at the marker.
+         *
+         * @param {Buffer} chunk - Output.
+         */
+        const read = (chunk) => {
+            output += chunk.toString('utf8');
+
+            if (!sawMarker && output.includes(marker)) {
+                sawMarker = true;
+                setTimeout(stop, graceMs);
+            }
+        };
+
+        child.stdout.on('data', read);
+        child.stderr.on('data', read);
+        child.on('error', reject);
+        child.on('close', () => {
+            clearTimeout(deadline);
+            resolvePromise({ output, sawMarker, exitedByItself: !stopping });
+        });
+    });
+
+/**
  * Bundle, package and inject a SEA binary from the current source tree.
  *
  * Mirrors what the build scripts do, minus code signing. macOS gets an ad-hoc signature, as
@@ -231,13 +306,25 @@ const buildBinary = (extensionsModule) => {
  * @param {string} path - Where to write it.
  * @param {unknown} label - The value of `Butler-SOS.canary.label`.
  * @param {boolean} [fileLogging] - Whether to log to a file too, in `log/` under {@link RUN_DIR}.
+ * @param {boolean} [start] - Whether the module's `beforeStart` lets Butler SOS start, with MQTT on
+ *     and InfluxDB off.
  *
  * @returns {void} Nothing.
  */
-const writeConfig = (path, label, fileLogging = false) => {
+const writeConfig = (path, label, fileLogging = false, start = false) => {
     const config = load(readFileSync('src/config/production_template.yaml', 'utf8'));
 
-    config['Butler-SOS'].canary = { label };
+    config['Butler-SOS'].canary = start ? { label, start: true } : { label };
+
+    if (start) {
+        // One output on and one off, so the hook's writers are known. Nothing needs to answer:
+        // the MQTT client connects in the background, and the hook only asks which writers exist.
+        config['Butler-SOS'].influxdbConfig.enable = false;
+        config['Butler-SOS'].mqttConfig.enable = true;
+        config['Butler-SOS'].mqttConfig.brokerHost = 'localhost';
+        config['Butler-SOS'].mqttConfig.brokerPort = 1883;
+    }
+
     config['Butler-SOS'].fileLogging = fileLogging;
     // Absolute, because a relative log directory starts from the executable's directory.
     config['Butler-SOS'].logDirectory = resolve(RUN_DIR, 'log');
@@ -260,6 +347,7 @@ writeFileSync(MODULE_PATH, EXTENSIONS_MODULE_SOURCE);
 writeConfig(CONFIG_PATH, 'from the config file');
 writeConfig(BAD_CONFIG_PATH, 42);
 writeConfig(FILE_LOG_CONFIG_PATH, 'from the config file', true);
+writeConfig(START_CONFIG_PATH, 'from the config file', false, true);
 try {
     // -----------------------------------------------------------------------------------------
     // A binary built WITH an extensions module
@@ -351,6 +439,37 @@ try {
         `exit status ${invalid.status}: ${invalid.output.trim().slice(-2000)}`
     );
 
+    const started = await runUntil(['-c', resolve(START_CONFIG_PATH)], AFTER_FAILURE_LINE);
+    const afterLine = started.output.split(/\r?\n/).find((line) => line.includes(AFTER_MARKER));
+    const after = afterLine ? JSON.parse(afterLine.slice(afterLine.indexOf('{'))) : {};
+    const tail = started.output.trim().slice(-2000);
+
+    check('with a setting that lets it start, the afterStart hook runs', Boolean(afterLine), tail);
+    check(
+        "after core's services have started",
+        started.output.indexOf('Starting Butler SOS') !== -1 &&
+            started.output.indexOf('Starting Butler SOS') < started.output.indexOf(AFTER_MARKER),
+        tail
+    );
+    check(
+        'with a writer for the output that is on and none for the one that is off',
+        after.mqtt === 'function' &&
+            after.influxdb === 'undefined' &&
+            JSON.stringify(after.keys?.slice(-2)) === JSON.stringify(['influxdb', 'mqtt']),
+        JSON.stringify(after)
+    );
+    check(
+        'a throw from it is reported once',
+        started.output.split(AFTER_FAILURE_LINE).length === 2 &&
+            started.output.includes(AFTER_FAILURE_MARKER),
+        tail
+    );
+    check(
+        'and Butler SOS keeps running, with no crash dump',
+        started.sawMarker && !started.exitedByItself && !existsSync(CRASH_DUMP_DIR),
+        tail
+    );
+
     // -----------------------------------------------------------------------------------------
     // A binary built WITHOUT one
     // -----------------------------------------------------------------------------------------
@@ -378,6 +497,7 @@ try {
         CONFIG_PATH,
         BAD_CONFIG_PATH,
         FILE_LOG_CONFIG_PATH,
+        START_CONFIG_PATH,
     ]) {
         rmSync(path, { force: true });
     }

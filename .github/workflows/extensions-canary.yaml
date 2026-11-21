@@ -11,7 +11,9 @@ name: extensions-canary
 #
 # scripts/extensions-canary.mjs builds two binaries on each runner. One bundles a throw-away
 # extensions module and must register its option, its config setting and its startup hook, and
-# report the hook's refusal to start as an ordinary failure. The other bundles the committed stub
+# report the hook's refusal to start as an ordinary failure. With a setting that lets it start, it
+# must run the module's after-startup hook once core's services are up, with a writer for each
+# output that is on, and keep running when that hook throws. The other bundles the committed stub
 # and must be unchanged. Every assertion prints `ok` or `FAIL`, and the job fails with the full
 # list rather than at the first problem.
 #
@@ -29,6 +31,7 @@ on:
       - 'scripts/lib/build-date.mjs'
       - 'scripts/extensions-canary.mjs'
       - 'src/lib/extensions/**'
+      - 'src/lib/extension-writers.js'
       - 'src/lib/util/version-report.js'
       - 'src/lib/globals/command-line.js'
       - 'src/lib/config-file-verify.js'
