@@ -3,12 +3,16 @@ import { Command, Option } from 'commander';
 import { default as Ajv } from 'ajv';
 
 import {
+    AFTER_START_CONTEXT_KEYS,
     START_CONTEXT_KEYS,
     applyConfigSchema,
     applyOptions,
+    createAfterStartContext,
     createStartContext,
+    hasAfterStart,
     isExpectedFailure,
     readOnlyConfig,
+    runAfterStart,
     runBeforeStart,
 } from '../apply.js';
 
@@ -273,6 +277,101 @@ describe('runBeforeStart', () => {
             runBeforeStart({ hooks: { beforeStart: () => Promise.reject(refusal) } }, {})
         ).rejects.toBe(refusal);
     });
+});
+
+describe('the after-start context', () => {
+    const start = Object.freeze({
+        config: readOnlyConfig({ get: () => 1, has: () => true }),
+        certificates: Object.freeze({ clientCert: 'c', clientCertKey: 'k', clientCertCA: 'ca' }),
+        logger: { info: jest.fn() },
+        options: Object.freeze({}),
+        appVersion: '15.3.0',
+        isSea: true,
+    });
+
+    test('has the start context keys, then the writers, as the contract lists them', () => {
+        const writers = { influxdb: { writePoints: jest.fn() }, mqtt: { publish: jest.fn() } };
+        const context = createAfterStartContext(start, writers);
+
+        expect(Object.keys(context)).toEqual([...AFTER_START_CONTEXT_KEYS]);
+        expect(AFTER_START_CONTEXT_KEYS.slice(0, START_CONTEXT_KEYS.length)).toEqual([
+            ...START_CONTEXT_KEYS,
+        ]);
+        expect(context.influxdb).toBe(writers.influxdb);
+        expect(context.mqtt).toBe(writers.mqtt);
+        expect(context.config).toBe(start.config);
+        expect(Object.isFrozen(context)).toBe(true);
+        expect(Object.isFrozen(AFTER_START_CONTEXT_KEYS)).toBe(true);
+    });
+
+    test('leaves a writer undefined when its output is off, and keeps its key', () => {
+        const context = createAfterStartContext(start, { influxdb: undefined });
+
+        expect(Object.keys(context)).toEqual([...AFTER_START_CONTEXT_KEYS]);
+        expect(context.influxdb).toBeUndefined();
+        expect(context.mqtt).toBeUndefined();
+    });
+});
+
+describe('hasAfterStart', () => {
+    test.each(NOTHING)('is false for %s', (_name, description) => {
+        expect(hasAfterStart(description)).toBe(false);
+    });
+
+    test('is false for a description with only a beforeStart hook', () => {
+        expect(hasAfterStart({ hooks: { beforeStart: () => {} } })).toBe(false);
+    });
+
+    test('is true for a description with an afterStart hook', () => {
+        expect(hasAfterStart({ hooks: { afterStart: () => {} } })).toBe(true);
+    });
+});
+
+describe('runAfterStart', () => {
+    test.each(NOTHING)(
+        'resolves at once for %s, and reports nothing',
+        async (_name, description) => {
+            const report = jest.fn();
+
+            await expect(runAfterStart(description, {}, report)).resolves.toBeUndefined();
+            expect(report).not.toHaveBeenCalled();
+        }
+    );
+
+    test('awaits the hook with the context', async () => {
+        const order = [];
+        const context = { marker: true };
+        const afterStart = jest.fn(async (received) => {
+            await new Promise((resolve) => setTimeout(resolve, 1));
+            order.push(received);
+        });
+
+        await runAfterStart({ hooks: { afterStart } }, context, jest.fn());
+
+        expect(order).toEqual([context]);
+        expect(afterStart).toHaveBeenCalledTimes(1);
+    });
+
+    test.each([
+        [
+            'throws',
+            () => {
+                throw new Error('broke');
+            },
+        ],
+        ['rejects', () => Promise.reject(new Error('broke'))],
+    ])(
+        'reports a hook that %s once, and resolves, so Butler SOS keeps running',
+        async (_name, afterStart) => {
+            const report = jest.fn();
+
+            await expect(
+                runAfterStart({ hooks: { afterStart } }, {}, report)
+            ).resolves.toBeUndefined();
+            expect(report).toHaveBeenCalledTimes(1);
+            expect(report.mock.calls[0][0].message).toBe('broke');
+        }
+    );
 });
 
 describe('isExpectedFailure', () => {

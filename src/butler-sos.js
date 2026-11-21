@@ -34,6 +34,15 @@ import {
     registerProcessSafetyNet,
     setGlobalsRef,
 } from './lib/process-safety-net.js';
+import { extensions } from '#extensions';
+import {
+    createAfterStartContext,
+    createStartContext,
+    hasAfterStart,
+    runAfterStart,
+} from './lib/extensions/apply.js';
+import { createExtensionWriters } from './lib/extension-writers.js';
+import { redactSensitivePatterns } from './lib/secret-patterns.js';
 
 // Suppress experimental warnings
 // https://stackoverflow.com/questions/55778283/how-to-disable-warnings-when-node-is-launched-via-a-global-shell-script
@@ -371,6 +380,23 @@ async function mainScript() {
 
     // Set up UDP queue metrics storage, if enabled
     const udpQueueMetricsIntervalIds = setupUdpQueueMetricsStorage();
+
+    // A variant build's step after startup, if it has one. It runs last, once every service above
+    // is up, and gets core's InfluxDB and MQTT outputs to write through. Butler SOS is running by
+    // now, so a failure is reported and does not stop it. The stock build has no step, and builds
+    // nothing for one.
+    if (hasAfterStart(extensions)) {
+        await runAfterStart(
+            extensions,
+            createAfterStartContext(createStartContext(globals), createExtensionWriters(globals)),
+            (err) =>
+                globals.logger.error(
+                    `EXTENSIONS: The step after startup failed, and Butler SOS carries on without it: ${redactSensitivePatterns(
+                        globals.getErrorMessage(err)
+                    )}`
+                )
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
