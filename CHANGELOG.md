@@ -1,5 +1,17 @@
 # Changelog
 
+## [15.3.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.2.0...butler-sos-v15.3.0) (2026-11-21)
+
+
+### Features
+
+* let an extension write through Butler SOS's outputs once its services are up ([699dedf](https://github.com/ptarmiganlabs/butler-sos/commit/699dedf07ed217867ca0ec65b1932de795569097)), closes [#1649](https://github.com/ptarmiganlabs/butler-sos/issues/1649)
+
+
+### Miscellaneous
+
+* check the step after startup in the extension canary ([e77731b](https://github.com/ptarmiganlabs/butler-sos/commit/e77731b7a60a819467308d3eadc7de9ca7cbd38a)), closes [#1649](https://github.com/ptarmiganlabs/butler-sos/issues/1649)
+
 ## [15.2.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.1.3...butler-sos-v15.2.0) (2026-11-20)
 
 
