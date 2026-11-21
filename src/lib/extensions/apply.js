@@ -6,7 +6,7 @@
  * can be inspected in a test without a running service, and the committed default can be a literal -
  * which is what lets the ordinary test suite cover the every-run path.
  *
- * A description reaches core at three points, in this order, each once per process:
+ * A description reaches core at four points, in this order, each once per process:
  *
  * 1. **Command line.** {@link applyOptions} adds its options to the root command before it is parsed.
  * 2. **Config file.** {@link applyConfigSchema} merges its settings into the schema the config file
@@ -14,6 +14,9 @@
  * 3. **Startup.** {@link runBeforeStart} awaits its `beforeStart` hook once the config is loaded and
  *    logging is up, and before Butler SOS opens a UDP port, connects to InfluxDB or MQTT, or starts
  *    any service. The hook gets the settings core already resolved ({@link createStartContext}).
+ * 4. **After startup.** {@link runAfterStart} awaits its `afterStart` hook once core's own services
+ *    have started, with core's InfluxDB and MQTT outputs to write through
+ *    ({@link createAfterStartContext}). A failure there is reported, and Butler SOS keeps running.
  *
  * This module imports nothing from the rest of Butler SOS, so it can be used while the globals
  * singleton is still being built.
@@ -44,6 +47,7 @@
  * @typedef {object} SeamHooks
  * @property {BeforeStart} [beforeStart] - Runs once at startup, after the config is loaded and
  *     before any service starts. It must be idempotent.
+ * @property {AfterStart} [afterStart] - Runs once, after core's own services have started.
  */
 
 /**
@@ -55,6 +59,37 @@
  * @callback BeforeStart
  * @param {StartContext} context - The settings core has resolved.
  * @returns {void|Promise<void>}
+ */
+
+/**
+ * A hook core awaits once, after its own services have started: the InfluxDB client, MQTT, the UDP
+ * servers and the timers. Butler SOS is running by then, so a throw does not stop it: core reports
+ * the error once and carries on.
+ *
+ * @callback AfterStart
+ * @param {AfterStartContext} context - What `beforeStart` gets, and core's outputs.
+ * @returns {void|Promise<void>}
+ */
+
+/**
+ * What `afterStart` gets: everything in {@link StartContext}, and a writer for each of core's
+ * outputs that is on. A writer for an output that is off, or whose client was not created, is
+ * undefined, so an extension asks `if (context.influxdb)` rather than reading the config again.
+ *
+ * @typedef {object} AfterStartContext
+ * @property {ReadOnlyConfig} config - As in {@link StartContext}.
+ * @property {{clientCert: string, clientCertKey: string, clientCertCA: string}} certificates - As
+ *     in {@link StartContext}.
+ * @property {object} logger - As in {@link StartContext}.
+ * @property {object} options - As in {@link StartContext}.
+ * @property {string} appVersion - As in {@link StartContext}.
+ * @property {boolean} isSea - As in {@link StartContext}.
+ * @property {{writePoints: (points: object[]) => Promise<void>}|undefined} influxdb - Writes points
+ *     given as `{measurement, tags, fields, timestamp}` to the configured InfluxDB, whichever
+ *     version, with core's batching and retries. See `src/lib/extension-writers.js`.
+ * @property {{publish: (topic: string, payload: unknown, options?: {retain?: boolean}) =>
+ *     Promise<void>}|undefined} mqtt - Publishes under `Butler-SOS.mqttConfig.baseTopic`, a payload
+ *     that is not a string or Buffer as JSON.
  */
 
 /**
@@ -98,6 +133,12 @@ export const START_CONTEXT_KEYS = Object.freeze([
     'appVersion',
     'isSea',
 ]);
+
+/**
+ * The keys of {@link AfterStartContext}, in the order {@link createAfterStartContext} builds them:
+ * the start context's, then the writers. Pinned like {@link START_CONTEXT_KEYS}.
+ */
+export const AFTER_START_CONTEXT_KEYS = Object.freeze([...START_CONTEXT_KEYS, 'influxdb', 'mqtt']);
 
 /**
  * Check the two mistakes in a description that would otherwise be silent.
@@ -261,6 +302,51 @@ export const createStartContext = (settings) =>
  */
 export const runBeforeStart = async (extensions, context) => {
     await extensions?.hooks?.beforeStart?.(context);
+};
+
+/**
+ * Whether a description has an `afterStart` hook, so core builds its writers only when one will use
+ * them. The stock build has none.
+ *
+ * @param {SeamDescription|undefined|null} extensions - The description.
+ *
+ * @returns {boolean} True when there is a hook to run.
+ */
+export const hasAfterStart = (extensions) => typeof extensions?.hooks?.afterStart === 'function';
+
+/**
+ * Build the context `afterStart` gets.
+ *
+ * @param {StartContext} startContext - From {@link createStartContext}, built once core's services
+ *     have started.
+ * @param {{influxdb?: object, mqtt?: object}} writers - Core's writers, from
+ *     `src/lib/extension-writers.js`, each undefined when its output is off.
+ *
+ * @returns {AfterStartContext} The context, frozen.
+ */
+export const createAfterStartContext = (startContext, writers = {}) =>
+    Object.freeze({
+        ...startContext,
+        influxdb: writers.influxdb,
+        mqtt: writers.mqtt,
+    });
+
+/**
+ * Run a description's `afterStart` hook, if it has one, without letting it stop Butler SOS.
+ *
+ * @param {SeamDescription|undefined|null} extensions - The description.
+ * @param {AfterStartContext} context - From {@link createAfterStartContext}.
+ * @param {(err: unknown) => void} report - Told once if the hook throws. Core logs it, redacted.
+ *
+ * @returns {Promise<void>} Resolves when the hook has finished or failed, at once when there is
+ *     none.
+ */
+export const runAfterStart = async (extensions, context, report) => {
+    try {
+        await extensions?.hooks?.afterStart?.(context);
+    } catch (err) {
+        report(err);
+    }
 };
 
 /**

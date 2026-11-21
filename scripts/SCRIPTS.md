@@ -113,7 +113,8 @@ Two environment variables let a variant build change the result. Every build her
 
 - `EXTENSIONS_MODULE` names a module to bundle behind the `#extensions` specifier instead of the
   committed stub, `src/lib/extensions/index.js`. That module describes command-line options, config
-  settings and a startup step to add; `src/lib/extensions/apply.js` documents the shape. A variant
+  settings, a startup step, and a step after startup that writes through Butler SOS's InfluxDB and
+  MQTT outputs (`src/lib/extension-writers.js`); `src/lib/extensions/apply.js` documents the shape. A variant
   build's `--version` names the variant and lists both versions and the build date.
 - `BUNDLE_TRANSFORM_MODULE` names a module whose default export takes the bundle's text and returns
   the text to package. It runs after esbuild, before the blob is made; see
@@ -124,8 +125,9 @@ Two environment variables let a variant build change the result. Every build her
 ### extensions-canary.mjs
 
 Builds two SEA binaries from the current tree and checks them: one with a throw-away extensions
-module, which must register its option, config setting and startup step, and one without, which must
-be unchanged. Run in CI by `extensions-canary.yaml` on Linux and Windows.
+module, which must register its option, config setting and startup step, and run its step after
+startup once core's services are up, with the right writers and without stopping Butler SOS when it
+throws; and one without, which must be unchanged. Run in CI by `extensions-canary.yaml` on Linux and Windows.
 
 **Platform:** Cross-platform (macOS needs `codesign`, for the ad-hoc signature)
 
