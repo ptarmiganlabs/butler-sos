@@ -1,5 +1,12 @@
 # Changelog
 
+## [15.3.1](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.3.0...butler-sos-v15.3.1) (2026-11-27)
+
+
+### Miscellaneous
+
+* **ci:** remove the Copilot coding agent setup workflow ([b1d3988](https://github.com/ptarmiganlabs/butler-sos/commit/b1d398879af07bf9d1d61056e9579a1bf63b6695))
+
 ## [15.3.0](https://github.com/ptarmiganlabs/butler-sos/compare/butler-sos-v15.2.0...butler-sos-v15.3.0) (2026-11-21)
 
 
