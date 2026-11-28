@@ -43,25 +43,56 @@ describe('config-file-verify', () => {
     });
 
     describe('verifyConfigFileSchema', () => {
-        test('returns false on YAML parse error', async () => {
+        test('reports a YAML parse error once, with its line and column', async () => {
+            // A YAML parse error used to print js-yaml's message, then return false so the caller
+            // printed a second, vaguer line on top. It is now one problem in one report.
             fs.readFile.mockResolvedValue('invalid yaml');
+            const parseError = new Error('Parse error');
+            parseError.reason = 'bad indentation of a mapping entry';
+            parseError.mark = { line: 2, column: 1, snippet: ' 3 |  c: 2' };
             load.mockImplementation(() => {
-                throw new Error('Parse error');
+                throw parseError;
             });
 
             const result = await verifyConfigFileSchema('config.yaml');
             expect(result).toBe(false);
+            expect(mockConsoleError).toHaveBeenCalledTimes(1);
+            const report = mockConsoleError.mock.calls[0][0];
+            expect(report).toContain('Config file config.yaml has 1 problem:');
+            expect(report).toContain(
+                'line 3, col 2  The file is not valid YAML: bad indentation of a mapping entry.'
+            );
+            expect(report).toContain('Fix this and start Butler SOS again.');
         });
 
-        test('exits on validation failure', async () => {
-            fs.readFile.mockResolvedValue('Butler-SOS: {}');
+        test('returns false and prints one report on a schema violation, without exiting', async () => {
+            // The exit belongs to the caller, so that a check can report its result instead of
+            // ending the process.
+            fs.readFile.mockResolvedValue('Butler-SOS: {}\n');
             load.mockReturnValue({ 'Butler-SOS': {} });
 
             // This will fail because it tries to validate against the real schema
             // which has many required fields.
             const result = await verifyConfigFileSchema('config.yaml');
             expect(result).toBe(false);
-            expect(mockExit).toHaveBeenCalledWith(1);
+            expect(mockExit).not.toHaveBeenCalled();
+            expect(mockConsoleError).toHaveBeenCalledTimes(1);
+            const report = mockConsoleError.mock.calls[0][0];
+            expect(report).toMatch(/^Config file config\.yaml has \d+ problems:/);
+            expect(report).toContain('Butler-SOS.logLevel');
+            expect(report).toContain('is missing. Add it under Butler-SOS.');
+            expect(report).not.toContain('VERIFY CONFIG FILE ERROR');
+        });
+
+        test('reports a file that cannot be read as one problem', async () => {
+            fs.readFile.mockRejectedValue(new Error('ENOENT: no such file or directory'));
+
+            const result = await verifyConfigFileSchema('config.yaml');
+            expect(result).toBe(false);
+            expect(mockConsoleError).toHaveBeenCalledTimes(1);
+            expect(mockConsoleError.mock.calls[0][0]).toContain(
+                'The file could not be read: ENOENT: no such file or directory'
+            );
         });
     });
 
@@ -283,6 +314,11 @@ describe('config-file-verify', () => {
 
             const result = await verifyAppConfig(mockCfg);
             expect(result).toBe(false);
+            expect(mockConsoleError).toHaveBeenCalledWith(
+                expect.stringMatching(
+                    /Butler-SOS\.serversToMonitor\.servers\[0\]\.serverTags\n\s+has no tag "tag1" \(server "S1"\)\./
+                )
+            );
         });
 
         test('validates server tags - extra tag on server', async () => {
@@ -299,6 +335,65 @@ describe('config-file-verify', () => {
 
             const result = await verifyAppConfig(mockCfg);
             expect(result).toBe(false);
+            expect(mockConsoleError).toHaveBeenCalledWith(
+                expect.stringMatching(
+                    /Butler-SOS\.serversToMonitor\.servers\[0\]\.serverTags\.tag2\n\s+is not listed in Butler-SOS\.serversToMonitor\.serverTagsDefinition \(server "S1"\)\./
+                )
+            );
+        });
+
+        test('reports every problem in one report, with lines from the config file', async () => {
+            // These checks used to stop at the first failure, so fixing one only revealed the
+            // next. All of them now go into one report, in the same format as the schema check.
+            fs.readFile.mockResolvedValue(
+                [
+                    'Butler-SOS:',
+                    '  anonTelemetry: true',
+                    '  influxdbConfig:',
+                    '    enable: true',
+                    '    version: 4',
+                    '  serversToMonitor:',
+                    '    serverTagsDefinition:',
+                    '      - tag1',
+                    '    servers:',
+                    '      - serverName: S1',
+                    '        serverTags:',
+                    '          tag1: null',
+                    '          tag2: v2',
+                    '',
+                ].join('\n')
+            );
+            mockCfg.get.mockImplementation((key) => {
+                if (key === 'Butler-SOS.appNames.enableAppNameExtract') return false;
+                if (key === 'Butler-SOS.influxdbConfig.enable') return true;
+                if (key === 'Butler-SOS.influxdbConfig.version') return 4;
+                if (key === 'Butler-SOS.anonTelemetry') return true;
+                if (key === 'Butler-SOS.systemInfo.enable') return false;
+                if (key === 'Butler-SOS.serversToMonitor.serverTagsDefinition') return ['tag1'];
+                if (key === 'Butler-SOS.serversToMonitor.servers')
+                    return [{ serverName: 'S1', serverTags: { tag1: null, tag2: 'v2' } }];
+                return null;
+            });
+
+            const result = await verifyAppConfig(mockCfg, { configFile: 'production.yaml' });
+            expect(result).toBe(false);
+            expect(fs.readFile).toHaveBeenCalledWith('production.yaml', 'utf8');
+            expect(mockConsoleError).toHaveBeenCalledTimes(1);
+
+            const report = mockConsoleError.mock.calls[0][0];
+            expect(report).toContain('Config file production.yaml has 4 problems:');
+            expect(report).toMatch(/line 2, col 3 +Butler-SOS\.anonTelemetry\n/);
+            expect(report).toMatch(/line 5, col 5 +Butler-SOS\.influxdbConfig\.version\n/);
+            expect(report).toContain('is 4, but must be 1, 2 or 3.');
+            expect(report).toMatch(
+                /line 12, col 11 +Butler-SOS\.serversToMonitor\.servers\[0\]\.serverTags\.tag1\n/
+            );
+            expect(report).toMatch(
+                /line 13, col 11 +Butler-SOS\.serversToMonitor\.servers\[0\]\.serverTags\.tag2\n/
+            );
+            // Sorted by line, as in the file.
+            expect(report.indexOf('anonTelemetry')).toBeLessThan(report.indexOf('version'));
+            expect(report.indexOf('tag1\n')).toBeLessThan(report.indexOf('tag2\n'));
         });
 
         test('handles error in server tags verification', async () => {
@@ -356,8 +451,8 @@ describe('config-file-verify', () => {
             expect(result).toBe(false);
             expect(mockVerifyHost).toHaveBeenCalledTimes(1);
             expect(mockConsoleError).toHaveBeenCalledWith(
-                expect.stringContaining(
-                    'It must be an IPv4 address or a hostname that resolves to an IPv4 address.'
+                expect.stringMatching(
+                    /Butler-SOS\.appNames\.hostIP\n\s+is "invalid host name", which is not an IPv4 address and does not resolve to one\./
                 )
             );
         });
