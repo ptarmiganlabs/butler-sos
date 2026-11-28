@@ -18,6 +18,8 @@ export const appSessionsSchema = {
                     { format: 'ipv4' },
                     {
                         pattern: hostnamePattern.source,
+                        // Says in words what the pattern means, for the config error messages.
+                        description: 'a host name',
                     },
                 ],
             },

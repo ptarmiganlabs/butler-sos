@@ -89,6 +89,7 @@ jest.unstable_mockModule('../../config-file-verify.js', () => ({
 }));
 
 const { initConfig } = await import('../config-loader.js');
+const { verifyConfigFileSchema, verifyAppConfig } = await import('../../config-file-verify.js');
 
 /**
  * Builds the minimal settings object initConfig expects.
@@ -216,5 +217,49 @@ describe('initConfig config normalisation wiring', () => {
         await initConfig(settings);
 
         expect(settings.config['Butler-SOS'].logEvents.tags).toEqual([]);
+    });
+
+    test('exits with code 1 when the config file check fails, printing nothing on top of its report', async () => {
+        // The check prints its own report with a closing line. A second "verification failed"
+        // line used to follow it; the exit is all that is left here.
+        const settings = makeSettings();
+        settings.options.skipConfigVerification = false;
+        verifyConfigFileSchema.mockResolvedValueOnce(false);
+        const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        const exitSpy = jest.spyOn(process, 'exit').mockImplementation((code) => {
+            throw new Error(`process.exit(${code})`);
+        });
+
+        try {
+            await expect(initConfig(settings)).rejects.toThrow('process.exit(1)');
+            expect(verifyConfigFileSchema).toHaveBeenCalledWith(settings.configFile);
+            expect(verifyAppConfig).not.toHaveBeenCalled();
+            expect(errorSpy).not.toHaveBeenCalled();
+        } finally {
+            errorSpy.mockRestore();
+            exitSpy.mockRestore();
+        }
+    });
+
+    test('gives verifyAppConfig the config file, and exits with code 1 when it fails', async () => {
+        // The file is passed so that its problems can be given line numbers.
+        const settings = makeSettings();
+        settings.options.skipConfigVerification = false;
+        verifyAppConfig.mockResolvedValueOnce(false);
+        const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        const exitSpy = jest.spyOn(process, 'exit').mockImplementation((code) => {
+            throw new Error(`process.exit(${code})`);
+        });
+
+        try {
+            await expect(initConfig(settings)).rejects.toThrow('process.exit(1)');
+            expect(verifyAppConfig).toHaveBeenCalledWith(settings.config, {
+                configFile: settings.configFile,
+            });
+            expect(errorSpy).not.toHaveBeenCalled();
+        } finally {
+            errorSpy.mockRestore();
+            exitSpy.mockRestore();
+        }
     });
 });

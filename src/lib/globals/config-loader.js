@@ -92,8 +92,9 @@ export async function initConfig(settings) {
     } else {
         const configFileVerify = await verifyConfigFileSchema(settings.configFile);
 
+        // verifyConfigFileSchema has already printed every problem, with a closing line of its
+        // own. This is the one place a failed check ends the process.
         if (!configFileVerify) {
-            console.error('MAIN: Config file verification failed. Exiting.');
             process.exit(1);
         }
     }
@@ -158,10 +159,12 @@ export async function initConfig(settings) {
     if (settings.options.skipConfigVerification) {
         console.warn('MAIN: Skipping application specific config verification');
     } else {
-        const appConfigVerify = await verifyAppConfig(settings.config);
+        const appConfigVerify = await verifyAppConfig(settings.config, {
+            configFile: settings.configFile,
+        });
 
+        // As above: the problems have been printed already.
         if (!appConfigVerify) {
-            console.error('MAIN: Application specific config verification failed. Exiting.');
             process.exit(1);
         }
     }

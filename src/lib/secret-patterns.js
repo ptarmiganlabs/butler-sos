@@ -68,6 +68,71 @@ export const SECRET_KEY_NAME_SOURCE =
 export const SECRET_KEY_NAME_REGEX = new RegExp(`(${SECRET_KEY_NAME_SOURCE})`, 'i');
 
 /**
+ * Config paths whose values are credentials even though their key name looks innocuous.
+ *
+ * Paths are relative to the `Butler-SOS` root, with `[]` standing for any list entry and a
+ * trailing `.*` for every child of a section. Two places read this list: `config-obfuscate.js`,
+ * which masks these values on the config visualisation page, and `config-error-format.js`, which
+ * leaves them out of the config error report printed at startup.
+ *
+ * `newRelic.event.header[]` and `newRelic.metric.header[]` are the documented place to put
+ * the New Relic ingest `Api-Key` (see `production_template.yaml`, and the consumption at
+ * `post-to-new-relic.js`), but the entries are `{name, value}` pairs — so the credential
+ * lives under the key `value`, which {@link SECRET_KEY_NAME_REGEX} cannot recognise.
+ *
+ * These must be matched by path, not by shape: `newRelic.event.attribute.static[]` uses the
+ * identical `{name, value}` shape but holds non-sensitive dimensions, so masking every
+ * `value` in a `{name, value}` pair would over-mask.
+ */
+export const SECRET_CONFIG_PATHS = new Set([
+    'newRelic.event.header[].value',
+    'newRelic.metric.header[].value',
+    // Every value under a server's custom headers, whatever the header is called. These
+    // headers exist to authenticate to Qlik Sense — `getServerHeaders` forwards them verbatim
+    // on every outbound request — and the schema declares them `additionalProperties: true`,
+    // so the header names are operator-chosen and cannot be enumerated. Names like
+    // `Authorization`, `Cookie` and `X-Subscription-Key` do not match SECRET_KEY_NAME_REGEX, so
+    // without this rule they fall through to a partial mask that discloses the first
+    // characters of a live credential. The header *names* stay readable.
+    'serversToMonitor.servers[].headers.*',
+]);
+
+/**
+ * Tells whether a config setting holds a credential, so that its value must not be shown.
+ *
+ * A setting is a credential when the name of the setting, or of any section it is in, matches
+ * {@link SECRET_KEY_NAME_REGEX}, or when it is at or under a path in {@link SECRET_CONFIG_PATHS}.
+ * These are the same rules the config visualisation page masks by.
+ *
+ * @param {string|null} path - The setting as a dotted path with list indexes in brackets, for
+ *     example `Butler-SOS.newRelic.event.header[0].value`.
+ * @returns {boolean} True when the value must not be shown.
+ */
+export function isSecretConfigPath(path) {
+    if (!path) return false;
+
+    const names = path.replaceAll(/\[\d+\]/g, '').split('.');
+    if (names.some((name) => SECRET_KEY_NAME_REGEX.test(name))) return true;
+
+    const root = 'Butler-SOS.';
+    if (!path.startsWith(root)) return false;
+    const relative = path.slice(root.length).replaceAll(/\[\d+\]/g, '[]');
+
+    for (const listed of SECRET_CONFIG_PATHS) {
+        if (listed.endsWith('.*')) {
+            if (relative.startsWith(listed.slice(0, -1))) return true;
+        } else if (
+            relative === listed ||
+            relative.startsWith(`${listed}.`) ||
+            relative.startsWith(`${listed}[`)
+        ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * Builds the `key=value` / `key: value` matcher used to redact secrets from free text.
  *
  * A fresh RegExp is returned on every call because these carry the `g` flag, and a shared
