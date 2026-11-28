@@ -442,6 +442,16 @@ function entriesWords(n) {
 }
 
 /**
+ * Says what failed when a keyword has no message of its own.
+ *
+ * @param {string} keyword - The keyword that failed.
+ * @returns {string} For example `does not pass the "myKeyword" check`.
+ */
+function fallbackMessage(keyword) {
+    return `does not pass the "${keyword}" check`;
+}
+
+/**
  * Says in words what an AJV error means for the setting it is about.
  *
  * @param {object} error - An AJV error object, from a validator compiled with `verbose: true`.
@@ -492,7 +502,7 @@ function describeError(error, found, secret) {
         default:
             // Keywords without wording of their own, including any a build adds to the schema,
             // keep AJV's message. They still get the setting's path, line and column.
-            return `${error.message ?? `does not pass the "${keyword}" check`}.`;
+            return `${error.message ?? fallbackMessage(keyword)}.`;
     }
 }
 
@@ -700,14 +710,17 @@ export function formatAjvErrors(errors, { data, locate = () => null } = {}) {
 function joinMessages(messages, found) {
     const prefix = found === null ? null : `is ${found}, but `;
 
-    return messages.reduce((text, next) => {
+    let text = messages[0] ?? '';
+    for (const next of messages.slice(1)) {
         const shareStart = prefix !== null && text.startsWith(prefix) && next.startsWith(prefix);
         // Only a single sentence can take ", and ...": a hint after it would end up in between.
         if (shareStart && !text.slice(prefix.length).includes('. ')) {
-            return `${text.slice(0, -1)}, and ${next.slice(prefix.length)}`;
+            text = `${text.slice(0, -1)}, and ${next.slice(prefix.length)}`;
+        } else {
+            text = `${text} Also, it ${next}`;
         }
-        return `${text} Also, it ${next}`;
-    });
+    }
+    return text;
 }
 
 /**
@@ -790,17 +803,43 @@ export function settingProblem(segments, message, locate = () => null) {
  * @returns {string} The line without its value.
  */
 function withoutValue(line) {
-    const comment = /^(\s*)#/.exec(line);
-    if (comment) return `${comment[1]}# ${EXCERPT_VALUE}`;
+    // Plain string scanning rather than one regular expression, which would have to backtrack
+    // over the whole line to find where a key ends.
+    let rest = line.trimStart();
+    let prefix = line.slice(0, line.length - rest.length);
 
-    const keyed = /^(\s*(?:-\s+)?)([^\s#][^#]*?):(?=\s|$)/.exec(line);
-    if (keyed) {
-        const rest = line.slice(keyed[0].length).trim();
-        return rest === '' ? line.trimEnd() : `${keyed[1]}${keyed[2]}: ${EXCERPT_VALUE}`;
+    if (rest.startsWith('#')) return `${prefix}# ${EXCERPT_VALUE}`;
+
+    if (rest === '-' || rest.startsWith('- ')) {
+        const afterDash = rest.slice(1).trimStart();
+        prefix += rest.slice(0, rest.length - afterDash.length);
+        rest = afterDash;
     }
+    if (rest.trim() === '') return line.trimEnd();
 
-    const item = /^(\s*(?:-\s*)?)(.*)$/.exec(line);
-    return item[2].trim() === '' ? line.trimEnd() : `${item[1]}${EXCERPT_VALUE}`;
+    const colon = keySeparator(rest);
+    if (colon > 0 && !rest.slice(0, colon).includes('#')) {
+        const value = rest.slice(colon + 1).trim();
+        return value === '' ? line.trimEnd() : `${prefix}${rest.slice(0, colon)}: ${EXCERPT_VALUE}`;
+    }
+    return `${prefix}${EXCERPT_VALUE}`;
+}
+
+/**
+ * Finds the colon that ends a mapping key: the first one followed by a space, a tab or the end of
+ * the line. A colon inside a value such as `http://host` is followed by neither.
+ *
+ * @param {string} text - A line's content, after its indentation and any list dash.
+ * @returns {number} The colon's index, or -1 when the text has no key.
+ */
+function keySeparator(text) {
+    let index = text.indexOf(':');
+    while (index !== -1) {
+        const after = text[index + 1];
+        if (after === undefined || after === ' ' || after === '\t') return index;
+        index = text.indexOf(':', index + 1);
+    }
+    return -1;
 }
 
 /**
