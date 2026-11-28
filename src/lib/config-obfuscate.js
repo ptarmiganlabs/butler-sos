@@ -1,5 +1,5 @@
 import globals from '../globals.js';
-import { SECRET_KEY_NAME_REGEX } from './secret-patterns.js';
+import { SECRET_KEY_NAME_REGEX, SECRET_CONFIG_PATHS } from './secret-patterns.js';
 
 /**
  * Keys whose values are credentials and must never be shown, at any depth in the config.
@@ -15,29 +15,11 @@ import { SECRET_KEY_NAME_REGEX } from './secret-patterns.js';
 const SECRET_KEY_REGEX = SECRET_KEY_NAME_REGEX;
 
 /**
- * Paths that must be fully masked even though their key name looks innocuous.
- *
- * `newRelic.event.header[]` and `newRelic.metric.header[]` are the documented place to put
- * the New Relic ingest `Api-Key` (see `production_template.yaml`, and the consumption at
- * `post-to-new-relic.js`), but the entries are `{name, value}` pairs — so the credential
- * lives under the key `value`, which {@link SECRET_KEY_REGEX} cannot recognise.
- *
- * These must be matched by path, not by shape: `newRelic.event.attribute.static[]` uses the
- * identical `{name, value}` shape but holds non-sensitive dimensions, so masking every
- * `value` in a `{name, value}` pair would over-mask.
+ * Paths that must be fully masked even though their key name looks innocuous. The list lives in
+ * `secret-patterns.js`, so that the config error report hides the same values; see
+ * {@link SECRET_CONFIG_PATHS} there for what each entry is and why.
  */
-const FULL_MASK_PATHS = new Set([
-    'newRelic.event.header[].value',
-    'newRelic.metric.header[].value',
-    // Every value under a server's custom headers, whatever the header is called. These
-    // headers exist to authenticate to Qlik Sense — `getServerHeaders` forwards them verbatim
-    // on every outbound request — and the schema declares them `additionalProperties: true`,
-    // so the header names are operator-chosen and cannot be enumerated. Names like
-    // `Authorization`, `Cookie` and `X-Subscription-Key` do not match SECRET_KEY_REGEX, so
-    // without this rule they fall through to a partial mask that discloses the first
-    // characters of a live credential. The header *names* stay readable.
-    'serversToMonitor.servers[].headers.*',
-]);
+const FULL_MASK_PATHS = SECRET_CONFIG_PATHS;
 
 /** Replacement used for fully masked values. */
 const MASK = '*'.repeat(10);

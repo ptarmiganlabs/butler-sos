@@ -10,9 +10,15 @@
  * The wording is derived from the schema AJV reports against (run it with `verbose: true`), never
  * from a table of known settings, so settings added to the schema later - including settings a
  * build contributes through the extension seam - get the same messages without changes here.
+ *
+ * The report goes to the console and from there into service and container logs, so it never
+ * shows the value of a setting that holds a credential, and never shows the values in an excerpt
+ * of the file: see {@link holdsSecret} and {@link yamlSyntaxProblem}.
  */
 
 import { parseDocument, LineCounter, isMap, isSeq, isAlias, isScalar } from 'yaml';
+
+import { isSecretConfigPath } from './secret-patterns.js';
 
 /**
  * One problem in a config file.
@@ -25,7 +31,7 @@ import { parseDocument, LineCounter, isMap, isSeq, isAlias, isScalar } from 'yam
  * @property {number|null} column - 1-based column in the config file, or `null` when not known.
  * @property {string} message - What is wrong and what is allowed, as one or more sentences.
  * @property {string} [snippet] - Optional excerpt of the file around the problem, for YAML
- *     syntax errors.
+ *     syntax errors. Values are left out of it.
  */
 
 /**
@@ -36,6 +42,12 @@ import { parseDocument, LineCounter, isMap, isSeq, isAlias, isScalar } from 'yam
  * @returns {{line: number, column: number}|null} The 1-based line and column, or `null` when the
  *     setting is not in the file.
  */
+
+/** What is shown in place of a value that must not be printed. */
+const HIDDEN_VALUE = 'a secret value (not shown)';
+
+/** What is shown in place of each value in an excerpt of the file. */
+const EXCERPT_VALUE = '...';
 
 /**
  * Finds the line and column of settings in a YAML text.
@@ -86,7 +98,7 @@ export function createPositionLocator(text) {
 
             if (isMap(node)) {
                 const pair = node.items.find(
-                    (item) => isScalar(item.key) && String(item.key.value) === String(segment)
+                    (item) => isScalar(item.key) && item.key.toString() === String(segment)
                 );
                 if (!pair) return null;
                 offset = pair.key.range?.[0];
@@ -116,7 +128,7 @@ export function pointerToSegments(instancePath) {
     return instancePath
         .split('/')
         .slice(1)
-        .map((segment) => segment.replace(/~1/g, '/').replace(/~0/g, '~'));
+        .map((segment) => segment.replaceAll('~1', '/').replaceAll('~0', '~'));
 }
 
 /**
@@ -150,18 +162,41 @@ export function toDottedPath(segments, data) {
 }
 
 /**
+ * Tells whether a setting's value must be left out of the report.
+ *
+ * The report reaches the console and the service or container log, so a credential with a typo in
+ * it must not be printed there. A setting is treated as one when its name, or the name of a section
+ * it is in, looks like a credential, or its path is one the config visualisation page masks
+ * ({@link isSecretConfigPath}), or when its schema says so with `format: 'password'` or
+ * `writeOnly: true`. The last two let a setting contributed through the extension seam be hidden
+ * whatever it is called.
+ *
+ * @param {string|null} path - The setting's dotted path.
+ * @param {object} [schema] - The setting's schema.
+ * @returns {boolean} True when the value must not be shown.
+ */
+function holdsSecret(path, schema) {
+    return schema?.format === 'password' || schema?.writeOnly === true || isSecretConfigPath(path);
+}
+
+/**
  * Describes a value as found in the config file.
  *
  * @param {unknown} value - The value.
+ * @param {boolean} [secret] - Whether the value must not be shown.
  * @returns {string} The value in words: strings quoted, numbers and booleans as written.
  */
-function describeValue(value) {
+function describeValue(value, secret = false) {
     if (value === undefined) return 'missing';
     if (value === null) return 'empty';
     if (Array.isArray(value)) return 'a list';
     if (typeof value === 'object') return 'a section of settings';
+    if (secret) return HIDDEN_VALUE;
     if (typeof value === 'string') return JSON.stringify(value);
-    return String(value);
+    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+        return String(value);
+    }
+    return typeof value;
 }
 
 /**
@@ -172,9 +207,10 @@ function describeValue(value) {
  */
 function showValue(value) {
     if (value === null) return 'null (empty)';
-    if (typeof value === 'string') return JSON.stringify(value);
-    if (typeof value === 'object') return JSON.stringify(value);
-    return String(value);
+    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+        return String(value);
+    }
+    return JSON.stringify(value) ?? typeof value;
 }
 
 const TYPE_WORDS = {
@@ -219,15 +255,19 @@ function formatWords(format, withExample) {
 /**
  * Says in words what a pattern expects.
  *
- * A regular expression means little to most readers, so a schema can say what its pattern means
- * with a `description` next to it, for example `{ pattern: '...', description: 'a host name' }`.
- * Without one, a short pattern is shown as it is and a long one is not shown at all.
+ * A regular expression means little to most readers. Where a pattern is one of the alternatives
+ * of an `anyOf` or `oneOf`, the alternative can say what it means with a `description`, for
+ * example `anyOf: [{ format: 'ipv4' }, { pattern: '...', description: 'a host name' }]`. Only
+ * an alternative's own description is used: on a setting, `description` describes the setting,
+ * not its pattern. Without one, a short pattern is shown as it is and a long one is not shown.
  *
  * @param {object} error - The AJV `pattern` error, from a validator compiled with `verbose: true`.
+ * @param {boolean} [isAlternative] - Whether the pattern is directly one alternative of an
+ *     `anyOf` or `oneOf`.
  * @returns {string} For example "a host name".
  */
-function patternWords(error) {
-    const description = error.parentSchema?.description;
+function patternWords(error, isAlternative = false) {
+    const description = isAlternative ? error.parentSchema?.description : undefined;
     if (typeof description === 'string' && description.trim() !== '') return description.trim();
     const { pattern } = error.params;
     return pattern.length <= 40 ? `text of the form ${pattern}` : 'text in the expected form';
@@ -242,26 +282,36 @@ function patternWords(error) {
  */
 function joinAlternatives(items, word = 'or') {
     if (items.length <= 1) return items.join('');
-    return `${items.slice(0, -1).join(', ')} ${word} ${items[items.length - 1]}`;
+    return `${items.slice(0, -1).join(', ')} ${word} ${items.at(-1)}`;
+}
+
+/**
+ * Reads the types a `type` error expects, and says them in words.
+ *
+ * @param {object} params - The error's `params`.
+ * @returns {{types: string[], words: string}} The types, and for example "a list or empty".
+ */
+function typeWords(params) {
+    const types = Array.isArray(params.type) ? params.type : String(params.type).split(',');
+    return { types, words: joinAlternatives(types.map((t) => TYPE_WORDS[t] ?? t)) };
 }
 
 /**
  * Says in words what one keyword expects, for use where several alternatives are listed.
  *
  * @param {object} error - An AJV error object.
+ * @param {boolean} isAlternative - Whether the error comes directly from one alternative.
  * @returns {string|null} For example "an IPv4 address", or `null` when it cannot be put in words.
  */
-function expectation(error) {
+function expectation(error, isAlternative) {
     const { keyword, params } = error;
     switch (keyword) {
-        case 'type': {
-            const types = Array.isArray(params.type) ? params.type : String(params.type).split(',');
-            return joinAlternatives(types.map((t) => TYPE_WORDS[t] ?? t));
-        }
+        case 'type':
+            return typeWords(params).words;
         case 'format':
             return formatWords(params.format, false);
         case 'pattern':
-            return patternWords(error);
+            return patternWords(error, isAlternative);
         case 'enum':
             return `one of ${params.allowedValues.map(showValue).join(', ')}`;
         case 'const':
@@ -319,6 +369,9 @@ function editDistance(a, b) {
 /**
  * Finds the known setting closest to a misspelt one.
  *
+ * Up to one edit in three counts as a misspelling, with at least one allowed. So `remoteUrll` is
+ * taken for `remoteURL` and `enabel` for `enable`, but `host` is not taken for `port`.
+ *
  * @param {string} name - The setting found in the file.
  * @param {string[]} candidates - The settings allowed at that place.
  * @returns {string|null} The closest candidate, or `null` when none is close enough to be a
@@ -338,42 +391,70 @@ export function closestSetting(name, candidates) {
     }
 
     if (best === null) return null;
-    const threshold = Math.max(2, Math.floor(Math.max(name.length, best.length) / 3));
+    const threshold = Math.max(1, Math.floor(Math.max(name.length, best.length) / 3));
     return bestDistance <= threshold ? best : null;
+}
+
+/**
+ * Says what is wrong with a value of the wrong type.
+ *
+ * @param {object} error - The AJV `type` error.
+ * @param {string} found - The value found, in words.
+ * @param {boolean} secret - Whether the value must not be shown.
+ * @returns {string} For example `is "8086", but must be a number. Remove the quotes around it.`
+ */
+function typeMessage(error, found, secret) {
+    const { params, data, parentSchema } = error;
+    const { types, words } = typeWords(params);
+
+    const example = secret ? undefined : parentSchema?.default;
+    const hasExample = example !== undefined && (example === null || typeof example !== 'object');
+    const exampleText = hasExample ? `, for example ${showValue(example)}` : '';
+
+    return `is ${found}, but must be ${words}${exampleText}.${quotedValueHint(data, types)}`;
+}
+
+/**
+ * Points out a number or a true/false value that was written in quotes, which YAML reads as text.
+ *
+ * @param {unknown} data - The value found.
+ * @param {string[]} types - The types expected.
+ * @returns {string} The hint, with a leading space, or an empty string.
+ */
+function quotedValueHint(data, types) {
+    if (typeof data !== 'string') return '';
+    const numeric =
+        (types.includes('number') || types.includes('integer')) &&
+        data.trim() !== '' &&
+        Number.isFinite(Number(data));
+    const boolean = types.includes('boolean') && (data === 'true' || data === 'false');
+    return numeric || boolean ? ' Remove the quotes around it.' : '';
+}
+
+/**
+ * Counts entries in words.
+ *
+ * @param {number} n - The count.
+ * @returns {string} For example "1 entry" or "3 entries".
+ */
+function entriesWords(n) {
+    return `${n} ${n === 1 ? 'entry' : 'entries'}`;
 }
 
 /**
  * Says in words what an AJV error means for the setting it is about.
  *
  * @param {object} error - An AJV error object, from a validator compiled with `verbose: true`.
+ * @param {string} found - The value found, in words.
+ * @param {boolean} secret - Whether the value must not be shown.
  * @returns {string} The message, without the setting's path.
  */
-function describeError(error) {
-    const { keyword, params, data, parentSchema } = error;
-    const found = describeValue(data);
+function describeError(error, found, secret) {
+    const { keyword, params, data } = error;
 
     switch (keyword) {
-        case 'type': {
-            const types = Array.isArray(params.type) ? params.type : String(params.type).split(',');
-            let message = `is ${found}, but must be ${joinAlternatives(types.map((t) => TYPE_WORDS[t] ?? t))}`;
-
-            const example = parentSchema?.default;
-            if (example !== undefined && (example === null || typeof example !== 'object')) {
-                message += `, for example ${showValue(example)}`;
-            }
-            message += '.';
-
-            if (typeof data === 'string') {
-                const numeric = types.includes('number') || types.includes('integer');
-                if (
-                    (numeric && data.trim() !== '' && Number.isFinite(Number(data))) ||
-                    (types.includes('boolean') && (data === 'true' || data === 'false'))
-                ) {
-                    message += ' Remove the quotes around it.';
-                }
-            }
-            return message;
-        }
+        case 'type':
+            return typeMessage(error, found, secret);
 
         case 'enum':
             return `is ${found}, but must be one of: ${params.allowedValues.map(showValue).join(', ')}.`;
@@ -399,14 +480,7 @@ function describeError(error) {
         case 'maxItems': {
             const count = Array.isArray(data) ? data.length : 0;
             const limitWord = keyword === 'minItems' ? 'at least' : 'at most';
-            /**
-             * Counts entries in words.
-             *
-             * @param {number} n - The count.
-             * @returns {string} For example "1 entry" or "3 entries".
-             */
-            const entries = (n) => `${n} ${n === 1 ? 'entry' : 'entries'}`;
-            return `has ${entries(count)}, but must have ${limitWord} ${entries(params.limit)}.`;
+            return `has ${entriesWords(count)}, but must have ${limitWord} ${entriesWords(params.limit)}.`;
         }
 
         case 'format':
@@ -418,8 +492,166 @@ function describeError(error) {
         default:
             // Keywords without wording of their own, including any a build adds to the schema,
             // keep AJV's message. They still get the setting's path, line and column.
-            return `${error.message}.`;
+            return `${error.message ?? `does not pass the "${keyword}" check`}.`;
     }
+}
+
+/**
+ * Folds the errors of each `anyOf` or `oneOf` branch into the `anyOf` or `oneOf` error itself.
+ *
+ * @param {object[]} errors - AJV errors.
+ * @returns {{remaining: object[], branchErrors: Map<object, object[]>}} The errors left, and the
+ *     branch errors of each `anyOf`/`oneOf` error.
+ */
+function foldBranches(errors) {
+    const branchErrors = new Map();
+    for (const group of errors) {
+        if (group.keyword !== 'anyOf' && group.keyword !== 'oneOf') continue;
+        const prefix = `${group.schemaPath}/`;
+        branchErrors.set(
+            group,
+            errors.filter((error) => error.schemaPath.startsWith(prefix))
+        );
+    }
+
+    const folded = new Set([...branchErrors.values()].flat());
+    return { remaining: errors.filter((error) => !folded.has(error)), branchErrors };
+}
+
+/**
+ * Drops exact duplicates: the same keyword, with the same parameters, at the same place.
+ *
+ * @param {object[]} errors - AJV errors.
+ * @returns {object[]} The errors, each once.
+ */
+function withoutDuplicates(errors) {
+    const seen = new Set();
+    return errors.filter((error) => {
+        const key = `${error.instancePath}\u0000${error.keyword}\u0000${JSON.stringify(error.params)}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+/**
+ * Finds the closest allowed setting for each setting that is not allowed.
+ *
+ * This is worked out before any message is written, so that a missing required setting a
+ * misspelling accounts for is left out wherever it comes in the list.
+ *
+ * @param {object[]} errors - AJV errors.
+ * @returns {{suggestions: Map<object, {suggestion: string|null, required: boolean}>, merged:
+ *     Set<object>}} The suggestion for each `additionalProperties` error, and the `required`
+ *     errors folded into one.
+ */
+function findMisspellings(errors) {
+    const missingBySection = new Map();
+    for (const error of errors) {
+        if (error.keyword !== 'required') continue;
+        const missing = missingBySection.get(error.instancePath) ?? new Map();
+        missing.set(error.params.missingProperty, error);
+        missingBySection.set(error.instancePath, missing);
+    }
+
+    const suggestions = new Map();
+    const merged = new Set();
+    for (const error of errors) {
+        if (error.keyword !== 'additionalProperties') continue;
+        const present = error.data && typeof error.data === 'object' ? error.data : {};
+        const candidates = Object.keys(error.parentSchema?.properties ?? {}).filter(
+            (candidate) => !Object.hasOwn(present, candidate)
+        );
+        const suggestion = closestSetting(error.params.additionalProperty, candidates);
+        const missing = suggestion && missingBySection.get(error.instancePath)?.get(suggestion);
+        const required = Boolean(missing) && !merged.has(missing);
+        if (required) merged.add(missing);
+        suggestions.set(error, { suggestion, required });
+    }
+
+    return { suggestions, merged };
+}
+
+/**
+ * Says what is wrong with a setting that is not allowed.
+ *
+ * @param {{suggestion: string|null, required: boolean}} misspelling - The closest allowed setting.
+ * @returns {string} The message.
+ */
+function unknownSettingMessage({ suggestion, required }) {
+    if (!suggestion) return 'is not a known setting. Check the spelling, or remove it.';
+    const requiredText = required ? ` "${suggestion}" is required.` : '';
+    return `is not a known setting. Did you mean "${suggestion}"?${requiredText}`;
+}
+
+/**
+ * Says what is wrong with a value that matches none, or more than one, of an `anyOf`/`oneOf`'s
+ * alternatives.
+ *
+ * @param {object} error - The AJV `anyOf` or `oneOf` error.
+ * @param {string} found - The value found, in words.
+ * @param {object[]} branches - The errors of its alternatives.
+ * @returns {string} The message.
+ */
+function alternativesMessage(error, found, branches) {
+    if (error.keyword === 'oneOf' && Array.isArray(error.params?.passingSchemas)) {
+        return `is ${found}, which matches more than one of the allowed forms. It must match exactly one.`;
+    }
+
+    const prefix = `${error.schemaPath}/`;
+    const alternatives = [
+        ...new Set(
+            branches
+                .filter((branch) => branch.instancePath === error.instancePath)
+                .map((branch) =>
+                    expectation(branch, /^\d+\/[^/]+$/.test(branch.schemaPath.slice(prefix.length)))
+                )
+                .filter(Boolean)
+        ),
+    ];
+
+    return alternatives.length > 0
+        ? `is ${found}, but must be ${joinAlternatives(alternatives)}.`
+        : `is ${found}, which matches none of the allowed forms.`;
+}
+
+/**
+ * Writes the message for one AJV error.
+ *
+ * @param {object} error - An AJV error object.
+ * @param {object} context - What the message is written from.
+ * @param {unknown} context.data - The parsed config.
+ * @param {Map<object, object[]>} context.branchErrors - From {@link foldBranches}.
+ * @param {Map<object, object>} context.suggestions - From {@link findMisspellings}.
+ * @returns {{segments: string[], path: string|null, message: string, found: string|null}} The
+ *     setting the message is about, the message, and the value found in words, if it was used.
+ */
+function messageFor(error, { data, branchErrors, suggestions }) {
+    const section = pointerToSegments(error.instancePath);
+
+    if (error.keyword === 'additionalProperties') {
+        const segments = [...section, error.params.additionalProperty];
+        const message = unknownSettingMessage(suggestions.get(error));
+        return { segments, path: toDottedPath(segments, data), message, found: null };
+    }
+
+    if (error.keyword === 'required') {
+        const segments = [...section, error.params.missingProperty];
+        const sectionPath = toDottedPath(section, data);
+        const message = sectionPath
+            ? `is missing. Add it under ${sectionPath}.`
+            : 'is missing. Add it at the top level of the file.';
+        return { segments, path: toDottedPath(segments, data), message, found: null };
+    }
+
+    const path = toDottedPath(section, data);
+    const secret = holdsSecret(path, error.parentSchema);
+    const found = describeValue(error.data, secret);
+    const message =
+        error.keyword === 'anyOf' || error.keyword === 'oneOf'
+            ? alternativesMessage(error, found, branchErrors.get(error))
+            : describeError(error, found, secret);
+    return { segments: section, path, message, found };
 }
 
 /**
@@ -433,6 +665,7 @@ function describeError(error) {
  * - A setting that is not allowed (`additionalProperties`) is named, with the closest allowed one
  *   suggested; if that one is also reported missing, the two become one message.
  * - Messages about the same setting are joined.
+ * - The value of a setting that holds a credential is not shown.
  *
  * @param {object[]} errors - AJV's `validate.errors`, from a validator compiled with `verbose: true`.
  * @param {object} [options] - Options.
@@ -441,150 +674,72 @@ function describeError(error) {
  * @returns {ConfigProblem[]} The problems, sorted by line.
  */
 export function formatAjvErrors(errors, { data, locate = () => null } = {}) {
-    let remaining = (errors ?? []).filter((error) => error.keyword !== 'if');
+    const { remaining, branchErrors } = foldBranches(
+        (errors ?? []).filter((error) => error.keyword !== 'if')
+    );
+    const distinct = withoutDuplicates(remaining);
+    const { suggestions, merged } = findMisspellings(distinct);
 
-    // Fold the branches of each anyOf/oneOf into the anyOf/oneOf error itself.
-    const branchGroups = remaining.filter((e) => e.keyword === 'anyOf' || e.keyword === 'oneOf');
-    const branchErrors = new Map();
-    for (const group of branchGroups) {
-        const prefix = `${group.schemaPath}/`;
-        branchErrors.set(
-            group,
-            remaining.filter((e) => e.schemaPath.startsWith(prefix))
-        );
-    }
-    const folded = new Set([...branchErrors.values()].flat());
-    remaining = remaining.filter((error) => !folded.has(error));
+    const entries = distinct
+        .filter((error) => !merged.has(error))
+        .map((error) => messageFor(error, { data, branchErrors, suggestions }));
 
-    // Drop exact duplicates.
-    const seen = new Set();
-    remaining = remaining.filter((error) => {
-        const key = `${error.instancePath}\u0000${error.keyword}\u0000${JSON.stringify(error.params)}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
+    return groupBySetting(entries, locate);
+}
+
+/**
+ * Joins several messages about one setting into one.
+ *
+ * Messages that start the same way, `is <value>, but ...`, share that start:
+ * `is "A", but must be at least 3 characters long, and must be text of the form ^[a-z]+$.`
+ *
+ * @param {string[]} messages - The messages, at least one.
+ * @param {string|null} found - The value found, in words, as the messages give it.
+ * @returns {string} One message.
+ */
+function joinMessages(messages, found) {
+    const prefix = found === null ? null : `is ${found}, but `;
+
+    return messages.reduce((text, next) => {
+        const shareStart = prefix !== null && text.startsWith(prefix) && next.startsWith(prefix);
+        // Only a single sentence can take ", and ...": a hint after it would end up in between.
+        if (shareStart && !text.slice(prefix.length).includes('. ')) {
+            return `${text.slice(0, -1)}, and ${next.slice(prefix.length)}`;
+        }
+        return `${text} Also, it ${next}`;
     });
-
-    // Missing required settings, by the instancePath of the section they belong in, so that a
-    // misspelt setting and the missing one it was meant to be become one message.
-    const missingBySection = new Map();
-    for (const error of remaining) {
-        if (error.keyword === 'required') {
-            const missing = missingBySection.get(error.instancePath) ?? new Map();
-            missing.set(error.params.missingProperty, error);
-            missingBySection.set(error.instancePath, missing);
-        }
-    }
-
-    // The closest allowed setting for each one that is not allowed, worked out before any message
-    // is written, so that a missing setting it accounts for is left out wherever it comes in the
-    // list.
-    const suggestions = new Map();
-    const merged = new Set();
-    for (const error of remaining) {
-        if (error.keyword !== 'additionalProperties') continue;
-        const present = error.data && typeof error.data === 'object' ? error.data : {};
-        const candidates = Object.keys(error.parentSchema?.properties ?? {}).filter(
-            (candidate) => !Object.hasOwn(present, candidate)
-        );
-        const suggestion = closestSetting(error.params.additionalProperty, candidates);
-        const missing = suggestion && missingBySection.get(error.instancePath)?.get(suggestion);
-        if (missing && !merged.has(missing)) {
-            merged.add(missing);
-            suggestions.set(error, { suggestion, required: true });
-        } else {
-            suggestions.set(error, { suggestion, required: false });
-        }
-    }
-
-    const entries = [];
-    for (const error of remaining) {
-        if (merged.has(error)) continue;
-
-        const sectionSegments = pointerToSegments(error.instancePath);
-        let segments = sectionSegments;
-        let message;
-
-        if (error.keyword === 'additionalProperties') {
-            segments = [...sectionSegments, error.params.additionalProperty];
-            const { suggestion, required } = suggestions.get(error);
-
-            message = 'is not a known setting.';
-            if (suggestion) {
-                message += ` Did you mean "${suggestion}"?`;
-                if (required) message += ` "${suggestion}" is required.`;
-            } else {
-                message += ' Check the spelling, or remove it.';
-            }
-        } else if (error.keyword === 'required') {
-            const name = error.params.missingProperty;
-            segments = [...sectionSegments, name];
-            const section = toDottedPath(sectionSegments, data);
-            message = section
-                ? `is missing. Add it under ${section}.`
-                : 'is missing. Add it at the top level of the file.';
-        } else if (error.keyword === 'anyOf' || error.keyword === 'oneOf') {
-            const found = describeValue(error.data);
-            if (error.keyword === 'oneOf' && Array.isArray(error.params?.passingSchemas)) {
-                message = `is ${found}, which matches more than one of the allowed forms. It must match exactly one.`;
-            } else {
-                const alternatives = [
-                    ...new Set(
-                        branchErrors
-                            .get(error)
-                            .filter((branch) => branch.instancePath === error.instancePath)
-                            .map(expectation)
-                            .filter(Boolean)
-                    ),
-                ];
-                message =
-                    alternatives.length > 0
-                        ? `is ${found}, but must be ${joinAlternatives(alternatives)}.`
-                        : `is ${found}, which matches none of the allowed forms.`;
-            }
-        } else {
-            message = describeError(error);
-        }
-
-        entries.push({ segments, message });
-    }
-
-    return groupBySetting(entries, { data, locate });
 }
 
 /**
  * Joins messages about the same setting into one problem, adds positions and sorts by line.
  *
- * @param {Array<{segments: Array<string|number>, message: string}>} entries - Messages with the
- *     setting each is about.
- * @param {object} options - Options.
- * @param {unknown} [options.data] - The parsed config, used to write list indexes.
- * @param {Locator} options.locate - Position lookup.
+ * @param {Array<{segments: string[], path: string|null, message: string, found: string|null}>}
+ *     entries - Messages with the setting each is about.
+ * @param {Locator} locate - Position lookup.
  * @returns {ConfigProblem[]} The problems.
  */
-function groupBySetting(entries, { data, locate }) {
+function groupBySetting(entries, locate) {
     const bySetting = new Map();
 
-    for (const { segments, message } of entries) {
-        const path = toDottedPath(segments, data);
+    for (const { segments, path, message, found } of entries) {
         const key = path ?? '';
         const existing = bySetting.get(key);
-        if (existing) {
-            if (!existing.messages.includes(message)) existing.messages.push(message);
-        } else {
-            bySetting.set(key, { path, segments, messages: [message] });
+        if (!existing) {
+            bySetting.set(key, { path, segments, found, messages: [message] });
+        } else if (!existing.messages.includes(message)) {
+            existing.messages.push(message);
+            existing.found ??= found;
         }
     }
 
-    const problems = [...bySetting.values()].map(({ path, segments, messages }) => {
+    const problems = [...bySetting.values()].map(({ path, segments, found, messages }) => {
         const position = locate(segments) ?? locate(segments.slice(0, -1));
-        let message = messages.join(' ');
-        if (path === null) message = `The top level of the file ${message}`;
+        const message = joinMessages(messages, found);
         return {
             path,
             line: position?.line ?? null,
             column: position?.column ?? null,
-            message,
+            message: path === null ? `The top level of the file ${message}` : message,
         };
     });
 
@@ -626,22 +781,73 @@ export function settingProblem(segments, message, locate = () => null) {
 }
 
 /**
+ * Writes one line of the file for an excerpt, with its value left out.
+ *
+ * Keys, list dashes and indentation stay, because they are what a YAML syntax error is usually
+ * about. Values go, because the file may hold passwords and the excerpt goes to the log.
+ *
+ * @param {string} line - A line of the file.
+ * @returns {string} The line without its value.
+ */
+function withoutValue(line) {
+    const comment = /^(\s*)#/.exec(line);
+    if (comment) return `${comment[1]}# ${EXCERPT_VALUE}`;
+
+    const keyed = /^(\s*(?:-\s+)?)([^\s#][^#]*?):(?=\s|$)/.exec(line);
+    if (keyed) {
+        const rest = line.slice(keyed[0].length).trim();
+        return rest === '' ? line.trimEnd() : `${keyed[1]}${keyed[2]}: ${EXCERPT_VALUE}`;
+    }
+
+    const item = /^(\s*(?:-\s*)?)(.*)$/.exec(line);
+    return item[2].trim() === '' ? line.trimEnd() : `${item[1]}${EXCERPT_VALUE}`;
+}
+
+/**
+ * Builds an excerpt of the file around a position, with the values left out.
+ *
+ * @param {string} text - The file's contents.
+ * @param {number} line - 1-based line of the problem.
+ * @param {number|null} column - 1-based column of the problem.
+ * @returns {string} Two lines before the problem, its line with a marker under the column, and one
+ *     line after, then a note that values are left out.
+ */
+function excerpt(text, line, column) {
+    const lines = text.split(/\r?\n/);
+    // A file that ends with a newline has no empty last line to show.
+    if (lines.at(-1) === '') lines.pop();
+    const first = Math.max(1, line - 2);
+    const last = Math.min(lines.length, line + 1);
+    const width = String(last).length;
+
+    const out = [];
+    for (let n = first; n <= last; n++) {
+        out.push(`${String(n).padStart(width)} | ${withoutValue(lines[n - 1])}`);
+        if (n === line && column) out.push(`${' '.repeat(width)} | ${' '.repeat(column - 1)}^`);
+    }
+    out.push('(Values are left out, because the file may hold passwords.)');
+    return out.join('\n');
+}
+
+/**
  * Turns a YAML parse error into one problem with its line and column.
  *
- * @param {Error & {reason?: string, mark?: {line: number, column: number, snippet?: string}}} err -
- *     The error js-yaml threw.
+ * The problem carries an excerpt of the file around the position, built from the file itself
+ * rather than taken from the parser, so that every value can be left out of it.
+ *
+ * @param {Error & {reason?: string, mark?: {line: number, column: number}}} err - The error
+ *     js-yaml threw.
+ * @param {string} [text] - The file's contents, for the excerpt.
  * @returns {ConfigProblem} The problem.
  */
-export function yamlSyntaxProblem(err) {
+export function yamlSyntaxProblem(err, text) {
     const mark = err?.mark;
     const reason = err?.reason ?? err?.message ?? String(err);
-    const problem = {
-        path: null,
-        line: typeof mark?.line === 'number' ? mark.line + 1 : null,
-        column: typeof mark?.column === 'number' ? mark.column + 1 : null,
-        message: `The file is not valid YAML: ${reason}.`,
-    };
-    if (mark?.snippet) problem.snippet = mark.snippet;
+    const line = typeof mark?.line === 'number' ? mark.line + 1 : null;
+    const column = typeof mark?.column === 'number' ? mark.column + 1 : null;
+
+    const problem = { path: null, line, column, message: `The file is not valid YAML: ${reason}.` };
+    if (line !== null && typeof text === 'string') problem.snippet = excerpt(text, line, column);
     return problem;
 }
 
@@ -677,17 +883,12 @@ export function renderConfigReport(configFile, problems) {
     problems.forEach((problem, i) => {
         const label = width > 0 ? `${labels[i].padEnd(width)}  ` : '';
         if (problem.path) {
-            lines.push(`  ${label}${problem.path}`);
-            lines.push(`${indent}${problem.message}`);
+            lines.push(`  ${label}${problem.path}`, `${indent}${problem.message}`);
         } else {
             lines.push(`  ${label}${problem.message}`);
         }
-        if (problem.snippet) {
-            for (const snippetLine of problem.snippet.split('\n')) {
-                if (snippetLine.trim() !== '') lines.push(`${indent}${snippetLine}`);
-            }
-        }
-        lines.push('');
+        const snippetLines = (problem.snippet ?? '').split('\n').filter((l) => l.trim() !== '');
+        lines.push(...snippetLines.map((snippetLine) => `${indent}${snippetLine}`), '');
     });
 
     lines.push(

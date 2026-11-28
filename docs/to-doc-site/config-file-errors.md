@@ -37,9 +37,26 @@ The report has three parts:
 1. **A heading** naming the config file that was checked and how many problems were found.
    The full path matters. If Butler SOS is not reading the file you expected, this is where
    you will see it.
-2. **One entry per problem**, in the order the problems appear in the file. A mistake is
-   reported once, even when it breaks more than one rule.
+2. **One entry per problem**, sorted by line. Problems that have no line of their own, such
+   as a problem with the file as a whole, come first. A mistake is reported once, even when
+   it breaks more than one rule.
 3. **One closing line.** Nothing follows it: no stack trace and no second error message.
+
+### Values that are not shown
+
+A value that is wrong is normally shown in the message, in quotes when it was read as text.
+The value of a setting that holds a password, token, key or other credential is never shown,
+because the report goes to the log:
+
+```text
+  line 567, col 13  Butler-SOS.influxdbConfig.v2Config.token
+                    is a secret value (not shown), but must be text.
+```
+
+Settings count as credentials by their name (anything containing *password*, *token*,
+*secret*, *passphrase*, *API key* and similar), and so do the custom headers sent to Qlik
+Sense servers and the New Relic header values. These are the same settings that the config
+visualisation page masks.
 
 ### Reading one entry
 
@@ -192,19 +209,26 @@ after a fix you will not find another one waiting behind it.
 
 If the file is not valid YAML, Butler SOS cannot read any settings from it. It reports one
 problem with the position where reading failed and what it expected there, followed by the
-lines around that position:
+lines around that position, with a `^` under the column:
 
 ```text
 Config file /opt/butler-sos/config/production.yaml has 1 problem:
 
   line 7, col 5  The file is not valid YAML: bad indentation of a mapping entry.
-                  5 |     # Logging configuration
-                  6 |      logLevel: info
-                  7 |     fileLogging: true
-                 ---------^
+                 5 |     # ...
+                 6 |      logLevel: ...
+                 7 |     fileLogging: ...
+                   |     ^
+                 8 |     logDirectory: ...
+                 (Values are left out, because the file may hold passwords.)
 
 Fix this and start Butler SOS again. Run with --help for the command-line options.
 ```
+
+The excerpt shows the setting names and their indentation, which is what a syntax error is
+almost always about, but every value and every comment is replaced by `...`. The report ends
+up in the service or container log, and the lines next to the error could hold a password.
+Open the file at the line given to see the values.
 
 The most common cause is indentation. YAML uses spaces, and every setting in a section must be
 indented by exactly the same number of spaces. Tabs are not allowed. The mistake is often on

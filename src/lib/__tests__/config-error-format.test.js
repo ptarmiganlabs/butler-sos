@@ -35,10 +35,40 @@ const schema = {
                 address: { type: 'string', format: 'ipv4' },
                 url: { type: 'string', format: 'uri' },
                 code: { type: 'string', pattern: '^[A-Z]{3}$' },
+                region: {
+                    type: 'string',
+                    pattern: '^[A-Z]{3}$',
+                    description: 'Region code used for routing',
+                },
                 name: { type: 'string', minLength: 1 },
                 label: { type: 'string', minLength: 3, pattern: '^[a-z]+$' },
                 mode: { type: 'string', const: 'fixed' },
                 tags: { type: 'array', minItems: 1, uniqueItems: true },
+                entries: { type: 'array', minItems: 3, uniqueItems: true },
+                apiToken: { type: 'string' },
+                certPin: { type: ['string', 'null'], format: 'password' },
+                signingValue: { type: 'string', writeOnly: true },
+                secretStore: {
+                    type: 'object',
+                    properties: { value: { type: 'string', enum: ['a', 'b'] } },
+                },
+                serversToMonitor: {
+                    type: 'object',
+                    properties: {
+                        servers: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    headers: {
+                                        type: 'object',
+                                        additionalProperties: { type: 'string' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
                 hostIP: {
                     type: 'string',
                     anyOf: [
@@ -210,6 +240,14 @@ describe('config-error-format', () => {
             ]);
         });
 
+        test("a setting's own description is not taken for what its pattern means", () => {
+            // On a setting, `description` describes the setting. Only an anyOf/oneOf alternative's
+            // description says what the alternative accepts.
+            expect(check(yaml('  region: abc')).map((p) => p.message)).toEqual([
+                'is "abc", but must be text of the form ^[A-Z]{3}$.',
+            ]);
+        });
+
         test('minLength of 1 says the value is empty', () => {
             expect(check(yaml('  name: ""')).map((p) => p.message)).toEqual([
                 'is empty, but must have a value.',
@@ -292,6 +330,9 @@ describe('config-error-format', () => {
             expect(closestSetting('enabel', ['enable', 'remoteURL'])).toBe('enable');
             expect(closestSetting('xyz', ['enable', 'remoteURL'])).toBeNull();
             expect(closestSetting('anything', [])).toBeNull();
+            // Two edits in a four-letter name is a different word, not a misspelling.
+            expect(closestSetting('host', ['port'])).toBeNull();
+            expect(closestSetting('pot', ['port'])).toBe('port');
         });
     });
 
@@ -344,7 +385,15 @@ describe('config-error-format', () => {
             const problems = check(yaml('  label: A'));
             expect(problems).toHaveLength(1);
             expect(problems[0].message).toBe(
-                'is "A", but must be at least 3 characters long. is "A", but must be text of the form ^[a-z]+$.'
+                'is "A", but must be at least 3 characters long, and must be text of the form ^[a-z]+$.'
+            );
+        });
+
+        test('messages about one setting that start differently are joined as sentences', () => {
+            const problems = check(yaml('  entries: [a, a]'));
+            expect(problems).toHaveLength(1);
+            expect(problems[0].message).toMatch(
+                /^has 2 entries, but must have at least 3 entries\. Also, it must NOT have duplicate items/
             );
         });
     });
@@ -422,23 +471,96 @@ describe('config-error-format', () => {
             } catch (err) {
                 parseError = err;
             }
-            const problem = yamlSyntaxProblem(parseError);
-            expect(problem).toMatchObject({
+            const problem = yamlSyntaxProblem(
+                parseError,
+                'Butler-SOS:\n  logLevel: info\n fileLogging: true\n'
+            );
+            expect(problem).toEqual({
                 path: null,
                 line: 3,
                 column: 2,
                 message: 'The file is not valid YAML: bad indentation of a mapping entry.',
+                snippet: [
+                    '1 | Butler-SOS:',
+                    '2 |   logLevel: ...',
+                    '3 |  fileLogging: ...',
+                    '  |  ^',
+                    '(Values are left out, because the file may hold passwords.)',
+                ].join('\n'),
             });
-            expect(problem.snippet).toContain('fileLogging: true');
         });
 
-        test('an error without a position still gives a message', () => {
-            expect(yamlSyntaxProblem(new Error('broken'))).toEqual({
-                path: null,
-                line: null,
-                column: null,
-                message: 'The file is not valid YAML: broken.',
-            });
+        test('leave every value, and commented-out lines, out of the excerpt', () => {
+            // The excerpt goes to the log. A syntax error next to a password must not print it.
+            const excerptFor = (lines) => {
+                const text = [...lines, ''].join('\n');
+                try {
+                    load(text);
+                } catch (err) {
+                    return yamlSyntaxProblem(err, text);
+                }
+                throw new Error('expected a YAML syntax error');
+            };
+
+            const nearPassword = excerptFor([
+                'Butler-SOS:',
+                '  # password: old-secret',
+                '  password: hunter2secret',
+                ' oops: true',
+            ]);
+            expect(nearPassword.line).toBe(4);
+            expect(nearPassword.snippet).not.toMatch(/hunter2secret|old-secret/);
+            expect(nearPassword.snippet).toContain('2 |   # ...');
+            expect(nearPassword.snippet).toContain('3 |   password: ...');
+
+            const nearList = excerptFor([
+                'Butler-SOS:',
+                '  servers:',
+                '    - host: qlik.example.com',
+                ' oops: true',
+            ]);
+            expect(nearList.snippet).not.toContain('qlik.example.com');
+            expect(nearList.snippet).toContain('2 |   servers:');
+            expect(nearList.snippet).toContain('3 |     - host: ...');
+        });
+    });
+
+    describe('secrets', () => {
+        // The report goes to the console and from there into service and container logs. A typo in
+        // a credential must not put the credential there.
+        test.each([
+            ['a setting whose name looks like a credential', '  apiToken: 73519246', 'apiToken'],
+            ["a setting the schema marks with format: 'password'", '  certPin: 1234', 'certPin'],
+            ['a setting the schema marks writeOnly', '  signingValue: 42', 'signingValue'],
+        ])('the value of %s is not shown', (_label, line, name) => {
+            const [problem] = check(yaml(line));
+            expect(problem.path).toBe(`Butler-SOS.${name}`);
+            expect(problem.message).toMatch(/^is a secret value \(not shown\), but must be text/);
+            expect(problem.message).not.toMatch(/\d{2,}/);
+        });
+
+        test('a value inside a section whose name looks like a credential is not shown', () => {
+            const [problem] = check(yaml('  secretStore:', '    value: leaked'));
+            expect(problem.message).toBe(
+                'is a secret value (not shown), but must be one of: "a", "b".'
+            );
+        });
+
+        test('the value of a server header is not shown, whatever the header is called', () => {
+            const [problem] = check(
+                yaml(
+                    '  serversToMonitor:',
+                    '    servers:',
+                    '      - headers:',
+                    '          Cookie: 12345'
+                )
+            );
+            expect(problem.path).toBe('Butler-SOS.serversToMonitor.servers[0].headers.Cookie');
+            expect(problem.message).toBe('is a secret value (not shown), but must be text.');
+        });
+
+        test('an ordinary setting still shows its value', () => {
+            expect(check(yaml('  code: ab'))[0].message).toContain('"ab"');
         });
     });
 
