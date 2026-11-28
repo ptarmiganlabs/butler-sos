@@ -188,11 +188,12 @@ const TYPE_WORDS = {
 };
 
 // Each format in words, and an example. The example is left out where several alternatives are
-// listed in one sentence.
+// listed in one sentence. The example addresses are from the ranges reserved for documentation
+// (RFC 5737 and RFC 3849), so they can never be a real host.
 const FORMAT_WORDS = {
     hostname: ['a host name', 'qlik.example.com'],
-    ipv4: ['an IPv4 address', '10.0.0.5'],
-    ipv6: ['an IPv6 address', 'fd00::5'],
+    ipv4: ['an IPv4 address', '192.0.2.10'],
+    ipv6: ['an IPv6 address', '2001:db8::10'],
     uri: ['a full URL', 'https://example.com/path'],
     'uri-reference': ['a URL or a path', null],
     email: ['an email address', null],
@@ -206,7 +207,7 @@ const FORMAT_WORDS = {
  *
  * @param {string} format - The format's name.
  * @param {boolean} withExample - Whether to add an example.
- * @returns {string} For example "an IPv4 address, for example 10.0.0.5".
+ * @returns {string} For example "an IPv4 address, for example 192.0.2.10".
  */
 function formatWords(format, withExample) {
     const known = FORMAT_WORDS[format];

@@ -32,6 +32,7 @@ const schema = {
                 interval: { type: 'number', minimum: 1, maximum: 60 },
                 ratio: { type: 'number', exclusiveMinimum: 0, exclusiveMaximum: 1 },
                 host: { type: 'string', format: 'hostname' },
+                address: { type: 'string', format: 'ipv4' },
                 url: { type: 'string', format: 'uri' },
                 code: { type: 'string', pattern: '^[A-Z]{3}$' },
                 name: { type: 'string', minLength: 1 },
@@ -193,6 +194,10 @@ describe('config-error-format', () => {
         test('format says what is expected, with an example', () => {
             expect(check(yaml('  host: "not a host!"')).map((p) => p.message)).toEqual([
                 'is "not a host!", but must be a host name, for example qlik.example.com.',
+            ]);
+            // The example is from the range reserved for documentation, never a real host.
+            expect(check(yaml('  address: 10.0.0')).map((p) => p.message)).toEqual([
+                'is "10.0.0", but must be an IPv4 address, for example 192.0.2.10.',
             ]);
             expect(check(yaml('  url: not a url')).map((p) => p.message)).toEqual([
                 'is "not a url", but must be a full URL, for example https://example.com/path.',
