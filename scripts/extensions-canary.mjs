@@ -434,7 +434,7 @@ try {
     check(
         'a contributed setting is verified like a core one',
         invalid.status === 1 &&
-            invalid.output.includes('/Butler-SOS/canary/label') &&
+            /has 1 problem:[\s\S]*Butler-SOS\.canary\.label\r?\n/.test(invalid.output) &&
             !invalid.output.includes(HOOK_MARKER),
         `exit status ${invalid.status}: ${invalid.output.trim().slice(-2000)}`
     );
