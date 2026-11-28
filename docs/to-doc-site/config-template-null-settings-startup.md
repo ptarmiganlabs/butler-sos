@@ -206,5 +206,9 @@ If server tag verification fails for an unexpected reason, the message now names
 the configuration file being checked, so it is clearer where to look:
 
 ```
-VERIFY CONFIG FILE: Server tags verification failed while checking Butler-SOS.serversToMonitor. ...
+  line 605, col 5  Butler-SOS.serversToMonitor
+                   could not be checked for server tags: ...
 ```
+
+The message appears in the config error report described on the "Reading a config file error"
+page.
